@@ -4,7 +4,7 @@
 // and lets table columns be dragged (or moved with Alt and the arrows). A record's value is
 // selected as its field, never changed in place as text. The app's own builds never include it.
 
-import { createHash, randomUUID, timingSafeEqual } from "node:crypto";
+import { createHash, createHmac, randomUUID, timingSafeEqual } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fontImportRuntime } from "@smithable/adapter-tanstack";
@@ -617,24 +617,35 @@ export const framedLocally: Middleware = (req, res, next) => {
   next();
 };
 
-/** The setting the preview's process gets: the token's SHA-256 as hex, never the token itself. */
+/**
+ * The preview's own credential behind a proxy (T1001): derived from Studio's token, so the
+ * service's proxy can make it too, and useless on Studio, which takes only its own token. The
+ * preview runs the app's code, which can read whatever reaches its process, requests included:
+ * Studio's token never does, by setting or by header.
+ */
+export const previewTokenOf = (studioToken: string) =>
+  createHmac("sha256", studioToken).update("smithable-preview").digest("hex");
+
+/** The header the preview's credential comes in: never Studio's own (x-smithable-studio-token). */
+export const PREVIEW_TOKEN_HEADER = "x-smithable-preview-token";
+
+/** The setting the preview's process gets: the credential's SHA-256 as hex, never the credential. */
 export const PREVIEW_TOKEN_DIGEST = "SMITHABLE_PREVIEW_TOKEN_SHA256";
 
-/** The token's SHA-256, as the preview compares it. */
+/** The credential's SHA-256, as the preview compares it. */
 export const tokenDigest = (token: string) => createHash("sha256").update(token).digest("hex");
 
 /**
- * Whether a request carries Studio's token. The preview knows only the token's digest (the
- * daemon gives it `SMITHABLE_PREVIEW_TOKEN_SHA256`), so the app's own code running in the preview
- * cannot read the token and use it on Studio; both sides are compared as digests, so the compare
- * takes the same time whatever is given.
+ * Whether a request carries the preview's credential. The preview knows only its digest (the
+ * daemon gives it `SMITHABLE_PREVIEW_TOKEN_SHA256`); both sides are compared as digests, so the
+ * compare takes the same time whatever is given.
  */
 function carriesToken(
   headers: Record<string, string | string[] | undefined>,
   digestHex: string | undefined,
 ): boolean {
   if (!digestHex) return false;
-  const given = headers["x-smithable-studio-token"];
+  const given = headers[PREVIEW_TOKEN_HEADER];
   if (typeof given !== "string") return false;
   const wanted = Buffer.from(digestHex, "hex");
   const got = Buffer.from(tokenDigest(given), "hex");
@@ -643,23 +654,25 @@ function carriesToken(
 
 /**
  * Behind a proxy (`smithable studio --host` with SMITHABLE_STUDIO_TOKEN) the preview's dev server
- * listens on the host's interface like Studio does, so it takes the same token on every request:
+ * listens on the host's interface like Studio does, so it takes its credential on every request:
  * the proxy adds it, and nothing else on the network reaches the app's pages or its data. Without
  * the digest to compare with, nothing is served at all (closed, never open by mistake).
  */
-const TOKEN_HEADER = "x-smithable-studio-token";
+const TOKEN_HEADERS = [PREVIEW_TOKEN_HEADER, "x-smithable-studio-token"];
 
 /**
- * The token out of the request once it is checked, parsed and raw, so neither Vite nor the app's
- * own code running in the preview (a route, a middleware) can read it and use it on Studio.
+ * The credential out of the request once it is checked, parsed and raw, so the app's pages do not
+ * see it (Studio's own token too, should an older proxy still send it).
  */
 export function stripToken(req: GuardedRequest): void {
-  delete req.headers[TOKEN_HEADER];
-  // Node keeps a second, per-name view of the headers; it is read lazily and then kept.
-  if (req.headersDistinct) delete req.headersDistinct[TOKEN_HEADER];
+  for (const name of TOKEN_HEADERS) {
+    delete req.headers[name];
+    // Node keeps a second, per-name view of the headers; it is read lazily and then kept.
+    if (req.headersDistinct) delete req.headersDistinct[name];
+  }
   if (!req.rawHeaders) return;
   for (let i = req.rawHeaders.length - 2; i >= 0; i -= 2)
-    if (req.rawHeaders[i]?.toLowerCase() === TOKEN_HEADER) req.rawHeaders.splice(i, 2);
+    if (TOKEN_HEADERS.includes(req.rawHeaders[i]?.toLowerCase() ?? "")) req.rawHeaders.splice(i, 2);
 }
 
 export function tokenGuard(digestHex: string | undefined): Middleware {

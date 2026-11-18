@@ -67,7 +67,9 @@ import { type LibraryVersion, libraryVersion } from "./picture-style.js";
 import { declaredPlugins, loadPlugins, pluginPath } from "./plugins.js";
 import {
   PREVIEW_TOKEN_DIGEST,
+  PREVIEW_TOKEN_HEADER,
   previewConfig,
+  previewTokenOf,
   tokenDigest,
   writePreviewConfig as writeConfig,
 } from "./preview-editor.js";
@@ -517,12 +519,13 @@ export async function studio(
   // new each start and never the Studio bearer, since the preview's process holds it in full
   // (SMITHABLE_LOOK_KEY) to verify tickets. Of the Studio bearer the preview gets the digest only.
   const lookKey = randomBytes(32).toString("hex");
-  // Behind a proxy the preview takes Studio's token on every request (the editor plugin's guard):
-  // the daemon's own requests to it carry it too. The preview's process gets the token's digest
-  // only, so the app's code running in it cannot use the token on Studio.
-  const previewToken = options.host ? studioToken() : undefined;
+  // Behind a proxy the preview takes a credential of its own on every request (the editor plugin's
+  // guard), derived from Studio's token and refused by Studio; the daemon's own requests to it carry
+  // it too. The preview's process gets the credential's digest only, and Studio's token never.
+  const hostToken = options.host ? studioToken() : undefined;
+  const previewToken = hostToken ? previewTokenOf(hostToken) : undefined;
   const previewHeaders: Record<string, string> = previewToken
-    ? { "x-smithable-studio-token": previewToken }
+    ? { [PREVIEW_TOKEN_HEADER]: previewToken }
     : {};
   // Neither Studio's token nor the model key: the app's code runs in this process (secrets.ts).
   const previewEnv = childEnv();
