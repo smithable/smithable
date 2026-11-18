@@ -5,10 +5,19 @@
 // credits and the hero's words. Files the owner changed, and files with no record, are theirs and
 // stay. Core fetches nothing; generation never fetches.
 import { createHash } from "node:crypto";
-import { existsSync, lstatSync, readdirSync, readFileSync } from "node:fs";
+import {
+  existsSync,
+  lstatSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  writeFileSync,
+} from "node:fs";
 import { join } from "node:path";
+import { DatabaseSync } from "node:sqlite";
 import type { PictureCredit, PictureEntry } from "@smithable/ai";
 import { YamlEditor } from "@smithable/core";
+import { databasePath } from "./database.js";
 import { atLibrary, type Fetch, libraryBase } from "./pictures.js";
 
 const TIMEOUT = 20_000;
@@ -240,6 +249,8 @@ export interface PlacedStyle {
   /** public/images/pictures.json, CREDITS.md and smithable.content.yml, as text. */
   texts: { path: string; text: string }[];
   kept: string[];
+  /** Each sample picture replaced: its old bytes and new, for the records seeded with it. */
+  swaps: { from: Uint8Array; to: Uint8Array; generated: boolean }[];
 }
 
 /**
@@ -262,11 +273,17 @@ export async function placeStyle(
   if (plan.missing.length)
     return `The ${style} style has no picture for ${plan.missing.join(", ")}, so it is not offered for this app.`;
   const files: PlacedStyle["files"] = [];
+  const swaps: PlacedStyle["swaps"] = [];
   const failed: string[] = [];
   for (const write of plan.writes) {
     const bytes = await fetchChecked(write.entry, fetchFn);
     if (typeof bytes === "string") failed.push(bytes);
-    else files.push({ path: `public/images/${write.file}`, bytes });
+    else {
+      files.push({ path: `public/images/${write.file}`, bytes });
+      const old = join(dir, "public", "images", write.file);
+      if (roleOf(write.file) === "sample" && existsSync(old))
+        swaps.push({ from: readFileSync(old), to: bytes, generated: !!write.record.generated });
+    }
   }
   if (failed.length) return `No pictures were changed: ${failed.join("; ")}.`;
   const records = rebuildRecords(dir, version);
@@ -281,7 +298,112 @@ export async function placeStyle(
   const hero = plan.writes.find((w) => w.file === "hero.webp");
   const content = hero && heroWords(dir, hero.entry);
   if (content) texts.push({ path: "smithable.content.yml", text: content });
-  return { files, texts, kept: plan.kept, planned };
+  return { files, texts, kept: plan.kept, planned, swaps };
+}
+
+/** The width and height of a WebP file, from its header (as the app kit's uploads.ts reads it). */
+function webpSize(bytes: Uint8Array): { width: number; height: number } | undefined {
+  const text = (at: number, n: number) => String.fromCharCode(...bytes.subarray(at, at + n));
+  if (bytes.length < 30 || text(0, 4) !== "RIFF" || text(8, 4) !== "WEBP") return undefined;
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  const chunk = text(12, 4);
+  if (chunk === "VP8 ")
+    return { width: view.getUint16(26, true) & 0x3fff, height: view.getUint16(28, true) & 0x3fff };
+  if (chunk === "VP8L") {
+    const bits = view.getUint32(21, true);
+    return { width: (bits & 0x3fff) + 1, height: ((bits >>> 14) & 0x3fff) + 1 };
+  }
+  if (chunk === "VP8X")
+    return {
+      width: (view.getUint16(24, true) | ((bytes[26] as number) << 16)) + 1,
+      height: (view.getUint16(27, true) | ((bytes[29] as number) << 16)) + 1,
+    };
+  return undefined;
+}
+
+const plainFile = (path: string) => {
+  try {
+    return lstatSync(path).isFile();
+  } catch {
+    return false;
+  }
+};
+
+/**
+ * The project's development data follows a style change (look-picker design §4.4): a record whose
+ * stored picture is the seeded copy of a sample the change replaced (its name is the old sample's
+ * hash and its bytes are the old sample's) gets the new sample, stored beside the old one so undo,
+ * which restores the database, finds every file it names. Anything else stays: an uploaded
+ * picture, one replaced by hand. Runs inside the operation's database snapshot; returns how many
+ * records changed. A deployed app's data is never reached from here.
+ */
+export function reseedPictures(dir: string, swaps: PlacedStyle["swaps"]): number {
+  const path = databasePath(dir);
+  if (!swaps.length || !existsSync(path)) return 0;
+  const short = (bytes: Uint8Array) => sha256(bytes).slice(0, 24);
+  const byOld = new Map(swaps.map((s) => [short(s.from), s]));
+  const uploads = join(dir, "data", "uploads");
+  const q = (name: unknown) => `"${String(name).replaceAll('"', '""')}"`;
+  /** One stored picture, swapped when it is a seeded copy; undefined when it stays. */
+  const swapped = (picture: unknown): Record<string, unknown> | undefined => {
+    if (!picture || typeof picture !== "object") return undefined;
+    const p = picture as Record<string, unknown>;
+    const m = typeof p.file === "string" && p.file.match(/^([a-z0-9-]+)\/([a-f0-9]{24})\.webp$/);
+    const swap = m && byOld.get(m[2] as string);
+    if (!m || !swap) return undefined;
+    const folder = join(uploads, m[1] as string);
+    const stored = join(folder, `${m[2]}.webp`);
+    if (!lstatSync(folder, { throwIfNoEntry: false })?.isDirectory() || !plainFile(stored))
+      return undefined;
+    if (!Buffer.from(swap.from).equals(readFileSync(stored))) return undefined;
+    const file = `${m[1]}/${short(swap.to)}.webp`;
+    if (!plainFile(join(uploads, file))) writeFileSync(join(uploads, file), swap.to);
+    const { generated: _, ...rest } = p;
+    return { ...rest, file, ...webpSize(swap.to), ...(swap.generated ? { generated: true } : {}) };
+  };
+  mkdirSync(uploads, { recursive: true });
+  const db = new DatabaseSync(path, { timeout: 5000 });
+  let changed = 0;
+  try {
+    db.exec("BEGIN IMMEDIATE");
+    const tables = db
+      .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'")
+      .all();
+    for (const { name: table } of tables)
+      for (const { name: column } of db.prepare(`PRAGMA table_info(${q(table)})`).all()) {
+        const rows = db
+          .prepare(
+            `SELECT rowid AS id, ${q(column)} AS value FROM ${q(table)} WHERE typeof(${q(column)}) = 'text' AND ${q(column)} LIKE '%.webp%'`,
+          )
+          .all();
+        for (const row of rows) {
+          let value: unknown;
+          try {
+            value = JSON.parse(String(row.value));
+          } catch {
+            continue;
+          }
+          let next: unknown;
+          if (Array.isArray(value)) {
+            const items = value.map((v) => swapped(v) ?? v);
+            if (items.some((v, i) => v !== value[i])) next = items;
+          } else next = swapped(value);
+          if (next === undefined) continue;
+          db.prepare(`UPDATE ${q(table)} SET ${q(column)} = ? WHERE rowid = ?`).run(
+            JSON.stringify(next),
+            row.id as number,
+          );
+          changed++;
+        }
+      }
+    db.exec("COMMIT");
+  } catch (error) {
+    db.exec("ROLLBACK");
+    throw error;
+  } finally {
+    db.close();
+  }
+  return changed;
 }
 
 /** CREDITS.md from the records: a line for each credited photograph; empty when none. */

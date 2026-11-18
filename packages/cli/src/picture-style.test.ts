@@ -251,3 +251,44 @@ test("a picture that is a link is never written through, and generation reads on
   expect(tagged.b.src).toBe("images/../../etc/passwd");
   expect(tagged.c.src).toBe("images/samples/0.webp");
 });
+
+test("seeded records follow the new samples; an uploaded picture and one replaced by hand stay", async () => {
+  const { DatabaseSync } = await import("node:sqlite");
+  const { reseedPictures } = await import("./picture-style.js");
+  const dir = oldApp();
+  mkdirSync(join(dir, "data", "db"), { recursive: true });
+  const uploads = join(dir, "data", "uploads", "dish");
+  mkdirSync(uploads, { recursive: true });
+  const short = (b: Uint8Array) => sha256(b).slice(0, 24);
+  const seeded = `dish/${short(fileOf("bicycle"))}.webp`;
+  writeFileSync(join(dir, "data", "uploads", seeded), fileOf("bicycle"));
+  const own = bytes("my upload");
+  const uploaded = `dish/${short(own)}.webp`;
+  writeFileSync(join(dir, "data", "uploads", uploaded), own);
+  // Named as the seeded lamp, but its bytes were changed by hand.
+  const handmade = `dish/${short(fileOf("lamp"))}.webp`;
+  writeFileSync(join(dir, "data", "uploads", handmade), bytes("changed"));
+  const db = new DatabaseSync(join(dir, "data", "db", "app.db"));
+  db.exec("CREATE TABLE dish (id INTEGER PRIMARY KEY, picture TEXT)");
+  const put = db.prepare("INSERT INTO dish (picture) VALUES (?)");
+  for (const file of [seeded, uploaded, handmade])
+    put.run(JSON.stringify({ file, alt: "x", width: 1, height: 1, generated: true }));
+  db.close();
+  const placed = await placeStyle(dir, "pastel", library());
+  if (typeof placed === "string") throw new Error(placed);
+  expect(reseedPictures(dir, placed.swaps)).toBe(1);
+  const read = new DatabaseSync(join(dir, "data", "db", "app.db"), { readOnly: true });
+  const rows = read.prepare("SELECT picture FROM dish ORDER BY id").all();
+  read.close();
+  const [a, b, c] = rows.map((r) => JSON.parse(String(r.picture)).file);
+  expect(a).toBe(`dish/${short(fileOf("bicycle-pastel"))}.webp`);
+  expect(readFileSync(join(dir, "data", "uploads", a))).toEqual(
+    Buffer.from(fileOf("bicycle-pastel")),
+  );
+  // The old copy stays, for undo, which puts the database back.
+  expect(readFileSync(join(dir, "data", "uploads", seeded))).toEqual(
+    Buffer.from(fileOf("bicycle")),
+  );
+  expect(b).toBe(uploaded);
+  expect(c).toBe(handmade);
+});

@@ -63,7 +63,7 @@ import {
   refusalText,
 } from "./import.js";
 import { type Io, lap, lapFrom } from "./io.js";
-import { currentHashes, placeStyle } from "./picture-style.js";
+import { currentHashes, placeStyle, reseedPictures } from "./picture-style.js";
 import { loadPlugins } from "./plugins.js";
 import { ProjectBusyError, ProjectLockError, withProjectMutation } from "./project-mutation.js";
 import { projectRevision, sourceDigests } from "./project-revision.js";
@@ -679,8 +679,9 @@ async function applyAndCheckpoint(
           mkdirSync(dirname(join(dir, file.path)), { recursive: true });
           writeFileSync(join(dir, file.path), file.text);
         } else rmSync(join(dir, file.path), { force: true });
+      const reseeded = reseedPictures(dir, placed.swaps);
       io.out(
-        `Pictures placed: ${placed.files.length ? placed.files.map((f) => f.path.replace("public/images/", "")).join(", ") : "none needed changing"}.${placed.kept.length ? ` Your own pictures stay: ${placed.kept.join(", ")}.` : ""}\n`,
+        `Pictures placed: ${placed.files.length ? placed.files.map((f) => f.path.replace("public/images/", "")).join(", ") : "none needed changing"}.${placed.kept.length ? ` Your own pictures stay: ${placed.kept.join(", ")}.` : ""}${reseeded ? ` Sample records with the new pictures: ${reseeded}.` : ""}\n`,
       );
     }
     followInSamples(dir, result.effects);
