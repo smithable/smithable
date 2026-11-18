@@ -125,6 +125,11 @@ image model made, the same in Studio and when published. Photographs carry no ma
 their credit. A style's card says only what is true whatever the switch: "Made by an image
 model" or "Photographs by people", with "More" opening what that means for the mark in this app.
 
+The Photographs style may hold a few pictures an image model made, where no photograph was
+found for a subject. Each picture says for itself whether a model made it; such a picture
+carries the mark like any other, and the card says how many there are ("2 of 14 made by an
+image model").
+
 Showing the mark differently per stage is a later step with its own note.
 
 ## 6 Pictures that may not be handed on
