@@ -1,0 +1,292 @@
+// An app's library pictures in an image style (docs/design/first-look.md §4.2–4.3): the host's
+// side of setPictureStyle's place-pictures effect. One library version is resolved into the
+// files to write, each fetched and checked against its hash, and only when every one is there
+// are they written, with public/images/pictures.json (the record of what was placed), the
+// credits and the hero's words. Files the owner changed, and files with no record, are theirs and
+// stay. Core fetches nothing; generation never fetches.
+import { createHash } from "node:crypto";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+import type { PictureCredit, PictureEntry } from "@smithable/ai";
+import { YamlEditor } from "@smithable/core";
+import { atLibrary, type Fetch, libraryBase } from "./pictures.js";
+
+const TIMEOUT = 20_000;
+const MAX_PICTURE = 2_000_000;
+
+/** A style in the library's index: its id, whether an image model makes it, its words. */
+export interface LibraryStyle {
+  id: string;
+  generated: boolean;
+  words: Record<string, { name: string; line: string }>;
+}
+
+/** An entry of a library version: today's fields, its style and subject, and its file's hash. */
+export interface VersionEntry extends PictureEntry {
+  style?: string;
+  subject?: string;
+  sha256: string;
+}
+
+/** One published version of the library's index; it never changes once published. */
+export interface LibraryVersion {
+  version: string;
+  styles: LibraryStyle[];
+  entries: VersionEntry[];
+}
+
+export type PictureRole = "hero" | "sample" | "logo";
+
+/** What public/images/pictures.json says of a placed file (keyed by its path under images/). */
+export interface PictureRecord {
+  /** Made by an image model; the kit's badge reads it. */
+  generated: boolean;
+  version?: string;
+  entry?: string;
+  style?: string;
+  sha256?: string;
+  role?: PictureRole;
+  credit?: PictureCredit;
+}
+
+export type PictureRecords = Record<string, PictureRecord>;
+
+export const sha256 = (bytes: Uint8Array) => createHash("sha256").update(bytes).digest("hex");
+
+const imagesDir = (dir: string) => join(dir, "public", "images");
+
+/** A placed file's role, from where it lies: the hero, the mark, or a sample picture. */
+export const roleOf = (file: string): PictureRole | undefined =>
+  file === "hero.webp"
+    ? "hero"
+    : file === "logo.webp"
+      ? "logo"
+      : /^samples\/[^/]+\.webp$/.test(file)
+        ? "sample"
+        : undefined;
+
+export function readRecords(dir: string): PictureRecords {
+  try {
+    const said = JSON.parse(readFileSync(join(imagesDir(dir), "pictures.json"), "utf8"));
+    return said && typeof said === "object" && !Array.isArray(said) ? said : {};
+  } catch {
+    return {};
+  }
+}
+
+export const recordsText = (records: PictureRecords) =>
+  `${JSON.stringify(
+    Object.fromEntries(Object.entries(records).sort(([a], [b]) => a.localeCompare(b))),
+    null,
+    2,
+  )}\n`;
+
+/** The files under public/images/ a library picture may lie at: the hero, the mark, samples. */
+function placedFiles(dir: string): string[] {
+  const images = imagesDir(dir);
+  const files = ["hero.webp", "logo.webp"].filter((f) => existsSync(join(images, f)));
+  const samples = join(images, "samples");
+  if (existsSync(samples))
+    for (const name of readdirSync(samples).sort())
+      if (name.endsWith(".webp")) files.push(`samples/${name}`);
+  return files;
+}
+
+const recordOf = (version: LibraryVersion, entry: VersionEntry, role: PictureRole) => ({
+  generated: entry.generated ?? true,
+  version: version.version,
+  entry: entry.id,
+  ...(entry.style ? { style: entry.style } : {}),
+  sha256: entry.sha256,
+  role,
+  ...(entry.credit ? { credit: entry.credit } : {}),
+});
+
+/**
+ * The record with every placed file the library knows, for apps made before it: a file whose
+ * bytes match an entry's hash in this version gets that entry's record; a file that matches none
+ * is the owner's and gets none. By hash only, never by name. Records already there are kept.
+ */
+export function rebuildRecords(dir: string, version: LibraryVersion): PictureRecords {
+  const records = readRecords(dir);
+  // The first entry with a hash wins: the index lists what apps got first before later styles.
+  const byHash = new Map<string, VersionEntry>();
+  for (const e of version.entries) if (!byHash.has(e.sha256)) byHash.set(e.sha256, e);
+  for (const file of placedFiles(dir)) {
+    if (records[file]?.sha256) continue;
+    const role = roleOf(file);
+    const entry = byHash.get(sha256(readFileSync(join(imagesDir(dir), file))));
+    if (role && entry) records[file] = recordOf(version, entry, role);
+  }
+  return records;
+}
+
+/** The pictures a style would write, and what stays. */
+export interface StylePlan {
+  /** Files to write, with their records; empty when the app already has the style. */
+  writes: { file: string; entry: VersionEntry; record: PictureRecord }[];
+  /** The owner's: changed since placed, or placed without the library. They stay. */
+  kept: string[];
+  /** Library pictures this style has no picture for, by file; a style with any is not offered. */
+  missing: string[];
+}
+
+/**
+ * Which file becomes which entry of the style: each placed library picture (hero, samples; never
+ * the mark) whose bytes still match its record, by its entry's subject. A picture the owner
+ * changed, and one with no record, stays.
+ */
+export function planStyle(dir: string, version: LibraryVersion, style: string): StylePlan {
+  const records = rebuildRecords(dir, version);
+  const byId = new Map(version.entries.map((e) => [e.id, e]));
+  const plan: StylePlan = { writes: [], kept: [], missing: [] };
+  for (const file of placedFiles(dir)) {
+    const role = roleOf(file);
+    if (role === "logo") continue;
+    const record = records[file];
+    const bytes = readFileSync(join(imagesDir(dir), file));
+    if (!record?.sha256 || !record.entry || sha256(bytes) !== record.sha256) {
+      plan.kept.push(file);
+      continue;
+    }
+    const subject = byId.get(record.entry)?.subject;
+    const entry =
+      subject &&
+      version.entries.find((e) => e.subject === subject && e.style === style && e.kind === role);
+    if (!entry) {
+      plan.missing.push(file);
+      continue;
+    }
+    if (entry.sha256 === record.sha256) continue;
+    plan.writes.push({ file, entry, record: recordOf(version, entry, role ?? "sample") });
+  }
+  return plan;
+}
+
+/** The styles an app can have: those with a picture for every library picture it holds. */
+export function offeredStyles(dir: string, version: LibraryVersion): LibraryStyle[] {
+  return version.styles.filter((s) => planStyle(dir, version, s.id).missing.length === 0);
+}
+
+async function fetchChecked(entry: VersionEntry, fetchFn: Fetch): Promise<Uint8Array | string> {
+  try {
+    const response = await fetchFn(atLibrary(entry.url), { signal: AbortSignal.timeout(TIMEOUT) });
+    if (!response.ok) return `${entry.id} could not be fetched (${response.status})`;
+    const bytes = new Uint8Array(await response.arrayBuffer());
+    if (bytes.byteLength > MAX_PICTURE) return `${entry.id} is larger than the library allows`;
+    return sha256(bytes) === entry.sha256
+      ? bytes
+      : `${entry.id} does not match the library's hash for it`;
+  } catch {
+    return `${entry.id} could not be fetched`;
+  }
+}
+
+/** The library's current version: library.json names it, versions/<it>.json holds it. */
+export async function libraryVersion(fetchFn: Fetch): Promise<LibraryVersion | string> {
+  const get = async (path: string) => {
+    const response = await fetchFn(`${libraryBase()}/${path}`, {
+      signal: AbortSignal.timeout(TIMEOUT),
+    });
+    if (!response.ok) throw new Error(String(response.status));
+    return response.json();
+  };
+  try {
+    const { latest } = ((await get("library.json")) ?? {}) as { latest?: unknown };
+    if (typeof latest !== "string" || !/^[\w.-]+$/.test(latest))
+      return "the image library's index has no versions yet";
+    const version = (await get(`versions/${latest}.json`)) as LibraryVersion;
+    if (!Array.isArray(version?.entries) || !Array.isArray(version.styles))
+      return "the image library's index could not be read";
+    return version;
+  } catch {
+    return "the image library could not be reached";
+  }
+}
+
+/** What placing a style writes, every file fetched and checked; or why nothing is. */
+export interface PlacedStyle {
+  files: { path: string; bytes: Uint8Array }[];
+  /** public/images/pictures.json, CREDITS.md and smithable.content.yml, as text. */
+  texts: { path: string; text: string }[];
+  kept: string[];
+}
+
+/**
+ * The files for a style, each fetched and checked against its hash; a refusal (a message) when
+ * the style is not in the library, misses a picture the app holds, or any file fails. Nothing is
+ * written here: the operation writes them before its one commit.
+ */
+export async function placeStyle(
+  dir: string,
+  style: string,
+  fetchFn: Fetch,
+  given?: LibraryVersion,
+): Promise<PlacedStyle | string> {
+  const version = given ?? (await libraryVersion(fetchFn));
+  if (typeof version === "string") return `No pictures were changed: ${version}.`;
+  if (!version.styles.some((s) => s.id === style))
+    return `The image library has no style "${style}"; it has ${version.styles.map((s) => s.id).join(", ")}.`;
+  const plan = planStyle(dir, version, style);
+  if (plan.missing.length)
+    return `The ${style} style has no picture for ${plan.missing.join(", ")}, so it is not offered for this app.`;
+  const files: PlacedStyle["files"] = [];
+  const failed: string[] = [];
+  for (const write of plan.writes) {
+    const bytes = await fetchChecked(write.entry, fetchFn);
+    if (typeof bytes === "string") failed.push(bytes);
+    else files.push({ path: `public/images/${write.file}`, bytes });
+  }
+  if (failed.length) return `No pictures were changed: ${failed.join("; ")}.`;
+  const records = rebuildRecords(dir, version);
+  for (const write of plan.writes) records[write.file] = write.record;
+  const texts = [{ path: "public/images/pictures.json", text: recordsText(records) }];
+  texts.push({ path: "public/images/CREDITS.md", text: creditsText(records) });
+  const hero = plan.writes.find((w) => w.file === "hero.webp");
+  const content = hero && heroWords(dir, hero.entry);
+  if (content) texts.push({ path: "smithable.content.yml", text: content });
+  return { files, texts, kept: plan.kept };
+}
+
+/** CREDITS.md from the records: a line for each credited photograph; empty when none. */
+export function creditsText(records: PictureRecords): string {
+  const credited = Object.entries(records).filter(([, r]) => r.credit);
+  if (!credited.length) return "";
+  return [
+    "# Photographs",
+    "",
+    "The photographs in this folder, from the Smithable image library. Written by Smithable from the library's index.",
+    "",
+    ...credited.map(([file, { credit: c }]) => {
+      const licence = c?.licenceUrl ? `[${c.licence}](${c.licenceUrl})` : c?.licence;
+      return `- ${file}: ${c?.author}, ${licence}, from ${c?.page} (fetched ${c?.fetched})`;
+    }),
+    "",
+  ].join("\n");
+}
+
+/**
+ * The content file with the new hero's words and `generated` wherever an image names
+ * images/hero.webp; undefined when nothing names it. Other images are the owner's.
+ */
+function heroWords(dir: string, entry: VersionEntry): string | undefined {
+  const path = join(dir, "smithable.content.yml");
+  if (!existsSync(path)) return undefined;
+  const editor = new YamlEditor(readFileSync(path, "utf8"));
+  const found: string[][] = [];
+  const walk = (value: unknown, at: string[]) => {
+    if (!value || typeof value !== "object" || Array.isArray(value)) return;
+    for (const [key, v] of Object.entries(value)) {
+      if (key === "image" && (v as { src?: unknown })?.src === "images/hero.webp")
+        found.push([...at, key]);
+      else walk(v, [...at, key]);
+    }
+  };
+  walk(editor.get([]), []);
+  if (!found.length) return undefined;
+  for (const at of found) {
+    editor.set([...at, "alt"], entry.alt);
+    editor.set([...at, "generated"], entry.generated ?? true);
+  }
+  return editor.text;
+}

@@ -591,6 +591,20 @@ export const UX_SCHEMA: JsonSchema = {
       description:
         "The menu's surface: light (the page's own colours) or dark (the text colour as its surface); unsaid, the theme's own menu colours.",
     },
+    pictures: {
+      type: "object",
+      additionalProperties: false,
+      required: ["style"],
+      properties: {
+        style: {
+          type: "string",
+          pattern: "^[a-z][a-z0-9]*(-[a-z0-9]+)*$",
+          description:
+            "The image style of the app's library pictures, a style of the image library (e.g. lifelike, pastel). Set it with setPictureStyle, which places the pictures.",
+        },
+      },
+      description: "The app's library pictures: which image style they are in.",
+    },
     aiBadge: {
       type: "boolean",
       description:

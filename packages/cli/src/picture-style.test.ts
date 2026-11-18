@@ -1,0 +1,190 @@
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { expect, test } from "vitest";
+import {
+  type LibraryVersion,
+  offeredStyles,
+  placeStyle,
+  readRecords,
+  rebuildRecords,
+  sha256,
+  type VersionEntry,
+} from "./picture-style.js";
+import type { Fetch } from "./pictures.js";
+
+const bytes = (text: string) => new TextEncoder().encode(text);
+const files: Record<string, Uint8Array> = {};
+const entry = (
+  id: string,
+  kind: string,
+  style: string | undefined,
+  subject: string | undefined,
+  extra: Partial<VersionEntry> = {},
+): VersionEntry => {
+  const content = bytes(`picture ${id}`);
+  const hash = sha256(content);
+  files[hash] = content;
+  return {
+    id,
+    kind,
+    url: `https://docs.smithable.ai/images/files/${hash}.webp`,
+    alt: `The ${id}`,
+    tags: [],
+    sha256: hash,
+    ...(style ? { style, generated: style !== "photographs" } : {}),
+    ...(subject ? { subject } : {}),
+    ...extra,
+  };
+};
+
+const version: LibraryVersion = {
+  version: "2026-11-18.1",
+  styles: [
+    { id: "lifelike", generated: true, words: { en: { name: "Lifelike", line: "" } } },
+    { id: "pastel", generated: true, words: { en: { name: "Pastel", line: "" } } },
+    { id: "ink-wash", generated: true, words: { en: { name: "Ink wash", line: "" } } },
+  ],
+  entries: [
+    entry("cafe-hero", "hero", "lifelike", "cafe"),
+    entry("cafe-hero-pastel", "hero", "pastel", "cafe"),
+    entry("cafe-hero-ink", "hero", "ink-wash", "cafe"),
+    entry("bicycle", "sample", "lifelike", "bicycle"),
+    entry("bicycle-pastel", "sample", "pastel", "bicycle"),
+    entry("lamp", "sample", "lifelike", "lamp"),
+    entry("lamp-pastel", "sample", "pastel", "lamp"),
+    // Ink wash has no lamp: it cannot dress an app with one.
+    entry("mark", "logo", undefined, undefined),
+  ],
+};
+
+const byId = (id: string) => version.entries.find((e) => e.id === id) as VersionEntry;
+const fileOf = (id: string) => files[byId(id).sha256] as Uint8Array;
+
+const library = (calls: string[] = []): Fetch =>
+  (async (url: string | URL | Request) => {
+    const address = String(url);
+    calls.push(address);
+    if (address.endsWith("/library.json")) return Response.json({ latest: version.version });
+    if (address.endsWith(`/versions/${version.version}.json`)) return Response.json(version);
+    const hash = address.match(/files\/([a-f0-9]{64})\.webp$/)?.[1];
+    const content = hash && files[hash];
+    return content ? new Response(content) : new Response("", { status: 404 });
+  }) as Fetch;
+
+const offline: Fetch = (async () => {
+  throw new TypeError("fetch failed");
+}) as Fetch;
+
+/** An app as one made before the record: its library pictures, by name, and no hashes said. */
+function oldApp(): string {
+  const dir = mkdtempSync(join(tmpdir(), "picture-style-"));
+  const images = join(dir, "public", "images");
+  mkdirSync(join(images, "samples"), { recursive: true });
+  writeFileSync(join(images, "hero.webp"), fileOf("cafe-hero"));
+  writeFileSync(join(images, "logo.webp"), fileOf("mark"));
+  writeFileSync(join(images, "samples", "0.webp"), fileOf("bicycle"));
+  writeFileSync(join(images, "samples", "1.webp"), fileOf("lamp"));
+  writeFileSync(
+    join(images, "pictures.json"),
+    JSON.stringify({
+      "samples/0.webp": { generated: true },
+      "samples/1.webp": { generated: true },
+    }),
+  );
+  writeFileSync(
+    join(dir, "smithable.content.yml"),
+    "smithableContent: 0.1\npages:\n  home:\n    hero:\n      title: Café\n      image: { src: images/hero.webp, alt: The cafe-hero, generated: true }\n",
+  );
+  return dir;
+}
+
+test("an older app's record is rebuilt by the files' hashes, not their names", () => {
+  const dir = oldApp();
+  // The owner's own picture under a library name: no hash matches, so no record.
+  writeFileSync(join(dir, "public", "images", "samples", "1.webp"), bytes("my own lamp"));
+  const records = rebuildRecords(dir, version);
+  expect(records["hero.webp"]).toMatchObject({
+    entry: "cafe-hero",
+    role: "hero",
+    style: "lifelike",
+  });
+  expect(records["logo.webp"]).toMatchObject({ entry: "mark", role: "logo" });
+  expect(records["samples/0.webp"]).toMatchObject({ entry: "bicycle", role: "sample" });
+  expect(records["samples/1.webp"]).toEqual({ generated: true });
+});
+
+test("a style is offered only when it has a picture for every library picture the app holds", () => {
+  const dir = oldApp();
+  expect(offeredStyles(dir, version).map((s) => s.id)).toEqual(["lifelike", "pastel"]);
+});
+
+test("a style's pictures are fetched, checked and written with their record; the mark stays", async () => {
+  const dir = oldApp();
+  const placed = await placeStyle(dir, "pastel", library());
+  if (typeof placed === "string") throw new Error(placed);
+  expect(placed.files.map((f) => f.path).sort()).toEqual([
+    "public/images/hero.webp",
+    "public/images/samples/0.webp",
+    "public/images/samples/1.webp",
+  ]);
+  expect(placed.files.find((f) => f.path.endsWith("hero.webp"))?.bytes).toEqual(
+    fileOf("cafe-hero-pastel"),
+  );
+  const record = JSON.parse(
+    placed.texts.find((t) => t.path.endsWith("pictures.json"))?.text ?? "{}",
+  );
+  expect(record["hero.webp"]).toEqual({
+    generated: true,
+    version: "2026-11-18.1",
+    entry: "cafe-hero-pastel",
+    style: "pastel",
+    sha256: byId("cafe-hero-pastel").sha256,
+    role: "hero",
+  });
+  expect(record["logo.webp"]).toMatchObject({ entry: "mark" });
+  // The hero's words follow its picture.
+  expect(placed.texts.find((t) => t.path === "smithable.content.yml")?.text).toContain(
+    "alt: The cafe-hero-pastel",
+  );
+});
+
+test("a picture the owner changed stays, and is named", async () => {
+  const dir = oldApp();
+  const first = await placeStyle(dir, "pastel", library());
+  if (typeof first === "string") throw new Error(first);
+  for (const f of [...first.files]) writeFileSync(join(dir, f.path), f.bytes);
+  for (const t of first.texts) writeFileSync(join(dir, t.path), t.text);
+  writeFileSync(join(dir, "public", "images", "samples", "0.webp"), bytes("my bicycle"));
+  const back = await placeStyle(dir, "lifelike", library());
+  if (typeof back === "string") throw new Error(back);
+  expect(back.kept).toEqual(["samples/0.webp"]);
+  expect(back.files.map((f) => f.path).sort()).toEqual([
+    "public/images/hero.webp",
+    "public/images/samples/1.webp",
+  ]);
+});
+
+test("an incomplete style, an unknown one, no network or a wrong hash refuses", async () => {
+  const dir = oldApp();
+  expect(await placeStyle(dir, "ink-wash", library())).toMatch(
+    /no picture for samples\/0.webp, samples\/1.webp/,
+  );
+  expect(await placeStyle(dir, "neon", library())).toMatch(/no style "neon"/);
+  expect(await placeStyle(dir, "pastel", offline)).toMatch(/could not be reached/);
+  const tampered: Fetch = (async (url: string | URL | Request) =>
+    String(url).includes("/files/")
+      ? new Response(bytes("not the picture"))
+      : library()(url)) as Fetch;
+  expect(await placeStyle(dir, "pastel", tampered)).toMatch(/does not match the library's hash/);
+  // Nothing was written by any of them.
+  expect(readFileSync(join(dir, "public", "images", "hero.webp"))).toEqual(
+    Buffer.from(fileOf("cafe-hero")),
+  );
+  expect(readRecords(dir)["hero.webp"]).toBeUndefined();
+});
+
+test("a library without versions refuses and says so", async () => {
+  const none: Fetch = (async () => new Response("", { status: 404 })) as Fetch;
+  expect(await placeStyle(oldApp(), "pastel", none)).toMatch(/could not be reached/);
+});
