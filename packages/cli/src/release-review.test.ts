@@ -256,3 +256,21 @@ test("hosted projects without local deployment evidence keep migration compariso
   expect(hosted.comparisonReason).toContain("No valid local deployment baseline");
   expect(releaseReview(dir).baselineState).toBe("none");
 });
+
+test("worth noting: a role with power over everyone's records and personal data made public", () => {
+  const dir = fixture();
+  expect(releaseReview(dir).warnings).toEqual([]);
+  writeFileSync(
+    join(dir, "smithable.yml"),
+    spec.replace("pages:", "  Contact:\n    fields: { name: string!, email: email }\npages:"),
+  );
+  writeFileSync(
+    join(dir, "smithable.auth.yml"),
+    "smithableAuth: 0.1\nsignIn: { providers: [email] }\ndefaultAccess: private\ndefaultRole: member\nroles: { admin: all, member: { pages: all, create: all, write: all, delete: all } }\npublic: { read: [Contact] }\n",
+  );
+  const warnings = releaseReview(dir).warnings;
+  expect(warnings).toContain(
+    "The member role can change or delete everyone's Note and Contact records, and everyone who signs up gets it.",
+  );
+  expect(warnings.some((w) => /Contact.*email/.test(w))).toBe(true);
+});

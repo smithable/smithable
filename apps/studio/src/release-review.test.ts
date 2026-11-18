@@ -157,3 +157,39 @@ test("the progress is shown only when its link is the service's own release page
   ).toBeUndefined();
   expect(trustedRelease(release, undefined)).toBeUndefined();
 });
+
+test("hosted: only what the owner can check, warnings first, access quiet without a comparison", () => {
+  const review: ReleaseReview = {
+    ...fixture(),
+    baselineState: "unavailable",
+    comparison: "unavailable",
+    accessUnchanged: false,
+    checks: undefined,
+    verifiedRestore: undefined,
+    maintenance: { ...fixture().maintenance, currentEngine: "0.0.0" },
+    warnings: ["The staff role can open the users page."],
+  };
+  const ids = reviewSections(review, { hosted: true }).map((s) => s.id);
+  expect(ids).toEqual(["noting", "access", "privacy"]);
+  expect(reviewSections(review, { hosted: true })[1]?.state).toBe("fine");
+  expect(needsLook(review, { hosted: true })).toBe(1);
+  // Locally (self-hosting) every part stays, as before.
+  expect(reviewSections(review).map((s) => s.id)).toEqual([
+    "noting",
+    "access",
+    "privacy",
+    "migrations",
+    "checks",
+    "maintenance",
+    "recovery",
+  ]);
+});
+
+test("hosted: model changes still show when a comparison found them", () => {
+  const review: ReleaseReview = { ...fixture(), migrations: ["Added model Booking."] };
+  expect(reviewSections(review, { hosted: true }).map((s) => s.id)).toEqual([
+    "access",
+    "privacy",
+    "migrations",
+  ]);
+});

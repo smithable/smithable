@@ -2,6 +2,7 @@ import type { ReleaseReview as Review } from "./api";
 
 export type ReviewState = "needs-look" | "fine" | "unchanged" | "not-applicable";
 export type ReviewPart =
+  | "noting"
   | "access"
   | "privacy"
   | "migrations"
@@ -25,7 +26,10 @@ export function checksPassed(review: Review): boolean {
 }
 
 /** Quiet states describe the evidence we have; missing evidence never means a check passed. */
-export function reviewSections(review: Review): ReviewSection[] {
+export function reviewSections(
+  review: Review,
+  { hosted = false }: { hosted?: boolean } = {},
+): ReviewSection[] {
   const first = review.baselineState === "none";
   const compared = review.comparison === "available";
   const accessSame = compared && review.accessUnchanged === true;
@@ -41,16 +45,30 @@ export function reviewSections(review: Review): ReviewSection[] {
       review.maintenance.generatedProfile === review.maintenance.currentProfile &&
       review.maintenance.generatedKit === review.maintenance.currentKit,
   );
-  return [
+  const warnings = review.warnings ?? [];
+  const sections: ReviewSection[] = [
+    ...(warnings.length
+      ? [
+          {
+            id: "noting" as const,
+            title: "Worth noting",
+            state: "needs-look" as const,
+            summary:
+              warnings.length === 1 ? "one thing to check" : `${warnings.length} things to check`,
+          },
+        ]
+      : []),
     {
       id: "access",
       title: "Access",
-      state: accessSame ? "unchanged" : "needs-look",
+      state: accessSame ? "unchanged" : hosted && !compared ? "fine" : "needs-look",
       summary: accessSame
         ? "unchanged since the last local release"
-        : compared
-          ? "review changed access settings"
-          : "comparison unavailable; review current access",
+        : hosted && !compared
+          ? "who can use the app"
+          : compared
+            ? "review changed access settings"
+            : "comparison unavailable; review current access",
     },
     {
       id: "privacy",
@@ -97,10 +115,20 @@ export function reviewSections(review: Review): ReviewSection[] {
           : "no verified restore is recorded by this tool",
     },
   ];
+  // On the hosted service, only what the owner can check here (Johan, 2026-11-18): publishing runs
+  // its own checks and the service keeps the backups, so those parts and an unavailable comparison
+  // only add words.
+  return hosted
+    ? sections.filter(
+        (s) =>
+          !["checks", "maintenance", "recovery"].includes(s.id) &&
+          (s.id !== "migrations" || (compared && review.migrations.length > 0)),
+      )
+    : sections;
 }
 
-export const needsLook = (review: Review) =>
-  reviewSections(review).filter((s) => s.state === "needs-look").length;
+export const needsLook = (review: Review, options: { hosted?: boolean } = {}) =>
+  reviewSections(review, options).filter((s) => s.state === "needs-look").length;
 
 /** The hosted release flow's saved progress, as the service writes it (T879 S2). */
 export type ReleaseProgress = NonNullable<NonNullable<import("./api").Project["beta"]>["release"]>;

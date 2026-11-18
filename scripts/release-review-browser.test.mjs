@@ -92,11 +92,19 @@ test("review and publish keeps quiet states closed and exposes first-release, ch
     assert.equal(await dialog.locator("[data-first-release]").count(), hosted ? 0 : 1);
     assert.equal(
       await dialog.locator("[data-review-count]").innerText(),
-      `${(development ? 5 : 4) + (hosted ? 1 : 0)} need a look`,
+      `${(development ? 5 : 4) + (hosted ? 1 : 0) + (evidence.warnings.length ? 1 : 0)} need a look`,
     );
-    await dialog
-      .getByRole("heading", { name: "Who can use the current app", exact: true })
-      .waitFor();
+    // What an owner may not expect comes first (T879, Johan 2026-11-18): the CRM's sales role
+    // changes everyone's records.
+    assert.match(evidence.warnings.join("\n"), /The sales role can change or delete everyone's/);
+    assert.equal(
+      await dialog.locator("[data-review-part]").first().getAttribute("data-review-part"),
+      "noting",
+    );
+    // The roles are folded away until asked for (Johan, 2026-11-18).
+    const roles = dialog.locator("[data-review-roles]");
+    assert.equal(await roles.getAttribute("open"), null);
+    await roles.locator(":scope > summary").click();
     assert.match(await dialog.innerText(), /People sign in/);
     const access = dialog.locator('[data-review-part="access"]');
     assert.equal(await access.getAttribute("data-review-state"), "needs-look");
@@ -237,7 +245,7 @@ test("review and publish keeps quiet states closed and exposes first-release, ch
     }
     assert.equal(
       await dialog.locator("[data-review-count]").innerText(),
-      `${development ? 3 : 2} need a look`,
+      `${(development ? 3 : 2) + (evidence.warnings.length ? 1 : 0)} need a look`,
     );
     if (screenshots)
       await page.screenshot({ path: join(screenshots, "02-compared-quiet.png"), fullPage: true });

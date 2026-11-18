@@ -1,6 +1,7 @@
 export type { Allowed, ModelAllowed } from "./access.js";
 export {
   actionAccess,
+  adminOnly,
   modelAccess,
   pageAccess,
   reviewRoles,

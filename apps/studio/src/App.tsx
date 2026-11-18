@@ -1250,7 +1250,7 @@ export function App() {
                 {release.error
                   ? " (unavailable)"
                   : release.review
-                    ? ` (${needsLook(release.review)})`
+                    ? ` (${needsLook(release.review, { hosted: Boolean(project.home) })})`
                     : " (reading…)"}
               </button>
             )}
