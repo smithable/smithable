@@ -18,6 +18,8 @@ const kit = (await import(path)) as {
   ): void;
   TooMany: new (what: string) => Error;
   address(headers: { get(name: string): string | null }): string;
+  viewAllowed(headers: { get(name: string): string | null }, now?: number): void;
+  viewMissed(headers: { get(name: string): string | null }, now?: number): void;
 };
 const headers = (given: Record<string, string>) => ({ get: (name: string) => given[name] ?? null });
 
@@ -111,4 +113,20 @@ test("an IPv6 address counts by its /64; an IPv4 one, also written IPv4-mapped, 
   // A port or brackets do not make another address; ::1 is IPv6 like the rest.
   expect(of("[2001:db8:1:2::1]:443")).toBe(of("2001:db8:1:2::9"));
   expect(of("::1")).toBe("0:0:0:0::/64");
+});
+
+test("ten links that open nothing within the hour stop the address, a right link too (record-documents.md §5)", () => {
+  // An address of its own, so the other tests' counts do not matter.
+  process.env.TRUST_PROXY = "1";
+  const from = headers({ "x-forwarded-for": "7.7.7.7" });
+  const other = headers({ "x-forwarded-for": "8.8.8.8" });
+  const at = (seconds: number) => 5_000_000 + seconds * 1000;
+  for (let i = 0; i < 10; i++) {
+    kit.viewAllowed(from, at(i));
+    kit.viewMissed(from, at(i));
+  }
+  expect(() => kit.viewAllowed(from, at(20))).toThrow("Too many views of a sent document");
+  // Another address is not stopped, and the hour ends it.
+  kit.viewAllowed(other, at(20));
+  kit.viewAllowed(from, at(3601));
 });

@@ -603,6 +603,8 @@ export function dataModule(
   ir: SpecIR,
   auth: AuthIR,
   ux: UxIR = emptyUx(),
+  /** Its mails send links to a copy of its document (record-documents.md §5). */
+  sends = false,
 ): string {
   const n = names(model, t);
   // The order an order page makes (orders.md §3): its lines are written with it, priced here.
@@ -1801,7 +1803,7 @@ ${eraseMembers}`
     if (!app && rows.some((row) => !allows(${n.access}.delete, viewer, ${rowOwner}))) throw new AccessDenied(viewer !== null);
     for (const row of rows) {
       const gone = tx.delete(${n.table}).where(eq(${n.table}.id, row.id)).returning().get();
-      if (gone) audit(tx, viewer, { action: "removed", model: "${model.name}", record: row.id, title: ${longTitle(model) ? `titleOf(gone.${titleKey})` : `gone.${titleKey}`} });
+      if (gone) audit(tx, viewer, { action: "removed", model: "${model.name}", record: row.id, title: ${longTitle(model) ? `titleOf(gone.${titleKey})` : `gone.${titleKey}`} });${sends ? `\n      if (gone) removeCopies(tx, "${model.name}", row.id);` : ""}
     }${
       pictures.length
         ? `
@@ -1842,7 +1844,7 @@ ${dropPictures(
     if (rows.length === 0) return;
     tx.update(${n.table}).set({ deletedAt: when, deletedBy: personOf(viewer), deletedWith: tag }).where(and(fits, isNull(${n.table}.deletedAt))).run();
     for (const row of rows) {
-      audit(tx, viewer, { action: "trashed", model: "${model.name}", record: row.id, title: row.${titleKey}, details: { with: tag } });${tell('"deleted"', "row").replace("\n        ", "\n      ")}
+      audit(tx, viewer, { action: "trashed", model: "${model.name}", record: row.id, title: row.${titleKey}, details: { with: tag } });${tell('"deleted"', "row").replace("\n        ", "\n      ")}${sends ? `\n      endLinks(tx, viewer, "${model.name}", row.id, "trashed");` : ""}
     }
   },
 
@@ -1965,7 +1967,7 @@ ${(composedName(model) || lined) && referenced ? 'import { sortRows } from "#/ki
   )
   .join(
     "",
-  )}${longTitle(model) ? 'import { titleOf } from "#/kit/format";\n' : ""}${mails ? `${OUTGOING_IMPORT}\n` : ""}${filteredBy || ((referenced || paged) && titleColumn !== "id") || (paged && (searched.length || nameSearch.some((c) => c.includes("contains(")))) ? `import { contains } from "#/kit/search";\n` : ""}${paged || ruled || orderPage || filteredBy ? 'import { BadInput } from "#/kit/refusal";\n' : ""}${ruled ? 'import { fits } from "#/kit/model";\n' : ""}${paged ? 'import { aggregate, type Filterable, nearest, sortOf, whereOf, wordsOf } from "#/kit/where";\n' : ""}${ruled ? 'import { w } from "#/kit/words";\n' : ""}${pictures.length ? `import { ${[...(singles.length || pictureLists.length ? ["deletePicture"] : []), ...(docSingles.length || docLists.length ? ["deleteFile"] : [])].join(", ")} } from "#/kit/uploads";\n` : ""}${model.fields.some(isUpload) ? 'import { acceptFiles, cleanUploads, keepsUpload } from "#/kit/receipts.server";\n' : ""}${model.review && signedIn ? 'import { tellReviewers } from "#/kit/review-mail.server";\n' : ""}${capacity?.closes || capacity?.cancelUntil ? 'import { now } from "#/kit/now";\n' : ""}${payEntry ? 'import { askPayment } from "#/kit/payments.server";\n' : ""}import { afterChange, afterDelete } from "./hooks";
+  )}${longTitle(model) ? 'import { titleOf } from "#/kit/format";\n' : ""}${mails ? `${OUTGOING_IMPORT}\n` : ""}${filteredBy || ((referenced || paged) && titleColumn !== "id") || (paged && (searched.length || nameSearch.some((c) => c.includes("contains(")))) ? `import { contains } from "#/kit/search";\n` : ""}${paged || ruled || orderPage || filteredBy ? 'import { BadInput } from "#/kit/refusal";\n' : ""}${ruled ? 'import { fits } from "#/kit/model";\n' : ""}${paged ? 'import { aggregate, type Filterable, nearest, sortOf, whereOf, wordsOf } from "#/kit/where";\n' : ""}${ruled ? 'import { w } from "#/kit/words";\n' : ""}${pictures.length ? `import { ${[...(singles.length || pictureLists.length ? ["deletePicture"] : []), ...(docSingles.length || docLists.length ? ["deleteFile"] : [])].join(", ")} } from "#/kit/uploads";\n` : ""}${model.fields.some(isUpload) ? 'import { acceptFiles, cleanUploads, keepsUpload } from "#/kit/receipts.server";\n' : ""}${model.review && signedIn ? 'import { tellReviewers } from "#/kit/review-mail.server";\n' : ""}${capacity?.closes || capacity?.cancelUntil ? 'import { now } from "#/kit/now";\n' : ""}${payEntry ? 'import { askPayment } from "#/kit/payments.server";\n' : ""}${sends ? `import { ${trashing ? "endLinks, " : ""}removeCopies } from "#/kit/view.server";\n` : ""}import { afterChange, afterDelete } from "./hooks";
 ${occ ? occupiesImports() : ""}${unmerge ? unmergeImports(ir, model, t) : ""}${[...others]
   .map((m) => `import { ${names(m, t).data} } from "./${kebab(m.name)}.server";`)
   .join("\n")}${others.size ? "\n" : ""}${[...labelledKinds]
@@ -2903,7 +2905,7 @@ ${dropPictures(
         if (!current) throw new AccessDenied(viewer !== null);${signedIn ? `\n        check(${n.access}.delete, viewer, ${ownerOf(model, n, "current")});` : ""}${cancelCheck("id", "        ")}
 ${groupCheck("id", "row", "        ")}${trashing ? "        const when = new Date();\n" : ""}        const gone = ${goneBy("id")};
         if (gone) {
-          audit(tx, viewer, { action: "${goneAction}", model: "${model.name}", record: id, title: ${longTitle(model) ? `titleOf(gone.${titleKey})` : `gone.${titleKey}`} });${tell('"deleted"', "gone").replace("\n        ", "\n          ")}${groupTrash("id", "          ")}
+          audit(tx, viewer, { action: "${goneAction}", model: "${model.name}", record: id, title: ${longTitle(model) ? `titleOf(gone.${titleKey})` : `gone.${titleKey}`} });${tell('"deleted"', "gone").replace("\n        ", "\n          ")}${sends ? `\n          ${trashing ? `endLinks(tx, viewer, "${model.name}", id, "trashed");` : `removeCopies(tx, "${model.name}", id);`}` : ""}${groupTrash("id", "          ")}
         }
       });
     } catch (error) {
@@ -2939,7 +2941,7 @@ ${
           if (!current) throw new AccessDenied(viewer !== null);${signedIn ? `\n          check(${n.access}.delete, viewer, ${ownerOf(model, n, "current")});` : ""}${cancelCheck("row.id", "          ")}
 ${groupCheck("row.id", "row", "          ")}          const gone = ${goneBy("row.id")};
           if (gone) {
-            audit(tx, viewer, { action: "${goneAction}", model: "${model.name}", record: row.id, title: ${longTitle(model) ? `titleOf(gone.${titleKey})` : `gone.${titleKey}`} });${tell('"deleted"', "gone").replace("\n        ", "\n            ")}${groupTrash("row.id", "            ")}
+            audit(tx, viewer, { action: "${goneAction}", model: "${model.name}", record: row.id, title: ${longTitle(model) ? `titleOf(gone.${titleKey})` : `gone.${titleKey}`} });${tell('"deleted"', "gone").replace("\n        ", "\n            ")}${sends ? `\n            ${trashing ? `endLinks(tx, viewer, "${model.name}", row.id, "trashed");` : `removeCopies(tx, "${model.name}", row.id);`}` : ""}${groupTrash("row.id", "            ")}
           }
         } catch (error) {
           const refused = refusal(error);

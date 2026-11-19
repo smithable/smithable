@@ -49,7 +49,7 @@ const workedOut = (model: ModelIR, show: string[], t: Texts) =>
   });
 
 /** The settings page's model, which `from` names fields of. */
-function settingsModel(ir: SpecIR): ModelIR | undefined {
+export function settingsModel(ir: SpecIR): ModelIR | undefined {
   const page = ir.pages.find((p) => p.pattern.kind === "settings");
   return page?.pattern.kind === "settings" ? modelNamed(ir, page.pattern.model) : undefined;
 }
@@ -283,6 +283,8 @@ export function documentRoute(
   ir: SpecIR,
   t: Texts,
   auth: AuthIR,
+  /** Its record's mails send links to a copy (record-documents.md §5): the page lists them. */
+  sends = false,
 ): string | undefined {
   const parts = documentParts(page, model, ir, t, auth);
   if (!parts) return undefined;
@@ -295,48 +297,203 @@ export function documentRoute(
   const title = words.title ?? n.label;
   const { title: _title, ...blockWords } = words;
   if (Object.keys(blockWords).length) props.push(`words={${literal(blockWords)}}`);
-  return `${HEADER}import { createFileRoute, notFound } from "@tanstack/react-router";
-import { createServerFn } from "@tanstack/react-start";
+  const owner = !hasSignIn(auth)
+    ? "undefined"
+    : addressOwned(model)
+      ? `addressOwner(row.owner, viewer)`
+      : "row.owner";
+  const sent = sends
+    ? `
+/** Whether the viewer may withdraw the record's links: whoever may read and change it. */
+async function mayWithdraw(viewer: Viewer | null, id: number): Promise<boolean> {
+  if (!(await ${n.data}.get(viewer, id))) return false;
+  const row = db.select({ owner: ${n.table}.${hasSignIn(auth) ? ownerKey(model) : "id"} }).from(${n.table}).where(eq(${n.table}.id, id)).get();
+  return row !== undefined && allows(${n.access}.write, viewer, ${owner});
+}
+
+/** What was sent of the record (only to whoever may read it), and whether they may withdraw it. */
+const getSent = createServerFn()
+  .validator(z.number().int())
+  .handler(async ({ data: id }) => {
+    const viewer = await currentViewer();
+    if (!(await ${n.data}.get(viewer, id))) return { sent: [], withdraw: false };
+    const sent = sentOf(${JSON.stringify(model.name)}, id).map(({ id, sentAt, to }) => ({ id, sentAt, to }));
+    return { sent, withdraw: await mayWithdraw(viewer, id) };
+  });
+
+/** Ends every open link to the record's sent copies, for good. */
+const withdrawSent = createServerFn({ method: "POST" })
+  .validator(z.number().int())
+  .handler(async ({ data: id }) => {
+    const viewer = await currentViewer();
+    writeAllowed(viewer, getRequestHeaders());
+    if (!(await mayWithdraw(viewer, id))) throw new AccessDenied(viewer !== null);
+    return db.transaction((tx) => endLinks(tx, viewer, ${JSON.stringify(model.name)}, id, "withdrawn"));
+  });
+`
+    : "";
+  return `${HEADER}import { createFileRoute, notFound${sends ? ", useRouter" : ""} } from "@tanstack/react-router";
+import { createServerFn } from "@tanstack/react-start";${sends ? '\nimport { getRequestHeaders } from "@tanstack/react-start/server";\nimport { eq } from "drizzle-orm";' : ""}
 import { z } from "zod";
-import { db } from "#/db";
+import { db } from "#/db";${sends ? `\n${SCHEMA_IMPORT}` : ""}
 import { app } from "#/generated/app";
 import { ${documentReaderName(model)} } from "#/generated/${kebab(model.name)}.document.server";
-import { pageAccess } from "#/generated/pages";
-${importLines(uiImports)}
-import { ${refuses ? "DocumentRefused, " : ""}RecordDocument } from "#/kit/Document";
-import { guardPage } from "#/kit/page-guard";
+import { pageAccess } from "#/generated/pages";${sends ? `\nimport { ${n.access}, ${n.data} } from "#/generated/${kebab(model.name)}.server";` : ""}
+${importLines(uiImports)}${sends ? `\nimport { AccessDenied, ${hasSignIn(auth) && addressOwned(model) ? "addressOwner, " : ""}allows, type Viewer } from "#/kit/access";` : ""}
+import { ${refuses ? "DocumentRefused, " : ""}RecordDocument } from "#/kit/Document";${sends ? '\nimport { writeAllowed } from "#/kit/limit";' : ""}
+import { guardPage } from "#/kit/page-guard";${sends ? '\nimport { SentDocuments } from "#/kit/SentDocuments";\nimport { endLinks, sentOf } from "#/kit/view.server";' : ""}
 import { currentViewer } from "#/lib/viewer.server";
 
 /** The record and its parts as the person may read them, or why the document cannot be printed. */
 const ${fn} = createServerFn()
   .validator(z.number().int())
   .handler(async ({ data: id }) => ${documentReaderName(model)}(db, await currentViewer(), id));
-
+${sent}
 export const Route = createFileRoute(${JSON.stringify(join(page.route, "$id_/document"))})({
 ${guard(`pageAccess[${JSON.stringify(page.id)}]`)}  loader: async ({ params }) => {
     const found = await ${fn}({ data: Number(params.id) });
     if (!found) throw notFound();
-    return found;
+    return ${sends ? "{ ...found, sent: await getSent({ data: Number(params.id) }) }" : "found"};
   },
   head: () => pageHead(${JSON.stringify(page.id)}, ${JSON.stringify(title)}),
   component: ${component},
 });
 
 function ${component}() {
-  const found = Route.useLoaderData();${
+  const found = Route.useLoaderData();${sends ? "\n  const { id } = Route.useParams();\n  const router = useRouter();" : ""}${
     refuses
       ? `
   if (found.refused)
     return <DocumentRefused refusal={found}${settingsPage ? ` settings=${JSON.stringify(settingsPage.route)}` : ""} />;`
       : ""
   }
-  return (
+  return ${
+    sends
+      ? `(
+    <>
+      <RecordDocument
+        app={app}
+        title=${attr(title)}
+        ${props.join("\n        ")}
+      />
+      <SentDocuments
+        sent={found.sent.sent}
+        timeZone={app.timeZone}
+        withdraw={
+          found.sent.withdraw
+            ? async () => {
+                await withdrawSent({ data: Number(id) });
+                await router.invalidate();
+              }
+            : undefined
+        }
+      />
+    </>
+  );`
+      : `(
     <RecordDocument
       app={app}
       title=${attr(title)}
       ${props.join("\n      ")}
     />
-  );
+  );`
+  }
+}
+`;
+}
+
+/**
+ * The page a sent document's link opens (record-documents.md §5): the stored copy alone, never
+ * the live record, for whoever holds the link. A wrong, ended or withdrawn link is the same "not
+ * found"; the page is kept out of search engines, caches and the next site's Referer.
+ */
+export function viewRoute(ir: SpecIR, t: Texts, auth: AuthIR, models: string[]): string {
+  const uiImports = new Map<string, string[]>();
+  const copies = models.flatMap((name) => {
+    const model = modelNamed(ir, name);
+    const page = ir.pages.find(
+      (p) => p.pattern.kind === "crud" && p.pattern.model === name && p.document,
+    );
+    const parts = page && documentParts(page, model, ir, t, auth);
+    if (!page || !parts) return [];
+    for (const [module, ns] of parts.uiImports)
+      uiImports.set(module, [...new Set([...(uiImports.get(module) ?? []), ...ns])]);
+    const { title: given, ...blockWords } = t.document(page.id);
+    const title = given ?? parts.n.label;
+    const props = [...parts.props];
+    if (Object.keys(blockWords).length) props.push(`words={${literal(blockWords)}}`);
+    return [{ name, title, props }];
+  });
+  return `${HEADER}import { createFileRoute, notFound } from "@tanstack/react-router";
+import { createServerFn } from "@tanstack/react-start";
+import { getRequestHeaders } from "@tanstack/react-start/server";
+import { z } from "zod";
+import { app } from "#/generated/app";
+${importLines(uiImports)}
+import { RecordDocument } from "#/kit/Document";
+import { viewAllowed, viewMissed } from "#/kit/limit";
+import { openCopy } from "#/kit/view.server";
+
+/** The copy a link opens, or null: the same for a wrong, an ended and a withdrawn link. */
+const getCopy = createServerFn()
+  .validator(z.string().max(100))
+  .handler(({ data: token }) => {
+    const headers = getRequestHeaders();
+    viewAllowed(headers);
+    const copy = openCopy(token);
+    if (!copy) viewMissed(headers);
+    // The stored copy as it was sent: its parts, picked when it was sent.
+    return copy && { model: copy.model, found: copy.content as Found };
+  });
+
+/** A value as the copy holds it: dates are text in the stored copy. */
+type Value = string | number | boolean | null | Value[] | { [key: string]: Value };
+type Part = { id: number } & { [key: string]: Value };
+// The parts a document has are always in its copy: lines, when it has them, are a list.
+type Found = { row: Part; to?: Part | null; lines: Part[]; from?: Part };
+
+/** Each document's title, by its model. */
+const TITLES: Record<string, string> = ${literal(Object.fromEntries(copies.map((c) => [c.name, c.title])))};
+
+export const Route = createFileRoute("/d/$token")({
+  loader: async ({ params }) => {
+    const copy = await getCopy({ data: params.token });
+    if (!copy || !(copy.model in TITLES)) throw notFound();
+    return copy;
+  },
+  headers: () => ({
+    "Cache-Control": "private, no-store",
+    "Referrer-Policy": "no-referrer",
+    "X-Robots-Tag": "noindex",
+  }),
+  head: ({ loaderData }) => ({
+    meta: [
+      { title: loaderData ? \`\${TITLES[loaderData.model]} · \${app.name}\` : app.name },
+      { name: "robots", content: "noindex" },
+      { name: "referrer", content: "no-referrer" },
+    ],
+  }),
+  component: SentDocumentPage,
+});
+
+function SentDocumentPage() {
+  const { model, found } = Route.useLoaderData();
+  switch (model) {${copies
+    .map(
+      (c) => `
+    case ${JSON.stringify(c.name)}:
+      return (
+        <RecordDocument
+          app={app}
+          title=${attr(c.title)}
+          ${c.props.join("\n          ")}
+        />
+      );`,
+    )
+    .join("")}
+    default:
+      return null;
+  }
 }
 `;
 }

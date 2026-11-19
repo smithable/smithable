@@ -97,12 +97,17 @@ export function ActionButton({
     } catch (error) {
       // A worked-out value the mail names, with no value (record-documents.md §3).
       const missing = error instanceof Error && /^no-value:(.+)$/.exec(error.message)?.[1];
+      const message = error instanceof Error ? error.message : "";
       setFailure(
         missing
           ? w.noValue(missing)
-          : error instanceof Error
-            ? error.message
-            : w.somethingWentWrong,
+          : message === "document-read"
+            ? w.document.sendRefused
+            : message === "document-settings"
+              ? w.document.sendSettings
+              : error instanceof Error
+                ? error.message
+                : w.somethingWentWrong,
       );
     }
     setBusy(false);

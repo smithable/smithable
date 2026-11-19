@@ -873,6 +873,15 @@ export const w = {
     refused: "Du får inte läsa allt i det här dokumentet, så det kan inte skrivas ut.",
     missing: (label: string) => `${label} har inget värde ännu, så dokumentet kan inte skrivas ut.`,
     settings: "Fyll i dina företagsuppgifter först",
+    sendRefused: "Du får inte läsa allt i det här dokumentet, så det kan inte skickas.",
+    sendSettings: "Fyll i dina företagsuppgifter innan dokumentet skickas.",
+    views: "visningar av ett skickat dokument",
+    sent: "Skickat",
+    sentAt: (when: string) => `Skickat ${when}`,
+    linkOpen: "länken öppen",
+    linkEnded: "länken avslutad",
+    withdraw: "Dra tillbaka länkar",
+    withdrawAsk: "Avsluta alla länkar till dokumentet? Den som har en kan inte längre öppna det.",
   },
   card: {
     list: (items: string[], or = false) =>

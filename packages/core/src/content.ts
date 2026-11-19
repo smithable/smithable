@@ -1211,9 +1211,16 @@ export function placeholderProblem(
         return bad(
           `"{view}" links to a copy of the ${model.name}'s document as sent, and no crud page of ${model.name} has a "document".`,
         );
-      return entry.list
-        ? bad(`"{view}" links to one record's copy, and this mail lists several.`)
-        : undefined;
+      if (entry.list)
+        return bad(`"{view}" links to one record's copy, and this mail lists several.`);
+      // The copy is read when the mail is queued: a deleted record has none to send.
+      if ("event" in entry.when && entry.when.event === "deleted")
+        return bad(
+          `"{view}" links to a copy of the ${model.name} as sent, and a deleted one has none to send.`,
+        );
+      return entry.to === "mail"
+        ? undefined
+        : bad(`"{view}" is a link for a mail's recipients, and this entry sends no mail.`);
     }
     if (first === "by") {
       const r = entry.recipient;

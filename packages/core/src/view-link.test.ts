@@ -48,3 +48,11 @@ test("viewDays is a whole number of days from 1 to 365", () => {
       expect.stringContaining('"viewDays" is how many days the {view} link opens'),
     );
 });
+
+test("{view} is refused on a deleted record's mail", () => {
+  const deleted = starter.split("    when: markSent ").join("    when: Invoice deleted ");
+  expect(deleted).toContain("when: Invoice deleted");
+  expect(messages(deleted, "Your invoice: {view}")).toContainEqual(
+    expect.stringContaining("a deleted one has none to send"),
+  );
+});
