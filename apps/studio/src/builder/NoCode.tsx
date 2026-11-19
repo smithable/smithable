@@ -2,7 +2,7 @@
 // Who can and Content (the texts, with Languages under them). What the preview reports in it
 // lands here: a part picked in Select opens Behavior at it, columns dragged and texts changed in
 // place are made as changes.
-import { channelsOf, formatFormula, humanize, kebab, type ModelIR } from "@smithable/core";
+import { formatFormula, humanize, kebab, type ModelIR } from "@smithable/core";
 import { describeChange } from "@smithable/index";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Project } from "../api";
@@ -23,7 +23,7 @@ import { CodeFiles, ImportRecords, OwnCode } from "./EntryTools";
 import { ExamplesTable } from "./ExamplesTable";
 import { Languages } from "./Languages";
 import { ChoiceTones, ContentIdentity, PageLayout } from "./Look";
-import { OutgoingTemplate } from "./OutgoingTemplate";
+import { mailTemplates, OutgoingTemplate } from "./OutgoingTemplate";
 import { PendingEdits, usePendingEdits } from "./pending-edit";
 import { PreviewNavigation, pageForPreviewPath } from "./preview-follow";
 import { ReferenceCreationProvider } from "./ReferenceCreationProvider";
@@ -130,7 +130,7 @@ export function NoCode({
   const root = useRef<HTMLDivElement>(null);
   const edits = usePendingEdits();
   const [editingMail, setEditingMail] = useState<string>();
-  const mail = spec.ir?.outgoing.filter((entry) => channelsOf(entry)?.includes("mail")) ?? [];
+  const mail = mailTemplates(spec.ir);
   const [contextPage, setContextPage] = useState(place.page ?? "");
   const pending = useRef<{ page: string; context: number }>(undefined);
   const navigation = useRef(new PreviewNavigation());

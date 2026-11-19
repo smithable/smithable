@@ -116,8 +116,13 @@ if (typeof window !== "undefined" && window.parent !== window) {
     post({ type: "selection-cleared" });
   };
   window.addEventListener("message", (event) => {
-    if (designOnly() || event.source !== window.parent || event.data?.type !== "smithable:clear-selection") return;
-    if (trusted(event.origin)) clearSelection();
+    if (designOnly() || event.source !== window.parent || !trusted(event.origin)) return;
+    if (event.data?.type === "smithable:clear-selection") clearSelection();
+    if (event.data?.type !== "smithable:reveal-selection" || event.origin !== studio || !selected) return;
+    const bottom = event.data.bottom;
+    if (!Number.isFinite(bottom) || bottom <= 0) return;
+    const overlap = selected.getBoundingClientRect().bottom - Math.min(window.innerHeight, bottom);
+    if (overlap > 0) window.scrollBy({ top: overlap, behavior: "instant" });
   });
 
   // What a change touched: its field, table or form, or text, flashed once. What the page does

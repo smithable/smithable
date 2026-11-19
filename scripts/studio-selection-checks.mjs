@@ -36,6 +36,24 @@ export async function checkStudioSelection(browser, base) {
     await form.waitFor();
     assert.equal(await form.evaluate((element) => element.closest("[data-guide=change]")), null);
     await hero.locator("a[data-sm-selected]").waitFor();
+    const overlay = page.locator('[data-studio-overlay="selection"]');
+    const move = form.getByRole("button", { name: "Move selection", exact: true });
+    await move.press("Enter");
+    await form.getByRole("button", { name: "Top left", exact: true }).press("Enter");
+    assert.ok((await overlay.boundingBox()).x <= 16);
+    await form.getByRole("button", { name: "Close selection", exact: true }).click();
+    await form.waitFor({ state: "hidden" });
+    await select.click();
+    await link.click();
+    await form.waitFor();
+    await page.waitForFunction(() => {
+      const bounds = document
+        .querySelector('[data-studio-overlay="selection"]')
+        ?.getBoundingClientRect();
+      return bounds && bounds.x <= 16;
+    });
+    await move.press("Enter");
+    await form.getByRole("button", { name: "Reset position", exact: true }).press("Enter");
     const text = form.getByRole("tab", { name: "Text", exact: true });
     const look = form.getByRole("tab", { name: "Look", exact: true });
     const behavior = form.getByRole("tab", { name: "What it does", exact: true });
@@ -113,7 +131,18 @@ export async function checkStudioSelection(browser, base) {
     await sheet.waitFor();
     const panel = await sheet.boundingBox();
     assert.ok(panel && panel.y >= 200 && panel.x < 12);
-    await sheet.getByRole("button", { name: "Cancel", exact: true }).tap();
+    const iframe = page.locator('iframe[title="App preview"]');
+    const framePosition = await iframe.boundingBox();
+    const preview = await (await iframe.elementHandle()).contentFrame();
+    await preview.waitForFunction((bottom) => {
+      const selected = document.querySelector("[data-sm-selected]");
+      return selected && selected.getBoundingClientRect().bottom <= bottom;
+    }, panel.y - framePosition.y);
+    assert.equal(
+      await sheet.getByRole("button", { name: "Move selection", exact: true }).count(),
+      0,
+    );
+    await sheet.getByRole("button", { name: "Close selection", exact: true }).tap();
     await sheet.waitFor({ state: "hidden" });
     await renamed.waitFor();
   } finally {
