@@ -1929,9 +1929,7 @@ ${
 }
   },
 `;
-  const firstMember = (
-    sync: boolean,
-  ) => `
+  const firstMember = (sync: boolean) => `
   /** The viewer's ${inert(n.label.toLowerCase())} for a settings page: the first one they may read, or null. */
   ${sync ? 'firstIn(q: Pick<typeof db, "query">, viewer: Viewer | null)' : "async first(viewer: Viewer | null)"} {
     if (readScope(${n.access}.read, viewer) === "none") throw new AccessDenied(viewer !== null);
