@@ -1,8 +1,8 @@
 # The gate. The required status is the `check` job, which only reports on the jobs it needs.
-# Every pull request runs lint, build, units and the site on GitHub's runners. The full check (the
-# example apps and Studio in a real browser, as `pnpm check`) runs on the self-hosted runner, one
-# job through scripts/gate.sh, when the change touches the
-# engine, the examples, the scripts `pnpm check` runs, the dependencies or this workflow, and either
+# Every pull request runs lint, build, units and the site on GitHub's runners. Studio changes
+# also run a browser smoke test there. The full check (the example apps and Studio in a real
+# browser, as `pnpm check`) runs on the self-hosted runner through scripts/gate.sh when the change
+# touches the engine, examples, check scripts, dependencies or this workflow, and either
 # the repository variable FULL_CI is "true" or the pull request has the label `full-ci` (for a
 # change someone judges risky). While the repository is private FULL_CI is off and the local
 # `pnpm check` is the gate for engine changes (CLAUDE.md); at the public flip it is switched on,
@@ -56,6 +56,7 @@ jobs:
       full: ${{ steps.scope.outputs.full }}
       engine: ${{ steps.scope.outputs.engine }}
       basics: ${{ steps.scope.outputs.basics }}
+      studio: ${{ steps.scope.outputs.studio }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with: { fetch-depth: 0 }
@@ -84,21 +85,37 @@ jobs:
               esac
             fi
           fi
+          studio=false
           if [ "$GITHUB_EVENT_NAME" = schedule ] || [ "$GITHUB_EVENT_NAME" = workflow_dispatch ]; then
             full=true; why="$GITHUB_EVENT_NAME"
           elif ! git cat-file -e "$BASE^{commit}" 2>/dev/null; then
-            full=true; why="no base to compare with"
-          elif git diff --name-only "$BASE" HEAD | grep -qE "$engine"; then
-            full=true; why="engine files changed"
+            full=true; studio=true; why="no base to compare with"
           else
-            full=false; why="no engine files changed"
+            changed=$(git diff --name-only --no-renames "$BASE" HEAD)
+            if grep -qE "$engine" <<< "$changed"; then
+              full=true; why="engine files changed"
+            else
+              full=false; why="no engine files changed"
+            fi
+            while IFS= read -r path; do
+              case "$path" in
+                apps/studio/*|packages/cli/src/studio*.ts|package.json|pnpm-lock.yaml|\
+                .github/workflows/ci.yml|.github/actions/setup/*|\
+                scripts/test-studio*.mjs|scripts/studio-*.mjs|scripts/*-look*.mjs|scripts/look-*.mjs|\
+                scripts/picture-picker-browser.mjs|scripts/preview-pages-checks.mjs|\
+                scripts/static-state-checks.mjs|scripts/theme-lab-checks.mjs|\
+                scripts/fake-model.mjs|scripts/patience.mjs|scripts/ports.mjs)
+                  studio=true
+                  break ;;
+              esac
+            done <<< "$changed"
           fi
           engine=$full   # whether the engine changed, before FULL_CI's say: check reads it for a fork
           if [ "$full" = true ] && [ "$FULL_CI" != true ] && [ "$LABELLED" != true ] && [ "$why" != "$GITHUB_EVENT_NAME" ]; then
             full=false; why="$why, but FULL_CI is off and no full-ci label: the local pnpm check is the gate"
           fi
           basics=true
-          { echo "full=$full"; echo "basics=$basics"; echo "engine=$engine"; } >> "$GITHUB_OUTPUT"
+          { echo "full=$full"; echo "basics=$basics"; echo "engine=$engine"; echo "studio=$studio"; } >> "$GITHUB_OUTPUT"
           echo "Full check: $full ($why)" | tee -a "$GITHUB_STEP_SUMMARY"
 
   lint-build-units:
@@ -129,6 +146,31 @@ jobs:
       - run: pnpm build
       - run: pnpm test
       - run: pnpm site
+
+  studio-smoke:
+    needs: scope
+    if: needs.scope.outputs.studio == 'true'
+    runs-on: ubuntu-latest
+    permissions: { contents: read }
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup
+        with: { browser: "true" }
+      - run: pnpm build
+      - run: pnpm test:studio:smoke
+        timeout-minutes: 4
+        env:
+          npm_config_frozen_lockfile: "false"
+          pnpm_config_frozen_lockfile: "false"
+          TMPDIR: ${{ runner.temp }}
+      - if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: studio-smoke-failure
+          path: |
+            ${{ runner.temp }}/smithable-studio-smoke-*/*.png
+            ${{ runner.temp }}/smithable-studio-smoke-*/server.log
+          if-no-files-found: ignore
 
   # The full check runs on the self-hosted runner (Johan's dev machine, docs/ci.md): no billed
   # minutes, and the machine already runs this check for every engine change through the gate
@@ -211,7 +253,7 @@ jobs:
   # run was going: a pull request opened with the label starts two runs): its jobs are cancelled,
   # and reporting that as a failed `check` stood in the way of the newer run's result.
   check:
-    needs: [scope, lint-build-units, full]
+    needs: [scope, lint-build-units, studio-smoke, full]
     if: ${{ !cancelled() && github.event_name == 'pull_request' && (github.event.action != 'labeled' || github.event.label.name == 'full-ci') }}
     runs-on: ubuntu-latest
     permissions: {}
@@ -221,11 +263,17 @@ jobs:
           RESULTS: ${{ join(needs.*.result, ' ') }}
           FORK: ${{ github.event.pull_request.head.repo.full_name != github.repository }}
           ENGINE: ${{ needs.scope.outputs.engine }}
+          STUDIO: ${{ needs.scope.outputs.studio }}
+          SMOKE_RESULT: ${{ needs.studio-smoke.result }}
         run: |
           echo "Results: $RESULTS"
           for r in $RESULTS; do
             case "$r" in success|skipped) ;; *) echo "A job ended $r."; exit 1 ;; esac
           done
+          if [ "$STUDIO" = true ] && [ "$SMOKE_RESULT" != success ]; then
+            echo "Studio smoke was required and ended $SMOKE_RESULT."
+            exit 1
+          fi
           if [ "$FORK" = true ] && [ "$ENGINE" = true ]; then
             echo "This pull request comes from a fork and changes the engine. Its full check (the example apps, Studio) does not run here: a maintainer runs scripts/gate.sh on the branch and merges it as the administrator. Until then this status stays red." | tee -a "$GITHUB_STEP_SUMMARY"
             exit 1

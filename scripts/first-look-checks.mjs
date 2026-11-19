@@ -1,15 +1,19 @@
 import assert from "node:assert/strict";
 
-/** The picker changes the real app, and refuses to undo an intervening writer's work. */
-export async function checkFirstLook(browser, base) {
-  const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
-  const page = await context.newPage();
+export function stubPictureCatalogue(context) {
   // This check exercises the theme-only/offline path; picture sets have their own real-library fixture.
-  await page.route("**/api/picture-styles?*", (route) =>
+  return context.route("**/api/picture-styles?*", (route) =>
     route.fulfill({
       json: { project: new URL(route.request().url()).searchParams.get("project"), styles: [] },
     }),
   );
+}
+
+/** The picker changes the real app, and refuses to undo an intervening writer's work. */
+export async function checkFirstLook(browser, base) {
+  const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  const page = await context.newPage();
+  await stubPictureCatalogue(context);
   const project = () =>
     page.evaluate(() => fetch("/api/project").then((response) => response.json()));
   const write = (name, args) =>
