@@ -14120,7 +14120,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/InlineRows.tsx": "b2c801d6 kit",
   "src/kit/Inspector.tsx": "2425cac5 kit",
   "src/kit/Keys.tsx": "aa99e677 kit",
-  "src/kit/ModelForm.tsx": "9251188a kit",
+  "src/kit/ModelForm.tsx": "abaf70be kit",
   "src/kit/ModelTable.tsx": "a8ae6290 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "fb5e87dc kit",
@@ -14165,7 +14165,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/people-match.ts": "09a0f7dc kit",
   "src/kit/person-time.server.ts": "5d9e216d kit",
   "src/kit/receipts.server.ts": "23b63f60 kit",
-  "src/kit/refusal.ts": "4f4712a9 kit",
+  "src/kit/refusal.ts": "644706e8 kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "b6f52acc kit",
   "src/kit/speech.test.ts": "19252a6e kit",
@@ -14178,7 +14178,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "e0a37738 kit",
+  "src/kit/words/en.ts": "6dbf205a kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "8cdb1ad7 generated",
@@ -14231,7 +14231,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/routes/team/activity.tsx": "f071bc95 generated",
   "src/routes/team/index.tsx": "c1b1e9fc generated",
   "src/start.ts": "6b874d2d kit",
-  "src/styles.css": "4fb2262f kit",
+  "src/styles.css": "706d757b kit",
   "src/theme.css": "2c20fc19 generated",
   "tests/smoke.spec.ts": "24a5a8cb generated",
   "tsconfig.json": "802b1b64 kit",
@@ -21894,7 +21894,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/generated/time-off.server.ts": "dd4540f1 generated",
   "src/generated/time-off.ts": "94851289 generated",
   "src/generated/uploads.ts": "40a253ac generated",
-  "src/kit/ActionButton.tsx": "8b94caea kit",
+  "src/kit/ActionButton.tsx": "44a85b61 kit",
   "src/kit/ActivityLog.tsx": "e53a5289 kit",
   "src/kit/AiMark.tsx": "0cd20527 kit",
   "src/kit/AppCard.tsx": "76e8455d kit",
@@ -21912,7 +21912,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/Landing.tsx": "a528f50e kit",
   "src/kit/LegalPage.tsx": "f9a9df1e kit",
   "src/kit/Live.tsx": "fbaa47cd kit",
-  "src/kit/ModelForm.tsx": "9251188a kit",
+  "src/kit/ModelForm.tsx": "abaf70be kit",
   "src/kit/ModelTable.tsx": "a8ae6290 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "fb5e87dc kit",
@@ -21949,14 +21949,14 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/model.ts": "a10b6641 kit",
   "src/kit/now.ts": "5ea87828 kit",
   "src/kit/origin.ts": "f7090ee4 kit",
-  "src/kit/outgoing.server.ts": "430e2aa2 kit",
+  "src/kit/outgoing.server.ts": "8e8824f3 kit",
   "src/kit/outgoing.ts": "e1f82237 kit",
   "src/kit/page-guard.ts": "d8974971 kit",
   "src/kit/params.ts": "65a69da0 kit",
   "src/kit/people-match.ts": "09a0f7dc kit",
   "src/kit/person-time.server.ts": "5d9e216d kit",
   "src/kit/receipts.server.ts": "23b63f60 kit",
-  "src/kit/refusal.ts": "4f4712a9 kit",
+  "src/kit/refusal.ts": "644706e8 kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "b6f52acc kit",
   "src/kit/slots.ts": "911e04a7 kit",
@@ -21967,7 +21967,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/uploads.ts": "1218e9e3 kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "e0a37738 kit",
+  "src/kit/words/en.ts": "6dbf205a kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "2f8e44ff generated",
@@ -22004,7 +22004,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/routes/time-off/index.tsx": "0126663b generated",
   "src/routes/time-off/new.tsx": "007c55c8 generated",
   "src/start.ts": "6b874d2d kit",
-  "src/styles.css": "4fb2262f kit",
+  "src/styles.css": "706d757b kit",
   "src/theme.css": "2c20fc19 generated",
   "tests/smoke.spec.ts": "dabb9af3 generated",
   "tsconfig.json": "802b1b64 kit",
@@ -37217,7 +37217,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/uploads.ts": "11494e99 generated",
   "src/generated/user-choices.server.ts": "d953aad5 generated",
   "src/generated/users.ts": "f77bb99b generated",
-  "src/kit/ActionButton.tsx": "8b94caea kit",
+  "src/kit/ActionButton.tsx": "44a85b61 kit",
   "src/kit/ActivityLog.tsx": "e53a5289 kit",
   "src/kit/AiMark.tsx": "0cd20527 kit",
   "src/kit/AppCard.tsx": "76e8455d kit",
@@ -37241,7 +37241,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/Live.tsx": "fbaa47cd kit",
   "src/kit/Markdown.tsx": "24e2fcd2 kit",
   "src/kit/MarkdownFormatted.tsx": "300ef9a1 kit",
-  "src/kit/ModelForm.tsx": "9251188a kit",
+  "src/kit/ModelForm.tsx": "abaf70be kit",
   "src/kit/ModelTable.tsx": "a8ae6290 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "fb5e87dc kit",
@@ -37284,14 +37284,14 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/model.ts": "a10b6641 kit",
   "src/kit/now.ts": "5ea87828 kit",
   "src/kit/origin.ts": "f7090ee4 kit",
-  "src/kit/outgoing.server.ts": "430e2aa2 kit",
+  "src/kit/outgoing.server.ts": "8e8824f3 kit",
   "src/kit/outgoing.ts": "e1f82237 kit",
   "src/kit/page-guard.ts": "d8974971 kit",
   "src/kit/params.ts": "65a69da0 kit",
   "src/kit/people-match.ts": "09a0f7dc kit",
   "src/kit/person-time.server.ts": "5d9e216d kit",
   "src/kit/receipts.server.ts": "23b63f60 kit",
-  "src/kit/refusal.ts": "4f4712a9 kit",
+  "src/kit/refusal.ts": "644706e8 kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "b6f52acc kit",
   "src/kit/speech.test.ts": "19252a6e kit",
@@ -37305,7 +37305,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "e0a37738 kit",
+  "src/kit/words/en.ts": "6dbf205a kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "a5e9568e generated",
@@ -37376,7 +37376,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/sign-in.tsx": "64dbc342 generated",
   "src/routes/sitemap[.]xml.ts": "018df36b generated",
   "src/start.ts": "6b874d2d kit",
-  "src/styles.css": "4fb2262f kit",
+  "src/styles.css": "706d757b kit",
   "src/theme.css": "2c20fc19 generated",
   "tests/smoke.spec.ts": "c6858e63 generated",
   "tsconfig.json": "802b1b64 kit",
@@ -47167,7 +47167,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/generated/users.server.ts": "aedee060 generated",
   "src/generated/users.test.ts": "18f42451 generated",
   "src/generated/users.ts": "f77bb99b generated",
-  "src/kit/ActionButton.tsx": "8b94caea kit",
+  "src/kit/ActionButton.tsx": "44a85b61 kit",
   "src/kit/ActivityLog.tsx": "e53a5289 kit",
   "src/kit/AiMark.tsx": "0cd20527 kit",
   "src/kit/AppCard.tsx": "76e8455d kit",
@@ -47185,7 +47185,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/Inspector.tsx": "2425cac5 kit",
   "src/kit/Landing.tsx": "a528f50e kit",
   "src/kit/MergeDialog.tsx": "54b364dd kit",
-  "src/kit/ModelForm.tsx": "9251188a kit",
+  "src/kit/ModelForm.tsx": "abaf70be kit",
   "src/kit/ModelTable.tsx": "a8ae6290 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "fb5e87dc kit",
@@ -47230,7 +47230,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/params.ts": "65a69da0 kit",
   "src/kit/people-match.ts": "09a0f7dc kit",
   "src/kit/person-time.server.ts": "5d9e216d kit",
-  "src/kit/refusal.ts": "4f4712a9 kit",
+  "src/kit/refusal.ts": "644706e8 kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "b6f52acc kit",
   "src/kit/speech.test.ts": "19252a6e kit",
@@ -47242,7 +47242,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "e0a37738 kit",
+  "src/kit/words/en.ts": "6dbf205a kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "a5bc8760 generated",
@@ -47278,7 +47278,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/routes/team/index.tsx": "6349287f generated",
   "src/routes/team/trash.tsx": "bbce40d6 generated",
   "src/start.ts": "6b874d2d kit",
-  "src/styles.css": "4fb2262f kit",
+  "src/styles.css": "706d757b kit",
   "src/theme.css": "2c20fc19 generated",
   "tests/smoke.spec.ts": "cd6797d3 generated",
   "tsconfig.json": "802b1b64 kit",
@@ -55190,7 +55190,7 @@ function HomePage() {
 
 exports[`../../../examples/invoicing/smithable.yml > file list and generated code > src/routes/invoices/$id.tsx 1`] = `
 "// Generated by Smithable from smithable.yml. Do not edit: this file is overwritten on every change.
-import { createFileRoute, notFound, useNavigate, useRouter } from "@tanstack/react-router";
+import { createFileRoute, Link, notFound, useNavigate, useRouter } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { and, desc, eq } from "drizzle-orm";
 import { db } from "#/db";
@@ -55201,6 +55201,7 @@ import { deleteInvoice, getInvoice, invoiceUi, updateInvoice } from "#/generated
 import { invoiceSchema } from "#/generated/invoice.schema";
 import { markSent, markSentAccess, markSentFits } from "#/generated/actions/mark-sent";
 import { markPaid, markPaidAccess, markPaidFits } from "#/generated/actions/mark-paid";
+import { buttonVariants } from "#/components/ui/button";
 import { invoiceLineUi } from "#/generated/invoice-line";
 import { clientOptions } from "#/generated/client";
 import { allows } from "#/kit/access";
@@ -55284,6 +55285,9 @@ function InvoicePage() {
                 }}
               />
             )}
+            <Link to="/invoices/$id/document" params={{ id: String(row.id) }} className={buttonVariants({ variant: "outline" })}>
+              {w.document.open}
+            </Link>
           </>
         }
       />
@@ -55331,6 +55335,130 @@ function InvoicePage() {
         </section>
       )}
     </>
+  );
+}
+"
+`;
+
+exports[`../../../examples/invoicing/smithable.yml > file list and generated code > src/routes/invoices/$id_.document.tsx 1`] = `
+"// Generated by Smithable from smithable.yml. Do not edit: this file is overwritten on every change.
+import { createFileRoute, notFound } from "@tanstack/react-router";
+import { createServerFn } from "@tanstack/react-start";
+import { eq } from "drizzle-orm";
+import { z } from "zod";
+import { db } from "#/db";
+import * as schema from "#/db/schema";
+import { app } from "#/generated/app";
+import { pageAccess, pageHead } from "#/generated/pages";
+import { invoiceData } from "#/generated/invoice.server";
+import { invoiceUi } from "#/generated/invoice";
+import { clientData } from "#/generated/client.server";
+import { clientUi } from "#/generated/client";
+import { invoiceLineData } from "#/generated/invoice-line.server";
+import { invoiceLineUi } from "#/generated/invoice-line";
+import { businessProfileAccess, businessProfileData } from "#/generated/business-profile.server";
+import { businessProfileUi } from "#/generated/business-profile";
+import { AccessDenied } from "#/kit/access";
+import { DocumentRefused, RecordDocument } from "#/kit/Document";
+import { guardPage } from "#/kit/page-guard";
+import { currentViewer } from "#/lib/viewer.server";
+
+type Found = { id: number } & Record<string, unknown>;
+/** A value as the server function sends it: what a field holds, a referenced record, a list. */
+type Value = string | number | boolean | null | Date | Value[] | { [key: string]: Value };
+type Picked = { id: number } & { [key: string]: Value };
+
+const READ = { refused: "read" as const };
+const SETTINGS = { refused: "settings" as const };
+
+/** The named fields of a part, and nothing else. */
+function pick(row: Found, keys: string[]): Picked {
+  return { id: row.id, ...Object.fromEntries(keys.map((k) => [k, (row[k] ?? null) as Value])) };
+}
+
+/** The label of the first worked-out field without a value. */
+function missing(row: Found, worked: string[][]): string | undefined {
+  return worked.find(([key]) => row[key as string] == null || Number.isNaN(row[key as string]))?.[1];
+}
+
+/** The record and its parts as the person may read them, or why the document cannot be printed. */
+const getInvoiceDocument = createServerFn()
+  .validator(z.number().int())
+  .handler(async ({ data: id }) => {
+    const viewer = await currentViewer();
+    const found = await invoiceData.get(viewer, id);
+    if (!found) return null;
+    const record: Found = found;
+    // Who it is for, by their own read rule.
+    const toId = record.clientId;
+    const to: Found | null = toId == null ? null : await clientData.get(viewer, Number(toId));
+    if (toId != null && !to) return READ;
+    // Each line by its own read rule: one the person may not read refuses the document.
+    const listed = await db.query.invoices.findFirst({
+      where: eq(schema.invoices.id, id),
+      columns: { id: true },
+      with: { lines: { columns: { id: true }, orderBy: (t, { asc }) => [asc(t.id)] } },
+    });
+    const lines: Found[] = [];
+    for (const line of listed?.lines ?? []) {
+      const read = await invoiceLineData.get(viewer, line.id);
+      if (!read) return READ;
+      lines.push(read);
+    }
+    // Who it is from: the business details on the settings page.
+    let from: Found | null;
+    if (businessProfileAccess.read.owner) {
+      const owner = record.ownerId;
+      const theirs =
+        owner == null
+          ? undefined
+          : await db.query.businessProfiles.findFirst({
+              where: eq(schema.businessProfiles.ownerId, String(owner)),
+              columns: { id: true },
+              orderBy: (t, { asc }) => [asc(t.id)],
+            });
+      if (!theirs) return SETTINGS;
+      from = await businessProfileData.get(viewer, theirs.id);
+      if (!from) return READ;
+    } else {
+      try {
+        from = await businessProfileData.first(viewer);
+      } catch (error) {
+        if (error instanceof AccessDenied) return READ;
+        throw error;
+      }
+      if (!from) return SETTINGS;
+    }
+    const label = missing(record, [["total", "Total"]]) ?? lines.map((line) => missing(line, [["amount", "Amount"]])).find(Boolean);
+    if (label) return { refused: "missing" as const, label };
+    return { row: pick(record, ["number", "issuedOn", "dueOn", "total"]), to: to && pick(to, ["name", "address", "vatNumber"]), lines: lines.map((line) => pick(line, ["description", "quantity", "unitPrice", "amount"])), from: pick(from, ["businessName", "vatNumber", "iban"]) };
+  });
+
+export const Route = createFileRoute("/invoices/$id_/document")({
+  beforeLoad: ({ context, location }) => guardPage(pageAccess["invoices"], context.viewer, location.href),
+  loader: async ({ params }) => {
+    const found = await getInvoiceDocument({ data: Number(params.id) });
+    if (!found) throw notFound();
+    return found;
+  },
+  head: () => pageHead("invoices", "Invoice"),
+  component: InvoiceDocumentPage,
+});
+
+function InvoiceDocumentPage() {
+  const found = Route.useLoaderData();
+  if (found.refused)
+    return <DocumentRefused refusal={found} settings="/settings" />;
+  return (
+    <RecordDocument
+      app={app}
+      title="Invoice"
+      record={{ ui: invoiceUi, row: found.row, show: ["number", "issuedOn", "dueOn"] }}
+      totals={["total"]}
+      to={found.to ? { ui: clientUi, row: found.to, show: ["name", "address", "vatNumber"] } : undefined}
+      lines={{ ui: invoiceLineUi, rows: found.lines, show: ["description", "quantity", "unitPrice", "amount"] }}
+      from={found.from ? { ui: businessProfileUi, row: found.from, show: ["businessName", "vatNumber", "iban"] } : undefined}
+    />
   );
 }
 "
@@ -56427,6 +56555,7 @@ exports[`../../../examples/invoicing/smithable.yml > file list and generated cod
   "kit: src/kit/Combobox.tsx",
   "kit: src/kit/Consent.tsx",
   "kit: src/kit/Dashboard.tsx",
+  "kit: src/kit/Document.tsx",
   "kit: src/kit/FieldInput.tsx",
   "kit: src/kit/FileInput.tsx",
   "kit: src/kit/Filters.tsx",
@@ -56525,6 +56654,7 @@ exports[`../../../examples/invoicing/smithable.yml > file list and generated cod
   "kit: src/routes/health.ts",
   "generated: src/routes/index.tsx",
   "generated: src/routes/invoices/$id.tsx",
+  "generated: src/routes/invoices/$id_.document.tsx",
   "generated: src/routes/invoices/index.tsx",
   "generated: src/routes/invoices/new.tsx",
   "generated: src/routes/overview/index.tsx",
@@ -56616,7 +56746,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/generated/site.ts": "97fb8041 generated",
   "src/generated/timers.server.ts": "8ff1c211 generated",
   "src/generated/uploads.ts": "a6f745ae generated",
-  "src/kit/ActionButton.tsx": "8b94caea kit",
+  "src/kit/ActionButton.tsx": "44a85b61 kit",
   "src/kit/ActivityLog.tsx": "e53a5289 kit",
   "src/kit/AiMark.tsx": "0cd20527 kit",
   "src/kit/AppCard.tsx": "76e8455d kit",
@@ -56627,6 +56757,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/Combobox.tsx": "c3a18c75 kit",
   "src/kit/Consent.tsx": "c5ee7e50 kit",
   "src/kit/Dashboard.tsx": "98bcd927 kit",
+  "src/kit/Document.tsx": "343fd9e6 kit",
   "src/kit/FieldInput.tsx": "39e40fcb kit",
   "src/kit/FileInput.tsx": "5d567f82 kit",
   "src/kit/Filters.tsx": "ceea52dc kit",
@@ -56636,7 +56767,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/Landing.tsx": "a528f50e kit",
   "src/kit/LegalPage.tsx": "f9a9df1e kit",
   "src/kit/Live.tsx": "fbaa47cd kit",
-  "src/kit/ModelForm.tsx": "9251188a kit",
+  "src/kit/ModelForm.tsx": "abaf70be kit",
   "src/kit/ModelTable.tsx": "a8ae6290 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Onboarding.tsx": "b68216f0 kit",
@@ -56680,14 +56811,14 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/model.ts": "a10b6641 kit",
   "src/kit/now.ts": "5ea87828 kit",
   "src/kit/origin.ts": "f7090ee4 kit",
-  "src/kit/outgoing.server.ts": "430e2aa2 kit",
+  "src/kit/outgoing.server.ts": "8e8824f3 kit",
   "src/kit/outgoing.ts": "e1f82237 kit",
   "src/kit/page-guard.ts": "d8974971 kit",
   "src/kit/params.ts": "65a69da0 kit",
   "src/kit/people-match.ts": "09a0f7dc kit",
   "src/kit/person-time.server.ts": "5d9e216d kit",
   "src/kit/receipts.server.ts": "23b63f60 kit",
-  "src/kit/refusal.ts": "4f4712a9 kit",
+  "src/kit/refusal.ts": "644706e8 kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "b6f52acc kit",
   "src/kit/speech.test.ts": "19252a6e kit",
@@ -56701,7 +56832,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "e0a37738 kit",
+  "src/kit/words/en.ts": "6dbf205a kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "abeccae5 generated",
@@ -56724,7 +56855,8 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/routes/files/$model.$id.$field.ts": "93378bd7 kit",
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/index.tsx": "268208f5 generated",
-  "src/routes/invoices/$id.tsx": "ab4f8ccf generated",
+  "src/routes/invoices/$id.tsx": "395cc8cc generated",
+  "src/routes/invoices/$id_.document.tsx": "99536aef generated",
   "src/routes/invoices/index.tsx": "892a7477 generated",
   "src/routes/invoices/new.tsx": "8fcd2b9f generated",
   "src/routes/overview/index.tsx": "254c2c93 generated",
@@ -56735,7 +56867,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/routes/sitemap[.]xml.ts": "5c8fa673 generated",
   "src/routes/welcome/index.tsx": "152dd8b1 generated",
   "src/start.ts": "6b874d2d kit",
-  "src/styles.css": "4fb2262f kit",
+  "src/styles.css": "706d757b kit",
   "src/theme.css": "2c20fc19 generated",
   "tests/smoke.spec.ts": "dadec54d generated",
   "tsconfig.json": "802b1b64 kit",
@@ -65965,7 +66097,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/generated/uploads.ts": "a35206c8 generated",
   "src/generated/users.server.ts": "875974ba generated",
   "src/generated/users.test.ts": "7acaec15 generated",
-  "src/kit/ActionButton.tsx": "8b94caea kit",
+  "src/kit/ActionButton.tsx": "44a85b61 kit",
   "src/kit/ActivityLog.tsx": "e53a5289 kit",
   "src/kit/AiMark.tsx": "0cd20527 kit",
   "src/kit/AppCard.tsx": "76e8455d kit",
@@ -65981,7 +66113,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/InlineRows.tsx": "b2c801d6 kit",
   "src/kit/Landing.tsx": "a528f50e kit",
   "src/kit/Live.tsx": "fbaa47cd kit",
-  "src/kit/ModelForm.tsx": "9251188a kit",
+  "src/kit/ModelForm.tsx": "abaf70be kit",
   "src/kit/ModelTable.tsx": "a8ae6290 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/OrderPage.tsx": "d4a74208 kit",
@@ -66021,7 +66153,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/model.ts": "a10b6641 kit",
   "src/kit/now.ts": "5ea87828 kit",
   "src/kit/origin.ts": "f7090ee4 kit",
-  "src/kit/outgoing.server.ts": "430e2aa2 kit",
+  "src/kit/outgoing.server.ts": "8e8824f3 kit",
   "src/kit/outgoing.ts": "e1f82237 kit",
   "src/kit/page-guard.ts": "d8974971 kit",
   "src/kit/params.ts": "65a69da0 kit",
@@ -66030,7 +66162,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/push-crypto.server.ts": "5d88f4a0 kit",
   "src/kit/push.server.ts": "38f4b235 kit",
   "src/kit/receipts.server.ts": "23b63f60 kit",
-  "src/kit/refusal.ts": "4f4712a9 kit",
+  "src/kit/refusal.ts": "644706e8 kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "b6f52acc kit",
   "src/kit/sequence.server.ts": "89a0dd0d kit",
@@ -66041,7 +66173,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/uploads.ts": "1218e9e3 kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "e0a37738 kit",
+  "src/kit/words/en.ts": "6dbf205a kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "5a8d99b1 generated",
@@ -66076,7 +66208,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/routes/team/index.tsx": "d0aa5bca generated",
   "src/routes/where/index.tsx": "55545172 generated",
   "src/start.ts": "6b874d2d kit",
-  "src/styles.css": "4fb2262f kit",
+  "src/styles.css": "706d757b kit",
   "src/theme.css": "2c20fc19 generated",
   "tests/smoke.spec.ts": "7a8dce6a generated",
   "tsconfig.json": "802b1b64 kit",
@@ -71385,7 +71517,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/generated/roles.ts": "d284ad2a generated",
   "src/generated/site.ts": "4c4ce201 generated",
   "src/generated/uploads.ts": "ca55296a generated",
-  "src/kit/ActionButton.tsx": "8b94caea kit",
+  "src/kit/ActionButton.tsx": "44a85b61 kit",
   "src/kit/ActivityLog.tsx": "e53a5289 kit",
   "src/kit/AiMark.tsx": "0cd20527 kit",
   "src/kit/AppCard.tsx": "76e8455d kit",
@@ -71403,7 +71535,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/InlineRows.tsx": "b2c801d6 kit",
   "src/kit/Inspector.tsx": "2425cac5 kit",
   "src/kit/Landing.tsx": "a528f50e kit",
-  "src/kit/ModelForm.tsx": "9251188a kit",
+  "src/kit/ModelForm.tsx": "abaf70be kit",
   "src/kit/ModelTable.tsx": "a8ae6290 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "fb5e87dc kit",
@@ -71448,7 +71580,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/people-match.ts": "09a0f7dc kit",
   "src/kit/person-time.server.ts": "5d9e216d kit",
   "src/kit/receipts.server.ts": "23b63f60 kit",
-  "src/kit/refusal.ts": "4f4712a9 kit",
+  "src/kit/refusal.ts": "644706e8 kit",
   "src/kit/review-mail.server.ts": "653c32e5 kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "b6f52acc kit",
@@ -71462,7 +71594,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "e0a37738 kit",
+  "src/kit/words/en.ts": "6dbf205a kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "074b32c0 generated",
@@ -71496,7 +71628,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/routes/sitemap[.]xml.ts": "abb491ed generated",
   "src/routes/welcome/index.tsx": "a572d932 generated",
   "src/start.ts": "6b874d2d kit",
-  "src/styles.css": "4fb2262f kit",
+  "src/styles.css": "706d757b kit",
   "src/theme.css": "2c20fc19 generated",
   "tests/smoke.spec.ts": "dcf4060e generated",
   "tsconfig.json": "802b1b64 kit",
@@ -75475,7 +75607,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/generated/pages.ts": "e4262913 generated",
   "src/generated/roles.ts": "d284ad2a generated",
   "src/generated/site.ts": "307674d6 generated",
-  "src/kit/ActionButton.tsx": "8b94caea kit",
+  "src/kit/ActionButton.tsx": "44a85b61 kit",
   "src/kit/ActivityLog.tsx": "e53a5289 kit",
   "src/kit/AiMark.tsx": "0cd20527 kit",
   "src/kit/AppCard.tsx": "76e8455d kit",
@@ -75491,7 +75623,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/InlineRows.tsx": "b2c801d6 kit",
   "src/kit/Inspector.tsx": "2425cac5 kit",
   "src/kit/Landing.tsx": "a528f50e kit",
-  "src/kit/ModelForm.tsx": "9251188a kit",
+  "src/kit/ModelForm.tsx": "abaf70be kit",
   "src/kit/ModelTable.tsx": "a8ae6290 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "fb5e87dc kit",
@@ -75533,7 +75665,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/params.ts": "65a69da0 kit",
   "src/kit/people-match.ts": "09a0f7dc kit",
   "src/kit/person-time.server.ts": "5d9e216d kit",
-  "src/kit/refusal.ts": "4f4712a9 kit",
+  "src/kit/refusal.ts": "644706e8 kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "b6f52acc kit",
   "src/kit/speech.test.ts": "19252a6e kit",
@@ -75545,7 +75677,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "e0a37738 kit",
+  "src/kit/words/en.ts": "6dbf205a kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "79f9bae2 generated",
@@ -75568,7 +75700,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/routes/sign-in.tsx": "563d1820 generated",
   "src/routes/sitemap[.]xml.ts": "8c1882fb generated",
   "src/start.ts": "6b874d2d kit",
-  "src/styles.css": "4fb2262f kit",
+  "src/styles.css": "706d757b kit",
   "src/theme.css": "2c20fc19 generated",
   "tests/smoke.spec.ts": "b04668e0 generated",
   "tsconfig.json": "802b1b64 kit",
@@ -89949,7 +90081,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/generated/site.ts": "4365ed76 generated",
   "src/generated/users.server.ts": "82848c13 generated",
   "src/generated/users.test.ts": "253c266e generated",
-  "src/kit/ActionButton.tsx": "8b94caea kit",
+  "src/kit/ActionButton.tsx": "44a85b61 kit",
   "src/kit/ActivityLog.tsx": "e53a5289 kit",
   "src/kit/AiMark.tsx": "0cd20527 kit",
   "src/kit/AppCard.tsx": "76e8455d kit",
@@ -89970,7 +90102,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/Landing.tsx": "a528f50e kit",
   "src/kit/Markdown.tsx": "24e2fcd2 kit",
   "src/kit/MarkdownFormatted.tsx": "300ef9a1 kit",
-  "src/kit/ModelForm.tsx": "9251188a kit",
+  "src/kit/ModelForm.tsx": "abaf70be kit",
   "src/kit/ModelTable.tsx": "a8ae6290 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "fb5e87dc kit",
@@ -90016,7 +90148,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/params.ts": "65a69da0 kit",
   "src/kit/people-match.ts": "09a0f7dc kit",
   "src/kit/person-time.server.ts": "5d9e216d kit",
-  "src/kit/refusal.ts": "4f4712a9 kit",
+  "src/kit/refusal.ts": "644706e8 kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "b6f52acc kit",
   "src/kit/speech.test.ts": "19252a6e kit",
@@ -90028,7 +90160,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "e0a37738 kit",
+  "src/kit/words/en.ts": "6dbf205a kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "5849713f generated",
@@ -90077,7 +90209,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/routes/updates/index.tsx": "11c7f442 generated",
   "src/routes/updates/new.tsx": "ac78941b generated",
   "src/start.ts": "6b874d2d kit",
-  "src/styles.css": "4fb2262f kit",
+  "src/styles.css": "706d757b kit",
   "src/theme.css": "2c20fc19 generated",
   "tests/smoke.spec.ts": "5de3170c generated",
   "tsconfig.json": "802b1b64 kit",
@@ -98018,7 +98150,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/generated/users.server.ts": "a6b70aa0 generated",
   "src/generated/users.test.ts": "5cb4d084 generated",
   "src/generated/users.ts": "f77bb99b generated",
-  "src/kit/ActionButton.tsx": "8b94caea kit",
+  "src/kit/ActionButton.tsx": "44a85b61 kit",
   "src/kit/ActivityLog.tsx": "e53a5289 kit",
   "src/kit/AiMark.tsx": "0cd20527 kit",
   "src/kit/AppCard.tsx": "76e8455d kit",
@@ -98035,7 +98167,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/InlineRows.tsx": "b2c801d6 kit",
   "src/kit/Inspector.tsx": "2425cac5 kit",
   "src/kit/Live.tsx": "fbaa47cd kit",
-  "src/kit/ModelForm.tsx": "9251188a kit",
+  "src/kit/ModelForm.tsx": "abaf70be kit",
   "src/kit/ModelTable.tsx": "a8ae6290 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "fb5e87dc kit",
@@ -98077,14 +98209,14 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/model.ts": "a10b6641 kit",
   "src/kit/now.ts": "5ea87828 kit",
   "src/kit/origin.ts": "f7090ee4 kit",
-  "src/kit/outgoing.server.ts": "430e2aa2 kit",
+  "src/kit/outgoing.server.ts": "8e8824f3 kit",
   "src/kit/outgoing.ts": "e1f82237 kit",
   "src/kit/page-guard.ts": "d8974971 kit",
   "src/kit/params.ts": "65a69da0 kit",
   "src/kit/people-match.ts": "09a0f7dc kit",
   "src/kit/person-time.server.ts": "5d9e216d kit",
   "src/kit/receipts.server.ts": "23b63f60 kit",
-  "src/kit/refusal.ts": "4f4712a9 kit",
+  "src/kit/refusal.ts": "644706e8 kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "b6f52acc kit",
   "src/kit/speech.test.ts": "19252a6e kit",
@@ -98098,7 +98230,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "e0a37738 kit",
+  "src/kit/words/en.ts": "6dbf205a kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "c686a476 generated",
@@ -98127,7 +98259,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/routes/team/activity.tsx": "468cb15a generated",
   "src/routes/team/index.tsx": "b9305ec9 generated",
   "src/start.ts": "6b874d2d kit",
-  "src/styles.css": "4fb2262f kit",
+  "src/styles.css": "706d757b kit",
   "src/theme.css": "2c20fc19 generated",
   "tests/smoke.spec.ts": "ed46d289 generated",
   "tsconfig.json": "802b1b64 kit",

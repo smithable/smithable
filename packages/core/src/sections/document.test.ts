@@ -1,4 +1,5 @@
 import { expect, test } from "vitest";
+import { applyOperation } from "../apply.js";
 import { validateSpec } from "../spec.js";
 
 const files = import.meta.glob("../../../../examples/invoicing/smithable.yml", {
@@ -6,7 +7,8 @@ const files = import.meta.glob("../../../../examples/invoicing/smithable.yml", {
   import: "default",
   eager: true,
 }) as Record<string, string>;
-const spec = Object.values(files)[0] as string;
+// The starter without its own document, so each test gives the page the one it reads.
+const spec = (Object.values(files)[0] as string).replace(/^ {4}document:\n(?: {6}.*\n)+/m, "");
 const crud = "    crud: Invoice\n";
 if (!spec.includes(crud)) throw new Error("the invoicing starter changed");
 
@@ -108,4 +110,64 @@ test("from needs a settings page, a document belongs to a crud page, and a model
   expect(
     validateSpec({ path: "smithable.yml", text: onSettings }).diagnostics.map((d) => d.message),
   ).toContain(`"document" belongs to a crud page.`);
+});
+
+test("a document follows renamed fields, loses removed ones, and keeps the record's own show", () => {
+  const project = { spec: Object.values(files)[0] as string };
+  const document = (spec: string) =>
+    validateSpec({ path: "smithable.yml", text: spec }).ir?.pages.find((p) => p.id === "invoices")
+      ?.document;
+  const apply = (name: string, args: Record<string, string>) => {
+    const result = applyOperation(project, name, args);
+    if (!result.ok) throw new Error(result.message);
+    return document(result.files.spec);
+  };
+  expect(
+    apply("renameField", { model: "InvoiceLine", from: "amount", to: "lineTotal" })?.lines,
+  ).toEqual({ list: "lines", show: ["description", "quantity", "unitPrice", "lineTotal"] });
+  expect(apply("renameField", { model: "Invoice", from: "client", to: "customer" })?.to).toEqual({
+    ref: "customer",
+    show: ["name", "address", "vatNumber"],
+  });
+  expect(
+    apply("renameField", { model: "BusinessProfile", from: "iban", to: "account" })?.from,
+  ).toEqual(["businessName", "vatNumber", "account"]);
+  expect(apply("removeField", { model: "Invoice", field: "number" })?.show).toEqual([
+    "issuedOn",
+    "dueOn",
+  ]);
+  // A block whose reference or list goes, goes with it; so does a list left empty.
+  const issuer = project.spec
+    .replace("      client: Client!\n", "      client: Client!\n      issuer: BusinessProfile\n")
+    .replace(
+      "to: { ref: client, show: [name, address, vatNumber] }",
+      "to: { ref: issuer, show: [businessName] }",
+    );
+  const unsent = applyOperation({ spec: issuer }, "removeField", {
+    model: "Invoice",
+    field: "issuer",
+  });
+  if (!unsent.ok) throw new Error(unsent.message);
+  expect(document(unsent.files.spec)?.to).toBeUndefined();
+  const onlyIban = applyOperation(
+    { spec: project.spec.replace("from: [businessName, vatNumber, iban]", "from: [iban]") },
+    "removeField",
+    { model: "BusinessProfile", field: "iban" },
+  );
+  if (!onlyIban.ok) throw new Error(onlyIban.message);
+  expect(document(onlyIban.files.spec)?.from).toBeUndefined();
+  const shown = applyOperation(
+    {
+      spec: project.spec.replace(
+        "      show: [number, issuedOn, dueOn]\n",
+        "      show: [number]\n",
+      ),
+    },
+    "removeField",
+    { model: "Invoice", field: "number" },
+  );
+  expect(shown).toMatchObject({
+    ok: false,
+    message: expect.stringContaining("document shows only Invoice.number"),
+  });
 });

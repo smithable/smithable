@@ -379,3 +379,22 @@
     padding-inline-end: max(var(--card-padding), 8rem);
   }
 }
+
+/* A record as a document (record-documents.md §4.2): printed alone, on the printer's paper (A4
+   or Letter), without the app's menus and its own button; a page breaks between rows only. */
+@media print {
+  @page {
+    margin: 15mm;
+  }
+  body:has([data-kit="document"]) :is(header, nav, aside, footer):not([data-kit="document"] *),
+  [data-kit="document"] [data-print="hide"] {
+    display: none !important;
+  }
+  [data-kit="document"] {
+    max-width: none;
+    padding: 0;
+  }
+  [data-kit="document"] tr {
+    break-inside: avoid;
+  }
+}

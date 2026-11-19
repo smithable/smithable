@@ -859,6 +859,15 @@ export const w = {
   mergeStayed: (n: number) =>
     `${n} ${n === 1 ? "sak har" : "saker har"} ändrats sedan sammanslagningen, eller får inte ändras av dig, och blir som de är.`,
   /** Appkortet (kit AppCard, docs/design/app-card.md), för administratörerna. */
+  document: {
+    print: "Skriv ut eller spara som PDF",
+    open: "Skriv ut",
+    from: "Från",
+    to: "Till",
+    refused: "Du får inte läsa allt i det här dokumentet, så det kan inte skrivas ut.",
+    missing: (label: string) => `${label} har inget värde ännu, så dokumentet kan inte skrivas ut.`,
+    settings: "Fyll i dina företagsuppgifter först",
+  },
   card: {
     list: (items: string[], or = false) =>
       items.length < 2

@@ -42,6 +42,7 @@ import { capitalize, kebab, plural } from "./naming.js";
 import type { AnyOperation, Effect, Note, Refusal } from "./operation.js";
 import { titleField } from "./samples.js";
 import type { JsonSchema } from "./section.js";
+import { followDocument } from "./sections/document.js";
 import { checkFilterFields } from "./sections/list-keys.js";
 import { checkModelFormulas, readField } from "./sections/models.js";
 import { COMPONENT_PATTERN, FIELD_NAME_PATTERN } from "./sections/names.js";
@@ -232,6 +233,11 @@ const crud: PagePattern<"crud"> = {
       ];
       if (!kept.length) spec.removeAndPrune(path, 3);
       else spec.set(path, kept.length > 1 ? kept : (kept[0] as string));
+    }
+    // The record's document follows the fields its blocks name (record-documents.md §4.1).
+    if (f && ir) {
+      const refused = followDocument(spec, page, f, ir);
+      if (refused) return refused;
     }
     // The contact block's user field follows a rename; when the field goes, it mails the owner.
     if (f && page.pattern.model === f.model && page.contact && page.contact.to === f.from) {

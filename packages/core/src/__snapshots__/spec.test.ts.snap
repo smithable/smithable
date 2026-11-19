@@ -3016,6 +3016,38 @@ exports[`valid specs > ../../../examples/invoicing/smithable.yml 1`] = `
         "markSent",
         "markPaid",
       ],
+      "document": {
+        "from": [
+          "businessName",
+          "vatNumber",
+          "iban",
+        ],
+        "lines": {
+          "list": "lines",
+          "show": [
+            "description",
+            "quantity",
+            "unitPrice",
+            "amount",
+          ],
+        },
+        "show": [
+          "number",
+          "issuedOn",
+          "dueOn",
+        ],
+        "to": {
+          "ref": "client",
+          "show": [
+            "name",
+            "address",
+            "vatNumber",
+          ],
+        },
+        "totals": [
+          "total",
+        ],
+      },
       "filters": [
         "client",
         "status",

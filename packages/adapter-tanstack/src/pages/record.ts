@@ -525,7 +525,9 @@ export function detailRoute(
       !threadFor(a.list)?.replies &&
       ux.pages[page.id]?.lists?.[a.list.name] !== "inline",
   );
-  if (links)
+  // A record with a document links to it (record-documents.md §4.2).
+  const document = Boolean(page.document && !within);
+  if (links || document)
     imports.set("#/components/ui/button", [
       ...(imports.get("#/components/ui/button") ?? []),
       "buttonVariants",
@@ -776,8 +778,16 @@ export function detailRoute(
     ...(favorite
       ? [`<SaveButton saved={saved} label={String(${heading})} onToggle={toggleSaved} />`]
       : []),
+    // The record as a document (record-documents.md §4.2), printed from its own page.
+    ...(document
+      ? [
+          `<Link to=${JSON.stringify(join(page.route, "$id/document"))} params={{ id: String(row.id) }} className={buttonVariants({ variant: "outline" })}>
+              {w.document.open}
+            </Link>`,
+        ]
+      : []),
   ];
-  return `${HEADER}import { createFileRoute, ${links ? "Link, " : ""}notFound, useNavigate${router ? ", useRouter" : ""} } from "@tanstack/react-router";
+  return `${HEADER}import { createFileRoute, ${links || document ? "Link, " : ""}notFound, useNavigate${router ? ", useRouter" : ""} } from "@tanstack/react-router";
 ${
   // The contact block imports some of the same: each name once.
   history

@@ -74,6 +74,9 @@ exports[`every kit component's hooks, as they are 1`] = `
     "data-kit="dashboard"",
     "data-part="quiet"",
   ],
+  "src/kit/Document.tsx": [
+    "data-kit="document"",
+  ],
   "src/kit/FakeCheckout.tsx": [
     "data-kit="fake-checkout"",
   ],

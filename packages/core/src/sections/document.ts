@@ -10,6 +10,7 @@ import {
   readNameList,
   readString,
 } from "../context.js";
+import type { YamlEditor } from "../edit.js";
 import type { Expr } from "../formula.js";
 import {
   type DocumentIR,
@@ -19,6 +20,7 @@ import {
   type PageIR,
   type SpecIR,
 } from "../ir.js";
+import type { Refusal } from "../operation.js";
 import { sensitiveKind } from "../sensitive.js";
 import { didYouMean } from "../suggest.js";
 
@@ -353,4 +355,62 @@ export function checkDocuments(
       );
     else byModel.set(page.pattern.model, page.id);
   }
+}
+
+/**
+ * A document follows a renamed field and loses a removed one: a block left with no fields goes,
+ * and so do `to` and `lines` when their reference or list goes, and `note` with its field. The
+ * record's own fields cannot all go: that is refused, so the document is not lost unasked.
+ */
+export function followDocument(
+  spec: YamlEditor,
+  page: PageIR,
+  f: { model: string; from: string; to?: string },
+  ir: SpecIR,
+): Refusal | undefined {
+  const doc = page.document;
+  if (!doc || page.pattern.kind !== "crud") return undefined;
+  const own = page.pattern.model;
+  const base = ["pages", page.id, "document"];
+  if (f.model === own && !f.to && doc.show.length === 1 && doc.show[0] === f.from)
+    return {
+      refusal: `The ${page.id} page's document shows only ${own}.${f.from}; give its "show" another field first, or remove the document.`,
+    };
+  const model = ir.models.find((m) => m.name === own);
+  const target = (name: string) => {
+    const type = model?.fields.find((x) => x.name === name)?.type;
+    return type?.kind === "relation" ? type.model : undefined;
+  };
+  const settings = ir.pages.find((p) => p.pattern.kind === "settings")?.pattern;
+  const lists: [string[], string | undefined, string[] | undefined][] = [
+    [["show"], own, doc.show],
+    [["totals"], own, doc.totals],
+    [["from"], settings?.kind === "settings" ? settings.model : undefined, doc.from],
+    [["to", "show"], doc.to && target(doc.to.ref), doc.to?.show],
+    [["lines", "show"], doc.lines && target(doc.lines.list), doc.lines?.show],
+  ];
+  for (const [path, of, names] of lists) {
+    if (of !== f.model || !names?.includes(f.from)) continue;
+    const next = f.to
+      ? names.map((n) => (n === f.from ? (f.to as string) : n))
+      : names.filter((n) => n !== f.from);
+    // An emptied `to` or `lines` goes whole; an emptied list of the record's goes alone.
+    if (next.length) spec.set([...base, ...path], next);
+    else spec.removeAndPrune([...base, ...(path.length > 1 ? path.slice(0, 1) : path)], 3);
+  }
+  if (f.model !== own) return undefined;
+  for (const [key, name] of [
+    ["to", doc.to?.ref],
+    ["lines", doc.lines?.list],
+  ] as const) {
+    if (name !== f.from) continue;
+    const path = [...base, key, key === "to" ? "ref" : "list"];
+    if (f.to) spec.set(path, f.to);
+    else spec.removeAndPrune([...base, key], 3);
+  }
+  if (doc.note === f.from) {
+    if (f.to) spec.set([...base, "note"], f.to);
+    else spec.removeAndPrune([...base, "note"], 3);
+  }
+  return undefined;
 }
