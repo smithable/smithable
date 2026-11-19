@@ -20,7 +20,10 @@ export type PreviewMessage =
       part: "field" | "column" | "value" | null;
       page: string | null;
       columns: string[] | null;
+      label?: string;
+      anchor?: { left: number; right: number; top: number; bottom: number };
     }
+  | { type: "selection-cleared" }
   | { type: "columns"; page: string; columns: string[] }
   /** A text changed in place; `path` is its place in smithable.content.yml, dot-separated. */
   | { type: "text"; path: string; text: string }
@@ -54,6 +57,10 @@ export function setPreview(window: Window | null, url: string) {
   previewOrigin = new URL(url, location.href).origin;
 }
 export const previewTarget = () => previewOrigin || "*";
+
+export function clearPreviewSelection() {
+  previewWindow?.postMessage({ type: "smithable:clear-selection" }, previewTarget());
+}
 
 let followContext = 0;
 export const previewFollowContext = () => followContext;

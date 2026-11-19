@@ -23,6 +23,7 @@ import wordmark from "./brand/wordmark.svg";
 import wordmarkDark from "./brand/wordmark-dark.svg";
 import { Ask, type AudioActivity, usePresentation } from "./builder/Ask";
 import { NoCode, OPEN_PART, type OpenPart } from "./builder/NoCode";
+import { SelectedButton, selectedButton } from "./builder/SelectedButton";
 import { SmithFace } from "./builder/SmithFace";
 import { SummaryTab } from "./builder/SummaryTab";
 import { Visualize } from "./builder/Visualize";
@@ -40,7 +41,14 @@ import { OLD_TAB, OldVersion, type OpenOld, openOldTab } from "./OldVersion";
 import { OutboxDialog } from "./Outbox";
 import { PeoplePanel } from "./People";
 import { usePan } from "./pan";
-import { isPreviewMessage, type Place, touched, touchesPage } from "./preview";
+import {
+  clearPreviewSelection,
+  isPreviewMessage,
+  type Place,
+  type Selection,
+  touched,
+  touchesPage,
+} from "./preview";
 import { PublishConfirmation, ReleaseReview, useReleaseReview } from "./ReleaseReview";
 import { ReportDialog } from "./Report";
 import { plainRefusal } from "./refusal";
@@ -280,6 +288,37 @@ export function App() {
   const [busy, setBusy] = useState(false);
   // The preview's Select, and where the person was in each window (kept for the tab's session).
   const [selecting, setSelecting] = useState(false);
+  const [shiftSelect, setShiftSelect] = useState(false);
+  const [selectedPart, setSelectedPart] = useState<Selection>();
+  const [selectionHost, setSelectionHost] = useState<HTMLDivElement | null>(null);
+  const clearSelection = useCallback(() => {
+    setSelectedPart(undefined);
+    setSelecting(false);
+    clearPreviewSelection();
+  }, []);
+  useEffect(() => {
+    const keydown = (event: KeyboardEvent) => {
+      if (
+        event.target instanceof Element &&
+        event.target.closest("input, textarea, select, [contenteditable=true], [role=textbox]")
+      )
+        return;
+      if (event.key === "Shift") setShiftSelect(true);
+      if (event.key === "Escape" && (selecting || selectedPart)) clearSelection();
+    };
+    const keyup = (event: KeyboardEvent) => {
+      if (event.key === "Shift") setShiftSelect(false);
+    };
+    const blur = () => setShiftSelect(false);
+    window.addEventListener("keydown", keydown);
+    window.addEventListener("keyup", keyup);
+    window.addEventListener("blur", blur);
+    return () => {
+      window.removeEventListener("keydown", keydown);
+      window.removeEventListener("keyup", keyup);
+      window.removeEventListener("blur", blur);
+    };
+  }, [clearSelection, selectedPart, selecting]);
   const [place, setPlace] = useState<Place>(() => {
     try {
       const kept = JSON.parse(sessionStorage.getItem("smithable:place") ?? "") as Place;
@@ -658,6 +697,23 @@ export function App() {
   }, [refresh, noticed]);
 
   const spec = useSpec(project);
+  const selectingCode = slotOf("code") !== undefined && slotOf("nocode") === undefined;
+  useEffect(() => {
+    const receiveSelection = (event: MessageEvent) => {
+      if (!isPreviewMessage(event)) return;
+      if (event.data.type === "selection-cleared") clearSelection();
+      if (event.data.type === "ready") setSelectedPart(undefined);
+      if (
+        !selectingCode &&
+        event.data.type === "select" &&
+        typeof event.data.concept === "string" &&
+        /^(action|field|model|page|text):[\w.-]+$/.test(event.data.concept)
+      )
+        setSelectedPart(event.data);
+    };
+    window.addEventListener("message", receiveSelection);
+    return () => window.removeEventListener("message", receiveSelection);
+  }, [clearSelection, selectingCode]);
   const lookApp = project?.localDir ?? project?.name ?? "";
   const initialLook = Boolean(
     project &&
@@ -1143,10 +1199,36 @@ export function App() {
     }
   };
   if (!project) return <p className="p-6 text-sm text-quiet">Opening the project…</p>;
+  const button = selectedButton(selectedPart, spec);
+  const selectionAnchor = selectedPart?.anchor;
+  const previewFrame = () =>
+    previewBox?.querySelector<HTMLIFrameElement>('iframe[title="App preview"]');
+  const selectionFrame = selectionAnchor && previewFrame()?.getBoundingClientRect();
+  const selectionPosition =
+    selectionAnchor &&
+    selectionFrame &&
+    [selectionAnchor.left, selectionAnchor.right, selectionAnchor.top].every(Number.isFinite)
+      ? {
+          left: Math.max(
+            12,
+            Math.min(window.innerWidth - 344, selectionFrame.left + selectionAnchor.right + 12),
+          ),
+          top: Math.max(
+            64,
+            Math.min(window.innerHeight - 260, selectionFrame.top + selectionAnchor.top),
+          ),
+        }
+      : { right: 12, top: 64 };
   // Smith's thread, wherever it is: on the overlay, in the floating panel, or in a window.
   const layerOn = !project.making && (overlaid || floating);
   const smith = (stage: "overlay" | "panel" | "window") => (
     <div data-guide="change" className="flex h-full min-h-0 flex-col">
+      {smithVisible && stage !== "overlay" && button && (
+        <div
+          ref={setSelectionHost}
+          className="max-h-[50vh] shrink-0 overflow-auto border-b border-line"
+        />
+      )}
       <Ask
         {...(project.ai ? { ai: project.ai } : {})}
         {...(project.aiEu ? { aiEu: true } : {})}
@@ -1166,6 +1248,7 @@ export function App() {
         {...(project.beta ? { beta: project.beta } : {})}
         words={words}
         waiting={project.waiting}
+        selection={selectedPart?.concept}
         trace={project.trace}
         onShowChanges={showChanges}
         onFeedback={setFeedback}
@@ -1428,7 +1511,11 @@ export function App() {
                   pressed={selecting}
                   onClick={() => {
                     openPreviewWindow();
-                    setSelecting(!selecting);
+                    if (selecting) clearSelection();
+                    else {
+                      setSelecting(true);
+                      requestAnimationFrame(() => previewFrame()?.focus());
+                    }
                   }}
                 >
                   <path d="M11 20H4V4h16v7M12 11l8 4-4 1-1 4-3-9Z" />
@@ -1923,8 +2010,8 @@ export function App() {
                     url={project.preview}
                     version={version}
                     updating={updating || busy}
-                    selecting={selecting}
-                    inCode={slotOf("code") !== undefined && slotOf("nocode") === undefined}
+                    selecting={selecting || shiftSelect}
+                    inCode={selectingCode}
                     addressHost={addressHost}
                     onShowPage={openPreviewWindow}
                     highlight={highlight}
@@ -2285,6 +2372,16 @@ export function App() {
           progress={releaseStep ? releaseProgress(releaseStep).line : undefined}
           onConfirm={() => void checkPublish(releaseView)}
           onClose={closeRelease}
+        />
+      )}
+      {button && (
+        <SelectedButton
+          key={selectedPart?.concept}
+          button={button}
+          run={run}
+          close={clearSelection}
+          host={smithVisible && !overlaid ? selectionHost : undefined}
+          position={narrow ? undefined : selectionPosition}
         />
       )}
     </div>
