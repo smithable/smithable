@@ -96,7 +96,9 @@ test("from needs a settings page, a document belongs to a crud page, and a model
   );
   const twice = withDocument("    document: { show: [number] }\n")
     .split("  clients:\n")
-    .join("  bills:\n    crud: Invoice\n    route: /bills\n    document: { show: [number] }\n  clients:\n");
+    .join(
+      "  bills:\n    crud: Invoice\n    route: /bills\n    document: { show: [number] }\n  clients:\n",
+    );
   expect(
     validateSpec({ path: "smithable.yml", text: twice }).diagnostics.map((d) => d.message),
   ).toContain(`Pages "invoices" and "bills" both give Invoice a document; a model has one.`);

@@ -21,13 +21,13 @@ import { capitalize, kebab } from "../naming.js";
 import { PAGE_PATTERNS, PATTERN_KINDS, patternInfo, readSections } from "../patterns.js";
 import type { SpecSection } from "../section.js";
 import { didYouMean } from "../suggest.js";
+import { checkDocuments, documentSchema, type PendingFrom, readDocument } from "./document.js";
 import {
   checkDefaultFilter,
   checkFilterFields,
   checkSortableFields,
   readDashboardPeriod,
 } from "./list-keys.js";
-import { checkDocuments, documentSchema, type PendingFrom, readDocument } from "./document.js";
 import { NAME_PATTERN, nameRule } from "./names.js";
 import { pageOperations } from "./page-operations.js";
 import { readSemanticText, TEXT_KEYS } from "./text.js";

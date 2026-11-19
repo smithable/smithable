@@ -188,16 +188,16 @@ export function readDocument(
     content: ["title", "heading"],
   });
   const byKey = new Map(known.map((e) => [e.key, e]));
-  const list = (key: string, value: At, of: ModelIR, what: string) =>
+  const list = (value: At, of: ModelIR, what: string) =>
     checkFields(ctx, readNameList(ctx, value, what), of, models, what);
   const doc: DocumentIR = { show: [] };
   const show = byKey.get("show");
   if (!show)
     ctx.error(keyNode, "missing-key", `${where} needs "show": the record's fields it prints.`);
-  else doc.show = list("show", show.value, model, `"show" of ${where}`);
+  else doc.show = list(show.value, model, `"show" of ${where}`);
   const totals = byKey.get("totals");
   if (totals) {
-    const names = list("totals", totals.value, model, `"totals" of ${where}`);
+    const names = list(totals.value, model, `"totals" of ${where}`);
     if (names.length) doc.totals = names;
   }
   const note = byKey.get("note");
@@ -243,7 +243,7 @@ export function readDocument(
         `${what} names "${ref}", which is no reference of ${model.name} to one record.`,
       );
     else if (ref !== undefined && target) {
-      const names = list("to", parts.get("show")?.value ?? null, target, `"show" of ${what}`);
+      const names = list(parts.get("show")?.value ?? null, target, `"show" of ${what}`);
       if (names.length) doc.to = { ref, show: names };
     }
   }
@@ -275,7 +275,7 @@ export function readDocument(
         `${what} names "${name}", which is no list field of ${model.name}.`,
       );
     else if (name !== undefined && listed) {
-      const names = list("lines", parts.get("show")?.value ?? null, listed, `"show" of ${what}`);
+      const names = list(parts.get("show")?.value ?? null, listed, `"show" of ${what}`);
       if (names.length) doc.lines = { list: name, show: names };
     }
   }
