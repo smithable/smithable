@@ -1203,7 +1203,8 @@ export function App() {
     <SelectedButton key={selectedPart?.concept} button={button} run={run} close={clearSelection} />
   );
   const selectionAnchor = selectedPart?.anchor;
-  const previewFrame = () => previewBox?.querySelector('iframe[title="App preview"]');
+  const previewFrame = () =>
+    previewBox?.querySelector<HTMLIFrameElement>('iframe[title="App preview"]');
   const selectionFrame = selectionAnchor && previewFrame()?.getBoundingClientRect();
   const selectionPosition =
     selectionAnchor &&

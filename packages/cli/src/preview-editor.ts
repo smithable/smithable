@@ -95,8 +95,15 @@ if (typeof window !== "undefined" && window.parent !== window) {
     });
   };
   const paintSelect = () => {
-    document.documentElement.toggleAttribute("data-sm-selecting", Boolean(armed()));
+    const active = Boolean(armed());
+    document.documentElement.toggleAttribute("data-sm-selecting", active);
     clear("data-sm-hover");
+    hovered = null;
+    if (!active) dragged = null;
+    // Remove the attribute when disarming, even if the page has not hydrated yet.
+    document.querySelectorAll("[data-sm-part=column]").forEach((column) =>
+      active ? (column.draggable = true) : column.removeAttribute("draggable")
+    );
   };
   const clearSelection = () => {
     selected = null;
@@ -279,10 +286,6 @@ if (typeof window !== "undefined" && window.parent !== window) {
     code = Boolean(event.data.code);
     // Visible to people (a cursor) and to tests: the page is in select mode.
     paintSelect();
-    // Out of select mode the attribute goes, not false: the page may not have hydrated yet.
-    document
-      .querySelectorAll("[data-sm-part=column]")
-      .forEach((th) => (selecting ? (th.draggable = true) : th.removeAttribute("draggable")));
   });
   document.addEventListener("mouseover", (event) => {
     if (designOnly() || !armed(event)) return;
@@ -346,7 +349,7 @@ if (typeof window !== "undefined" && window.parent !== window) {
   document.addEventListener("dragstart", (event) => {
     if (designOnly()) return;
     const marked = markedAt(event.target);
-    if (selecting && marked?.dataset.smPart === "column") dragged = marked;
+    if (armed(event) && marked?.dataset.smPart === "column") dragged = marked;
   });
   document.addEventListener("dragover", (event) => {
     if (designOnly()) return;
@@ -383,7 +386,7 @@ if (typeof window !== "undefined" && window.parent !== window) {
       post({ type: "undo" });
     }
     // A selected column moves with Alt+Left and Alt+Right: the drag's keyboard way (A 231).
-    const chosen = !designOnly() && selecting ? document.querySelector("[data-sm-selected][data-sm-part=column]") : null;
+    const chosen = !designOnly() && armed(event) && selected?.dataset.smPart === "column" ? selected : null;
     if (chosen && event.altKey && (event.key === "ArrowLeft" || event.key === "ArrowRight") && !typing) {
       const headers = [...(chosen.closest("tr")?.querySelectorAll("[data-sm-part=column]") ?? [])];
       const at = headers.indexOf(chosen);
