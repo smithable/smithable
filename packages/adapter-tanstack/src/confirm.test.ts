@@ -56,6 +56,16 @@ test("the question reads what its text names as the viewer, and checks the mail'
   expect(list).toContain("confirm: true,");
 });
 
+test("another mail that may go keeps the question from saying it reaches nobody", () => {
+  const spec = at("smithable.yml").replace(
+    "    recipient: client.email\n",
+    "    recipient: client.email\n  invoiceCopy:\n    when: markSent\n    to: mail\n    recipient: client.email\n    where: { status: draft }\n",
+  );
+  const { server } = files(spec);
+  expect(server).toContain("export async function questionMarkSent(");
+  expect(server).not.toContain("noRecipient: true };");
+});
+
 test("without a text it asks with the title only; without confirm there is no question", () => {
   const content = at("smithable.content.yml").replace(/\nactions:\n {2}markSent:\n.*\n/, "\n");
   const { server, page } = files(at("smithable.yml"), content);

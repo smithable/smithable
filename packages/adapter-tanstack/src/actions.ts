@@ -814,32 +814,39 @@ function withQuestion(module: string, action: StandardActionIR, ir: SpecIR, t: T
       `${JSON.stringify(path)}: shown(${names(other, t).ui}, ${JSON.stringify(dataKey(target))}, ${local(field)}),`,
     ];
   });
-  // The addresses a mail fired by this action goes to, on the record or one reference away. A
-  // mail with a where is left out: whether it goes is settled by the change itself.
-  const addresses = ir.outgoing.flatMap((o) =>
-    "action" in o.when &&
-    o.when.action === action.name &&
-    o.when.model === model.name &&
-    !o.where &&
-    o.recipient?.kind === "field"
-      ? [o.recipient.path]
-      : [],
+  // "Would reach nobody" is said only when every mail this action fires is known to: each goes
+  // to an address on the record or one reference away, with no where, and each of those is empty
+  // as the viewer reads the record (no reference, or a referenced record they may read without
+  // the address; one they may not read says nothing either way). Anything else is not known, and
+  // the question is asked as usual.
+  const mails = ir.outgoing.filter(
+    (o) => "action" in o.when && o.when.action === action.name && o.when.model === model.name,
   );
-  // Known to be empty as the viewer reads the record: no reference, or a referenced record they
-  // may read without the address. One they may not read says nothing either way.
-  const empty = addresses.flatMap(([first, second]) => {
+  const empty = mails.map((o) => {
+    if (o.where || o.recipient?.kind !== "field") return undefined;
+    const [first, second, more] = o.recipient.path;
     const field = model.fields.find((f) => f.name === first);
-    if (!field) return [];
-    if (second === undefined) return [`!row.${dataKey(field)}`];
-    if (field.type.kind !== "relation") return [];
+    if (!field || more !== undefined) return undefined;
+    if (second === undefined) return `!row.${dataKey(field)}`;
+    if (field.type.kind !== "relation") return undefined;
     const other = modelNamed(ir, field.type.model);
     const target = other.fields.find((f) => f.name === second);
-    if (!target) return [];
-    refs.set(field.name, { field, other });
-    return [
-      `(row.${dataKey(field)} == null || (${local(field)} !== null && !${local(field)}.${dataKey(target)}))`,
-    ];
+    if (!target) return undefined;
+    return {
+      field,
+      other,
+      test: `(row.${dataKey(field)} == null || (${local(field)} !== null && !${local(field)}.${dataKey(target)}))`,
+    };
   });
+  const sure = empty.filter((e) => e !== undefined);
+  const tests =
+    sure.length > 0 && sure.length === mails.length
+      ? sure.map((e) => {
+          if (typeof e === "string") return e;
+          refs.set(e.field.name, { field: e.field, other: e.other });
+          return e.test;
+        })
+      : [];
   const uis = new Map([[n.module, n.ui]]);
   for (const { other } of refs.values()) uis.set(names(other, t).module, names(other, t).ui);
   const datas = [...refs.values()]
@@ -860,7 +867,7 @@ function shown(ui: { fields: RecordFieldUi<never>[] }, name: string, row: unknow
 
 /**
  * What the "${action.name}" action asks before it runs (record-documents.md §6), on the
- * ${inert(n.label.toLowerCase())} as the viewer may read it now${empty.length ? "; or that the mail it sends would reach nobody" : ""}.
+ * ${inert(n.label.toLowerCase())} as the viewer may read it now${tests.length ? "; or that the mail it sends would reach nobody" : ""}.
  */
 export async function ${a.question}(
   viewer: Viewer | null,
@@ -871,7 +878,7 @@ export async function ${a.question}(
   check(${a.access}, viewer, ${ownerOf(model, n)});
   if (!${a.fits}(row, viewer)) throw new Error("This cannot be done now.");
 ${[...refs.values()].map(({ field, other }) => `  const ${local(field)} = row.${dataKey(field)} == null ? null : await ${names(other, t).data}.get(viewer, row.${dataKey(field)});\n`).join("")}${
-  empty.length ? `  if (${empty.join(" && ")}) return { noRecipient: true };\n` : ""
+  tests.length ? `  if (${tests.join(" && ")}) return { noRecipient: true };\n` : ""
 }  return {
     values: {
 ${entries.map((e) => `      ${e}`).join("\n")}
