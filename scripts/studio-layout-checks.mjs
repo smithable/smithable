@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { join } from "node:path";
+import { showWorkspaceControls, toolbarAction } from "./studio-form-checks.mjs";
 
 // Use CSS pixels: desktop display scaling reduces the available layout size.
 export async function checkStudioLayout(browser, base, pictures) {
@@ -23,8 +24,10 @@ export async function checkStudioLayout(browser, base, pictures) {
       );
       if (pictures)
         await page.screenshot({ path: join(pictures, `after-${viewport.width}-guide.png`) });
-      if (viewport.width < 1024)
+      if (viewport.width < 1024) {
+        await showWorkspaceControls(page);
         await page.getByRole("radio", { name: "Smith", exact: true }).check({ force: true });
+      }
       const input = page
         .getByRole("textbox", { name: "Describe a change, or ask a question" })
         .locator("visible=true");
@@ -162,7 +165,7 @@ export async function checkCompactLook(browser, base, pictures) {
   });
   try {
     await page.goto(`${base}/?guide=off`);
-    await page.getByRole("button", { name: "Look", exact: true }).click();
+    await (await toolbarAction(page, "Look")).click();
     await page.getByRole("button", { name: "More look settings", exact: true }).click();
     const dialog = page.getByRole("dialog", { name: "Look", exact: true });
     await dialog.getByRole("tab", { name: "Customise", exact: true }).click();

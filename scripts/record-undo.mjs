@@ -6,6 +6,7 @@
 // each moment starts with its caption, for the editing tool, to --out. The checks read the
 // database and the spec at each step, so a take where undo did not work stops.
 // Run after `pnpm build`: `node scripts/record-undo.mjs [--out <dir>] [--port 8412]`. Not part of `check`.
+
 import { spawn } from "node:child_process";
 import { copyFileSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -13,6 +14,7 @@ import { DatabaseSync } from "node:sqlite";
 import { parseArgs } from "node:util";
 import { chromium } from "playwright";
 import { cli, newApp, op } from "./dev-app.mjs";
+import { openPreviewAddress } from "./studio-form-checks.mjs";
 
 const { values: opts } = parseArgs({
   options: {
@@ -135,6 +137,7 @@ const go = async (path) => {
   await page
     .locator('section[aria-busy="true"]', { has: page.getByRole("heading", { name: "Preview" }) })
     .waitFor({ state: "detached", timeout: 60000 });
+  await openPreviewAddress(page);
   await page.getByLabel("Preview address").fill(path);
   await page.getByLabel("Preview address", { exact: true }).press("Enter");
 };

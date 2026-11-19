@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { join } from "node:path";
+import { toolbarAction } from "./studio-form-checks.mjs";
 
 /** A fresh app session redirects a protected preview before returning through the client router. */
 export async function checkStudioLookNavigation(browser, base, label = "Customers", pictures) {
@@ -11,7 +12,8 @@ export async function checkStudioLookNavigation(browser, base, label = "Customer
   const page = await context.newPage();
   try {
     await page.goto(`${base}/?guide=off`);
-    await page.getByRole("button", { name: "Look", exact: true }).waitFor();
+    const launch = await toolbarAction(page, "Look");
+    await launch.waitFor();
     // Finish the ordinary preview's initial load, then exercise a new app session in the editor.
     const main = await page.locator('iframe[title="App preview"]').elementHandle();
     const mainFrame = await main.contentFrame();
@@ -25,7 +27,7 @@ export async function checkStudioLookNavigation(browser, base, label = "Customer
       )
         redirected = true;
     });
-    await page.getByRole("button", { name: "Look", exact: true }).click();
+    await launch.click();
     // Look opens the first-look picker, which may reload the preview (signing it in again); the
     // session ends once it is open, so the editor's own frame is the one that meets sign-in.
     const more = page.getByRole("button", { name: "More look settings", exact: true });

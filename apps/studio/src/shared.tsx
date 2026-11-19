@@ -1,7 +1,8 @@
 // Parts both modes show: the app's preview and the change trace (ARCHITECTURE §9.7).
 
 import type { SpecPlugin, Verification } from "@smithable/core";
-import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { api, type ChangeDetail, type TraceEntry } from "./api";
 import { type PartChange, summaryDiff } from "./builder/change-diff";
 import { entryText, grouped, numbers, restores, summary as summaryOf } from "./history";
@@ -36,14 +37,24 @@ const WIDTH_TITLES: Record<PreviewWidth, string> = {
   phone: "The app as a phone shows it (390 px)",
 };
 
+/** Matches a declared route, including its named path segments. */
+function matchesRoute(path: string, route: string) {
+  const target = path.split("/").filter(Boolean);
+  const parts = route.split("/").filter(Boolean);
+  return (
+    parts.length === target.length &&
+    parts.every((part, index) => part.startsWith("$") || part === target[index])
+  );
+}
+
 export function Preview({
   url,
   version,
   updating,
   selecting,
   inCode,
-  onSelecting,
-  onHide,
+  addressHost,
+  onShowPage,
   highlight,
   pages = [],
   go,
@@ -59,9 +70,8 @@ export function Preview({
   /** Code mode: a text clicked in select mode goes to its line in the content file instead of
    * being changed in place. */
   inCode?: boolean;
-  onSelecting?: (on: boolean) => void;
-  /** Hides the preview's column, for more room (wide windows). */
-  onHide?: () => void;
+  addressHost: HTMLElement | null;
+  onShowPage: () => void;
   /** What the last change touched, flashed once in the preview (motion.md 9a); `key` names the change. */
   highlight?: { key: string; concepts: string[] };
   /** The app's pages, each its address and its title: offered under the address as it is typed. */
@@ -272,10 +282,18 @@ export function Preview({
   // list, not a datalist, which an iPhone does not show.
   const listId = useId();
   const [listing, setListing] = useState(false);
+  const [addressOpen, setAddressOpen] = useState(false);
+  const [addressError, setAddressError] = useState<string>();
+  const address = useRef<HTMLFieldSetElement>(null);
+  const addressButton = useRef<HTMLButtonElement>(null);
+  const addressInput = useRef<HTMLInputElement>(null);
   const [active, setActive] = useState(-1);
   const wanted = typed.replace(/^\//, "").toLowerCase();
   const matches = pages
-    .filter(([route, title]) => `${route} ${title}`.toLowerCase().includes(wanted))
+    .filter(
+      ([route, title]) =>
+        !route.includes("$") && `${route} ${title}`.toLowerCase().includes(wanted),
+    )
     .slice(0, 8);
   const open = (path: string) => {
     current.current = path.startsWith("/") ? path : `/${path}`;
@@ -288,6 +306,61 @@ export function Preview({
     setActive(-1);
     setOpened((n) => n + 1);
   };
+  const closeAddress = useCallback((returnFocus = false) => {
+    setAddressOpen(false);
+    setAddressError(undefined);
+    setListing(false);
+    setActive(-1);
+    setTyped(current.current);
+    if (returnFocus) addressButton.current?.focus();
+  }, []);
+  useEffect(() => {
+    if (!addressOpen) return;
+    addressInput.current?.focus();
+    addressInput.current?.select();
+    const outside = (event: PointerEvent) => {
+      if (!address.current?.contains(event.target as Node)) closeAddress();
+    };
+    document.addEventListener("pointerdown", outside);
+    return () => document.removeEventListener("pointerdown", outside);
+  }, [addressOpen, closeAddress]);
+  const openAddress = (path: string) => {
+    const input = path.trim();
+    let target: URL;
+    try {
+      if (/^(?:\/\/|[a-z][a-z0-9+.-]*:)|\\/i.test(input))
+        throw new Error("Only an app path is allowed.");
+      target = new URL(input.startsWith("/") ? input : `/${input}`, window.location.origin);
+    } catch {
+      setAddressError("Enter a local page or record address.");
+      return;
+    }
+    const bare = target.pathname.replace(/\/$/, "") || "/";
+    if (
+      pages.length &&
+      bare !== "/" &&
+      bare !== "/sign-in" &&
+      !pages.some(
+        ([route]) =>
+          matchesRoute(bare, route) ||
+          (route !== "/" && !route.includes("$") && bare.startsWith(`${route}/`)),
+      ) &&
+      !/^\/(?:new|\d+(?:\/edit)?)$/.test(bare)
+    ) {
+      setAddressError("That page is not in this app.");
+      return;
+    }
+    closeAddress(true);
+    onShowPage();
+    open(target.pathname + target.search + target.hash);
+  };
+  const path = current.current.split(/[?#]/)[0] || "/";
+  const pageName =
+    [...pages]
+      .filter(
+        ([route]) => matchesRoute(path, route) || (route !== "/" && path.startsWith(`${route}/`)),
+      )
+      .sort(([a], [b]) => b.length - a.length)[0]?.[1] ?? (path === "/" ? "Home" : path);
   // Once each: a preview made again later (another layout) does not follow anyone again.
   const went = useRef(go?.key);
   // biome-ignore lint/correctness/useExhaustiveDependencies: asked for by go; open is the same each time in what it does
@@ -315,152 +388,178 @@ export function Preview({
     } catch {}
   };
   return (
-    <Panel
-      title="Preview"
-      busy={reloading}
-      className="h-full"
-      actions={
-        <div className="flex items-center gap-2">
-          {reloading && <span className="text-xs text-quiet">Updating…</span>}
-          <fieldset className="flex items-center rounded-md border border-line">
-            <legend className="sr-only">Preview width</legend>
-            {(["desktop", "tablet", "phone"] as const).map((w) => (
-              <button
-                key={w}
-                type="button"
-                aria-pressed={width === w}
-                title={WIDTH_TITLES[w]}
-                onClick={() => showAt(w)}
-                className={cx(
-                  "h-7 px-2 text-xs first:rounded-l-md last:rounded-r-md",
-                  width === w ? "bg-accent-soft font-medium" : "hover:bg-subtle",
-                )}
-              >
-                {WIDTH_LABELS[w]}
-              </button>
-            ))}
-          </fieldset>
-          {onSelecting && (
-            <Button
-              variant={selecting ? "primary" : "ghost"}
-              aria-pressed={Boolean(selecting)}
-              className="h-7 border border-line"
-              onClick={() => onSelecting(!selecting)}
+    <Panel label="Preview" busy={reloading} className="h-full">
+      <h2 className="sr-only">Preview</h2>
+      {addressHost &&
+        createPortal(
+          <fieldset
+            ref={address}
+            aria-label="Preview page"
+            className="relative min-w-0"
+            onKeyDown={(event) => {
+              if (!addressOpen || event.key !== "Escape") return;
+              event.preventDefault();
+              event.stopPropagation();
+              closeAddress(true);
+            }}
+          >
+            <button
+              ref={addressButton}
+              type="button"
+              data-preview-page
+              data-preview-current={current.current}
+              aria-expanded={addressOpen}
+              aria-controls={`${listId}-address`}
+              title="Open preview address"
+              onClick={() => (addressOpen ? closeAddress() : setAddressOpen(true))}
+              className="flex min-w-0 max-w-full items-center gap-1 rounded-md px-2 py-1.5 text-sm font-semibold hover:bg-subtle"
             >
-              Select
-            </Button>
-          )}
-          {/* No form: a lone text field in a form that submits is what password managers take for
-              an identity or address form (T969); Enter opens the page from the key handler. */}
-          <div className="relative flex items-center gap-1">
-            <Input
-              type="text"
-              name="preview-path"
-              inputMode="url"
-              // A phone's keyboard shows Go for Enter, the Go button's place.
-              enterKeyHint="go"
-              spellCheck={false}
-              data-1p-ignore=""
-              data-lpignore="true"
-              data-form-type="other"
-              aria-label="Preview address"
-              role="combobox"
-              aria-autocomplete="list"
-              aria-expanded={listing && matches.length > 0}
-              aria-controls={listId}
-              aria-activedescendant={active >= 0 ? `${listId}-${active}` : undefined}
-              autoComplete="off"
-              value={typed}
-              onChange={(e) => {
-                setTyped(e.target.value);
-                setListing(true);
-                setActive(-1);
-              }}
-              onFocus={() => setListing(true)}
-              onBlur={() => setListing(false)}
-              onKeyDown={(e) => {
-                if (e.key === "Escape") {
-                  if (listing) e.stopPropagation();
-                  setListing(false);
-                  return;
-                }
-                if (e.key === "ArrowDown" || e.key === "ArrowUp") {
-                  e.preventDefault();
-                  setListing(true);
-                  const step = e.key === "ArrowDown" ? 1 : -1;
-                  setActive((at) => (at + step + matches.length) % Math.max(matches.length, 1));
-                  return;
-                }
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  const chosen = matches[active];
-                  open(listing && chosen ? chosen[0] : typed);
-                }
-              }}
-              className="h-7 w-56 font-mono text-xs"
-            />
-            {listing && matches.length > 0 && (
-              <div
-                id={listId}
-                role="listbox"
-                aria-label="Pages"
-                className="absolute top-8 left-0 z-30 w-72 rounded-md border border-line bg-panel py-1 shadow-lg"
+              <span className="truncate">{pageName}</span>
+              <svg
+                aria-hidden="true"
+                viewBox="0 0 16 16"
+                className="size-4 shrink-0"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
               >
-                {matches.map(([route, title], index) => (
-                  // biome-ignore lint/a11y/useKeyWithClickEvents: the keys are the address field's (a combobox)
+                <path d="m5 6 3 3 3-3" />
+              </svg>
+            </button>
+            <div
+              id={`${listId}-address`}
+              className={cx(
+                "absolute top-full left-0 z-[65] mt-2 w-[min(88vw,24rem)] space-y-2 rounded-md border border-line bg-panel p-2 shadow-lg",
+                !addressOpen && "hidden",
+              )}
+            >
+              {/* No form: a lone text field in a form that submits is what password managers take for
+              an identity or address form (T969); Enter opens the page from the key handler. */}
+              <div className="relative flex items-center gap-1">
+                <Input
+                  ref={addressInput}
+                  type="text"
+                  name="preview-path"
+                  inputMode="url"
+                  // A phone's keyboard shows Go for Enter, the Go button's place.
+                  enterKeyHint="go"
+                  spellCheck={false}
+                  data-1p-ignore=""
+                  data-lpignore="true"
+                  data-form-type="other"
+                  aria-label="Preview address"
+                  role="combobox"
+                  aria-autocomplete="list"
+                  aria-expanded={listing && matches.length > 0}
+                  aria-controls={listId}
+                  aria-activedescendant={active >= 0 ? `${listId}-${active}` : undefined}
+                  autoComplete="off"
+                  value={typed}
+                  onChange={(e) => {
+                    setTyped(e.target.value);
+                    setAddressError(undefined);
+                    setListing(true);
+                    setActive(-1);
+                  }}
+                  onFocus={() => setListing(true)}
+                  onBlur={() => setListing(false)}
+                  onKeyDown={(e) => {
+                    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+                      e.preventDefault();
+                      setListing(true);
+                      const step = e.key === "ArrowDown" ? 1 : -1;
+                      setActive((at) => (at + step + matches.length) % Math.max(matches.length, 1));
+                      return;
+                    }
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      const chosen = matches[active];
+                      openAddress(listing && chosen ? chosen[0] : typed);
+                    }
+                  }}
+                  className="h-8 min-w-0 flex-1 font-mono text-xs"
+                />
+                {listing && matches.length > 0 && (
                   <div
-                    key={route}
-                    id={`${listId}-${index}`}
-                    role="option"
-                    aria-selected={index === active}
-                    tabIndex={-1}
-                    // Picked before the field loses the focus (and the list with it).
-                    onMouseDown={(e) => e.preventDefault()}
-                    onClick={() => open(route)}
+                    id={listId}
+                    role="listbox"
+                    aria-label="Pages"
+                    className="absolute top-8 left-0 z-30 w-full rounded-md border border-line bg-panel py-1 shadow-lg"
+                  >
+                    {matches.map(([route, title], index) => (
+                      // biome-ignore lint/a11y/useKeyWithClickEvents: the keys are the address field's (a combobox)
+                      <div
+                        key={route}
+                        id={`${listId}-${index}`}
+                        role="option"
+                        aria-selected={index === active}
+                        tabIndex={-1}
+                        // Picked before the field loses the focus (and the list with it).
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => openAddress(route)}
+                        className={cx(
+                          "flex cursor-pointer items-baseline gap-2 px-2 py-1 text-xs",
+                          index === active ? "bg-accent-soft" : "hover:bg-subtle",
+                        )}
+                      >
+                        <span className="font-mono">{route}</span>
+                        <span className="truncate text-quiet">{title}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {onFollowing && (
+                  <button
+                    type="button"
+                    aria-pressed={Boolean(following)}
+                    aria-label="Link the editors to the preview"
+                    title={
+                      following
+                        ? "Linked: the editors open the page the preview shows. Click to unlink."
+                        : "Not linked: the editors stay where they are. Click to open the page the preview shows."
+                    }
+                    onClick={() => onFollowing(!following)}
                     className={cx(
-                      "flex cursor-pointer items-baseline gap-2 px-2 py-1 text-xs",
-                      index === active ? "bg-accent-soft" : "hover:bg-subtle",
+                      "grid h-7 w-7 place-items-center rounded-md border border-line",
+                      following ? "bg-accent-soft" : "text-quiet hover:bg-subtle",
                     )}
                   >
-                    <span className="font-mono">{route}</span>
-                    <span className="truncate text-quiet">{title}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-            {onFollowing && (
-              <button
-                type="button"
-                aria-pressed={Boolean(following)}
-                aria-label="Link the editors to the preview"
-                title={
-                  following
-                    ? "Linked: the editors open the page the preview shows. Click to unlink."
-                    : "Not linked: the editors stay where they are. Click to open the page the preview shows."
-                }
-                onClick={() => onFollowing(!following)}
-                className={cx(
-                  "grid h-7 w-7 place-items-center rounded-md border border-line",
-                  following ? "bg-accent-soft" : "text-quiet hover:bg-subtle",
+                    <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" fill="none">
+                      <g stroke="currentColor" strokeWidth="1.5" transform="rotate(-45 8 8)">
+                        <rect x="1.5" y="5.5" width="7" height="5" rx="2.5" />
+                        <rect x="7.5" y="5.5" width="7" height="5" rx="2.5" />
+                      </g>
+                    </svg>
+                  </button>
                 )}
-              >
-                <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" fill="none">
-                  <g stroke="currentColor" strokeWidth="1.5" transform="rotate(-45 8 8)">
-                    <rect x="1.5" y="5.5" width="7" height="5" rx="2.5" />
-                    <rect x="7.5" y="5.5" width="7" height="5" rx="2.5" />
-                  </g>
-                </svg>
-              </button>
-            )}
-          </div>
-          {onHide && (
-            <Button variant="ghost" className="h-7" onClick={onHide}>
-              Hide
-            </Button>
-          )}
-        </div>
-      }
-    >
+              </div>
+              {addressError && (
+                <p role="alert" className="text-xs text-red-700">
+                  {addressError}
+                </p>
+              )}
+              <fieldset className="flex items-center rounded-md border border-line">
+                <legend className="sr-only">Preview width</legend>
+                {(["desktop", "tablet", "phone"] as const).map((w) => (
+                  <button
+                    key={w}
+                    type="button"
+                    aria-pressed={width === w}
+                    title={WIDTH_TITLES[w]}
+                    onClick={() => showAt(w)}
+                    className={cx(
+                      "h-7 px-2 text-xs first:rounded-l-md last:rounded-r-md",
+                      width === w ? "bg-accent-soft font-medium" : "hover:bg-subtle",
+                    )}
+                  >
+                    {WIDTH_LABELS[w]}
+                  </button>
+                ))}
+              </fieldset>
+            </div>
+          </fieldset>,
+          addressHost,
+        )}
       <div data-guide="preview" className="flex h-full flex-col">
         {samples && (
           <div
