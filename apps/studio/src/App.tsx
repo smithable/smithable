@@ -21,7 +21,7 @@ import {
 } from "./api";
 import wordmark from "./brand/wordmark.svg";
 import wordmarkDark from "./brand/wordmark-dark.svg";
-import { Ask, usePresentation } from "./builder/Ask";
+import { Ask, type AudioActivity, usePresentation } from "./builder/Ask";
 import { NoCode, OPEN_PART, type OpenPart } from "./builder/NoCode";
 import { SmithFace } from "./builder/SmithFace";
 import { SummaryTab } from "./builder/SummaryTab";
@@ -257,11 +257,13 @@ export function App() {
   const floating = !narrow && !compact && smithAt === "floating";
   const [panelOpen, setPanelOpen] = useState(false);
   const [smithHidden, setSmithHidden] = useState(false);
-  const [smithHideHint, setSmithHideHint] = useState(false);
-  const hideHintShown = useRef(false);
+  const [smithHideHint, setSmithHideHint] = useState<"smith" | "call">();
+  const hideHintShown = useRef(new Set<"smith" | "call">());
+  const [audio, setAudio] = useState<AudioActivity>();
+  const smithFace = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     if (!smithHideHint) return;
-    const timer = setTimeout(() => setSmithHideHint(false), 4500);
+    const timer = setTimeout(() => setSmithHideHint(undefined), 4500);
     return () => clearTimeout(timer);
   }, [smithHideHint]);
   // The preview's edges on the screen, which the floating panel hangs between.
@@ -1112,6 +1114,7 @@ export function App() {
         onShowChanges={showChanges}
         onFeedback={setFeedback}
         speech={project.speech ?? []}
+        onAudioActivity={setAudio}
         // A milestone named or an undo from Smith: the windows read the history again.
         onDone={() => void refresh()}
         onBeginChange={pauseGuide}
@@ -1142,25 +1145,30 @@ export function App() {
       : narrow
         ? phoneWindow === "smith" && (!phone.changesUnderSmith || phoneSub === "smith")
         : slotOf("smith") !== undefined);
+  const onCall = Boolean(audio && audio.call !== "idle");
+  const listening = Boolean(audio && (audio.listening || audio.auto));
+  const speakingHidden = !smithVisible && Boolean(audio?.speaking);
+  const audioHidden = !smithVisible && (onCall || listening || speakingHidden);
   const hideSmith = () => {
     if (floating) setPanelOpen(false);
     else if (narrow) showWindow("preview");
     else setSmithHidden(true);
-    if (hideHintShown.current) return;
-    hideHintShown.current = true;
+    const hint = onCall ? "call" : "smith";
+    if (hideHintShown.current.has(hint)) return;
+    hideHintShown.current.add(hint);
     try {
-      const key = "smithable:seen-smith-hide";
+      const key = onCall ? "smithable:seen-smith-hide-call" : "smithable:seen-smith-hide";
       if (localStorage.getItem(key) === "1") return;
       localStorage.setItem(key, "1");
     } catch {}
-    setSmithHideHint(true);
+    setSmithHideHint(hint);
   };
   const toggleSmith = () => {
     if (smithVisible) {
       hideSmith();
       return;
     }
-    setSmithHideHint(false);
+    setSmithHideHint(undefined);
     if (floating) {
       setVisualize(false);
       setPanelOpen(true);
@@ -1437,7 +1445,9 @@ export function App() {
                 <div className="relative shrink-0">
                   <button
                     type="button"
+                    ref={smithFace}
                     aria-label={questionWaiting ? "Smith, a question is waiting" : "Smith"}
+                    aria-describedby={audioHidden ? "smith-hidden-audio" : undefined}
                     aria-pressed={smithVisible}
                     title={smithVisible ? "Hide Smith" : "Show Smith"}
                     onClick={toggleSmith}
@@ -1445,7 +1455,9 @@ export function App() {
                       "smith-chip relative -my-1 flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-full border",
                       smithVisible
                         ? "border-accent bg-accent-soft"
-                        : "border-line hover:border-accent",
+                        : speakingHidden
+                          ? "border-accent bg-accent-soft ring-2 ring-accent/40"
+                          : "border-line hover:border-accent",
                     )}
                   >
                     <span className="scale-[0.8]">
@@ -1455,19 +1467,50 @@ export function App() {
                       <span
                         data-question-waiting
                         aria-hidden="true"
-                        className="absolute right-0 top-0 grid size-4 place-items-center rounded-full bg-accent text-xs text-panel"
+                        className={cx(
+                          "absolute right-0 top-0 grid size-4 place-items-center rounded-full bg-accent text-xs text-panel",
+                          !onCall && "motion-safe:animate-[pulse_3s_infinite]",
+                        )}
                       >
                         ?
                       </span>
                     )}
                   </button>
-                  {smithHideHint && (
-                    <span
-                      role="status"
-                      className="absolute top-full right-0 z-[65] mt-2 w-max max-w-[80vw] rounded-md border border-line bg-panel px-3 py-2 text-sm shadow-lg"
-                    >
-                      Click Smith’s face to show him again.
-                    </span>
+                  {(audioHidden || smithHideHint) && (
+                    <div className="absolute top-full right-0 z-[65] mt-2 w-max max-w-[80vw] space-y-1 rounded-md border border-line bg-panel px-3 py-2 text-sm shadow-lg">
+                      {audioHidden && audio && (
+                        <div className="flex items-center gap-2">
+                          <span id="smith-hidden-audio" role="status">
+                            {speakingHidden
+                              ? "Smith is speaking"
+                              : audio.call === "starting"
+                                ? "Starting call…"
+                                : "Listening"}
+                          </span>
+                          {(onCall || listening) && (
+                            <button
+                              type="button"
+                              className="shrink-0 rounded px-1 py-0.5 font-medium text-accent hover:bg-subtle"
+                              onClick={() => {
+                                if (onCall) audio.endCall();
+                                else audio.stopListening();
+                                setSmithHideHint(undefined);
+                                smithFace.current?.focus();
+                              }}
+                            >
+                              {onCall ? "End call" : "Stop listening"}
+                            </button>
+                          )}
+                        </div>
+                      )}
+                      {smithHideHint && (
+                        <p role="status">
+                          {smithHideHint === "call"
+                            ? "You can hide Smith and keep talking."
+                            : "Click Smith’s face to show him again."}
+                        </p>
+                      )}
+                    </div>
                   )}
                 </div>
               </div>

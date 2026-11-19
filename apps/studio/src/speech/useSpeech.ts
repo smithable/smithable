@@ -5,7 +5,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import { playback } from "./playback";
-import { type Detector, type Ear, loadDetector, openEar } from "./vad";
+import { type Ear, loadDetector, openEar } from "./vad";
 import { framer, segmenter } from "./vad-core";
 import { type Browser, browserOf, usableVoices, whereLine } from "./words";
 
@@ -68,6 +68,8 @@ const recognitionClass = (): RecognitionClass | undefined =>
   ).SpeechRecognition ??
   (window as unknown as { webkitSpeechRecognition?: RecognitionClass }).webkitSpeechRecognition;
 
+type Call = "idle" | "starting" | "active";
+
 export interface Speech {
   /** Smith can speak here (a voice the policy allows), and can hear (recognition allowed). */
   canSpeak: boolean;
@@ -103,6 +105,10 @@ export interface Speech {
   notice?: string;
   /** Starts or stops manual listening; finals arrive through onFinal. */
   toggleMic: () => void;
+  stopListening: () => void;
+  call: Call;
+  startCall: () => void;
+  endCall: () => void;
   speak: (text: string) => void;
   stopSpeaking: () => void;
   speaking: boolean;
@@ -167,14 +173,23 @@ export function useSpeech(
   // A single sentence queue survives renders and speaker pause/resume.
   const [speaking, setSpeaking] = useState(false);
   const [blocked, setBlocked] = useState(false);
+  const [call, setCallState] = useState<Call>("idle");
+  const callNow = useRef<Call>("idle");
+  const callGeneration = useRef(0);
+  const setCall = (state: Call) => {
+    callNow.current = state;
+    setCallState(state);
+  };
+  const [callSound, setCallSound] = useState<boolean>();
+  const sound = callSound ?? settings.sound;
   const player = useRef<ReturnType<typeof playback> | undefined>(undefined);
   if (!player.current && synth)
     player.current = playback(synth, setSpeaking, () => setBlocked(true));
   const speak = useCallback(
     (text: string) => {
-      if (voice && settings.sound) player.current?.speak(text, voice, settings.rate);
+      if (voice && sound) player.current?.speak(text, voice, settings.rate);
     },
-    [voice, settings.sound, settings.rate],
+    [voice, sound, settings.rate],
   );
   const stopSpeaking = useCallback(() => player.current?.stop(), []);
   useEffect(() => () => player.current?.stop(), []);
@@ -222,7 +237,6 @@ export function useSpeech(
   const [autoNote, setAutoNote] = useState<string>();
   const [simple, setSimple] = useState(false);
   const ear = useRef<Ear | undefined>(undefined);
-  const detector = useRef<Detector | undefined>(undefined);
   const lastHeard = useRef(0);
   const speakingNow = useRef(false);
   speakingNow.current = speaking;
@@ -248,6 +262,7 @@ export function useSpeech(
       if (onDeviceOnly && "processLocally" in r) r.processLocally = true;
       let heardAny = false;
       r.onresult = (e) => {
+        if (rec.current !== r) return;
         let heard = "";
         for (let i = e.resultIndex; i < e.results.length; i++) {
           const result = e.results[i];
@@ -260,13 +275,16 @@ export function useSpeech(
         setInterim(heard);
       };
       r.onerror = (e) => {
+        if (rec.current !== r) return;
+        const permissionDenied = e.error === "not-allowed" || e.error === "service-not-allowed";
+        if (permissionDenied && callNow.current !== "idle") stopAuto();
         if (ear.current && e.error === "audio-capture") clash.current = true;
         if (
           e.error !== "aborted" &&
           !(ear.current && ["audio-capture", "no-speech"].includes(e.error))
         )
           setHearingError(
-            e.error === "not-allowed" || e.error === "service-not-allowed"
+            permissionDenied
               ? "Microphone access was refused. Allow the microphone for this Studio address in your browser's site settings, then try again."
               : e.error === "audio-capture"
                 ? "No microphone is available. Check that it is connected and allowed by your system."
@@ -278,6 +296,7 @@ export function useSpeech(
           );
       };
       r.onend = () => {
+        if (rec.current !== r) return;
         manualListening.current = false;
         rec.current = undefined;
         setListening(false);
@@ -304,6 +323,7 @@ export function useSpeech(
         );
         return;
       }
+      if (rec.current !== r) return;
       setListening(true);
       if (settings.mic === "off" || !settings.told) save({ ...settings, mic: "press", told: true });
     },
@@ -324,12 +344,25 @@ export function useSpeech(
     starting.current = false;
     ear.current?.stop();
     ear.current = undefined;
-    rec.current?.stop();
+    if (callNow.current === "idle") rec.current?.stop();
+    else {
+      callGeneration.current++;
+      setCall("idle");
+      const active = rec.current;
+      rec.current = undefined;
+      manualListening.current = false;
+      setListening(false);
+      setInterim("");
+      active?.abort();
+      stopSpeaking();
+      setCallSound(false);
+    }
     setAutoOn(false);
     setAutoNote(note);
   };
-  const startAuto = async () => {
-    if (ear.current || !Rec || !canHear) return;
+  const startAuto = async (): Promise<boolean> => {
+    if (ear.current) return true;
+    if (starting.current || !Rec || !canHear) return false;
     setHearingError(undefined);
     if (!settings.told) {
       flushSync(() =>
@@ -350,15 +383,15 @@ export function useSpeech(
         () => false,
       );
       setLocalHearing(local);
-      if (cancelled()) return;
+      if (cancelled()) return false;
       if (!local) {
         starting.current = false;
-        return setAutoNote(undefined);
+        setAutoNote(undefined);
+        return false;
       }
     }
     const found = await loadDetector();
-    if (cancelled()) return;
-    detector.current = found;
+    if (cancelled()) return false;
     setSimple(found.kind === "simple");
     const segments = segmenter();
     let frames: ((chunk: Float32Array) => Float32Array[]) | undefined;
@@ -370,6 +403,7 @@ export function useSpeech(
         for (const frame of frames(chunk))
           queue = queue
             .then(async () => {
+              if (cancelled()) return;
               // Nothing is heard while Smith speaks (barge-in is off for these voices): what was
               // being heard when he started is dropped, so he is not written out as the person.
               if (speakingNow.current || inputBlockedNow.current) {
@@ -378,6 +412,7 @@ export function useSpeech(
                 return;
               }
               const probability = await found.detect(frame);
+              if (cancelled()) return;
               if (manualListening.current) {
                 segments.reset();
                 return;
@@ -392,20 +427,52 @@ export function useSpeech(
             // A frame the detector failed on is skipped; the next ones still run.
             .catch(() => undefined);
       });
-    } catch {
-      if (cancelled()) return;
+    } catch (error) {
+      if (cancelled()) return false;
       starting.current = false;
-      setAutoNote("The microphone could not be opened for automatic mode.");
-      return;
+      setAutoNote(
+        error instanceof DOMException && error.name === "NotAllowedError"
+          ? "Microphone access was refused. Allow the microphone for this Studio address in your browser's site settings, then try again. You can type instead."
+          : "The microphone could not be opened. Check that it is connected and allowed, then try again. You can type instead.",
+      );
+      return false;
     }
-    if (cancelled()) return opened.stop();
+    if (cancelled()) {
+      opened.stop();
+      return false;
+    }
     starting.current = false;
     ear.current = opened;
     lastHeard.current = Date.now();
     setAutoOn(true);
     setAutoNote(undefined);
     channel.current?.postMessage("listening");
+    return true;
   };
+  const startCall = async () => {
+    if (!voice || !canHear || inputBlockedNow.current || callNow.current !== "idle") return;
+    if (starting.current) stopAuto();
+    rec.current?.abort();
+    const mine = ++callGeneration.current;
+    setCall("starting");
+    // Reset playback on the button gesture, before the microphone permission prompt.
+    stopSpeaking();
+    const ready = await startAuto();
+    if (mine !== callGeneration.current) return;
+    if (!ready) {
+      setCall("idle");
+      return;
+    }
+    setCallSound(true);
+    setCall("active");
+    setBlocked(false);
+    player.current?.speak("Hi, it’s Smith. I’m listening.", voice, settings.rate);
+  };
+  // biome-ignore lint/correctness/useExhaustiveDependencies: stopAuto reads current refs
+  useEffect(() => {
+    if (call === "active" && (!canHear || !canSpeak)) stopAuto();
+  }, [call, canHear, canSpeak]);
+
   // Back to press to talk after ten minutes without the person speaking, and when the tab hides.
   // biome-ignore lint/correctness/useExhaustiveDependencies: stopAuto reads refs only
   useEffect(() => {
@@ -420,9 +487,9 @@ export function useSpeech(
   useEffect(() => {
     const hide = () => {
       if (document.visibilityState !== "hidden") return;
-      rec.current?.stop();
       // Also a start still loading: it finds itself cancelled.
       if (ear.current || starting.current) stopAuto("Back to press to talk: the tab was hidden.");
+      else rec.current?.stop();
     };
     document.addEventListener("visibilitychange", hide);
     return () => document.removeEventListener("visibilitychange", hide);
@@ -455,11 +522,12 @@ export function useSpeech(
     canSpeak,
     canHear,
     ...(why ? { why } : {}),
-    sound: settings.sound && canSpeak,
+    sound: sound && canSpeak,
     setSound: (on) => {
       if (on) player.current?.resume();
       else player.current?.pause();
       setBlocked(false);
+      setCallSound(undefined);
       save({ ...settings, sound: on });
     },
     blocked,
@@ -469,7 +537,7 @@ export function useSpeech(
       const selected = voices.find((voice) => voice.name === name);
       if (!selected) return;
       save({ ...settings, voice: name });
-      if (!player.current?.busy && settings.sound)
+      if (!player.current?.busy && sound)
         player.current?.speak("Hello, I'm Smith. This is my voice.", selected, settings.rate);
     },
     rate: settings.rate,
@@ -506,6 +574,13 @@ export function useSpeech(
       if (rec.current) rec.current.stop();
       else listen(true);
     },
+    stopListening: () => {
+      if (ear.current || starting.current) stopAuto();
+      else rec.current?.stop();
+    },
+    call,
+    startCall: () => void startCall(),
+    endCall: () => stopAuto(),
     speak,
     stopSpeaking,
     speaking,

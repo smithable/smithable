@@ -13,6 +13,8 @@ export function SpeechControls({
   speech: Speech;
   inputDisabled?: boolean;
 }) {
+  const onCall = speech.call !== "idle";
+  const listening = speech.listening || speech.call === "active";
   if (!speech.canHear && !speech.canSpeak)
     return (
       <p data-speech-off className="text-xs text-quiet">
@@ -25,8 +27,8 @@ export function SpeechControls({
         <div className="inline-flex items-center rounded-md border border-line">
           <button
             type="button"
-            className={cx(BUTTON, speech.listening && "border-red-500 text-red-600")}
-            disabled={inputDisabled || !speech.canHear || speech.checkingHearing}
+            className={cx(BUTTON, listening && "w-auto gap-1 px-2 text-red-700 dark:text-red-300")}
+            disabled={inputDisabled || onCall || !speech.canHear || speech.checkingHearing}
             title={
               speech.needsLocalCheck
                 ? "Check whether speech recognition can run on this computer"
@@ -45,8 +47,22 @@ export function SpeechControls({
             onClick={speech.toggleMic}
           >
             <MicIcon />
+            {listening && <span className="text-xs">Listening</span>}
           </button>
-          {speech.canHear && !speech.needsLocalCheck && (
+          <button
+            type="button"
+            className="flex h-8 items-center gap-1.5 rounded-md border-l border-line px-2 text-xs hover:bg-subtle disabled:opacity-40"
+            disabled={
+              !onCall &&
+              (inputDisabled || !speech.canHear || !speech.canSpeak || speech.checkingHearing)
+            }
+            title={!onCall && (!speech.canHear || !speech.canSpeak) ? speech.why : undefined}
+            onClick={onCall ? speech.endCall : speech.startCall}
+          >
+            <PhoneIcon />
+            {onCall ? "End call" : "Start call"}
+          </button>
+          {!onCall && speech.canHear && !speech.needsLocalCheck && (
             <button
               type="button"
               className={cx(
@@ -132,7 +148,12 @@ export function SpeechControls({
           {speech.hearingNote}
         </p>
       )}
-      {speech.auto && (
+      {speech.call === "starting" && (
+        <p role="status" className="text-xs text-quiet">
+          Starting call…
+        </p>
+      )}
+      {speech.auto && speech.call === "idle" && (
         <p className="text-xs text-quiet">
           Listening while Smith is silent; a headset works best.
           {speech.simpleDetector && " A simpler voice detector is in use."}
@@ -169,6 +190,23 @@ function MicIcon() {
     >
       <rect x="9" y="3" width="6" height="11" rx="3" />
       <path d="M5 11a7 7 0 0 0 14 0M12 18v3" />
+    </svg>
+  );
+}
+
+function PhoneIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      className="size-4"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M7 3H4a1 1 0 0 0-1 1 17 17 0 0 0 17 17 1 1 0 0 0 1-1v-3l-5-2-2 2a13 13 0 0 1-7-7l2-2-2-5Z" />
     </svg>
   );
 }

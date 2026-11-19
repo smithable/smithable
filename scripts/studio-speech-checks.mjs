@@ -13,6 +13,9 @@ export async function checkStudioSpeech(
         window.speechFixture = {
           starts: 0,
           captures: 0,
+          released: 0,
+          cancelledSpeech: 0,
+          micPermission: "allow",
           checks: 0,
           local: false,
           rates: [],
@@ -81,12 +84,24 @@ export async function checkStudioSpeech(
           value: undefined,
           configurable: true,
         });
-        const track = { stop() {}, getSettings: () => ({}) };
+        const track = {
+          stop() {
+            window.speechFixture.released++;
+          },
+          getSettings: () => ({}),
+        };
         Object.defineProperty(navigator, "mediaDevices", {
           configurable: true,
           value: {
             async getUserMedia() {
-              window.speechFixture.captures++;
+              const fixture = window.speechFixture;
+              fixture.captures++;
+              if (fixture.micPermission === "deny")
+                throw new DOMException("Fixture permission refused", "NotAllowedError");
+              if (fixture.micPermission === "hold")
+                await new Promise((resolve) => {
+                  fixture.releasePermission = resolve;
+                });
               return { getTracks: () => [track], getAudioTracks: () => [track] };
             },
           },
@@ -131,6 +146,7 @@ export async function checkStudioSpeech(
           { name: "Google UK English Male", lang: "en-GB", localService: false },
         ];
         synth.cancel = () => {
+          window.speechFixture.cancelledSpeech++;
           synth.speaking = false;
         };
         synth.pause = () => {
@@ -400,19 +416,9 @@ export async function checkStudioSpeech(
         await page.evaluate(() => {
           window.speechFixture.behavior = "automatic";
         });
-        const utter = async () =>
-          page.evaluate(() => {
-            const port = window.speechFixture.worklet.port;
-            for (let frame = 0; frame < 12; frame++)
-              port.onmessage({
-                data: Float32Array.from({ length: 512 }, (_, i) => 0.3 * Math.sin(i * 0.3)),
-              });
-            for (let frame = 0; frame < 26; frame++)
-              port.onmessage({ data: new Float32Array(512) });
-          });
         await automatic.click();
         await page.getByRole("button", { name: "Auto on", exact: true }).waitFor();
-        await utter();
+        await utterWhileSilent(page);
         await page.waitForFunction(
           () =>
             document.querySelector('textarea[aria-label="Describe a change, or ask a question"]')
@@ -424,7 +430,7 @@ export async function checkStudioSpeech(
         await page.waitForTimeout(1700);
         assert.equal(await input.inputValue(), "Hi", "an old Auto timer survived off/on toggles");
         await input.fill("");
-        await utter();
+        await utterWhileSilent(page);
         await page.waitForFunction(
           () =>
             document.querySelector('textarea[aria-label="Describe a change, or ask a question"]')
@@ -447,6 +453,7 @@ export async function checkStudioSpeech(
           "the first-use notice was repeated on reload",
         );
         await checkSmithQuestions(page);
+        await checkSmithCall(page);
       }
       console.log(
         `  ✓ Smith speech ${support}: visible failure, saved sound/speed, introduction stays while reading`,
@@ -455,6 +462,146 @@ export async function checkStudioSpeech(
       await page.close();
     }
   }
+}
+
+async function utterWhileSilent(page) {
+  await page.evaluate(() => {
+    const port = window.speechFixture.worklet.port;
+    for (let frame = 0; frame < 12; frame++)
+      port.onmessage({
+        data: Float32Array.from({ length: 512 }, (_, i) => 0.3 * Math.sin(i * 0.3)),
+      });
+    for (let frame = 0; frame < 26; frame++) port.onmessage({ data: new Float32Array(512) });
+  });
+}
+
+async function checkSmithCall(page) {
+  // A phone keeps the preview visible when the call is hidden. Its audio state avoids animation.
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(new URL("?guide=off", page.url()).href);
+  const header = page.locator("[data-studio-header]");
+  const face = header.getByRole("button", { name: "Smith", exact: true });
+  const start = page.getByRole("button", { name: "Start call", exact: true });
+  const endHidden = header.getByRole("button", { name: "End call", exact: true });
+  const speaking = header.getByRole("status").filter({ hasText: /^Smith is speaking$/ });
+  const hint = header.getByText("You can hide Smith and keep talking.", { exact: true });
+  await face.click();
+  const ownerSound = page.getByRole("button", { name: "Sound: on", exact: true });
+  if (await ownerSound.isVisible()) await ownerSound.click();
+  await page.evaluate(() => {
+    window.speechFixture.hold = true;
+  });
+  await start.click();
+  await page.waitForFunction(() =>
+    window.speechFixture.utterances.some((u) => u.text === "Hi, it’s Smith."),
+  );
+  assert.equal(await page.evaluate(() => window.speechFixture.captures), 1);
+  await face.click();
+  await speaking.waitFor();
+  await hint.waitFor();
+  assert.equal(await face.getAttribute("aria-describedby"), "smith-hidden-audio");
+  assert.equal(await speaking.evaluate((node) => getComputedStyle(node).animationName), "none");
+  assert.equal(await page.evaluate(() => window.speechFixture.released), 0);
+  await page.evaluate(() => window.speechFixture.utterances.at(-1).onend?.());
+  await page.waitForFunction(() =>
+    window.speechFixture.utterances.some((u) => u.text === "I’m listening."),
+  );
+  await page.evaluate(() => {
+    window.speechFixture.utterances.at(-1).onend?.();
+    window.speechFixture.behavior = "automatic";
+    window.speechFixture.transcript = "Hi Smith";
+  });
+  await header
+    .getByRole("status")
+    .filter({ hasText: /^Listening$/ })
+    .waitFor();
+  let heard;
+  await page.route("**/api/ask", (route) => {
+    heard = route.request().postDataJSON().request;
+    return route.fulfill({
+      json: {
+        kind: "answer",
+        id: "hidden-call-fixture",
+        text: "I heard you with Smith hidden.",
+        usage: "",
+      },
+    });
+  });
+  await utterWhileSilent(page);
+  await page.waitForFunction(() =>
+    window.speechFixture.utterances.some((u) => u.text === "I heard you with Smith hidden."),
+  );
+  assert.equal(heard, "Hi Smith");
+  await speaking.waitFor();
+  await endHidden.click();
+  await endHidden.waitFor({ state: "hidden" });
+  assert.equal(await page.evaluate(() => window.speechFixture.released), 1);
+  assert.equal(await page.evaluate(() => window.speechSynthesis.speaking), false);
+  assert.equal(await face.evaluate((button) => document.activeElement === button), true);
+
+  // Permission can be denied after pressing Start call, and the same controls can retry.
+  await face.click();
+  await page.evaluate(() => {
+    window.speechFixture.micPermission = "deny";
+  });
+  await start.click();
+  await page.getByText(/Microphone access was refused.*You can type instead/).waitFor();
+  assert.equal(await start.isEnabled(), true);
+  assert.equal(
+    await page
+      .getByRole("textbox", { name: "Describe a change, or ask a question", exact: true })
+      .isEnabled(),
+    true,
+  );
+
+  // End call is also reachable while the permission prompt is outstanding.
+  await page.evaluate(() => {
+    window.speechFixture.micPermission = "hold";
+  });
+  await start.click();
+  await page.waitForFunction(() => Boolean(window.speechFixture.releasePermission));
+  await face.click();
+  await endHidden.waitFor();
+  assert.equal(await hint.isVisible(), false, "the first-hide hint was repeated");
+  await endHidden.click();
+  await page.evaluate(() => window.speechFixture.releasePermission());
+  await page.waitForFunction(() => window.speechFixture.released === 2);
+  await endHidden.waitFor({ state: "hidden" });
+  assert.equal(await page.evaluate(() => window.speechSynthesis.speaking), false);
+
+  await page.setViewportSize({ width: 1600, height: 1000 });
+  await page.goto(new URL("?guide=off", page.url()).href);
+  await face.click();
+  await page.getByRole("button", { name: "Dock", exact: true }).click();
+  const dock = page.getByRole("heading", { name: "Ask Smith", exact: true });
+  await dock.waitFor();
+  await page.evaluate(() => {
+    window.speechFixture.behavior = "manual";
+  });
+  const mic = page.getByRole("button", { name: "Mic: off", exact: true });
+  await mic.click();
+  await page
+    .getByRole("button", { name: "Mic: on", exact: true })
+    .getByText("Listening", { exact: true })
+    .waitFor();
+  await page.getByRole("button", { name: "Close Smith", exact: true }).click();
+  await dock.waitFor({ state: "hidden" });
+  await header.getByRole("button", { name: "Stop listening", exact: true }).click();
+  await face.click();
+  await dock.waitFor();
+  await mic.waitFor();
+
+  await start.click();
+  await page.waitForFunction(() =>
+    window.speechFixture.utterances.some((u) => u.text === "Hi, it’s Smith."),
+  );
+  await page.getByRole("button", { name: "Close Smith", exact: true }).click();
+  await endHidden.click();
+  assert.equal(await page.evaluate(() => window.speechFixture.released), 1);
+  console.log(
+    "  ✓ Smith call: one press, hidden conversation and End call, mic-only stop, denied and cancelled capture, reduced motion",
+  );
 }
 
 // T872 D: a needed answer holds the change, shares typed/voice context, and can be aborted silently.
