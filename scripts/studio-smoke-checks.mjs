@@ -39,7 +39,7 @@ async function checkBuilder(page, phone) {
   const review = page.getByRole("dialog", { name: "Review", exact: true });
   await review.getByRole("tab", { name: "Summary", exact: true }).click();
   await review.getByRole("region", { name: "Summary", exact: true }).waitFor();
-  await review.getByRole("button", { name: "Close", exact: true }).click();
+  await review.getByRole("button", { name: "Close Review", exact: true }).click();
   await review.waitFor({ state: "detached" });
 
   await showEditor();
