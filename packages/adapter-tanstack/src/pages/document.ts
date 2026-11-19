@@ -429,7 +429,6 @@ export function viewRoute(ir: SpecIR, t: Texts, auth: AuthIR, models: string[]):
 import { createServerFn } from "@tanstack/react-start";
 import { getRequestHeaders } from "@tanstack/react-start/server";
 import { and, eq${copies.some((c) => c.trash) ? ", isNull" : ""} } from "drizzle-orm";
-import { z } from "zod";
 import { db } from "#/db";
 ${SCHEMA_IMPORT}
 import { app } from "#/generated/app";
@@ -440,13 +439,15 @@ import { openCopy } from "#/kit/view.server";
 
 /** The copy a link opens, or null: the same for a wrong, an ended and a withdrawn link. */
 const getCopy = createServerFn()
-  .validator(z.string())
+  // Whatever is sent reaches the limiter, cut short: only a 43-character token can open a copy.
+  .validator((token: unknown) => (typeof token === "string" ? token.slice(0, 100) : ""))
   .handler(({ data: token }) => {
     const headers = getRequestHeaders();
     viewAllowed(headers);
     const found = openCopy(token);
     // A record gone or in the trash by any way (a parent's with it, too) opens no copy.
-    const copy = found && LIVE[found.model]?.(found.record) ? found : null;
+    const copy =
+      found && Object.hasOwn(LIVE, found.model) && LIVE[found.model]?.(found.record) ? found : null;
     if (!copy) viewMissed(headers);
     // The stored copy as it was sent: its parts, picked when it was sent.
     return copy && { model: copy.model, found: copy.content as Found };
