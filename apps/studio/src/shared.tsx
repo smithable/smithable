@@ -450,6 +450,14 @@ export function Preview({
                 </svg>
               </button>
             )}
+            {reloading && (
+              <span
+                role="status"
+                className="sr-only shrink-0 text-xs whitespace-nowrap text-quiet sm:not-sr-only"
+              >
+                Updating…
+              </span>
+            )}
             <div
               id={`${listId}-address`}
               className={cx(
