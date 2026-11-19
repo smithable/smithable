@@ -1,6 +1,6 @@
-// Smithable app kit: what was sent of a record's document (docs/design/record-documents.md §5):
-// each sent copy, when, to whom, and whether its link still opens. Whoever may change the record
-// may withdraw the links; a withdrawn link stays ended. Not printed with the document.
+// Smithable app kit: a document's sent copies, to whom, and whether each link opens
+// (docs/design/record-documents.md §5). Whoever may change the record may withdraw the links; a
+// withdrawn link stays ended. Not printed with the document.
 import { ActionButton } from "./ActionButton";
 import { instantText } from "./format";
 import { w } from "./words";

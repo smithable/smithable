@@ -96,8 +96,9 @@ pages:
   that calls the browser's own print. No new dependency in generated apps.
 - It is read as that person: the record by its read rule, and the client, the lines and the
   settings record by theirs. A block the person may not read is refused, not left out silently.
-- Whose `from`: where records are private, the settings record of the document record's owner;
-  where shared, the app's.
+- Whose `from`: where records are private, the settings record of the document record's owner
+  (a record with no owner, such as a seeded sample, takes the reading or sending person's own,
+  never another member's); where shared, the app's.
 - The record page gets a "Print" button, and a list "Sent" of the copies sent (section 5).
 
 ### 4.3 The five questions (ARCHITECTURE §2.4)

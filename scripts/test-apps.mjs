@@ -6057,7 +6057,7 @@ async function invoiceMailFlow(dir, base) {
     existsSync(outbox) ? readdirSync(outbox).filter((f) => !f.startsWith(".")) : [];
   const drafts = query(
     dir,
-    `select i.id, i.number, sum(l.quantity * l.unit_price) as cents, min(l.id) as line, min(l.quantity) as quantity
+    `select i.id, i.number, i.owner_id as owner, sum(l.quantity * l.unit_price) as cents, min(l.id) as line, min(l.quantity) as quantity
        from invoices i join invoice_lines l on l.invoice_id = i.id
        join clients c on c.id = i.client_id
       where i.status = 'draft' and c.email is not null and c.email != ''
@@ -6077,6 +6077,36 @@ async function invoiceMailFlow(dir, base) {
         .getByRole("button", { name: "Mark sent" })
         .click();
     let count = mails().length;
+    // The mail links to the invoice as a document, which says whom it is from: without the
+    // owner's business details Mark sent is refused, and nothing changes or goes (record-documents.md §4).
+    // A sample invoice has no owner: it is from whoever sends it, the admin signed in now.
+    const [{ id: sender }] = query(
+      dir,
+      "select user_id as id from session order by created_at desc limit 1",
+    );
+    const owner = sent.owner ?? sender;
+    const profile = `select id from business_profiles where owner_id = '${owner}'`;
+    if (!query(dir, profile).length) {
+      await open(page, `${base}/invoices/${sent.id}`);
+      await markSent.click();
+      await confirmed();
+      await page
+        .getByText("Fill in your business details before sending the document.")
+        .first()
+        .waitFor({ timeout: 10000 * P });
+      await page.waitForTimeout(1000);
+      const [{ status }] = query(dir, `select status from invoices where id = ${sent.id}`);
+      if (status !== "draft") throw new Error(`the refused invoice is ${status}, not draft`);
+      if (mails().length !== count) throw new Error("a mail went out without business details");
+      console.log(
+        "  ✓ browser: without business details Mark sent is refused: the invoice stays a draft and no mail goes",
+      );
+      write(
+        dir,
+        `insert into business_profiles (business_name, iban, payment_term_days, owner_id, created_at, updated_at)
+           values ('Sender Design Oy', 'FI00 SENDER', 30, '${owner}', 0, 0)`,
+      );
+    }
     await open(page, `${base}/invoices/${sent.id}`);
     await markSent.click();
     await confirmed();
@@ -6207,12 +6237,14 @@ async function sentLinkFlow(dir, base) {
       .locator('[data-open="true"]')
       .first()
       .waitFor({ timeout: 10000 * P });
-    await sent.getByRole("button", { name: "Withdraw links" }).click();
+    // The button that opens the question (the dialog has one of the same name).
+    const withdraw = sent.getByRole("button", { name: "Withdraw links" }).first();
+    await withdraw.click();
     await page
       .getByRole("dialog", { name: "Withdraw links" })
       .getByRole("button", { name: "Withdraw links" })
       .click();
-    await sent.getByRole("button", { name: "Withdraw links" }).waitFor({
+    await withdraw.waitFor({
       state: "detached",
       timeout: 10000 * P,
     });
@@ -6301,6 +6333,7 @@ async function copyFlow(base) {
     await page
       .locator('[data-kit="activity-log"] [data-part="line"]', { hasText: "mark sent" })
       .getByText("(status)")
+      .first()
       .waitFor({ timeout: 10000 * P });
     console.log(
       "  ✓ browser: after an action on its page, the record's form shows the new values, and its history the action",

@@ -46,6 +46,8 @@ test("the document sends only its named fields, also after a column is added to 
   expect(before).toContain("invoiceLineData.getIn(q, viewer, line.id)");
   expect(before).toContain("clientData.getIn(q, viewer, Number(toId))");
   expect(before).toContain("if (businessProfileAccess.read.owner)");
+  // A record with no owner (a seeded sample) takes the reader's own details, never another's.
+  expect(before).toContain("const owner = record.ownerId ?? viewer?.id;");
   // A worked-out value missing refuses the document instead of printing a blank.
   expect(before).toContain(
     'lines.map((line) => missing(line, [["amount", "Amount"]])).find(Boolean)',
