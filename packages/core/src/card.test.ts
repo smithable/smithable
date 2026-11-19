@@ -368,6 +368,7 @@ const LEFT_OUT: Record<string, string> = {
   "smithable.yml:pages.*.favorites": "a list's favorites",
   "smithable.yml:pages.*.export": "a list's download, within what the viewer may read",
   "smithable.yml:pages.*.contact.**": "a record page's contact button",
+  "smithable.yml:pages.*.document.**": "a record printed as a document, from fields the card lists",
   "smithable.yml:pages.*.rules.**": "a guide for the page",
   "smithable.yml:navigation": "the menu",
   "smithable.auth.yml:defaultRole": "the role a new account gets; the table shows every role",

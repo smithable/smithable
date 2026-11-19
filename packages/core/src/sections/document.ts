@@ -46,7 +46,16 @@ export const documentSchema = {
       required: ["ref", "show"],
       additionalProperties: false,
       description: "Who it is for: a reference of the record and fields of its model.",
-      properties: { ref: { type: "string" }, show: fieldList },
+      properties: {
+        ref: {
+          type: "string",
+          description: "A reference of the record to one record, e.g. client.",
+        },
+        show: {
+          ...fieldList,
+          description: "Fields of the referenced record, e.g. [name, address].",
+        },
+      },
     },
     show: { ...fieldList, description: "Fields of the record, e.g. [number, issued, due]." },
     lines: {
@@ -54,7 +63,10 @@ export const documentSchema = {
       required: ["list", "show"],
       additionalProperties: false,
       description: "A list field of the record and the listed model's fields, as a table.",
-      properties: { list: { type: "string" }, show: fieldList },
+      properties: {
+        list: { type: "string", description: "A list field of the record, e.g. lines." },
+        show: { ...fieldList, description: "Fields of each listed record: the table's columns." },
+      },
     },
     totals: { ...fieldList, description: "Fields of the record under the lines, e.g. [total]." },
     note: { type: "string", description: "A text field of the record printed at the end." },
