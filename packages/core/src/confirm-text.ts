@@ -2,8 +2,8 @@
 // file's `confirm` text, filled from the record as it is before the action. The person pressing
 // the button is on the record already, so its fields and worked-out values may be in it; a link,
 // a pay page or a name are a mail's and are not.
-import type { SpecIR, StandardActionIR } from "./ir.js";
-import { notSendable } from "./sections/outgoing.js";
+import type { FieldIR, ModelIR, SpecIR, StandardActionIR } from "./ir.js";
+import { notSendable, workedOutFrom } from "./sections/outgoing.js";
 import { didYouMean } from "./suggest.js";
 
 const MAIL_ONLY = ["view", "pay", "link", "by", "before"];
@@ -18,7 +18,7 @@ export function confirmPlaceholderProblem(
   if (!model) return undefined;
   const offered = () => [
     "title",
-    ...model.fields.filter((f) => !notSendable(f)).map((f) => f.name),
+    ...model.fields.filter((f) => !refused(f, model, ir)).map((f) => f.name),
   ];
   const parts = path.split(".");
   if (parts.length > 2 || parts.some((p) => !p))
@@ -38,7 +38,7 @@ export function confirmPlaceholderProblem(
       message: `${model.name} has no field named "${first}".`,
       hint: didYouMean(first, offered()) ?? `The placeholders here: ${offered().join(", ")}.`,
     };
-  const why = notSendable(f);
+  const why = refused(f, model, ir);
   if (why) return { message: `${model.name}.${first} ${why}, so it cannot fill a placeholder.` };
   if (second === undefined) return undefined;
   if (f.type.kind !== "relation")
@@ -57,8 +57,13 @@ export function confirmPlaceholderProblem(
       );
     return { message: `${target} has no field named "${second}".`, ...(hint ? { hint } : {}) };
   }
-  const whyNot = notSendable(g);
+  const whyNot = refused(g, other, ir);
   return whyNot
     ? { message: `${other.name}.${second} ${whyNot}, so it cannot fill a placeholder.` }
     : undefined;
+}
+
+/** Why a field may not fill a placeholder: it is never sent, or worked out from one that is. */
+function refused(f: FieldIR, model: ModelIR, ir: SpecIR): string | undefined {
+  return notSendable(f) ?? (f.formula ? workedOutFrom(f, model, ir.models) : undefined);
 }

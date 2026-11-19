@@ -12,6 +12,7 @@ models:
       name: string!
       email: email
       ssn: string
+      ssnTail: { type: string, formula: "CONCAT(name, ssn)" }
   Invoice:
     fields:
       number: string!
@@ -74,6 +75,9 @@ test("the confirm text fills from the record, its references and worked-out valu
   ]);
   expect(messages("send", "{lines}")).toEqual([expect.stringContaining("lists other records")]);
   expect(messages("send", "{client.ssn}")).toEqual([expect.stringContaining("identity number")]);
+  expect(messages("send", "{client.ssnTail}")).toEqual([
+    expect.stringContaining("is worked out from ssn"),
+  ]);
   expect(messages("send", "{number.x}")).toEqual([
     expect.stringContaining("is not a reference to one record"),
   ]);
