@@ -336,7 +336,7 @@ try {
         throw new Error("Smith is docked by default");
       if (await page.getByText("No changes yet.").count())
         throw new Error("the window Smith left is on screen beside the preview");
-      const hint = page.getByText("Click Smith’s face to show him again.", { exact: true });
+      const hint = page.getByText("Click Smith to show him again.", { exact: true });
       await face.click();
       await panel.waitFor({ state: "hidden" });
       await hint.waitFor();

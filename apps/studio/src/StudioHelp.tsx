@@ -11,7 +11,7 @@ const hints = [
   {
     id: "smith",
     title: "Keep the preview in view",
-    text: "Select Smith’s face to open his conversation. Select it again to return to the preview.",
+    text: "Select Smith to open his conversation. Select it again to return to the preview.",
   },
   {
     id: "changes",
