@@ -355,6 +355,10 @@ pages:
     "return workedOut(named.flatMap((name) => (all[name] ? [all[name]] : [])));",
   );
   expect(module).toContain('import { invoiceFormulas } from "./invoice.formulas";');
+  // Listed under the text only where show names it.
+  expect(module).toContain(
+    "const labels = worked && Array.isArray(entry.show) ? [...pageLabels, ...worked.labels] : pageLabels;",
+  );
   expect(module).toContain('type Tx = Pick<typeof db, "select" | "insert" | "query">;');
   // Named once though show and the text both name it; an entry naming none has no list.
   expect(module).toContain('show: ["number","total"],\n    worked: ["total"],');

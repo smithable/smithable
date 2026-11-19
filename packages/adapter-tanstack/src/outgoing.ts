@@ -716,7 +716,8 @@ export function outgoing(tx: Tx, ${mails.length ? "viewer" : "_viewer"}: Viewer 
         ? `const { title, labels: pageLabels, values: pageValues, ...rest } = shown;
     // The worked-out values it names, worked out now: one without a value refuses the change.
     const worked = entry.worked ? WORKED[model]?.(tx, record.id as number, entry.worked) : undefined;
-    const labels = worked ? [...pageLabels, ...worked.labels] : pageLabels;
+    // A worked-out field joins the listed fields only where show names it; a placeholder fills its value.
+    const labels = worked && Array.isArray(entry.show) ? [...pageLabels, ...worked.labels] : pageLabels;
     const values = worked ? { ...pageValues, ...worked.values } : pageValues;`
         : "const { title, labels, values, ...rest } = shown;"
     }

@@ -370,7 +370,7 @@ function readShow(
       );
       return { problem: `${model.name} has no field named "${name}".${hint ? ` ${hint}` : ""}` };
     }
-    const why = f.formula ? worked : notSendable(f);
+    const why = (f.formula ? worked : undefined) ?? notSendable(f);
     if (why) return { problem: `${model.name}.${name} ${why}, so it cannot be shown.` };
   }
   return { show: [...new Set(names)] };

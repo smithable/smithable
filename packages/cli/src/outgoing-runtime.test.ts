@@ -285,6 +285,7 @@ test("worked-out values a mail names: written as the page writes them; one with 
     () => "",
     () => Number.NaN,
     () => Number.POSITIVE_INFINITY,
+    () => new Date(Number.NaN),
     () => {
       throw new Error("no lines");
     },
@@ -296,4 +297,21 @@ test("worked-out values a mail names: written as the page writes them; one with 
       ]),
     ).toThrow(new Conflict("no-value:Total"));
   }
+  // A value its page writes as nothing has none to send either.
+  expect(() => workedOut([["total", "Total", () => 5, () => " "]])).toThrow(
+    new Conflict("no-value:Total"),
+  );
+  // A refusal made while working it out stands as it was.
+  expect(() =>
+    workedOut([
+      [
+        "total",
+        "Total",
+        () => {
+          throw new Conflict("full");
+        },
+        money,
+      ],
+    ]),
+  ).toThrow(new Conflict("full"));
 });

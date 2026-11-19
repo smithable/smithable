@@ -1127,7 +1127,9 @@ export function placeholderProblem(
   // A worked-out field of the record itself, worked out when the mail is written (record-documents.md §3).
   const worked = workedOutRefused(Boolean(channelsOf(entry)), entry.when);
   const offered = () => [
-    ...model.fields.filter((f) => (f.formula ? !worked : !notSendable(f))).map((f) => f.name),
+    ...model.fields
+      .filter((f) => (f.formula ? !worked : true) && !notSendable(f))
+      .map((f) => f.name),
     "title",
     "link",
     "by",
@@ -1146,7 +1148,8 @@ export function placeholderProblem(
     f: { name: string; formula?: unknown; type: OutgoingFieldType },
     formula = worked,
   ) => {
-    const why = f.formula ? formula : notSendable(f as Parameters<typeof notSendable>[0]);
+    const why =
+      (f.formula ? formula : undefined) ?? notSendable(f as Parameters<typeof notSendable>[0]);
     return why ? bad(`${of}.${f.name} ${why}, so it cannot fill a placeholder.`) : undefined;
   };
   if (second === undefined) {

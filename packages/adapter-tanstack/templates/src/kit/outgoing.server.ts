@@ -144,13 +144,21 @@ export function workedOut(fields: Worked[]): {
     let v: unknown;
     try {
       v = value();
-    } catch {
+    } catch (error) {
+      // A refusal already made stands; a formula that fails has no value.
+      if (error instanceof Conflict) throw error;
       v = undefined;
     }
-    if (v == null || v === "" || (typeof v === "number" && !Number.isFinite(v)))
-      throw new Conflict(`no-value:${label}`);
+    const text =
+      v == null ||
+      v === "" ||
+      (typeof v === "number" && !Number.isFinite(v)) ||
+      (v instanceof Date && Number.isNaN(v.getTime()))
+        ? ""
+        : written(v);
+    if (!text.trim()) throw new Conflict(`no-value:${label}`);
     labels.push([name, label]);
-    values[name] = written(v);
+    values[name] = text;
   }
   return { labels, values };
 }
