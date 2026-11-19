@@ -9,7 +9,7 @@ import { lookup } from "node:dns/promises";
 import { and, eq, isNull, lte } from "drizzle-orm";
 import { db } from "#/db";
 import { outgoingCall, outgoingMail } from "#/db/schema";
-import { AccessDenied, type Viewer } from "./access";
+import { AccessDenied, Conflict, type Viewer } from "./access";
 import { audit } from "./audit.server";
 import { post, proxied, proxyRefusal } from "./call.server";
 import { dayText } from "./format";
@@ -118,6 +118,41 @@ export function shownFields(
     const label = labels.find(([n]) => n === name)?.[1] ?? name;
     return [label, previous && was !== undefined && was !== now ? `${now} (${w.was} ${was})` : now];
   });
+}
+
+/** A worked-out field a mail names: its name, label, how to work it out, how its page writes it. */
+export type Worked = [
+  name: string,
+  label: string,
+  value: () => unknown,
+  written: (value: unknown) => string,
+];
+
+/**
+ * The worked-out values a mail names (record-documents.md §3), worked out now, in the change's
+ * transaction, and written as the record page writes them. One with no value (its formula fails,
+ * or gives nothing) refuses the change, so a mail never goes out with a hole where an amount
+ * should be.
+ */
+export function workedOut(fields: Worked[]): {
+  labels: [string, string][];
+  values: Record<string, string>;
+} {
+  const labels: [string, string][] = [];
+  const values: Record<string, string> = {};
+  for (const [name, label, value, written] of fields) {
+    let v: unknown;
+    try {
+      v = value();
+    } catch {
+      v = undefined;
+    }
+    if (v == null || v === "" || (typeof v === "number" && !Number.isFinite(v)))
+      throw new Conflict(`no-value:${label}`);
+    labels.push([name, label]);
+    values[name] = written(v);
+  }
+  return { labels, values };
 }
 
 /** One record in a list mail (docs/design/reports.md §2.2): as a record's own mail shows it. */

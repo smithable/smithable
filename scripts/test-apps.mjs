@@ -6044,6 +6044,80 @@ async function documentFlow(dir, base) {
   }
 }
 
+/**
+ * The invoice mail names the invoice's total, a worked-out field (record-documents.md §3): it
+ * carries the total as the page writes it, summed from the lines in the action's transaction, not
+ * zero; and when the total has no value, Mark sent is refused and nothing changes or is sent.
+ */
+async function invoiceMailFlow(dir, base) {
+  const browser = await chromium.launch();
+  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+  const outbox = join(dir, "data", "mail", "outbox");
+  const mails = () =>
+    existsSync(outbox) ? readdirSync(outbox).filter((f) => !f.startsWith(".")) : [];
+  const drafts = query(
+    dir,
+    `select i.id, i.number, sum(l.quantity * l.unit_price) as cents, min(l.id) as line, min(l.quantity) as quantity
+       from invoices i join invoice_lines l on l.invoice_id = i.id
+       join clients c on c.id = i.client_id
+      where i.status = 'draft' and c.email is not null and c.email != ''
+      group by i.id order by i.id desc limit 2`,
+  );
+  let broken;
+  try {
+    if (drafts.length < 2) throw new Error(`${drafts.length} draft invoices with lines, too few`);
+    const [sent, refused] = drafts;
+    await signInAs(page, base, "admin");
+    const markSent = page.getByRole("button", { name: "Mark sent" }).filter({ visible: true });
+    let count = mails().length;
+    await open(page, `${base}/invoices/${sent.id}`);
+    await markSent.click();
+    for (let i = 0; i < 100 * P && mails().length <= count; i++) await page.waitForTimeout(100);
+    const mail = mails()
+      .map((f) => quotedPrintable(readFileSync(join(outbox, f), "latin1")))
+      .find((m) => m.includes(`invoice ${sent.number} for`));
+    if (!mail) throw new Error(`no mail names invoice ${sent.number}`);
+    const total = new Intl.NumberFormat("en", { style: "currency", currency: "EUR" }).format(
+      Math.round(sent.cents) / 100,
+    );
+    if (!mail.includes(`invoice ${sent.number} for ${total},`))
+      throw new Error(`the mail does not say ${total}: ${mail.slice(0, 600)}`);
+    console.log(
+      `  ✓ browser: Mark sent mails the invoice's total as the page writes it (${total})`,
+    );
+
+    // A line whose quantity is no number leaves the total without a value.
+    write(dir, `UPDATE invoice_lines SET quantity = 'x' WHERE id = ${refused.line}`);
+    broken = refused;
+    count = mails().length;
+    await open(page, `${base}/invoices/${refused.id}`);
+    await markSent.click();
+    await page
+      .getByText("Total has no value to send")
+      .first()
+      .waitFor({ timeout: 10000 * P });
+    await page.waitForTimeout(1000);
+    const [{ status }] = query(dir, `select status from invoices where id = ${refused.id}`);
+    if (status !== "draft") throw new Error(`the refused invoice is ${status}, not draft`);
+    if (mails().length !== count) throw new Error("a mail went out for the refused change");
+    console.log(
+      "  ✓ browser: a total with no value refuses Mark sent: the invoice stays a draft and no mail goes",
+    );
+  } catch (error) {
+    console.log(
+      `  ✗ browser (invoice mail): ${error.message.split("\n")[0]}\n    at ${page.url()}, see ${await screenshot(page)}`,
+    );
+    failures.push("invoice mail");
+  } finally {
+    if (broken)
+      write(
+        dir,
+        `UPDATE invoice_lines SET quantity = ${broken.quantity} WHERE id = ${broken.line}`,
+      );
+    await browser.close();
+  }
+}
+
 /** A copy: Duplicate asks for the new invoice's number and opens the copy, with the lines. */
 async function copyFlow(base) {
   const browser = await chromium.launch();
@@ -9475,6 +9549,7 @@ test("the session cookie's name and attributes", async () => {
       if (example === "api") await apiTrashFlow(base);
       if (example === "api") await askPanelFlow(dir, base);
       if (example === "invoicing") {
+        await invoiceMailFlow(dir, base);
         await copyFlow(base);
         await documentFlow(dir, base);
         await formulaFlow(base);

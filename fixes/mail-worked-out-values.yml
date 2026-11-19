@@ -1,0 +1,9 @@
+id: mail-worked-out-values
+title: A mail, push or sms could not name a worked-out field of its record, such as an invoice's total; now it can, worked out in the change's own transaction, and one with no value refuses the change.
+severity: fix
+exposure: none
+introduced: unknown
+affects:
+  kit: [src/kit/outgoing.server.ts, src/kit/refusal.ts, src/kit/ModelForm.tsx, src/kit/ActionButton.tsx, src/kit/words/en.ts, src/kit/words/sv.ts]
+  features: [any]
+migration: none

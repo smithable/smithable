@@ -8,6 +8,8 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
+class Conflict extends Error {}
+
 function fixture() {
   vi.useFakeTimers();
   type Row = {
@@ -89,7 +91,8 @@ function fixture() {
       "pauseAfter",
       "createHmac",
       "outsideTrace",
-      `${source}; return {sendDue};`,
+      "Conflict",
+      `${source}; return {sendDue, workedOut};`,
     )(
       db,
       mail,
@@ -109,7 +112,14 @@ function fixture() {
       () => 60000,
       () => ({ update: () => ({ digest: () => "signature" }) }),
       (fn: () => void) => fn(),
-    ) as { sendDue(): Promise<number> };
+      Conflict,
+    ) as {
+      sendDue(): Promise<number>;
+      workedOut(fields: [string, string, () => unknown, (v: unknown) => string][]): {
+        labels: [string, string][];
+        values: Record<string, string>;
+      };
+    };
   vi.stubEnv("TEST_WEBHOOK_URL", "https://example.test/hook");
   vi.stubEnv("TEST_WEBHOOK_SECRET", "test");
   const row = (id: number) => ({
@@ -259,3 +269,31 @@ for (const kind of ["mail", "call"] as const) {
     expect(kind === "mail" ? f.sendMail : f.post).toHaveBeenCalledTimes(1);
   });
 }
+
+test("worked-out values a mail names: written as the page writes them; one with no value refuses the change (record-documents.md §3)", () => {
+  const { workedOut } = fixture().load();
+  const money = (v: unknown) => `€${(Number(v) / 100).toFixed(2)}`;
+  expect(workedOut([["total", "Total", () => 12345, money]])).toEqual({
+    labels: [["total", "Total"]],
+    values: { total: "€123.45" },
+  });
+  // Nothing worked out is a value: an empty invoice's total is zero, and says so.
+  expect(workedOut([["total", "Total", () => 0, money]]).values.total).toBe("€0.00");
+  for (const missing of [
+    () => null,
+    () => undefined,
+    () => "",
+    () => Number.NaN,
+    () => Number.POSITIVE_INFINITY,
+    () => {
+      throw new Error("no lines");
+    },
+  ]) {
+    expect(() =>
+      workedOut([
+        ["number", "Number", () => "2026-001", String],
+        ["total", "Total", missing, money],
+      ]),
+    ).toThrow(new Conflict("no-value:Total"));
+  }
+});

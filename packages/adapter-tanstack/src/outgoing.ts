@@ -24,6 +24,7 @@ import {
 import { apiFields, readCode } from "./api.js";
 import { hasSignIn } from "./auth.js";
 import { fieldUi } from "./data.js";
+import { aggregatedLists, formulasModule, formulasName } from "./formulas.js";
 import { nameColumns, nameFunction } from "./names.js";
 import {
   composedName,
@@ -376,8 +377,48 @@ ${apiFields(model)
   // Whom to mail, naming only what it reads (a role's people need no record).
   const toCode = (code: string) =>
     `to: (${/\btx\b/.test(code) ? "tx" : "_tx"}, ${/\br\./.test(code) ? "r" : "_r"}) => ${code},`;
+  // The worked-out fields of its record a mail names in its show and texts (record-documents.md
+  // §3): worked out when it is written, in the change's transaction.
+  const workedOf = (o: RecordOutgoing): FieldIR[] => {
+    if (!told(o)) return [];
+    const words = content?.outgoing?.[o.name];
+    const named = [
+      ...(Array.isArray(o.show) ? o.show : []),
+      ...placeholdersOf(`${words?.subject ?? ""} ${words?.text ?? ""}`),
+    ];
+    return modelNamed(ir, o.when.model).fields.filter((f) => f.formula && named.includes(f.name));
+  };
+  const workedBy = new Map<ModelIR, Set<FieldIR>>();
+  for (const o of entries)
+    for (const f of workedOf(o)) {
+      const model = modelNamed(ir, o.when.model);
+      workedBy.set(model, (workedBy.get(model) ?? new Set()).add(f));
+    }
+  // Each model's worked-out values a mail may name: the record read again in the transaction,
+  // after the change's writes, with the lists its formulas read (a trashed line not counted).
+  const workers = [...workedBy].map(([model, fields]) => {
+    const lists = aggregatedLists(model).map((list) => {
+      const f = model.fields.find((x) => x.name === list);
+      const target = f?.type.kind === "relation" ? modelNamed(ir, f.type.model) : undefined;
+      return target?.trash
+        ? `${list}: { where: (t, { isNull }) => isNull(t.deletedAt) }`
+        : `${list}: true`;
+    });
+    const each = [...fields].map((f) => {
+      const ui = fieldUi(model, f, t, ir, ux);
+      return `      ${JSON.stringify(f.name)}: [${JSON.stringify(f.name)}, ${JSON.stringify(ui.label)}, () => row && ${formulasName(model)}.${f.name}(row), (v) => formatValue(${uiLiteral(ui)}, v, app)],`;
+    });
+    return `  ${JSON.stringify(model.name)}: (tx, id, named) => {
+    const row = tx.query.${names(model, t).tableKey}.findFirst({ where: (t, { eq }) => eq(t.id, id)${lists.length ? `, with: { ${lists.join(", ")} }` : ""} }).sync();
+    const all: Record<string, Worked> = {
+${each.join("\n")}
+    };
+    return workedOut(named.flatMap((name) => all[name] ?? []));
+  },`;
+  });
   const list = entries.map((o) => {
     const model = modelNamed(ir, o.when.model);
+    const worked = workedOf(o).map((f) => f.name);
     const words = content?.outgoing?.[o.name];
     const when =
       "event" in o.when
@@ -398,7 +439,7 @@ ${apiFields(model)
     return `  {
     name: ${JSON.stringify(o.name)},
     model: ${JSON.stringify(o.when.model)},
-    when: ${JSON.stringify(when)},${fits ? `\n    fits: ${fits},` : ""}${o.fields?.length ? `\n    fields: ${JSON.stringify(o.fields.map((f) => keyOf(model, f)))},` : ""}${words?.subject ? `\n    subject: ${JSON.stringify(words.subject)},` : ""}${words?.text ? `\n    text: ${JSON.stringify(words.text)},` : ""}${o.show ? `\n    show: ${JSON.stringify(o.show)},` : ""}${o.previous ? "\n    previous: true," : ""}${paths.some((p) => p.startsWith("before.")) ? "\n    before: true," : ""}${hops.length ? `\n    more: (tx, r) => ({ ${hops.map(([path, code]) => `${JSON.stringify(path)}: ${code}`).join(", ")} }),` : ""}
+    when: ${JSON.stringify(when)},${fits ? `\n    fits: ${fits},` : ""}${o.fields?.length ? `\n    fields: ${JSON.stringify(o.fields.map((f) => keyOf(model, f)))},` : ""}${words?.subject ? `\n    subject: ${JSON.stringify(words.subject)},` : ""}${words?.text ? `\n    text: ${JSON.stringify(words.text)},` : ""}${o.show ? `\n    show: ${JSON.stringify(o.show)},` : ""}${o.previous ? "\n    previous: true," : ""}${paths.some((p) => p.startsWith("before.")) ? "\n    before: true," : ""}${worked.length ? `\n    worked: ${JSON.stringify(worked)},` : ""}${hops.length ? `\n    more: (tx, r) => ({ ${hops.map(([path, code]) => `${JSON.stringify(path)}: ${code}`).join(", ")} }),` : ""}
     ${told(o) ? toCode(recipients(model, o.recipient)) : `target: ${JSON.stringify(o.to)},`}${channelsOf(o)?.includes("push") ? "\n    push: true," : ""}${channelsOf(o)?.includes("sms") ? "\n    sms: true," : ""}${told(o) && !channelsOf(o)?.includes("mail") ? "\n    mail: false," : ""}
   },`;
   });
@@ -432,7 +473,7 @@ ${apiFields(model)
       `  ${JSON.stringify(o.name)}: { model: ${JSON.stringify(o.list.model)}, columns: ${literal(o.list.columns)}, send: ${o.empty === "send"}${o.list.limit ? `, limit: ${o.list.limit}` : ""}, subject: ${JSON.stringify(`${words.pluralLabel}: {date}`)}${fits ? `, fits: ${fits}` : ""} },`,
     ];
   });
-  const body = [...showers, ...senders, ...list, ...afterList].join("\n");
+  const body = [...showers, ...senders, ...workers, ...list, ...afterList].join("\n");
   const ones = body.includes("one(tx,");
   const trashOne = body.includes(".deletedAt)");
   const imports = threading ? 'import { AsyncLocalStorage } from "node:async_hooks";\n' : "";
@@ -446,9 +487,9 @@ ${apiFields(model)
   ];
   return `${HEADER}${imports}${drizzle.length ? `import { ${drizzle.join(", ")} } from "drizzle-orm";\n` : ""}${ones ? 'import type { SQLiteColumn, SQLiteTable } from "drizzle-orm/sqlite-core";\n' : ""}import type { db } from "#/db";
 ${tables.size || users || named || threaded ? `${SCHEMA_IMPORT}\n` : ""}${body.includes("formatValue(") || threaded ? 'import { app } from "#/generated/app";\n' : ""}import type { Viewer } from "#/kit/access";
-${body.includes("formatValue(") || body.includes("titleOf(") ? `import { ${[...(body.includes("formatValue(") ? ["formatValue"] : []), ...(body.includes("titleOf(") ? ["titleOf"] : [])].join(", ")} } from "#/kit/format";\n` : ""}${entries.length ? `import { ${[...(mails.length ? ["blank"] : []), ...(calls.length ? ["changedBefore"] : []), "counts", ...(mails.length ? ["fillText"] : []), ...(calls.length ? ["picked"] : [])].join(", ")} } from "#/kit/outgoing";\n` : ""}${[...composedUsed].map((m) => `import { ${nameFunction(m)} } from "./${kebab(m.name)}.name";\n`).join("")}import { ${[...(mails.length ? ["type Happening", "linkTo"] : []), ...(calls.length || callsAfter ? ["queueCall"] : []), ...(mails.length || mailsAfter ? ["queueMail", "type Recipient"] : []), ...(mails.length ? ["shownFields"] : []), ...(threaded ? ["type Thread"] : [])].join(", ")} } from "#/kit/outgoing.server";${listed.length ? '\nimport { dayWords, listText } from "#/kit/outgoing.server";' : ""}${pushes.length ? '\nimport { pushReaders, queuePush } from "#/kit/push.server";' : ""}${texts.length ? '\nimport { queueSms } from "#/kit/sms.server";' : ""}
+${body.includes("formatValue(") || body.includes("titleOf(") ? `import { ${[...(body.includes("formatValue(") ? ["formatValue"] : []), ...(body.includes("titleOf(") ? ["titleOf"] : [])].join(", ")} } from "#/kit/format";\n` : ""}${entries.length ? `import { ${[...(mails.length ? ["blank"] : []), ...(calls.length ? ["changedBefore"] : []), "counts", ...(mails.length ? ["fillText"] : []), ...(calls.length ? ["picked"] : [])].join(", ")} } from "#/kit/outgoing";\n` : ""}${[...composedUsed].map((m) => `import { ${nameFunction(m)} } from "./${kebab(m.name)}.name";\n`).join("")}${[...workedBy.keys()].map((m) => `import { ${formulasName(m)} } from "${formulasModule(m)}";\n`).join("")}import { ${[...(mails.length ? ["type Happening", "linkTo"] : []), ...(calls.length || callsAfter ? ["queueCall"] : []), ...(mails.length || mailsAfter ? ["queueMail", "type Recipient"] : []), ...(mails.length ? ["shownFields"] : []), ...(threaded ? ["type Thread"] : []), ...(workers.length ? ["type Worked", "workedOut"] : [])].join(", ")} } from "#/kit/outgoing.server";${listed.length ? '\nimport { dayWords, listText } from "#/kit/outgoing.server";' : ""}${pushes.length ? '\nimport { pushReaders, queuePush } from "#/kit/push.server";' : ""}${texts.length ? '\nimport { queueSms } from "#/kit/sms.server";' : ""}
 
-type Tx = Pick<typeof db, "select" | "insert"${composedUsed.size ? ' | "query"' : ""}>;
+type Tx = Pick<typeof db, "select" | "insert"${composedUsed.size || workers.length ? ' | "query"' : ""}>;
 type Row = Record<string, unknown>;
 
 /** The targets the outgoing section calls: the only ones src/kit/tell.server.ts may call too. */
@@ -544,7 +585,16 @@ type Shown = Omit<Happening, "entry" | "model" | "record" | "fields"> & {
 const SHOWN: Record<string, (tx: Tx, r: Row) => Shown> = {
 ${showers.join("\n")}
 };
+${
+  workers.length
+    ? `
+/** The worked-out values a mail names, worked out when it is written (record-documents.md §3). */
+const WORKED: Record<string, (tx: Tx, id: number, named: string[]) => ReturnType<typeof workedOut>> = {
+${workers.join("\n")}
+};
 `
+    : ""
+}`
     : ""
 }${
   calls.length
@@ -578,7 +628,7 @@ const ENTRIES: {
   /** The texts use {before.<field>}: the record before the change is read too. */
   before?: true;
   /** The texts' placeholders one reference away, read with the record. */
-  more?: (tx: Tx, r: Row) => Record<string, string>;
+  more?: (tx: Tx, r: Row) => Record<string, string>;${workers.length ? "\n  /** The worked-out fields its show and texts name. */\n  worked?: string[];" : ""}
   to?: (tx: Tx, r: Row) => Recipient[];${
     pushes.length || texts.length
       ? `
@@ -661,7 +711,15 @@ export function outgoing(tx: Tx, ${mails.length ? "viewer" : "_viewer"}: Viewer 
         ? `
     const shown = SHOWN[model]?.(tx, record);
     if (!shown || !entry.to) continue;
-    const { title, labels, values, ...rest } = shown;
+    ${
+      workers.length
+        ? `const { title, labels: pageLabels, values: pageValues, ...rest } = shown;
+    // The worked-out values it names, worked out now: one without a value refuses the change.
+    const worked = entry.worked ? WORKED[model]?.(tx, record.id as number, entry.worked) : undefined;
+    const labels = worked ? [...pageLabels, ...worked.labels] : pageLabels;
+    const values = worked ? { ...pageValues, ...worked.values } : pageValues;`
+        : "const { title, labels, values, ...rest } = shown;"
+    }
     const prior = before && (entry.previous || entry.before) ? SHOWN[model]?.(tx, before) : undefined;
     const more = entry.more?.(tx, record);
     // The texts' placeholders (outgoing-templates.md §3): the record's values as its page shows them, its title and address, who made the change, and what a field was.
