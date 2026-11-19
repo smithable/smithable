@@ -62,6 +62,12 @@ export function clearPreviewSelection() {
   previewWindow?.postMessage({ type: "smithable:clear-selection" }, previewTarget());
 }
 
+/** Keep the selected part above a Studio sheet, within the existing preview. */
+export function revealPreviewSelection(bottom: number) {
+  if (previewOrigin && bottom > 0 && Number.isFinite(bottom))
+    previewWindow?.postMessage({ type: "smithable:reveal-selection", bottom }, previewOrigin);
+}
+
 let followContext = 0;
 export const previewFollowContext = () => followContext;
 /** An explicit editor destination wins over already queued messages from the preview. */

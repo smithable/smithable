@@ -131,6 +131,13 @@ export async function checkStudioSelection(browser, base) {
     await sheet.waitFor();
     const panel = await sheet.boundingBox();
     assert.ok(panel && panel.y >= 200 && panel.x < 12);
+    const iframe = page.locator('iframe[title="App preview"]');
+    const framePosition = await iframe.boundingBox();
+    const preview = await (await iframe.elementHandle()).contentFrame();
+    await preview.waitForFunction((bottom) => {
+      const selected = document.querySelector("[data-sm-selected]");
+      return selected && selected.getBoundingClientRect().bottom <= bottom;
+    }, panel.y - framePosition.y);
     assert.equal(
       await sheet.getByRole("button", { name: "Move selection", exact: true }).count(),
       0,

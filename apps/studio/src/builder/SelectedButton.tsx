@@ -1,5 +1,5 @@
 import { humanize, SECTION_LOOKS } from "@smithable/core";
-import { type CSSProperties, useId, useRef, useState } from "react";
+import { type CSSProperties, useId, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { Spec } from "../engine";
 import type { Selection } from "../preview";
@@ -40,12 +40,14 @@ export function SelectedButton({
   close,
   host,
   position,
+  reveal,
 }: {
   button: NonNullable<ReturnType<typeof selectedButton>>;
   run: Run;
   close: () => void;
   host?: HTMLDivElement | null;
   position?: CSSProperties;
+  reveal: (sheetTop: number) => void;
 }) {
   const [tab, setTab] = useState<"look" | "text" | "behavior">("look");
   const [layout, setLayout] = useState<string>();
@@ -58,6 +60,19 @@ export function SelectedButton({
   const narrow = useMedia("(max-width: 1023px)");
   const standalone = host === undefined;
   const movement = useOverlayPosition("selection", panel, standalone && !narrow);
+  useLayoutEffect(() => {
+    const sheet = panel.current;
+    if (!narrow || !standalone || !sheet) return;
+    const align = () => reveal(sheet.getBoundingClientRect().top);
+    align();
+    const observer = new ResizeObserver(align);
+    observer.observe(sheet);
+    window.addEventListener("resize", align);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", align);
+    };
+  }, [narrow, standalone, reveal]);
   const layouts = SECTION_LOOKS.hero?.layout;
   const meaningful =
     tab === "look"

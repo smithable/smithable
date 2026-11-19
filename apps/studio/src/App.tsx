@@ -46,6 +46,7 @@ import {
   clearPreviewSelection,
   isPreviewMessage,
   type Place,
+  revealPreviewSelection,
   type Selection,
   touched,
   touchesPage,
@@ -368,6 +369,13 @@ export function App() {
   }, [smithHideHint]);
   // The preview's edges on the screen, which the floating panel hangs between.
   const [previewBox, setPreviewBox] = useState<HTMLDivElement | null>(null);
+  const revealSelection = useCallback(
+    (sheetTop: number) => {
+      const frame = previewBox?.querySelector('iframe[title="App preview"]');
+      if (frame) revealPreviewSelection(sheetTop - frame.getBoundingClientRect().top - 12);
+    },
+    [previewBox],
+  );
   const [over, setOver] = useState<Bounds>();
   useEffect(() => {
     const box = previewBox;
@@ -2409,6 +2417,7 @@ export function App() {
           close={clearSelection}
           host={smithVisible && !overlaid ? selectionHost : undefined}
           position={narrow ? undefined : selectionPosition}
+          reveal={revealSelection}
         />
       )}
     </div>
