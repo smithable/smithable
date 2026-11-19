@@ -1,6 +1,6 @@
 # Studio opens on the app
 
-Design for Fable’s read, 19 November 2026. Based on engine main at `4f2c452f3`, Johan’s Studio feedback and his approval of all eight follow-up decisions. The pictures use Stillwater Yoga so the same button, page and conversation can be followed across states.
+Design reviewed by Fable, 19 November 2026. Based on engine main at `4f2c452f3`, Johan’s Studio feedback and his approval of all eight follow-up decisions. The pictures use Stillwater Yoga so the same button, page and conversation can be followed across states.
 
 ## From the Studio we have
 
@@ -53,15 +53,16 @@ Today `history.ts` groups trace entries and `OldVersion.tsx` opens an isolated c
 
 ## Small pull requests
 
-| Order | Deliverable and acceptance |
-| --- | --- |
-| 1 | Preview-first chrome, names, responsive overflow and page-name disclosure. Verify a typed visitor form survives opening Help or Smith, keyboard focus returns and phone controls fit. |
-| 2 | Smith bubbles, Dock / Undock, hide hint, collapsed topics and first-run ordering. Verify a returning owner skips the welcome and a new owner reaches both look picks. |
-| 3 | Keep mic toggle, add call lifecycle and hidden-state indicators. Exercise first-hide hint, denied permission, end call while hidden and reduced motion. |
-| 4 | Inspect click/tap and temporary Shift selection. Route one representative button through Look, Text and What it does in both panel positions. Expand by reusing the same forms. |
-| 5 | Draggable overlays, reset position, phone sheets, Help and large mail-template editor. Exercise resize, reopen and keyboard operation. |
-| 6 | Split Review and Publish over the existing review result. Move Summary and Map; exercise zero, nonzero and unreadable counts, plus a change before confirmation. |
-| 7 | List full history and open the existing isolated viewer. Show branch, current and unavailable states. Existing undo and redo remain available. |
-| 8 | After the retention decision, specify snapshot migration and restoration, then implement Apply in a separate PR. Test A → B → undo → C → preview B → apply → reopen, including preservation of C and visitor data. |
+| PR | Task and owner | Deliverable and acceptance |
+| --- | --- | --- |
+| First | T1021 · Codex | Deliver Undock, collapsed Suggested topics, the mic toggle, undo/redo and mail icons, a large mail-template overlay and the toolbar’s Smith toggle. Later PRs reuse these controls. |
+| 1 | T1022 · Codex | Preview-first chrome, names, responsive overflow and page-name disclosure. Verify a typed visitor form survives opening Help or Smith, keyboard focus returns and phone controls fit. |
+| 2 | T1022 · Codex | Smith bubbles, Dock / Undock, hide hint, collapsed topics and first-run ordering. Verify a returning owner skips the welcome and a new owner reaches both look picks. |
+| 3 | T1022 · Codex | Keep mic toggle, add call lifecycle and hidden-state indicators. Exercise first-hide hint, denied permission, end call while hidden and reduced motion. |
+| 4 | T1023 · Sol | Inspect click/tap and temporary Shift selection. Route one representative button through Look, Text and What it does in both panel positions. Expand by reusing the same forms. |
+| 5 | T1022 · Codex | Draggable overlays, reset position, phone sheets, Help and large mail-template editor. Exercise resize, reopen and keyboard operation. |
+| 6 | T1023 · Sol | Split Review and Publish over the existing review result. Move Summary and Map; exercise zero, nonzero and unreadable counts, plus a change before confirmation. |
+| 7 | Later · pending Fable’s go-ahead | List full history and open the existing isolated viewer. Show branch, current and unavailable states. Existing undo and redo remain available. |
+| 8 | Later · core design first | Write a separate core design note on snapshots, retention, migration, schema compatibility and restoration. Fable must read it before any PR 8 implementation begins. Resolve retention with Johan before building Apply. Test A → B → undo → C → preview B → apply → reopen, including preservation of C and visitor data. |
 
-PRs 1–7 can start from the decisions already recorded. This note and the accompanying pictures are for review.
+After T1021, Codex builds PRs 1, 2, 3 and 5 in sequence. When PR 1 lands on main, Codex tells Fable and Sol. Sol then builds PR 6 followed by PR 4, using the existing release permissions and operations. Fable schedules PRs 7 and 8 separately.
