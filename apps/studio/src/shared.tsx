@@ -37,6 +37,22 @@ const WIDTH_TITLES: Record<PreviewWidth, string> = {
   phone: "The app as a phone shows it (390 px)",
 };
 
+/** Frames stay on the preview's origin and keep its mounted path on a proxy. */
+function previewFrameSource(base: string, path: string) {
+  try {
+    const preview = new URL(base, window.location.origin);
+    if (preview.protocol !== "https:" && preview.protocol !== "http:") return "about:blank";
+    // Encode path text while keeping escapes which already came from a URL.
+    const encoded = encodeURI(path.startsWith("/") ? path : `/${path}`).replace(
+      /%25([0-9a-f]{2})/gi,
+      "%$1",
+    );
+    return `${preview.origin}${preview.pathname.replace(/\/$/, "")}${encoded}`;
+  } catch {
+    return "about:blank";
+  }
+}
+
 /** Matches a declared route, including its named path segments. */
 function matchesRoute(path: string, route: string) {
   const target = path.split("/").filter(Boolean);
@@ -130,7 +146,7 @@ export function Preview({
   // The address a frame is made with, fixed for that frame: the app's own navigation inside it
   // updates the address bar (current), and a src that followed would load the page again.
   // biome-ignore lint/correctness/useExhaustiveDependencies: a new frame (frameKey) takes the page shown now
-  const src = useMemo(() => `${url}${current.current}`, [frameKey, url]);
+  const src = useMemo(() => previewFrameSource(url, current.current), [frameKey, url]);
   // The last page that was up stays on screen while the next one starts (a change can restart
   // the app's server for seconds), instead of an empty panel.
   // It is the last frame whose page said it was ready: one that loaded an error page while the
@@ -143,7 +159,7 @@ export function Preview({
       if (!isPreviewMessage(e) || e.data.type !== "ready") return;
       if (e.source !== frame.current?.contentWindow) return;
       const { frameKey: key, opened: at, url: base } = now.current;
-      setShown({ key, src: `${base}${current.current}`, opened: at });
+      setShown({ key, src: previewFrameSource(base, current.current), opened: at });
     };
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);

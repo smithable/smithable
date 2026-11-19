@@ -1248,6 +1248,7 @@ export function App() {
     else workIn("nocode");
     setWorkspaceControls(true);
   };
+  const undoArrow = <path d="M4 10a8 8 0 1 1 1 8M4 4v6h6" />;
   const undoHistory = (
     <>
       <ToolbarButton
@@ -1258,7 +1259,7 @@ export function App() {
         }
         text={narrow}
       >
-        <path d="M4 10a8 8 0 1 1 1 8M4 4v6h6" />
+        {undoArrow}
       </ToolbarButton>
       <ToolbarButton label="Changes" onClick={() => showChanges()} text={narrow}>
         <path d="M9 6h11M9 12h11M9 18h11M4 6h1M4 12h1M4 18h1" />
@@ -1304,6 +1305,7 @@ export function App() {
           style={narrow ? { touchAction: "pan-y" } : undefined}
           {...rowPan.handlers}
         >
+          {!project.making && <span className="sr-only">Studio for {project.name}</span>}
           <div className="flex min-h-12 min-w-0 items-center gap-1 px-2 py-1.5 md:gap-2 md:px-4">
             <div
               className={cx(
@@ -1321,7 +1323,14 @@ export function App() {
             </div>
             <div ref={setAddressHost} className="min-w-0" />
             {project.making ? (
-              <span className="text-sm text-quiet">Preparing the app…</span>
+              <>
+                <span className="text-sm text-quiet">Preparing the app…</span>
+                <div className="ml-auto">
+                  <ToolbarButton label="Undo" onClick={() => void undo()} disabled>
+                    {undoArrow}
+                  </ToolbarButton>
+                </div>
+              </>
             ) : (
               <div className="ml-auto flex shrink-0 items-center gap-0.5 sm:gap-1">
                 <ToolbarButton

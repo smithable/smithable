@@ -425,6 +425,11 @@ try {
       await smith.press("Enter");
       if ((await draft.inputValue()) !== "Unsubmitted customer")
         throw new Error("the preview lost the unsubmitted form");
+      const encodedPath = "/customers?label=two%20words&kind=member#results";
+      const encodedAddress = await openPreviewAddress(page);
+      await encodedAddress.fill(encodedPath);
+      await encodedAddress.press("Enter");
+      await page.locator(`iframe[title="App preview"][src$="${encodedPath}"]`).waitFor();
       await openPreview("/customers");
     },
   );
@@ -3841,9 +3846,8 @@ try {
             throw new Error("the making page shows more than one line of what the app does");
           await screen.waitFor({ state: "detached", timeout: 60000 * P });
           await watcher
-            .locator("header")
-            .first()
-            .getByText("Lotus Pilates")
+            .locator("[data-studio-header]")
+            .getByText("Studio for Lotus Pilates", { exact: true })
             .waitFor({ timeout: 30000 * P });
         })();
         // Awaited after the making: a failure meanwhile is held for then, not thrown unhandled.
