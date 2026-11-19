@@ -5,16 +5,16 @@
 import { useEffect, useRef, useState } from "react";
 import { Button, cx, Select } from "./ui";
 
-export type WindowId = "nocode" | "code" | "summary" | "preview" | "smith" | "changes";
+export type WindowId = "nocode" | "code" | "preview" | "smith" | "changes";
 /**
- * No code, Code and the app's Summary are the sub-tabs of one window, the view for changing the
+ * No code and Code are the sub-tabs of one window, the view for changing the
  * app by hand (smith-first.md §6; Summary T962), named by the one open; nothing calls it
  * "manual" on the screen.
  */
-export type ManualView = "nocode" | "code" | "summary";
+export type ManualView = "nocode" | "code";
 /** Whether a window is one of that view's sub-tabs. */
 export const isManualView = (window: string | undefined): window is ManualView =>
-  window === "nocode" || window === "code" || window === "summary";
+  window === "nocode" || window === "code";
 /** A slot holds one window, Smith with Changes under it, or the view with No code and Code. */
 export type SlotContent = "manual" | "preview" | "smith" | "changes" | "smith+changes";
 export type Layout = "one" | "two" | "three" | "three-below";
@@ -22,7 +22,6 @@ export type Layout = "one" | "two" | "three" | "three-below";
 export const WINDOW_NAMES: Record<SlotContent | WindowId, string> = {
   nocode: "No code",
   code: "Code",
-  summary: "Summary",
   manual: "No code and Code",
   preview: "Preview",
   smith: "Smith",
@@ -65,7 +64,7 @@ const KEY = "smithable:windows";
 export function keptArrangement(kept: {
   layout: Layout;
   slots: string[];
-  manual?: ManualView;
+  manual?: ManualView | "summary";
 }): Arrangement {
   const old = kept.slots.find((s): s is ManualView => s === "nocode" || s === "code");
   const slots = kept.slots.map((s) => (s === "nocode" || s === "code" ? "manual" : s));
@@ -80,7 +79,11 @@ export function keptArrangement(kept: {
     }
     return missing.shift() ?? s;
   }) as Arrangement["slots"];
-  return { layout: kept.layout, slots: unique, manual: kept.manual ?? old ?? "nocode" };
+  return {
+    layout: kept.layout,
+    slots: unique,
+    manual: kept.manual === "summary" ? "nocode" : (kept.manual ?? old ?? "nocode"),
+  };
 }
 
 /** The arrangement kept in this browser, and a way to change it. */

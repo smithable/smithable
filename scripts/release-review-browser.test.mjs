@@ -8,7 +8,7 @@ import test from "node:test";
 import { pathToFileURL } from "node:url";
 import { chromium } from "playwright";
 
-test("review and publish keeps quiet states closed and exposes first-release, changed and unavailable evidence", {
+test("Review and Publish use current evidence and preserve the release destination", {
   timeout: 240000,
 }, async () => {
   const hosted = process.env.REVIEW_HOSTED === "1";
@@ -66,17 +66,17 @@ test("review and publish keeps quiet states closed and exposes first-release, ch
     await page.goto(`${base}/?guide=off`);
     const open = async () => {
       await page.locator("[data-review-launch]").click();
-      const dialog = page.getByRole("dialog", { name: "Review and publish", exact: true });
+      const dialog = page.getByRole("dialog", { name: "Review", exact: true });
       await dialog.locator('[data-review-part="access"]').waitFor();
       const count = Number((await dialog.locator("[data-review-count]").innerText()).split(" ")[0]);
       assert.equal(
-        await page.locator("[data-review-launch]").innerText(),
-        `Review and publish (${count})`,
+        await page.locator("[data-review-launch]").getAttribute("aria-label"),
+        `Review (${count} open ${count === 1 ? "item" : "items"})`,
       );
       return dialog;
     };
     const close = async (dialog) => {
-      await dialog.getByRole("button", { name: "Close", exact: true }).click();
+      await dialog.getByRole("button", { name: "Close Review", exact: true }).click();
       await dialog.waitFor({ state: "hidden" });
     };
     const expand = async (dialog, id) => {
@@ -92,7 +92,7 @@ test("review and publish keeps quiet states closed and exposes first-release, ch
     assert.equal(await dialog.locator("[data-first-release]").count(), hosted ? 0 : 1);
     assert.equal(
       await dialog.locator("[data-review-count]").innerText(),
-      `${(development ? 5 : 4) + (hosted ? 1 : 0) + (evidence.warnings.length ? 1 : 0)} need a look`,
+      `${(development ? 5 : 4) + (hosted ? 1 : 0) + (evidence.warnings.length ? 1 : 0)} items need a look before publishing.`,
     );
     // What an owner may not expect comes first (T879, Johan 2026-11-18): the CRM's sales role
     // changes everyone's records.
@@ -161,7 +161,7 @@ test("review and publish keeps quiet states closed and exposes first-release, ch
       await page.waitForFunction(
         () =>
           document
-            .querySelector('dialog[aria-label="Review and publish"]')
+            .querySelector('dialog[aria-labelledby="studio-review-title"]')
             ?.getAttribute("aria-busy") !== "true",
       );
       const late = page.waitForResponse(
@@ -180,7 +180,7 @@ test("review and publish keeps quiet states closed and exposes first-release, ch
     await page.waitForFunction(
       () =>
         document
-          .querySelector('dialog[aria-label="Review and publish"]')
+          .querySelector('dialog[aria-labelledby="studio-review-title"]')
           ?.getAttribute("aria-busy") !== "true",
     );
     assert.equal(
@@ -245,7 +245,7 @@ test("review and publish keeps quiet states closed and exposes first-release, ch
     }
     assert.equal(
       await dialog.locator("[data-review-count]").innerText(),
-      `${(development ? 3 : 2) + (evidence.warnings.length ? 1 : 0)} need a look`,
+      `${(development ? 3 : 2) + (evidence.warnings.length ? 1 : 0)} items need a look before publishing.`,
     );
     if (screenshots)
       await page.screenshot({ path: join(screenshots, "02-compared-quiet.png"), fullPage: true });
@@ -344,31 +344,122 @@ test("review and publish keeps quiet states closed and exposes first-release, ch
         .count(),
       0,
     );
-    await close(page.getByRole("dialog", { name: "Review and publish", exact: true }));
+    await close(page.getByRole("dialog", { name: "Review", exact: true }));
     await page.unroute("**/api/release-review");
-    // Only the hosted link is a fixture; publishing is never called or represented as enforced.
+    // Route to a same-origin fixture, never to production or a live release.
+    const home = `${base}/projects/review-fixture`;
+    const url = `${home}/release`;
+    let fixtureHosted = true;
+    let revision;
     await page.route("**/api/project", async (route) => {
       const response = await route.fetch();
       const project = await response.json();
       await route.fulfill({
-        json: { ...project, home: "https://example.invalid/projects/review-fixture" },
+        json: {
+          ...project,
+          home: fixtureHosted ? home : undefined,
+          revision: revision ?? project.revision,
+          beta: {
+            ...project.beta,
+            release: {
+              url,
+              reviewed: null,
+              staging: "locked",
+              production: "locked",
+              changed: false,
+            },
+          },
+        },
       });
     });
     await page.reload();
-    dialog = await open();
-    assert.equal(
-      await dialog
-        .getByRole("link", { name: "Continue to publishing", exact: true })
-        .getAttribute("href"),
-      "https://example.invalid/projects/review-fixture",
-    );
+    const publish = page.getByRole("button", { name: "Publish", exact: true });
+    await publish.click();
+    dialog = page.getByRole("dialog", { name: "Review", exact: true });
+    await dialog.getByText("Look at the open items before publishing.", { exact: true }).waitFor();
     assert.equal(
       await dialog.getByRole("link", { name: "Publish on your own server", exact: true }).count(),
       0,
     );
-    assert.equal(await dialog.getByRole("tab", { name: /staging|production/i }).count(), 0);
+    await close(dialog);
+    await page.route("**/api/release-review", (route) =>
+      route.fulfill({ status: 500, body: "fixture unavailable" }),
+    );
+    await publish.click();
+    await dialog.getByRole("button", { name: "Retry review", exact: true }).waitFor();
+    assert.equal(await page.getByRole("dialog", { name: /^Publish / }).count(), 0);
+    await page.unroute("**/api/release-review");
+    await page.route("**/api/release-review", (route) =>
+      route.fulfill({
+        json: {
+          ...evidence,
+          baselineState: "none",
+          comparison: "available",
+          accessUnchanged: true,
+          warnings: [],
+          access: [],
+          migrations: [],
+          maintenance: {
+            ...evidence.maintenance,
+            currentEngine: "1.0.0",
+            generatedEngine: "1.0.0",
+            generatedProfile: evidence.maintenance.currentProfile,
+            generatedKit: evidence.maintenance.currentKit,
+          },
+          checks: {
+            level: "release",
+            current: true,
+            results: [{ what: "Fixture check", ok: true, checked: true }],
+          },
+          privacy: [{ page: "privacy", facts: "fixture", state: "reviewed", on: "2026-11-19" }],
+        },
+      }),
+    );
+    await dialog.getByRole("button", { name: "Retry review", exact: true }).click();
+    await dialog.getByText("Review complete · 0 open items", { exact: true }).waitFor();
+    await close(dialog);
+    await publish.click();
+    const confirmation = page.getByRole("dialog", { name: /^Publish / });
+    const continueButton = confirmation.getByRole("button", {
+      name: "Continue to publishing",
+      exact: true,
+    });
+    await continueButton.waitFor();
+    if (screenshots)
+      await page.screenshot({ path: join(screenshots, "04-publish-confirmation.png") });
+    revision = "changed-after-confirmation-opened";
+    await continueButton.click();
+    await dialog
+      .getByText(
+        "The app changed since this review. Check the current version before publishing.",
+        { exact: true },
+      )
+      .waitFor();
+    assert.equal(await confirmation.count(), 0);
+    assert.equal(page.url(), `${base}/?guide=off`);
+    await close(dialog);
+    fixtureHosted = false;
+    await page.reload();
+    await publish.click();
+    await continueButton.click();
+    const selfHost = dialog.getByRole("link", {
+      name: "Publish on your own server",
+      exact: true,
+    });
+    await selfHost.waitFor();
+    assert.equal(await selfHost.getAttribute("target"), "_blank");
+    assert.equal(page.url(), `${base}/?guide=off`);
+    await close(dialog);
+    fixtureHosted = true;
+    await page.reload();
+    await publish.click();
+    await continueButton.waitFor();
+    await page.route(url, (route) => route.fulfill({ body: "Existing release destination" }));
+    await continueButton.click();
+    await page.waitForURL(url);
+    await page.getByText("Existing release destination", { exact: true }).waitFor();
     console.log(
-      "PASS quiet/fine/unchanged/first-release/needs-look states, count, keyboard expansion and hosted/local continuation; existing stale/refusal checks preserved; no actual release or enforced publishing sequence claimed",
+      "PASS current review, stale and unreadable refusal, self-host guide and hosted destination",
     );
   } finally {
     await browser?.close();

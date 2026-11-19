@@ -44,8 +44,8 @@ const NOCODE: Stop[] = [
   },
   {
     anchor: "publish",
-    title: "Review and publish",
-    text: "Review who can use the app and its checks, then continue to publishing. Publishing runs its own checks before people can use the app at its address.",
+    title: "Publish your app",
+    text: "Review shows who can use the app and which checks need attention. Publish takes you to any open items, or asks you to confirm the app version before continuing.",
   },
 ];
 

@@ -1,16 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import { api, type Project, type ReleaseReview as Review } from "./api";
-import {
-  checksPassed,
-  needsLook,
-  type ReleaseProgress,
-  releaseProgress,
-  reviewSections,
-} from "./release-review";
-import { Button } from "./ui";
+import { checksPassed, needsLook, reviewSections } from "./release-review";
+import { Button, Tabs } from "./ui";
 
 /** One current read shared by the top-bar count and the open review. Older replies cannot win. */
-export function useReleaseReview(files: Project["files"] | undefined, enabled: boolean) {
+export function useReleaseReview(project: Project | undefined, enabled: boolean) {
   const [state, setState] = useState<{ review?: Review; error?: string; loading?: boolean }>({});
   const request = useRef(0);
   const reload = useCallback(async (invalidate = false) => {
@@ -20,13 +14,17 @@ export function useReleaseReview(files: Project["files"] | undefined, enabled: b
     );
     try {
       const review = await api.releaseReview();
-      if (request.current === mine) setState({ review });
+      if (request.current !== mine) return;
+      setState({ review });
+      return review;
     } catch (error) {
       if (request.current === mine)
         setState({ error: error instanceof Error ? error.message : String(error) });
     }
   }, []);
-  const source = files ? JSON.stringify(files) : undefined;
+  const source = project
+    ? JSON.stringify([project.lookProject, project.revision ?? project.files])
+    : undefined;
   useEffect(() => {
     if (enabled && source) void reload(true);
     else setState({});
@@ -49,19 +47,23 @@ export function ReleaseReview({
   loading = false,
   reload,
   home,
-  release,
+  notice,
+  summary,
+  map,
   onClose,
 }: {
   review?: Review;
   error?: string;
   loading?: boolean;
-  reload: () => Promise<void>;
+  reload: () => Promise<Review | undefined>;
   home?: string;
-  /** The hosted release flow's saved progress (T879 S2), when the service has written it. */
-  release?: ReleaseProgress;
+  notice?: string;
+  summary: ReactNode;
+  map: ReactNode;
   onClose: () => void;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
+  const [tab, setTab] = useState<"items" | "summary" | "map">("items");
   const [refused, setRefused] = useState<string>();
   const [reviewingPrivacy, setReviewingPrivacy] = useState(false);
   // The page just confirmed, said in its section, which stays open (Johan, 2026-11-18: the button
@@ -302,94 +304,149 @@ export function ReleaseReview({
       </>
     ),
   };
+  const openItems = review ? needsLook(review, { hosted }) : undefined;
   return (
     <dialog
       ref={dialog}
-      aria-label="Review and publish"
+      aria-labelledby="studio-review-title"
       aria-busy={loading || undefined}
       onClose={onClose}
-      className="m-auto max-h-[90vh] w-[min(48rem,92vw)] overflow-auto rounded-lg bg-panel p-4 text-fg shadow-xl backdrop:bg-black/40"
+      className={reviewDialog}
     >
-      <div className="space-y-4">
-        <h2 className="text-lg font-semibold">
-          Review and publish
-          {review && (
-            <span className="ml-2 text-sm font-normal" data-review-count>
-              {needsLook(review, { hosted })}{" "}
-              {needsLook(review, { hosted }) === 1 ? "needs" : "need"} a look
-            </span>
-          )}
+      <div className="flex items-center justify-between gap-3">
+        <h2 id="studio-review-title" className="text-lg font-semibold">
+          Review
         </h2>
-        <p className="text-sm text-muted">
-          Review before publishing. This view does not run checks or publish the app. Publishing
-          still performs its own checks.
-        </p>
-        {loading && review && (
-          <p role="status" className="text-sm text-muted">
-            Refreshing release evidence…
-          </p>
-        )}
-        {error ? (
-          <p role="alert">The release review could not be read: {error}</p>
-        ) : !review ? (
-          <p role="status">Reading release evidence…</p>
-        ) : (
-          <>
-            {review.baselineState === "none" && (
-              <p data-first-release>
-                No local release is recorded yet. Review who can use the current app, its privacy
-                page and whether the checks are current. Hosted publishing has its own evidence.
+        <Button variant="ghost" aria-label="Close Review" onClick={() => dialog.current?.close()}>
+          ×
+        </Button>
+      </div>
+      <Tabs
+        tabs={[
+          ["items", openItems ? `Items · ${openItems}` : "Items"],
+          ["summary", "Summary"],
+          ["map", "Map"],
+        ]}
+        value={tab}
+        onChange={setTab}
+      />
+      {tab === "summary" ? (
+        <div className="max-h-[65vh] overflow-auto">{summary}</div>
+      ) : tab === "map" ? (
+        <div className="mt-2 h-[min(60vh,34rem)] min-h-52">{map}</div>
+      ) : (
+        <div className="mt-3 space-y-3">
+          {notice && (
+            <p role="status" className="text-sm text-muted">
+              {notice}
+            </p>
+          )}
+          {loading && !review ? (
+            <p role="status" className="text-sm text-muted">
+              Reading release evidence…
+            </p>
+          ) : error || !review ? (
+            <>
+              <p role="alert">
+                {error
+                  ? `The release review could not be read: ${error}`
+                  : "Release evidence is unavailable."}
               </p>
-            )}
-            {reviewSections(review, { hosted }).map((part) => (
-              <details
-                key={`${part.id}:${part.state}:${part.summary}`}
-                data-review-part={part.id}
-                data-review-state={part.state}
-                open={
-                  part.state === "needs-look" ||
-                  (part.id === "privacy" && readPrivacy !== undefined)
-                }
-                className={`rounded-md border p-3 ${part.state === "needs-look" ? "border-accent text-fg" : "border-line text-muted open:text-fg"}`}
-              >
-                <summary className="cursor-pointer text-sm">
-                  <span className="font-semibold">{part.title}:</span> {part.summary}
-                </summary>
-                <div className="mt-3 space-y-2 text-sm">{content?.[part.id]}</div>
-              </details>
-            ))}
-            <div className="flex flex-wrap items-center gap-3 border-t border-line pt-3">
-              {release ? (
-                <>
-                  <a
-                    href={release.url}
-                    data-release-step
-                    className="text-sm font-medium text-accent hover:underline"
-                  >
-                    {releaseProgress(release).label}
-                  </a>
-                  <span className="text-sm text-muted" data-release-line>
-                    {releaseProgress(release).line}
-                  </span>
-                </>
-              ) : home ? (
-                <a href={home} className="text-sm font-medium text-accent hover:underline">
-                  Continue to publishing
-                </a>
-              ) : (
+              <Button onClick={() => void reload()}>Retry review</Button>
+            </>
+          ) : (
+            <>
+              {loading && (
+                <p role="status" className="text-sm text-muted">
+                  Refreshing release evidence…
+                </p>
+              )}
+              <p className="text-sm text-muted" data-review-count>
+                {openItems === 0
+                  ? "Review complete · 0 open items"
+                  : `${openItems} ${openItems === 1 ? "item needs" : "items need"} a look before publishing.`}
+              </p>
+              {review.baselineState === "none" && !hosted && (
+                <p data-first-release className="text-sm">
+                  No local release is recorded yet. Review who can use the current app, its privacy
+                  page and whether the checks are current.
+                </p>
+              )}
+              {reviewSections(review, { hosted }).map((part) => (
+                <details
+                  key={`${part.id}:${part.state}:${part.summary}`}
+                  data-review-part={part.id}
+                  data-review-state={part.state}
+                  open={
+                    part.state === "needs-look" ||
+                    (part.id === "privacy" && readPrivacy !== undefined)
+                  }
+                  className={`rounded-md border p-3 ${part.state === "needs-look" ? "border-accent text-fg" : "border-line text-muted open:text-fg"}`}
+                >
+                  <summary className="cursor-pointer text-sm">
+                    <span className="font-semibold">{part.title}:</span> {part.summary}
+                  </summary>
+                  <div className="mt-3 space-y-2 text-sm">{content?.[part.id]}</div>
+                </details>
+              ))}
+              {!hosted && (
                 <a
-                  href="https://docs.smithable.ai/self-host.html"
+                  href={selfHostPublishing}
                   target="_blank"
                   rel="noreferrer"
-                  className="text-sm font-medium text-accent hover:underline"
+                  className="text-sm text-accent hover:underline"
                 >
                   Publish on your own server
                 </a>
               )}
-            </div>
-          </>
-        )}
-        <Button onClick={() => dialog.current?.close()}>Close</Button>
+            </>
+          )}
+        </div>
+      )}
+    </dialog>
+  );
+}
+
+const selfHostPublishing = "https://docs.smithable.ai/self-host.html";
+
+const reviewDialog =
+  "fixed inset-x-0 top-auto bottom-0 m-0 max-h-[85dvh] w-full max-w-none overflow-auto rounded-t-xl border border-line bg-panel p-4 text-fg shadow-xl backdrop:bg-black/15 md:inset-x-auto md:top-16 md:right-4 md:bottom-auto md:w-[min(46rem,calc(100vw-2rem))] md:rounded-xl";
+
+export function PublishConfirmation({
+  project,
+  busy,
+  progress,
+  onConfirm,
+  onClose,
+}: {
+  project: string;
+  busy: boolean;
+  progress?: string;
+  onConfirm: () => void;
+  onClose: () => void;
+}) {
+  const dialog = useRef<HTMLDialogElement>(null);
+  useEffect(() => dialog.current?.showModal(), []);
+  return (
+    <dialog
+      ref={dialog}
+      aria-labelledby="studio-publish-title"
+      aria-busy={busy || undefined}
+      onClose={onClose}
+      className={`${reviewDialog} md:w-96`}
+    >
+      <h2 id="studio-publish-title" className="mb-3 text-lg font-semibold">
+        Publish {project}?
+      </h2>
+      <p className="rounded-md bg-subtle p-3 text-sm">Review complete · 0 open items</p>
+      <p className="my-3 text-sm">{progress ?? "Continue to publishing for this version."}</p>
+      <div className="flex flex-wrap gap-2">
+        <Button variant="ghost" onClick={() => dialog.current?.close()}>
+          Cancel
+        </Button>
+        <Button disabled={busy} onClick={onConfirm}>
+          {busy ? "Checking review…" : "Continue to publishing"}
+        </Button>
       </div>
     </dialog>
   );
