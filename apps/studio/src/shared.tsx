@@ -486,7 +486,9 @@ export function Preview({
                     setActive(-1);
                   }}
                   onFocus={() => setListing(true)}
-                  onBlur={() => setListing(false)}
+                  onBlur={(event) => {
+                    if (!address.current?.contains(event.relatedTarget)) setListing(false);
+                  }}
                   onKeyDown={(e) => {
                     if (e.key === "ArrowDown" || e.key === "ArrowUp") {
                       e.preventDefault();
