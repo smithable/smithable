@@ -351,6 +351,9 @@ pages:
   expect(module).toContain(
     '"total": ["total", "Total", () => row && invoiceFormulas.total(row), (v) => formatValue({ name: "total", label: "Total", kind: "money", required: false }, v, app)],',
   );
+  expect(module).toContain(
+    "return workedOut(named.flatMap((name) => (all[name] ? [all[name]] : [])));",
+  );
   expect(module).toContain('import { invoiceFormulas } from "./invoice.formulas";');
   expect(module).toContain('type Tx = Pick<typeof db, "select" | "insert" | "query">;');
   // Named once though show and the text both name it; an entry naming none has no list.

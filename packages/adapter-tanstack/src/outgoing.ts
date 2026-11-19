@@ -413,7 +413,7 @@ ${apiFields(model)
     const all: Record<string, Worked> = {
 ${each.join("\n")}
     };
-    return workedOut(named.flatMap((name) => all[name] ?? []));
+    return workedOut(named.flatMap((name) => (all[name] ? [all[name]] : [])));
   },`;
   });
   const list = entries.map((o) => {

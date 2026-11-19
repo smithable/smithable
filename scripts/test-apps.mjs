@@ -6064,6 +6064,7 @@ async function invoiceMailFlow(dir, base) {
       group by i.id order by i.id desc limit 2`,
   );
   let broken;
+  let marked;
   try {
     if (drafts.length < 2) throw new Error(`${drafts.length} draft invoices with lines, too few`);
     const [sent, refused] = drafts;
@@ -6072,6 +6073,7 @@ async function invoiceMailFlow(dir, base) {
     let count = mails().length;
     await open(page, `${base}/invoices/${sent.id}`);
     await markSent.click();
+    marked = sent;
     for (let i = 0; i < 100 * P && mails().length <= count; i++) await page.waitForTimeout(100);
     const mail = mails()
       .map((f) => quotedPrintable(readFileSync(join(outbox, f), "latin1")))
@@ -6109,6 +6111,8 @@ async function invoiceMailFlow(dir, base) {
     );
     failures.push("invoice mail");
   } finally {
+    // Later checks (the row menu) want the drafts as the samples have them.
+    if (marked) write(dir, `UPDATE invoices SET status = 'draft' WHERE id = ${marked.id}`);
     if (broken)
       write(
         dir,
