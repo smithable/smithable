@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { api, type PictureStyles, type Project } from "./api";
+import { SMITHS } from "./builder/chat-style";
+import { SmithFace } from "./builder/SmithFace";
 import { ThemePreview } from "./first-look";
 import { ThemeCards } from "./ThemeCards";
 import { Button, cx } from "./ui";
@@ -122,13 +124,23 @@ export function FirstLook({
       }}
     >
       <div className="shrink-0 border-b border-line p-4">
-        <h2 ref={heading} id="first-look-title" tabIndex={-1} className="text-lg font-semibold">
-          Choose a look
-        </h2>
-        <p className="mt-1 text-sm text-muted">
-          Try a theme in your app, then choose a picture style when a complete set is available.
-          Skip puts back the opening look.
-        </p>
+        <div className="flex items-center gap-2">
+          {automatic && <SmithFace mood="pointing" />}
+          <h2 ref={heading} id="first-look-title" tabIndex={-1} className="text-lg font-semibold">
+            Choose a look
+          </h2>
+        </div>
+        {automatic && (
+          <p className={cx(SMITHS, "mt-2 max-w-full")}>
+            Hi, I’m Smith. Let’s give your app a look.
+          </p>
+        )}
+        {!automatic && (
+          <p className="mt-1 text-sm text-muted">
+            Try a theme in your app, then choose a picture style when a complete set is available.
+            Skip puts back the opening look.
+          </p>
+        )}
       </div>
       <div className="min-h-0 flex-1 overflow-auto p-4">
         {havePictures && (
@@ -143,7 +155,9 @@ export function FirstLook({
         )}
         {!pictureStep ? (
           <>
-            <h3 className="mb-3 text-sm font-medium">Theme</h3>
+            <h3 className="mb-3 text-sm font-medium">
+              {automatic ? "Which look feels right?" : "Theme"}
+            </h3>
             <fieldset disabled={closing || Boolean(error)}>
               <ThemeCards
                 themes={project.themes}
@@ -162,7 +176,9 @@ export function FirstLook({
           </>
         ) : (
           <>
-            <h3 className="mb-3 text-sm font-medium">Pictures</h3>
+            <h3 className="mb-3 text-sm font-medium">
+              {automatic ? "Choose an image style" : "Pictures"}
+            </h3>
             <p className="mb-3 text-sm text-muted">
               The same subjects, in another style.{" "}
               {automatic

@@ -28,3 +28,12 @@ export async function showWorkspaceControls(page) {
   if (!(await page.locator("[data-workspace-controls]").isVisible()))
     await (await toolbarAction(page, "Workspace layout")).click();
 }
+
+export async function openSmith(page) {
+  const face = page
+    .locator("[data-studio-header]")
+    .getByRole("button", { name: /^Smith(?:, a question is waiting)?$/ });
+  await face.waitFor();
+  if ((await face.getAttribute("aria-pressed")) === "false") await face.click();
+  return face;
+}

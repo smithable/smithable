@@ -33,6 +33,7 @@ import { checkStudioDraft } from "./studio-draft-checks.mjs";
 import {
   openFormEntry,
   openPreviewAddress,
+  openSmith,
   showWorkspaceControls,
   toolbarAction,
 } from "./studio-form-checks.mjs";
@@ -322,24 +323,25 @@ try {
 
   console.log("No code");
   await step(
-    "Studio opens on the preview with Smith floating over it, opened and closed by his face; Dock puts him in the left window, and it is kept",
+    "Studio opens on the preview; Smith’s face opens him, the first hide shows a hint, and Dock opens his window",
     async () => {
       await page.goto(`${base}/?guide=off`);
-      // Floating by default (smith-first.md §12.3): his panel over the preview, which takes the
-      // width; no window beside it.
       const panel = page.getByRole("complementary", { name: "Smith" });
-      await panel.getByLabel("Describe a change").waitFor();
       await page.locator("iframe[title='App preview']").waitFor();
+      await panel.waitFor({ state: "hidden" });
+      const face = await openSmith(page);
+      await panel.getByLabel("Describe a change").waitFor();
       if (await page.getByRole("heading", { name: "Ask Smith", exact: true }).count())
         throw new Error("Smith is docked by default");
       if (await page.getByText("No changes yet.").count())
         throw new Error("the window Smith left is on screen beside the preview");
-      // His face in the top bar folds the panel and opens it again.
-      const face = page.locator("header").getByRole("button", { name: "Smith", exact: true });
+      const hint = page.getByText("Click Smith’s face to show him again.", { exact: true });
       await face.click();
       await panel.waitFor({ state: "hidden" });
+      await hint.waitFor();
       await face.click();
       await panel.getByLabel("Describe a change").waitFor();
+      await hint.waitFor({ state: "hidden" });
       await panel.getByRole("button", { name: "Dock" }).click();
       const docked = page.getByRole("heading", { name: "Ask Smith", exact: true });
       await docked.waitFor();
@@ -347,6 +349,7 @@ try {
       await openSuggestedTopics(page);
       await face.click();
       await docked.waitFor({ state: "hidden" });
+      if (await hint.isVisible()) throw new Error("the first-hide hint was shown twice");
       await page.locator("iframe[title='App preview']").waitFor();
       if ((await face.getAttribute("aria-pressed")) !== "false")
         throw new Error("the hidden docked Smith is still pressed");

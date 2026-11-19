@@ -109,7 +109,8 @@ export async function checkStudioSmoke(browser, base, evidence) {
       );
       await presentation.getByRole("button", { name: "Skip", exact: true }).click();
       await presentation.waitFor({ state: "detached" });
-      await page.locator("[data-guide-card]").waitFor();
+      // On a cold runner the guide waits for the preview or its own 20-second fallback.
+      await page.locator("[data-guide-card]").waitFor({ timeout: 45000 });
       await page.getByRole("button", { name: "Skip guide", exact: true }).click();
       await page.locator("[data-guide-card]").waitFor({ state: "detached" });
       await page.locator('iframe[title="App preview"]').waitFor();

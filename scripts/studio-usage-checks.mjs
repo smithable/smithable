@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
 
+import { openSmith } from "./studio-form-checks.mjs";
+
 export async function checkStudioUsage(browser, base) {
   const page = await browser.newPage({ viewport: { width: 1600, height: 1000 } });
   try {
@@ -40,6 +42,7 @@ export async function checkStudioUsage(browser, base) {
       page.waitForResponse((response) => new URL(response.url()).pathname === "/api/model-usage"),
       page.goto(base),
     ]);
+    await openSmith(page);
     const input = page.getByRole("textbox", { name: "Describe a change, or ask a question" });
     await input.waitFor();
     const bar = page.getByRole("region", { name: "AI help usage" });
@@ -59,6 +62,7 @@ export async function checkStudioUsage(browser, base) {
       ],
     };
     await page.reload();
+    await openSmith(page);
     await bar.waitFor();
     const toggle = bar.getByRole("button");
     assert.ok((await toggle.textContent()).includes("€0.20 of €0.50 used"));

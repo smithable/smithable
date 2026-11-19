@@ -211,6 +211,9 @@ export async function checkPicturePicker(port = 5840) {
     assert.ok((await (await applied).json()).ok);
     await page.waitForFunction(() => document.querySelector('.first-look[aria-busy="false"]'));
     await opened.picker.getByRole("button", { name: "Next: Pictures", exact: true }).click();
+    await opened.picker
+      .getByRole("heading", { name: "Choose an image style", exact: true })
+      .waitFor();
     const pastel = opened.picker.getByRole("button", { name: "Use Pastel pictures", exact: true });
     assert.equal(await pastel.locator("img").count(), 3);
     // The previews come through Studio (T951), so they load for a hosted owner too.

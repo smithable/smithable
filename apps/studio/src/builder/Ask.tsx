@@ -587,10 +587,10 @@ export function Ask({
   const greeted = useRef(false);
   // biome-ignore lint/correctness/useExhaustiveDependencies: once, when a voice is there
   useEffect(() => {
-    if (greeted.current || !speech.canSpeak || !ready || making) return;
+    if (greeted.current || !speech.canSpeak || !ready || making || !questionVisible) return;
     greeted.current = true;
     speech.speak(greetingText(ready.appName, partsSaid > 0, true).join(" "));
-  }, [speech.canSpeak, Boolean(ready), making]);
+  }, [speech.canSpeak, Boolean(ready), making, questionVisible]);
   // biome-ignore lint/correctness/useExhaustiveDependencies: a new proposal is the signal
   useEffect(() => {
     if (proposal?.kind === "change")

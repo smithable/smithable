@@ -47,6 +47,8 @@ export async function checkFirstLook(browser, base) {
   try {
     await page.goto(base);
     await picker.waitFor();
+    await picker.getByText("Hi, I’m Smith. Let’s give your app a look.", { exact: true }).waitFor();
+    await picker.getByRole("heading", { name: "Which look feels right?", exact: true }).waitFor();
     assert.equal(await page.getByRole("dialog", { name: /^Smith presents / }).count(), 0);
     assert.equal(await page.getByRole("button", { name: "Pictures", exact: true }).count(), 0);
     const current = await picker.getByRole("button", { pressed: true }).getAttribute("aria-label");
@@ -87,6 +89,10 @@ export async function checkFirstLook(browser, base) {
     await page.goto(base);
     await page.getByRole("button", { name: "Look", exact: true }).waitFor();
     assert.equal(await picker.count(), 0, "seen picker returned after reload");
+    assert.equal(
+      await page.getByRole("complementary", { name: "Smith", exact: true }).isVisible(),
+      false,
+    );
     await page.goto(`${base}/?guide=off`);
     await page.setViewportSize({ width: 390, height: 844 });
     await (await toolbarAction(page, "Look")).click();
