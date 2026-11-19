@@ -4,6 +4,7 @@
 // not read refuses the document instead of being left out, a worked-out value missing refuses it
 // too, and only the named fields leave the server.
 import {
+  type AuthIR,
   type FieldIR,
   humanize,
   kebab,
@@ -11,6 +12,7 @@ import {
   type PageIR,
   type SpecIR,
 } from "@smithable/core";
+import { hasSignIn } from "../auth.js";
 import {
   addressOwned,
   attr,
@@ -58,6 +60,7 @@ export function documentRoute(
   model: ModelIR,
   ir: SpecIR,
   t: Texts,
+  auth: AuthIR,
 ): string | undefined {
   const doc = page.document;
   if (!doc) return undefined;
@@ -71,9 +74,11 @@ export function documentRoute(
   add(server(model), n.data);
   add(n.module, n.ui);
   const checks: string[] = [];
-  const check = (part: string, m: ModelIR, show: string[]) => {
+  // A part that may be absent (no one it is for) has nothing missing.
+  const check = (part: string, m: ModelIR, show: string[], optional = false) => {
     const worked = workedOut(m, show, t);
-    if (worked.length) checks.push(`missing(${part}, ${literal(worked)})`);
+    const test = `missing(${part}, ${literal(worked)})`;
+    if (worked.length) checks.push(optional ? `(${part} ? ${test} : undefined)` : test);
   };
   check("record", model, [...doc.show, ...(doc.totals ?? [])]);
   const body: string[] = [];
@@ -95,7 +100,7 @@ export function documentRoute(
     const toId = record.${doc.to.ref}Id;
     const to: Found | null = toId == null ? null : await ${tn.data}.get(viewer, Number(toId));
     if (toId != null && !to) return READ;`);
-    check("to", target, doc.to.show);
+    check("to", target, doc.to.show, true);
     result.push(`to: to && pick(to, ${literal(keysOf(target, doc.to.show))})`);
     props.push(
       `to={found.to ? { ui: ${tn.ui}, row: found.to, show: ${literal(doc.to.show.map((f) => keyOf(target, f)))} } : undefined}`,
@@ -107,11 +112,11 @@ export function documentRoute(
     const ln = names(listed, t);
     add(server(listed), ln.data);
     add(ln.module, ln.ui);
-    body.push(`    // Each line by its own read rule: one the person may not read refuses the document.
+    body.push(`    // Each live line by its own read rule: one the person may not read refuses the document.
     const listed = await db.query.${n.tableKey}.findFirst({
       where: eq(${n.table}.id, id),
       columns: { id: true },
-      with: { ${doc.lines.list}: { columns: { id: true }, orderBy: (t, { asc }) => [asc(t.id)] } },
+      with: { ${doc.lines.list}: { columns: { id: true },${listed.trash ? " where: (t, { isNull }) => isNull(t.deletedAt)," : ""} orderBy: (t, { asc }) => [asc(t.id)] } },
     });
     const lines: Found[] = [];
     for (const line of listed?.${doc.lines.list} ?? []) {
@@ -139,7 +144,7 @@ export function documentRoute(
     // Whose business details: where they are each person's own, those of the record's owner;
     // where they are the app's, the app's.
     const own =
-      !addressOwned(model) && !addressOwned(settings) && creatorOwned(settings)
+      hasSignIn(auth) && !addressOwned(model) && !addressOwned(settings) && creatorOwned(settings)
         ? `    if (${sn.access}.read.owner) {
       const owner = record.${ownerKey(model)};
       const theirs =

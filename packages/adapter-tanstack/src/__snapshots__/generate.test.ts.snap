@@ -55435,7 +55435,7 @@ const getInvoiceDocument = createServerFn()
     const toId = record.clientId;
     const to: Found | null = toId == null ? null : await clientData.get(viewer, Number(toId));
     if (toId != null && !to) return READ;
-    // Each line by its own read rule: one the person may not read refuses the document.
+    // Each live line by its own read rule: one the person may not read refuses the document.
     const listed = await db.query.invoices.findFirst({
       where: eq(schema.invoices.id, id),
       columns: { id: true },
@@ -56900,7 +56900,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/index.tsx": "268208f5 generated",
   "src/routes/invoices/$id.tsx": "5ccd9637 generated",
-  "src/routes/invoices/$id_.document.tsx": "7fe724b7 generated",
+  "src/routes/invoices/$id_.document.tsx": "c00bc78d generated",
   "src/routes/invoices/index.tsx": "40be869e generated",
   "src/routes/invoices/new.tsx": "8fcd2b9f generated",
   "src/routes/overview/index.tsx": "254c2c93 generated",

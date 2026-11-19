@@ -42,7 +42,9 @@ export const PAGE_GENERATORS: {
         "new.tsx": newRoute(page, model, t, ir, ux, auth),
         "$id.tsx": detailRoute(page, model, t, ir, ux, undefined, auth),
         ...(model.trash ? { "trash.tsx": trashRoute(page, model, t) } : {}),
-        ...(page.document ? { [DOCUMENT_FILE]: documentRoute(page, model, ir, t) as string } : {}),
+        ...(page.document
+          ? { [DOCUMENT_FILE]: documentRoute(page, model, ir, t, auth) as string }
+          : {}),
       };
     },
   },

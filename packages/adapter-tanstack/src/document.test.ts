@@ -17,10 +17,11 @@ const raw = import.meta.glob("../../../examples/invoicing/smithable*.yml", {
 }) as Record<string, string>;
 const at = (file: string) => raw[`../../../examples/invoicing/${file}`] as string;
 
-function route(spec: string): string | undefined {
+function route(spec: string, signIn?: AuthIR["signIn"]): string | undefined {
   const ir = validateSpec({ path: "smithable.yml", text: spec }).ir as SpecIR;
-  const auth = validateAuth({ path: "smithable.auth.yml", text: at("smithable.auth.yml") }, ir)
+  const read = validateAuth({ path: "smithable.auth.yml", text: at("smithable.auth.yml") }, ir)
     .auth as AuthIR;
+  const auth = signIn ? { ...read, signIn } : read;
   const content = validateContent(
     { path: "smithable.content.yml", text: at("smithable.content.yml") },
     ir,
@@ -60,4 +61,29 @@ test("the document sends only its named fields, also after a column is added to 
 test("a page without a document has no document route", () => {
   const spec = at("smithable.yml").replace(/^ {4}document:\n(?: {6}.*\n)+/m, "");
   expect(route(spec)).toBeUndefined();
+});
+
+test("a worked-out value of the one it is for is missing only when there is someone", () => {
+  const spec = at("smithable.yml")
+    .split("      vatNumber: string\n      invoices: Invoice[]\n")
+    .join(
+      '      vatNumber: string\n      tag: { type: string, formula: "CONCAT(name, vatNumber)" }\n      invoices: Invoice[]\n',
+    )
+    .split("show: [name, address, vatNumber] }")
+    .join("show: [name, address, vatNumber, tag] }");
+  expect(spec).toContain("vatNumber, tag]");
+  expect(route(spec)).toMatch(/\(to \? missing\(to, \[\["tag", /);
+});
+
+test("a line in the trash is not on the document, so it refuses nothing", () => {
+  const spec = at("smithable.yml").replace("  InvoiceLine:\n", "  InvoiceLine:\n    trash: true\n");
+  expect(route(spec)).toContain("where: (t, { isNull }) => isNull(t.deletedAt),");
+  expect(route(at("smithable.yml"))).not.toContain("isNull(t.deletedAt)");
+});
+
+test("without sign-in the business details are the app's, not an owner's", () => {
+  const signedOut = route(at("smithable.yml"), "none");
+  if (!signedOut) throw new Error("no document route");
+  expect(signedOut).not.toContain("ownerId");
+  expect(signedOut).not.toContain(".read.owner");
 });
