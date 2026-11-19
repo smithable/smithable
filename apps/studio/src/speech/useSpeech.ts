@@ -355,7 +355,7 @@ export function useSpeech(
       setInterim("");
       active?.abort();
       stopSpeaking();
-      setCallSound(false);
+      setCallSound(undefined);
     }
     setAutoOn(false);
     setAutoNote(note);
@@ -571,6 +571,7 @@ export function useSpeech(
     told: Boolean(settings.told),
     ...(notice ? { notice } : {}),
     toggleMic: () => {
+      if (callNow.current !== "idle") return;
       if (rec.current) rec.current.stop();
       else listen(true);
     },

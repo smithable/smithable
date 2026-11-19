@@ -542,6 +542,7 @@ async function checkSmithCall(page) {
 
   // Permission can be denied after pressing Start call, and the same controls can retry.
   await face.click();
+  await page.getByRole("button", { name: "Sound: off", exact: true }).waitFor();
   await page.evaluate(() => {
     window.speechFixture.micPermission = "deny";
   });
@@ -592,6 +593,7 @@ async function checkSmithCall(page) {
   await dock.waitFor();
   await mic.waitFor();
 
+  await page.getByRole("button", { name: "Sound: off", exact: true }).click();
   await start.click();
   await page.waitForFunction(() =>
     window.speechFixture.utterances.some((u) => u.text === "Hi, it’s Smith."),
@@ -599,6 +601,8 @@ async function checkSmithCall(page) {
   await page.getByRole("button", { name: "Close Smith", exact: true }).click();
   await endHidden.click();
   assert.equal(await page.evaluate(() => window.speechFixture.released), 1);
+  await face.click();
+  await page.getByRole("button", { name: "Sound: on", exact: true }).waitFor();
   console.log(
     "  ✓ Smith call: one press, hidden conversation and End call, mic-only stop, denied and cancelled capture, reduced motion",
   );

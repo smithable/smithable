@@ -41,9 +41,9 @@ export function SpeechControls({
             aria-label={
               speech.needsLocalCheck
                 ? "Check on-device speech support"
-                : `Mic: ${speech.listening ? "on" : "off"}`
+                : `Mic: ${listening ? "on" : "off"}`
             }
-            aria-pressed={speech.listening}
+            aria-pressed={listening}
             onClick={speech.toggleMic}
           >
             <MicIcon />
