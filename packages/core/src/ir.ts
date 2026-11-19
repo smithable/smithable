@@ -471,6 +471,22 @@ export interface PageIR extends SemanticText {
   mine?: true;
   /** A "contact" block on the record page that mails the record's owner, or the user a field of the model names; `keep` names a model a copy of each message is stored in. */
   contact?: { to: string; keep?: string };
+  /** A crud page's record as a document (record-documents.md §4): each block names its fields. */
+  document?: DocumentIR;
+}
+
+/**
+ * A record as a document, printed from /<page>/<id>/document: who it is from (fields of the
+ * settings model), who it is for (a reference and fields of its model), the record's fields, its
+ * lines (a list field and the listed model's fields), totals and a note. Exactly these fields.
+ */
+export interface DocumentIR {
+  from?: string[];
+  to?: { ref: string; show: string[] };
+  show: string[];
+  lines?: { list: string; show: string[] };
+  totals?: string[];
+  note?: string;
 }
 
 /**

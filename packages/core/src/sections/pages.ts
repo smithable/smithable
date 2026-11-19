@@ -27,6 +27,7 @@ import {
   checkSortableFields,
   readDashboardPeriod,
 } from "./list-keys.js";
+import { checkDocuments, documentSchema, type PendingFrom, readDocument } from "./document.js";
 import { NAME_PATTERN, nameRule } from "./names.js";
 import { pageOperations } from "./page-operations.js";
 import { readSemanticText, TEXT_KEYS } from "./text.js";
@@ -177,6 +178,7 @@ export const pagesSection: SpecSection<"pages"> = {
           description:
             "A contact block on the record page that mails the record's owner (or the user a field names): owner, a field, or { to, keep }.",
         },
+        document: documentSchema,
         ...textSchema,
       },
     },
@@ -185,6 +187,8 @@ export const pagesSection: SpecSection<"pages"> = {
     if (node === undefined) return [];
     const pages: PageIR[] = [];
     const routes = new Map<string, string>();
+    const pendingFrom: PendingFrom[] = [];
+    const keyNodes = new Map<string, ParsedNode>();
     for (const { key: id, keyNode, value } of mapEntries(ctx, node, `"pages"`) ?? []) {
       if (!NAME_PATTERN.test(id)) {
         ctx.error(keyNode, "invalid-name", nameRule("page", id));
@@ -192,7 +196,8 @@ export const pagesSection: SpecSection<"pages"> = {
       }
       ctx.define("page", id);
       ctx.mark(`page:${id}`, keyNode);
-      const page = readPage(ctx, id, keyNode, value, parsed);
+      keyNodes.set(id, keyNode);
+      const page = readPage(ctx, id, keyNode, value, parsed, pendingFrom);
       if (!page) continue;
       // The page's own route and any its pattern takes besides (a data page's model lists).
       for (const route of [page.route, ...patternInfo(page).routes(page.route)]) {
@@ -207,6 +212,7 @@ export const pagesSection: SpecSection<"pages"> = {
       }
       pages.push(page);
     }
+    checkDocuments(ctx, pages, pendingFrom, parsed, (page) => keyNodes.get(page) ?? node);
     // Files that wait for review with no page to approve them would wait for ever.
     const listed = new Set(
       pages.flatMap((p) => (p.pattern.kind === "review" ? p.pattern.models : [])),
@@ -240,6 +246,7 @@ function readPage(
   keyNode: ParsedNode,
   node: ParsedNode | null,
   parsed: Partial<SpecIR>,
+  pendingFrom: PendingFrom[],
 ): PageIR | undefined {
   const where = `page "${id}"`;
   const entries = mapEntries(ctx, node, where);
@@ -257,6 +264,7 @@ function readPage(
       "export",
       "period",
       "contact",
+      "document",
       "mine",
       ...TEXT_KEYS,
     ],
@@ -457,6 +465,7 @@ function readPage(
         "favorites",
         "export",
         "contact",
+        "document",
         "mine",
       ].includes(e.key),
     ))
@@ -540,6 +549,24 @@ function readPage(
     ...(model && noExport ? { export: false as const } : {}),
     ...(model && mine ? { mine: true as const } : {}),
     ...(model && contact ? checkContact(ctx, contact, model, parsed, where) : {}),
+    ...(() => {
+      const entry = known.find((e) => e.key === "document");
+      if (!entry || !model) return {};
+      if (pattern?.kind !== "crud") {
+        ctx.error(entry.keyNode, "invalid-key", `"document" belongs to a crud page.`);
+        return {};
+      }
+      const document = readDocument(
+        ctx,
+        entry.value,
+        entry.keyNode,
+        id,
+        model,
+        parsed,
+        pendingFrom,
+      );
+      return document ? { document } : {};
+    })(),
     ...readSemanticText(ctx, known),
   };
 }
