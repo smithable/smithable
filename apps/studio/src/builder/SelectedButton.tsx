@@ -180,7 +180,7 @@ export function SelectedButton({
     <div
       ref={panel}
       data-studio-overlay="selection"
-      className="fixed inset-x-1.5 bottom-1.5 z-30 max-h-[65dvh] overflow-auto overscroll-contain rounded-2xl border border-line bg-panel shadow-xl lg:inset-x-auto lg:bottom-auto lg:w-80"
+      className="fixed inset-x-1.5 bottom-1.5 z-30 max-h-[65dvh] overflow-auto overscroll-contain rounded-2xl border border-line bg-panel shadow-xl lg:inset-x-auto lg:bottom-auto lg:w-80 lg:overflow-visible"
       style={movement.position ?? position}
     >
       {narrow && (

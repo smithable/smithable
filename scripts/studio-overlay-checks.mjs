@@ -42,6 +42,14 @@ export async function checkStudioOverlays(browser, base) {
     const reopened = await changes.boundingBox();
     assert.ok(Math.abs(reopened.x - dragged.x) < 3 && Math.abs(reopened.y - dragged.y) < 3);
     await panelPosition(changes, "Changes", "Bottom right");
+    const cornerMenu = changes.getByRole("group", { name: "Changes position", exact: true });
+    const changesHandle = changes.getByRole("button", { name: "Move Changes", exact: true });
+    await changesHandle.press("Enter");
+    await cornerMenu.waitFor();
+    const menuBounds = await cornerMenu.boundingBox();
+    assert.ok(menuBounds.y >= 0 && menuBounds.y + menuBounds.height <= 900);
+    await changesHandle.press("Escape");
+    await cornerMenu.waitFor({ state: "detached" });
     await page.setViewportSize({ width: 1120, height: 600 });
     await page.waitForFunction(() => {
       const bounds = document

@@ -137,6 +137,7 @@ export function OverlayPositionControl({
   movement: ReturnType<typeof useOverlayPosition>;
 }) {
   const [open, setOpen] = useState(false);
+  const [above, setAbove] = useState(false);
   const trigger = useRef<HTMLButtonElement>(null);
   const choose = (act: () => void) => {
     act();
@@ -166,7 +167,10 @@ export function OverlayPositionControl({
         className="grid size-8 cursor-grab touch-none place-items-center rounded text-sm text-muted hover:bg-subtle active:cursor-grabbing"
         {...movement.gestures}
         onClick={(event) => {
-          if (event.detail === 0 || !movement.consumeDrag()) setOpen(!open);
+          if (event.detail !== 0 && movement.consumeDrag()) return;
+          if (!open)
+            setAbove(window.innerHeight - event.currentTarget.getBoundingClientRect().bottom < 200);
+          setOpen(!open);
         }}
       >
         <span aria-hidden="true">⋮</span>
@@ -174,7 +178,10 @@ export function OverlayPositionControl({
       {open && (
         <fieldset
           aria-label={`${label} position`}
-          className="absolute right-0 top-full z-10 w-max rounded-md border border-line bg-panel p-1 text-sm shadow-xl"
+          className={cx(
+            "absolute right-0 z-10 w-max rounded-md border border-line bg-panel p-1 text-sm shadow-xl",
+            above ? "bottom-full mb-1" : "top-full mt-1",
+          )}
         >
           {corners.map((corner) => (
             <button
