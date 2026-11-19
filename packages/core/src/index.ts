@@ -301,6 +301,7 @@ export {
 } from "./sections/list-keys.js";
 export { partText, readNamePart } from "./sections/name-parts.js";
 export { type NameKind, nameProblem, RESERVED_WORDS } from "./sections/names.js";
+export { DOCUMENT_BLOCKS, DOCUMENT_TEXTS } from "./sections/document.js";
 export { notSendable, outgoingText } from "./sections/outgoing.js";
 export { searchableFields } from "./sections/pages.js";
 export {

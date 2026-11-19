@@ -472,3 +472,15 @@ test("a list shown as a conversation is said on its page", () => {
   );
   expect(pages({ messages: "table" })).not.toContain("conversation");
 });
+
+test("a crud page's document is said with the fields it prints (record-documents.md §4)", () => {
+  const text = file("smithable.yml")
+    .split("    crud: Order\n")
+    .join("    crud: Order\n    document: { show: [number, placedAt], totals: [total] }\n");
+  const ir = validateSpec({ path: "smithable.yml", text }).ir;
+  if (!ir) throw new Error("invalid spec");
+  const pages = summarize(ir, undefined, emptyContent()).find((s) => s.concept === "pages");
+  expect(pages?.sentences.find((s) => s.startsWith("- Orders"))).toContain(
+    "an order can be printed as a document with its number, placed at and total",
+  );
+});

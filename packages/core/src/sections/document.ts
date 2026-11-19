@@ -26,7 +26,7 @@ import { didYouMean } from "../suggest.js";
 export const DOCUMENT_BLOCKS = ["from", "to", "show", "lines", "totals", "note"] as const;
 
 /** The words a document's page takes from the content file (pages.<page>.document). */
-export const DOCUMENT_TEXTS = ["title", "from", "to", "lines", "totals", "note", "print"];
+export const DOCUMENT_TEXTS = ["title", "from", "to", "lines", "totals", "note", "print"] as const;
 
 const fieldList = { type: "array", items: { type: "string" } } as const;
 

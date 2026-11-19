@@ -14,6 +14,7 @@ import { channelsOf, type ModelIR, type OutgoingIR, type SpecIR, USER_MODEL } fr
 import { capitalize, humanize, plural } from "./naming.js";
 import { patternInfo } from "./patterns.js";
 import { titleField } from "./samples.js";
+import { DOCUMENT_TEXTS } from "./sections/document.js";
 import { notSendable, workedOutFrom, workedOutRefused } from "./sections/outgoing.js";
 import { didYouMean } from "./suggest.js";
 import { placeholdersOf } from "./template.js";
@@ -90,6 +91,8 @@ export interface PageContent {
   fields?: Record<string, FieldContent>;
   /** The headings of a form's sections (smithable.ux.yml), by section name. */
   formSections?: Record<string, { title?: string }>;
+  /** A crud page's document's words (record-documents.md §4.1): its title, the blocks' headings, the button. */
+  document?: Partial<Record<(typeof DOCUMENT_TEXTS)[number], string>>;
 }
 
 export interface SectionContent {
@@ -683,6 +686,10 @@ function readPage(ctx: ParseContext, node: ParsedNode | null, id: string, ir: Sp
             ["title"],
           );
       }
+      continue;
+    }
+    if (entry.key === "document" && page?.document) {
+      result.document = readTexts(ctx, entry.value, `"document" of ${where}`, [...DOCUMENT_TEXTS]);
       continue;
     }
     if (page?.pattern.kind === "legal" && entry.key === "reviewed") {
