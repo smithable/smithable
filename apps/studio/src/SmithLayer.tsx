@@ -203,7 +203,7 @@ export function SmithLayer({
                 type="button"
                 onClick={onHide}
                 aria-label="Close Smith"
-                title="Select Smith in the toolbar to reopen the conversation"
+                title="Close Smith. Select Smith in the toolbar to reopen."
                 className="flex size-6 items-center justify-center rounded text-muted hover:bg-subtle hover:text-fg"
               >
                 ✕
