@@ -52670,10 +52670,11 @@ export function readInvoiceDocument(q: Pick<typeof db, "query">, viewer: Viewer 
   // Who it is from: the business details on the settings page.
   let from: Found | null;
   if (businessProfileAccess.read.owner) {
-    const owner =
-      q.query.invoices
-        .findFirst({ where: eq(schema.invoices.id, id), columns: { ownerId: true } })
-        .sync()?.ownerId ?? viewer?.id;
+    const row = q.query.invoices
+      .findFirst({ where: eq(schema.invoices.id, id), columns: { ownerId: true } })
+      .sync();
+    if (!row) return null;
+    const owner = row.ownerId ?? viewer?.id;
     const theirs =
       owner == null
         ? undefined
@@ -57362,7 +57363,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/generated/invoice-line.schema.ts": "a1a621b7 generated",
   "src/generated/invoice-line.server.ts": "e4cb16a4 generated",
   "src/generated/invoice-line.ts": "2f4b4010 generated",
-  "src/generated/invoice.document.server.ts": "6f2d3076 generated",
+  "src/generated/invoice.document.server.ts": "8b530637 generated",
   "src/generated/invoice.formulas.ts": "ac175676 generated",
   "src/generated/invoice.import.server.ts": "5d63bdd7 generated",
   "src/generated/invoice.import.ts": "92bad053 generated",

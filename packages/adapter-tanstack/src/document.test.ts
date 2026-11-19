@@ -54,7 +54,7 @@ test("the document sends only its named fields, also after a column is added to 
   expect(before).toContain(
     ".findFirst({ where: eq(schema.invoices.id, id), columns: { ownerId: true } })",
   );
-  expect(before).toContain(".sync()?.ownerId ?? viewer?.id;");
+  expect(before).toContain("if (!row) return null;\n    const owner = row.ownerId ?? viewer?.id;");
   expect(before).not.toContain("record.ownerId");
   // A worked-out value missing refuses the document instead of printing a blank.
   expect(before).toContain(

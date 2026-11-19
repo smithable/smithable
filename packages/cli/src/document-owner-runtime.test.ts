@@ -35,7 +35,11 @@ type Row = Record<string, unknown>;
  * The reader run on stand-ins: `owner` is the owner column of the row as stored, the record as the
  * reader is given it shows no owner, and `readable` says which business details they may read.
  */
-function read(viewer: Viewer, owner: string | null, readable: (profile: number) => boolean) {
+function read(
+  viewer: Viewer,
+  owner: string | null | undefined,
+  readable: (profile: number) => boolean,
+) {
   const profiles: Record<string, Row> = {
     alice: { id: 7, businessName: "Alice Oy" },
     bob: { id: 9, businessName: "Bob Ab" },
@@ -45,7 +49,12 @@ function read(viewer: Viewer, owner: string | null, readable: (profile: number) 
     query: {
       invoices: {
         findFirst: (options: { columns: Row }) => ({
-          sync: () => ("ownerId" in options.columns ? { ownerId: owner } : { id: 1, lines: [] }),
+          sync: () =>
+            "ownerId" in options.columns
+              ? owner === undefined
+                ? undefined
+                : { ownerId: owner }
+              : { id: 1, lines: [] },
         }),
       },
       businessProfiles: {
@@ -91,4 +100,6 @@ test("a reader by another rule gets the owner's business details, never their ow
 
 test("only a record with no owner at all takes the reader's own business details", () => {
   expect(read(bob, null, (id) => id === 9)?.from).toMatchObject({ id: 9, businessName: "Bob Ab" });
+  // A record gone between reading it and looking up its owner is no record, not an ownerless one.
+  expect(read(bob, undefined, () => true)).toBeNull();
 });

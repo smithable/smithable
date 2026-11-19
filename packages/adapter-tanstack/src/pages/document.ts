@@ -163,10 +163,11 @@ function documentParts(page: PageIR, model: ModelIR, ir: SpecIR, t: Texts, auth:
     const own =
       hasSignIn(auth) && !addressOwned(model) && !addressOwned(settings) && creatorOwned(settings)
         ? `  if (${sn.access}.read.owner) {
-    const owner =
-      q.query.${n.tableKey}
-        .findFirst({ where: eq(${n.table}.id, id), columns: { ${ownerKey(model)}: true } })
-        .sync()?.${ownerKey(model)} ?? viewer?.id;
+    const row = q.query.${n.tableKey}
+      .findFirst({ where: eq(${n.table}.id, id), columns: { ${ownerKey(model)}: true } })
+      .sync();
+    if (!row) return null;
+    const owner = row.${ownerKey(model)} ?? viewer?.id;
     const theirs =
       owner == null
         ? undefined
