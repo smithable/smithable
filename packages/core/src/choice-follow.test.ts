@@ -62,7 +62,7 @@ test("an action's condition and what it writes follow a renamed value", () => {
     "sent=issued",
     "overdue=late",
   ]);
-  expect(after.spec).toContain("set: { status: issued }");
+  expect(after.spec).toContain("set: { status: issued, sentAt: NOW() }");
   expect(after.spec).toContain("when: { status: [issued, late] }");
   expect(after.spec).toContain("outstanding: { sum: Invoice.total, where: { status: issued } }");
   expect(after.spec).toContain("overdue: { sum: Invoice.total, where: { status: late } }");

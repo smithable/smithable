@@ -2490,13 +2490,47 @@ exports[`valid specs > ../../../examples/invoicing/smithable.yml 1`] = `
       "confirm": true,
       "custom": false,
       "input": [],
-      "intent": "The invoice went to the client.",
+      "intent": "Email the invoice to the client.",
+      "name": "sendInvoice",
+      "on": "Invoice",
+      "set": [
+        {
+          "field": "status",
+          "value": "sent",
+        },
+        {
+          "field": "sentAt",
+          "formula": {
+            "args": [],
+            "kind": "call",
+            "name": "NOW",
+          },
+          "text": "NOW()",
+        },
+      ],
+      "when": {
+        "status": "draft",
+      },
+    },
+    {
+      "custom": false,
+      "input": [],
+      "intent": "The invoice went to the client another way.",
       "name": "markSent",
       "on": "Invoice",
       "set": [
         {
           "field": "status",
           "value": "sent",
+        },
+        {
+          "field": "sentAt",
+          "formula": {
+            "args": [],
+            "kind": "call",
+            "name": "NOW",
+          },
+          "text": "NOW()",
         },
       ],
       "when": {
@@ -2556,6 +2590,33 @@ exports[`valid specs > ../../../examples/invoicing/smithable.yml 1`] = `
           "type": {
             "kind": "scalar",
             "name": "string",
+          },
+          "unique": false,
+        },
+        {
+          "name": "businessId",
+          "required": false,
+          "type": {
+            "kind": "scalar",
+            "name": "string",
+          },
+          "unique": false,
+        },
+        {
+          "name": "registeredOffice",
+          "required": false,
+          "type": {
+            "kind": "scalar",
+            "name": "string",
+          },
+          "unique": false,
+        },
+        {
+          "name": "address",
+          "required": false,
+          "type": {
+            "kind": "scalar",
+            "name": "text",
           },
           "unique": false,
         },
@@ -2653,6 +2714,13 @@ exports[`valid specs > ../../../examples/invoicing/smithable.yml 1`] = `
     {
       "fields": [
         {
+          "locked": {
+            "status": [
+              "sent",
+              "paid",
+              "overdue",
+            ],
+          },
           "name": "number",
           "required": true,
           "type": {
@@ -2662,6 +2730,13 @@ exports[`valid specs > ../../../examples/invoicing/smithable.yml 1`] = `
           "unique": true,
         },
         {
+          "locked": {
+            "status": [
+              "sent",
+              "paid",
+              "overdue",
+            ],
+          },
           "name": "client",
           "required": true,
           "type": {
@@ -2676,6 +2751,13 @@ exports[`valid specs > ../../../examples/invoicing/smithable.yml 1`] = `
             "args": [],
             "kind": "call",
             "name": "TODAY",
+          },
+          "locked": {
+            "status": [
+              "sent",
+              "paid",
+              "overdue",
+            ],
           },
           "name": "issuedOn",
           "required": true,
@@ -2704,6 +2786,13 @@ exports[`valid specs > ../../../examples/invoicing/smithable.yml 1`] = `
             "kind": "call",
             "name": "DATEADD",
           },
+          "locked": {
+            "status": [
+              "sent",
+              "paid",
+              "overdue",
+            ],
+          },
           "name": "dueOn",
           "required": true,
           "type": {
@@ -2713,6 +2802,23 @@ exports[`valid specs > ../../../examples/invoicing/smithable.yml 1`] = `
           "unique": false,
         },
         {
+          "locked": {
+            "status": [
+              "sent",
+              "paid",
+              "overdue",
+            ],
+          },
+          "name": "deliveryDate",
+          "required": false,
+          "type": {
+            "kind": "scalar",
+            "name": "date",
+          },
+          "unique": false,
+        },
+        {
+          "byApp": true,
           "default": "draft",
           "name": "status",
           "required": true,
@@ -2724,6 +2830,32 @@ exports[`valid specs > ../../../examples/invoicing/smithable.yml 1`] = `
               "paid",
               "overdue",
             ],
+          },
+          "unique": false,
+        },
+        {
+          "byApp": true,
+          "name": "sentAt",
+          "required": false,
+          "type": {
+            "kind": "scalar",
+            "name": "datetime",
+          },
+          "unique": false,
+        },
+        {
+          "locked": {
+            "status": [
+              "sent",
+              "paid",
+              "overdue",
+            ],
+          },
+          "name": "vatNote",
+          "required": false,
+          "type": {
+            "kind": "scalar",
+            "name": "text",
           },
           "unique": false,
         },
@@ -2748,12 +2880,48 @@ exports[`valid specs > ../../../examples/invoicing/smithable.yml 1`] = `
         },
         {
           "formula": {
+            "kind": "binary",
+            "left": {
+              "kind": "field",
+              "name": "netTotal",
+            },
+            "op": "+",
+            "right": {
+              "kind": "field",
+              "name": "vatTotal",
+            },
+          },
+          "name": "total",
+          "required": false,
+          "type": {
+            "kind": "scalar",
+            "name": "money",
+          },
+          "unique": false,
+        },
+        {
+          "formula": {
             "field": "amount",
             "kind": "aggregate",
             "list": "lines",
             "name": "SUM",
           },
-          "name": "total",
+          "name": "netTotal",
+          "required": false,
+          "type": {
+            "kind": "scalar",
+            "name": "money",
+          },
+          "unique": false,
+        },
+        {
+          "formula": {
+            "field": "vatAmount",
+            "kind": "aggregate",
+            "list": "lines",
+            "name": "SUM",
+          },
+          "name": "vatTotal",
           "required": false,
           "type": {
             "kind": "scalar",
@@ -2830,18 +2998,79 @@ exports[`valid specs > ../../../examples/invoicing/smithable.yml 1`] = `
             },
           ],
           "formula": {
-            "kind": "binary",
-            "left": {
-              "kind": "field",
-              "name": "quantity",
-            },
-            "op": "*",
-            "right": {
-              "kind": "field",
-              "name": "unitPrice",
-            },
+            "args": [
+              {
+                "kind": "binary",
+                "left": {
+                  "kind": "field",
+                  "name": "quantity",
+                },
+                "op": "*",
+                "right": {
+                  "kind": "field",
+                  "name": "unitPrice",
+                },
+              },
+              {
+                "kind": "number",
+                "value": 2,
+              },
+            ],
+            "kind": "call",
+            "name": "ROUND",
           },
           "name": "amount",
+          "required": false,
+          "type": {
+            "kind": "scalar",
+            "name": "money",
+          },
+          "unique": false,
+        },
+        {
+          "default": 0,
+          "max": 100,
+          "min": 0,
+          "name": "vatRate",
+          "required": true,
+          "type": {
+            "kind": "scalar",
+            "name": "decimal",
+          },
+          "unique": false,
+        },
+        {
+          "formula": {
+            "args": [
+              {
+                "kind": "binary",
+                "left": {
+                  "kind": "binary",
+                  "left": {
+                    "kind": "field",
+                    "name": "amount",
+                  },
+                  "op": "*",
+                  "right": {
+                    "kind": "field",
+                    "name": "vatRate",
+                  },
+                },
+                "op": "/",
+                "right": {
+                  "kind": "number",
+                  "value": 100,
+                },
+              },
+              {
+                "kind": "number",
+                "value": 2,
+              },
+            ],
+            "kind": "call",
+            "name": "ROUND",
+          },
+          "name": "vatAmount",
           "required": false,
           "type": {
             "kind": "scalar",
@@ -2880,7 +3109,7 @@ exports[`valid specs > ../../../examples/invoicing/smithable.yml 1`] = `
       },
       "to": "mail",
       "when": {
-        "action": "markSent",
+        "action": "sendInvoice",
         "model": "Invoice",
       },
     },
@@ -3014,12 +3243,16 @@ exports[`valid specs > ../../../examples/invoicing/smithable.yml 1`] = `
     },
     {
       "actions": [
+        "sendInvoice",
         "markSent",
         "markPaid",
       ],
       "document": {
         "from": [
           "businessName",
+          "businessId",
+          "registeredOffice",
+          "address",
           "vatNumber",
           "iban",
         ],
@@ -3030,11 +3263,15 @@ exports[`valid specs > ../../../examples/invoicing/smithable.yml 1`] = `
             "quantity",
             "unitPrice",
             "amount",
+            "vatRate",
+            "vatAmount",
           ],
         },
+        "note": "vatNote",
         "show": [
           "number",
           "issuedOn",
+          "deliveryDate",
           "dueOn",
         ],
         "to": {
@@ -3046,6 +3283,8 @@ exports[`valid specs > ../../../examples/invoicing/smithable.yml 1`] = `
           ],
         },
         "totals": [
+          "netTotal",
+          "vatTotal",
           "total",
         ],
       },
@@ -3141,6 +3380,9 @@ exports[`valid specs > ../../../examples/invoicing/smithable.yml 1`] = `
           {
             "fields": [
               "businessName",
+              "businessId",
+              "registeredOffice",
+              "address",
               "vatNumber",
             ],
             "name": "business",

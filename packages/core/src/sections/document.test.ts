@@ -86,7 +86,7 @@ test("a worked-out field is refused when what it is worked out from could not be
   const text = spec
     .split("      unitPrice: money!\n")
     .join("      unitPrice: money!\n      cardNumber: string\n")
-    .split("        formula: quantity * unitPrice\n")
+    .split("        formula: ROUND(quantity * unitPrice, 2)\n")
     .join(`        formula: IF(cardNumber = "", quantity * unitPrice, 0)\n`);
   expect(messages("    document: { show: [number], totals: [total] }\n", text)).toContain(
     "Invoice.total is worked out from InvoiceLine.cardNumber, which looks like a card number, a password or an identity number, so it cannot be on a document.",
@@ -131,21 +131,25 @@ test("a document follows renamed fields, loses removed ones, and keeps the recor
   };
   expect(
     apply("renameField", { model: "InvoiceLine", from: "amount", to: "lineTotal" })?.lines,
-  ).toEqual({ list: "lines", show: ["description", "quantity", "unitPrice", "lineTotal"] });
+  ).toEqual({
+    list: "lines",
+    show: ["description", "quantity", "unitPrice", "lineTotal", "vatRate", "vatAmount"],
+  });
   expect(apply("renameField", { model: "Invoice", from: "client", to: "customer" })?.to).toEqual({
     ref: "customer",
     show: ["name", "address", "vatNumber"],
   });
   expect(
     apply("renameField", { model: "BusinessProfile", from: "iban", to: "account" })?.from,
-  ).toEqual(["businessName", "vatNumber", "account"]);
+  ).toEqual(["businessName", "businessId", "registeredOffice", "address", "vatNumber", "account"]);
   expect(apply("removeField", { model: "Invoice", field: "number" })?.show).toEqual([
     "issuedOn",
+    "deliveryDate",
     "dueOn",
   ]);
   // A block whose reference or list goes, goes with it; so does a list left empty.
   const issuer = project.spec
-    .replace("      client: Client!\n", "      client: Client!\n      issuer: BusinessProfile\n")
+    .replace(/^(      client: .*)$/m, "$1\n      issuer: BusinessProfile")
     .replace(
       "to: { ref: client, show: [name, address, vatNumber] }",
       "to: { ref: issuer, show: [businessName] }",
@@ -157,7 +161,12 @@ test("a document follows renamed fields, loses removed ones, and keeps the recor
   if (!unsent.ok) throw new Error(unsent.message);
   expect(document(unsent.files.spec)?.to).toBeUndefined();
   const onlyIban = applyOperation(
-    { spec: project.spec.replace("from: [businessName, vatNumber, iban]", "from: [iban]") },
+    {
+      spec: project.spec.replace(
+        "from: [businessName, businessId, registeredOffice, address, vatNumber, iban]",
+        "from: [iban]",
+      ),
+    },
     "removeField",
     { model: "BusinessProfile", field: "iban" },
   );
@@ -166,7 +175,7 @@ test("a document follows renamed fields, loses removed ones, and keeps the recor
   const shown = applyOperation(
     {
       spec: project.spec.replace(
-        "      show: [number, issuedOn, dueOn]\n",
+        "      show: [number, issuedOn, deliveryDate, dueOn]\n",
         "      show: [number]\n",
       ),
     },

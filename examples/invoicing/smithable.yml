@@ -11,6 +11,9 @@ models:
     description: The freelancer's own business details, printed on their invoices.
     fields:
       businessName: string!
+      businessId: string
+      registeredOffice: string
+      address: text
       vatNumber: string
       iban: string
       paymentTermDays: int! = 30
@@ -26,18 +29,22 @@ models:
 
   Invoice:
     fields:
-      number: string! unique
-      client: Client!
-      issuedOn: date! = TODAY()
+      number: { type: string!, unique: true, locked: { status: [sent, paid, overdue] } }
+      client: { type: Client!, locked: { status: [sent, paid, overdue] } }
+      issuedOn: { type: date!, default: TODAY(), locked: { status: [sent, paid, overdue] } }
       dueOn:
         type: date!
         default: DATEADD(issuedOn, 30, "day")
-      status: draft | sent | paid | overdue
+        locked: { status: [sent, paid, overdue] }
+      deliveryDate: { type: date, locked: { status: [sent, paid, overdue] } }
+      status: { type: draft | sent | paid | overdue, default: draft, by: app }
+      sentAt: { type: datetime, by: app }
+      vatNote: { type: text, locked: { status: [sent, paid, overdue] } }
       contract: file                   # the agreement the invoice is for, as a PDF or a document
       lines: InvoiceLine[]
-      total:
-        type: money
-        formula: SUM(lines.amount)
+      total: { type: money, formula: netTotal + vatTotal }
+      netTotal: { type: money, formula: SUM(lines.amount) }
+      vatTotal: { type: money, formula: SUM(lines.vatAmount) }
     rules:
       - Invoice numbers are sequential per user, like 2026-001, 2026-002.
       - A sent or paid invoice can no longer be edited, only credited.
@@ -50,20 +57,27 @@ models:
       unitPrice: money!
       amount:
         type: money
-        formula: quantity * unitPrice
+        formula: ROUND(quantity * unitPrice, 2)
         examples:
           - input: { quantity: 3, unitPrice: 40 }
             expected: 120
           - input: { quantity: 0.5, unitPrice: 19.99 }
             expected: 10
+      vatRate: { type: decimal!, default: 0, min: 0, max: 100 }
+      vatAmount: { type: money, formula: "ROUND(amount * vatRate / 100, 2)" }
 
 actions:
+  sendInvoice:
+    on: Invoice
+    when: { status: draft }
+    set: { status: sent, sentAt: NOW() }
+    confirm: true
+    intent: Email the invoice to the client.
   markSent:
     on: Invoice
     when: { status: draft }
-    set: { status: sent }
-    confirm: true                    # asks first: the mail below goes out
-    intent: The invoice went to the client.
+    set: { status: sent, sentAt: NOW() }
+    intent: The invoice went to the client another way.
   markPaid:
     on: Invoice
     when: { status: [sent, overdue] }
@@ -85,7 +99,7 @@ timers:
 
 outgoing:
   invoiceSent:
-    when: markSent                   # an action: when it has run
+    when: sendInvoice
     to: mail
     recipient: client.email
 
@@ -112,13 +126,14 @@ pages:
     search: [number, client]
     filters: [client, status]
     sortable: [issuedOn, dueOn, number]
-    actions: [markSent, markPaid]
+    actions: [sendInvoice, markSent, markPaid]
     document:
-      from: [businessName, vatNumber, iban]
+      from: [businessName, businessId, registeredOffice, address, vatNumber, iban]
       to: { ref: client, show: [name, address, vatNumber] }
-      show: [number, issuedOn, dueOn]
-      lines: { list: lines, show: [description, quantity, unitPrice, amount] }
-      totals: [total]
+      show: [number, issuedOn, deliveryDate, dueOn]
+      lines: { list: lines, show: [description, quantity, unitPrice, amount, vatRate, vatAmount] }
+      totals: [netTotal, vatTotal, total]
+      note: vatNote
   clients:
     crud: Client
     search: [name, email]
@@ -132,7 +147,7 @@ pages:
     onboarding:
       model: BusinessProfile
       steps:
-        business: [businessName, vatNumber]
+        business: [businessName, businessId, registeredOffice, address, vatNumber]
         payment: [iban, paymentTermDays]
 
 navigation:                             # invoice lines are edited on their invoice (smithable.ux.yml), with no page of their own

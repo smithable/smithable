@@ -5,6 +5,8 @@ logo: { src: images/logo.webp, alt: A receipt with a torn edge and a coin, gener
 models:
   BusinessProfile:
     fields:
+      businessId: { label: Business ID }
+      registeredOffice: { label: Registered office }
       vatNumber: { label: VAT number }
       iban: { label: IBAN, help: Where clients pay your invoices. It is printed on every invoice. }
       paymentTermDays: { label: Days to pay }
@@ -12,14 +14,27 @@ models:
     fields:
       vatNumber: { label: VAT number }
 
+  Invoice:
+    fields:
+      netTotal: { label: Total excluding VAT }
+      vatTotal: { label: VAT total }
+      vatNote: { label: VAT note, help: Give the reason if no VAT is charged. }
+  InvoiceLine:
+    fields:
+      unitPrice: { label: Unit price, help: Price per unit before VAT. }
+      amount: { label: Net amount }
+      vatRate: { label: VAT rate (%) }
+      vatAmount: { label: VAT amount }
+
 actions:
-  markSent:
+  sendInvoice:
+    label: Send invoice
     confirm: Send invoice {number} of {total} to {client} at {client.email}?
 
 outgoing:
   invoiceSent:
-    subject: Your invoice
-    text: Here is your invoice {number} for {total}, due {dueOn}. You can open it at {view} and the account to pay to is on it. If anything looks wrong, reply to this mail and I will sort it out. Thank you for your business.
+    subject: "Invoice {number}"
+    text: "Invoice {number}: {total}, due {dueOn}. See it here: {view}"
 
 pages:
   home:
@@ -92,7 +107,7 @@ pages:
     invoiced: { label: Invoiced by month }
     latest: { label: Latest invoices }
   invoices:
-    subtitle: Every invoice and where it stands. Mark one sent when it goes out and paid when the money is in.
+    subtitle: Send a draft by email, print an invoice, or mark it sent if you delivered it another way.
     document: { title: Invoice }
   clients: { subtitle: "The people and companies you work for, with the details your invoices need." }
   settings:

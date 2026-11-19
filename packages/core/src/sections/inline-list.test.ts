@@ -28,6 +28,8 @@ test("an invoice's lines edited in place: the row's own values, the menu warned 
     "quantity",
     "unitPrice",
     "amount",
+    "vatRate",
+    "vatAmount",
   ]);
   const inline = read("    record: { lists: { lines: inline } }\n");
   expect(inline.diagnostics).toEqual([]);

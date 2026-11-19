@@ -1,0 +1,7 @@
+- businessName: North Quay Studio
+  businessId: DEMO-0001
+  registeredOffice: Mariehamn
+  address: Example Quay 1, 22100 Mariehamn
+  vatNumber: FI-DEMO-0001
+  iban: FI00 0000 0000 0000 00
+  paymentTermDays: 30

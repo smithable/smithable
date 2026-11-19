@@ -939,7 +939,9 @@ test("a rename follows into formulas, their examples, dashboard tiles and onboar
     to: "vat",
   });
   if (!vat.ok) throw new Error(vat.message);
-  expect(vat.files.spec).toContain("business: [businessName, vat]");
+  expect(vat.files.spec).toContain(
+    "business: [businessName, businessId, registeredOffice, address, vat]",
+  );
 });
 
 test("a removal leaves onboarding steps without the field, and is refused while a tile uses it", () => {
@@ -955,16 +957,23 @@ test("a removal leaves onboarding steps without the field, and is refused while 
     applyOperation(invoicing, "removeField", { model: "Invoice", field: "status" }),
   ).toMatchObject({
     ok: false,
-    message: 'The action "markSent" uses Invoice.status; change or remove the action first.',
+    message:
+      "Invoice.number is locked when status is sent or paid or overdue; change its rules first.",
   });
-  const withoutActions = {
+  const withoutLocks = {
     ...invoicing,
     spec: invoicing.spec
+      .replaceAll(", locked: { status: [sent, paid, overdue] }", "")
+      .replace("        locked: { status: [sent, paid, overdue] }\n", ""),
+  };
+  const withoutActions = {
+    ...withoutLocks,
+    spec: withoutLocks.spec
       .replace(/\nactions:\n[\s\S]*?\n\n/, "\n")
-      // The timer that runs markOverdue, and the outgoing mail on markSent, go with the actions.
+      // The timer that runs markOverdue, and the outgoing mail on sendInvoice, go with the actions.
       .replace(/\n# What the app does on a clock[\s\S]*?\n\n/, "\n")
       .replace(/\noutgoing:\n[\s\S]*?\n\n/, "\n")
-      .replace("    actions: [markSent, markPaid]\n", ""),
+      .replace("    actions: [sendInvoice, markSent, markPaid]\n", ""),
   };
   expect(
     applyOperation(withoutActions, "removeField", { model: "Invoice", field: "status" }),

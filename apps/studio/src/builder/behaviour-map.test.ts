@@ -25,13 +25,13 @@ test("the invoicing starter's behaviour: actions with when and set, the timer, t
     target: "action:markOverdue",
     label: "runs",
   });
-  // The mail goes when markSent ran, to the address on the invoice's client.
+  // The mail goes when sendInvoice ran, to the address on the invoice's client.
   expect(nodes.find((n) => n.id === "outgoing:invoiceSent")?.lines).toEqual([
     "mail to client.email",
   ]);
   expect(edges).toContainEqual(
     expect.objectContaining({
-      source: "action:markSent",
+      source: "action:sendInvoice",
       target: "outgoing:invoiceSent",
       label: "ran",
     }),

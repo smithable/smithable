@@ -10,7 +10,7 @@ import { expect, test } from "vitest";
 import { generateApp } from "./generate.js";
 
 // An action that asks before it runs (docs/design/record-documents.md §6), on the invoicing
-// starter's Mark sent.
+// starter's Send invoice.
 const raw = import.meta.glob("../../../examples/invoicing/smithable*.yml", {
   query: "?raw",
   import: "default",
@@ -27,7 +27,7 @@ function files(spec: string, contentText = at("smithable.content.yml")) {
   const all = generateApp(ir, { smithableVersion: "0.0.0", auth, content });
   const file = (end: string) => all.find((f) => f.path.endsWith(end))?.content ?? "";
   return {
-    server: file("/actions/mark-sent.server.ts"),
+    server: file("/actions/send-invoice.server.ts"),
     page: file("/invoices/$id.tsx"),
     list: file("/invoices/index.tsx"),
   };
@@ -35,10 +35,10 @@ function files(spec: string, contentText = at("smithable.content.yml")) {
 
 test("the question reads what its text names as the viewer, and checks the mail's address", () => {
   const { server, page, list } = files(at("smithable.yml"));
-  expect(server).toContain("export async function questionMarkSent(");
+  expect(server).toContain("export async function questionSendInvoice(");
   // Read with the viewer's own rights: the invoice, then its client.
   expect(server).toContain("const row = await invoiceData.get(viewer, id);");
-  expect(server).toContain("check(markSentAccess, viewer, row.ownerId);");
+  expect(server).toContain("check(sendInvoiceAccess, viewer, row.ownerId);");
   expect(server).toContain(
     "const clientRecord = row.clientId == null ? null : await clientData.get(viewer, row.clientId);",
   );
@@ -49,9 +49,9 @@ test("the question reads what its text names as the viewer, and checks the mail'
   expect(server).toContain(
     "if ((row.clientId == null || (clientRecord !== null && !clientRecord.email))) return { noRecipient: true };",
   );
-  expect(server.slice(server.indexOf("questionMarkSent("))).not.toContain("db.select");
+  expect(server.slice(server.indexOf("questionSendInvoice("))).not.toContain("db.select");
   expect(page).toContain(
-    'confirm={{ text: "Send invoice {number} of {total} to {client} at {client.email}?", load: () => markSentQuestion({ data: row.id }) }}',
+    'confirm={{ text: "Send invoice {number} of {total} to {client} at {client.email}?", load: () => sendInvoiceQuestion({ data: row.id }) }}',
   );
   expect(list).toContain("confirm: true,");
 });
@@ -59,23 +59,26 @@ test("the question reads what its text names as the viewer, and checks the mail'
 test("another mail that may go keeps the question from saying it reaches nobody", () => {
   const spec = at("smithable.yml").replace(
     "    recipient: client.email\n",
-    "    recipient: client.email\n  invoiceCopy:\n    when: markSent\n    to: mail\n    recipient: client.email\n    where: { status: draft }\n",
+    "    recipient: client.email\n  invoiceCopy:\n    when: sendInvoice\n    to: mail\n    recipient: client.email\n    where: { status: draft }\n",
   );
   const { server } = files(spec);
-  expect(server).toContain("export async function questionMarkSent(");
+  expect(server).toContain("export async function questionSendInvoice(");
   expect(server).not.toContain("noRecipient: true };");
 });
 
 test("without a text it asks with the title only; without confirm there is no question", () => {
-  const content = at("smithable.content.yml").replace(/\nactions:\n {2}markSent:\n.*\n/, "\n");
+  const content = at("smithable.content.yml").replace(
+    /\nactions:\n {2}sendInvoice:\n(?: {4}.*\n)+/,
+    "\n",
+  );
   const { server, page } = files(at("smithable.yml"), content);
   expect(server).toContain(
     '"title": shown(invoiceUi, invoiceUi.titleField, row) || String(row.id),',
   );
   expect(server).not.toContain('"client.email":');
   expect(server).not.toContain('"number":');
-  expect(page).toContain("confirm={{ load: () => markSentQuestion({ data: row.id }) }}");
+  expect(page).toContain("confirm={{ load: () => sendInvoiceQuestion({ data: row.id }) }}");
   const plain = files(at("smithable.yml").replace(/\n {4}confirm: true.*\n/, "\n"), content);
-  expect(plain.server).not.toContain("questionMarkSent");
+  expect(plain.server).not.toContain("questionSendInvoice");
   expect(plain.page).not.toContain("confirm=");
 });
