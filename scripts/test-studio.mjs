@@ -492,8 +492,14 @@ try {
         throw new Error("Desktop did not give the pane back");
     },
   );
+  const reviewDialog = page.getByRole("dialog", { name: "Review", exact: true });
+  const openReview = async (tab = "Items") => {
+    await page.locator("[data-review-launch]").click();
+    if (tab !== "Items") await reviewDialog.getByRole("tab", { name: tab, exact: true }).click();
+    return reviewDialog;
+  };
   await step(
-    "the toolbar opens Review and publish and Help links to the documentation",
+    "the toolbar separates Review and Publish, and Help links to the documentation",
     async () => {
       const header = page.locator("[data-studio-header]");
       await header.getByRole("button", { name: "Help", exact: true }).click();
@@ -503,10 +509,9 @@ try {
         throw new Error("Help does not lead to the start page");
       await help.getByRole("button", { name: "Close", exact: true }).click();
       await help.waitFor({ state: "detached" });
-      await header.getByRole("button", { name: /^Review and publish/ }).click();
-      const review = page.getByRole("dialog", { name: "Review and publish", exact: true });
-      await review.getByRole("heading", { name: /^Review and publish/ }).waitFor();
-      await review.getByRole("button", { name: "Close", exact: true }).click();
+      const review = await openReview();
+      await review.getByRole("heading", { name: "Review", exact: true }).waitFor();
+      await review.getByRole("button", { name: "Close Review", exact: true }).click();
       await review.waitFor({ state: "detached" });
     },
   );
@@ -540,7 +545,7 @@ try {
       if (await page.getByRole("region", { name: "The app in words" }).count())
         throw new Error("Behavior still shows the summary");
       const tabs = page.locator("[data-subtabs]");
-      await tabs.getByRole("tab", { name: "Summary", exact: true }).click();
+      await openReview("Summary");
       const summary = page.getByRole("region", { name: "Summary", exact: true });
       const toggles = summary.locator("button[aria-expanded]");
       if ((await toggles.first().getAttribute("aria-expanded")) !== "true")
@@ -560,7 +565,7 @@ try {
         .first()
         .waitFor();
       // Kept while Studio is open: the section unfolded before is unfolded again.
-      await tabs.getByRole("tab", { name: "Summary", exact: true }).click();
+      await openReview("Summary");
       await summary
         .getByRole("button", { name: /^Fold Customer/ })
         .first()
@@ -571,8 +576,9 @@ try {
       await page.getByRole("region", { name: "Code", exact: true }).waitFor();
       await tabs.getByRole("tab", { name: "Code", selected: true }).waitFor();
       // Back to No code for the steps after, its setting too.
-      await tabs.getByRole("tab", { name: "Summary", exact: true }).click();
+      await openReview("Summary");
       await summary.getByRole("button", { name: "Open links in No code" }).click();
+      await reviewDialog.getByRole("button", { name: "Close Review", exact: true }).click();
       await tabs.getByRole("tab", { name: "No code", exact: true }).click();
       await page.getByRole("tab", { name: "Behavior" }).waitFor();
     },
@@ -1231,8 +1237,7 @@ try {
   await step(
     "the Data map: a box per kind of record, arrows between them, a name opens Behavior",
     async () => {
-      // The app map is Visualize's, over the whole window (A 150).
-      await page.locator("label", { hasText: /^Map$/ }).click();
+      await openReview("Map");
       await sub("Data map");
       const map = page.getByRole("region", { name: "Data map" });
       for (const box of ["Customer", "Order", "User"])
@@ -1266,8 +1271,7 @@ try {
   await step(
     "the Navigation map: the menu's pages, what opens as a role and as a visitor, a name opens Behavior",
     async () => {
-      // The app map is Visualize's, over the whole window (A 150).
-      await page.locator("label", { hasText: /^Map$/ }).click();
+      await openReview("Map");
       await sub("Navigation");
       const map = page.getByRole("region", { name: "Navigation map" });
       for (const box of ["customers", "orders", "team"])
@@ -1298,8 +1302,7 @@ try {
   await step(
     "What happens: the CRM's custom action as code Studio does not read, with what it is for; a name opens Behavior",
     async () => {
-      // The app map is Visualize's, over the whole window (A 150).
-      await page.locator("label", { hasText: /^Map$/ }).click();
+      await openReview("Map");
       await sub("What happens");
       const map = page.getByRole("region", { name: "What happens" });
       const custom = map.locator('[data-behaviour-box="action:scheduleFollowUps"]');
@@ -1315,7 +1318,7 @@ try {
   await step(
     "Card: the app card as the command writes it, downloaded as HTML (A 233)",
     async () => {
-      await page.locator("label", { hasText: /^Map$/ }).click();
+      await openReview("Map");
       await sub("Card");
       const card = page.frameLocator('iframe[title="App card"]');
       await card.getByRole("heading", { level: 1 }).waitFor({ timeout: 30000 * P });
@@ -1329,7 +1332,7 @@ try {
       const text = readFileSync(await file.path(), "utf8");
       if (!text.startsWith("<!doctype html>"))
         throw new Error(`not the card: ${text.slice(0, 80)}`);
-      await page.locator("label", { hasText: /^Map$/ }).click();
+      await reviewDialog.getByRole("button", { name: "Close Review", exact: true }).click();
     },
   );
   await step(

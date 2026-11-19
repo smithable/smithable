@@ -19,7 +19,7 @@ async function checkBuilder(page, phone) {
   const showEditor = async () => {
     if (phone) {
       await showWorkspaceControls(page);
-      await page.getByRole("radio", { name: /^(No code|Code|Summary)$/ }).check({ force: true });
+      await page.getByRole("radio", { name: /^(No code|Code)$/ }).check({ force: true });
     } else {
       const open = page.getByRole("button", { name: "Show the window on the right" });
       if (await open.isVisible()) await open.click();
@@ -35,10 +35,14 @@ async function checkBuilder(page, phone) {
   const undo = async () => (await toolbarAction(page, "Undo")).click();
 
   await preview("Overview");
-  await showEditor();
-  await tab("Summary").click();
-  await page.getByRole("region", { name: "Summary", exact: true }).waitFor();
+  await page.locator("[data-review-launch]").click();
+  const review = page.getByRole("dialog", { name: "Review", exact: true });
+  await review.getByRole("tab", { name: "Summary", exact: true }).click();
+  await review.getByRole("region", { name: "Summary", exact: true }).waitFor();
+  await review.getByRole("button", { name: "Close Review", exact: true }).click();
+  await review.waitFor({ state: "detached" });
 
+  await showEditor();
   await tab("No code").click();
   await tab("Content").click();
   const pages = page

@@ -41,10 +41,10 @@ import { OutboxDialog } from "./Outbox";
 import { PeoplePanel } from "./People";
 import { usePan } from "./pan";
 import { isPreviewMessage, type Place, touched, touchesPage } from "./preview";
-import { ReleaseReview, useReleaseReview } from "./ReleaseReview";
+import { PublishConfirmation, ReleaseReview, useReleaseReview } from "./ReleaseReview";
 import { ReportDialog } from "./Report";
 import { plainRefusal } from "./refusal";
-import { needsLook, trustedRelease } from "./release-review";
+import { needsLook, releaseProgress, trustedRelease } from "./release-review";
 import { type Bounds, type LayerMode, SmithLayer, sideFor, useSmithPlace } from "./SmithLayer";
 import { keptPage, Preview, Trace } from "./shared";
 import { useStudioQuestion } from "./studio-questions";
@@ -107,8 +107,69 @@ function keepWaiting(shown: Project | undefined, next: Project): Project {
 
 export function App() {
   const [project, setProject] = useState<Project>();
-  const [reviewingRelease, setReviewingRelease] = useState(false);
-  const release = useReleaseReview(project?.files, Boolean(project && !project.making));
+  const [releaseView, setReleaseView] = useState<
+    "review" | { revision: string; projectId?: string }
+  >();
+  const [releaseNotice, setReleaseNotice] = useState<string>();
+  const [checkingPublish, setCheckingPublish] = useState(false);
+  const publishCheck = useRef(0);
+  const release = useReleaseReview(project, Boolean(project && !project.making));
+  const closeRelease = () => {
+    publishCheck.current++;
+    setCheckingPublish(false);
+    setReleaseView(undefined);
+    setReleaseNotice(undefined);
+  };
+  const checkPublish = async (confirmed?: { revision: string; projectId?: string }) => {
+    if (checkingPublish) return;
+    const mine = ++publishCheck.current;
+    setCheckingPublish(true);
+    const backToReview = (notice: string) => {
+      setReleaseNotice(notice);
+      setReleaseView("review");
+    };
+    try {
+      const before = await api.project();
+      if (mine !== publishCheck.current) return;
+      if (!before.revision)
+        return backToReview("The current revision could not be checked. Retry before publishing.");
+      if (
+        confirmed &&
+        (before.revision !== confirmed.revision || before.lookProject !== confirmed.projectId)
+      ) {
+        setProject((shown) => keepWaiting(shown, before));
+        void release.reload(true);
+        return backToReview(
+          "The app changed since this review. Check the current version before publishing.",
+        );
+      }
+      const evidence = await release.reload(true);
+      const after = await api.project();
+      if (mine !== publishCheck.current) return;
+      setProject((shown) => keepWaiting(shown, after));
+      if (!evidence) return backToReview("Check the review items before continuing to publishing.");
+      if (before.revision !== after.revision || before.lookProject !== after.lookProject)
+        return backToReview(
+          "The app changed during review. Check the current version before publishing.",
+        );
+      if (needsLook(evidence, { hosted: Boolean(after.home) }) > 0)
+        return backToReview("Look at the open items before publishing.");
+      if (!confirmed) {
+        setReleaseNotice(undefined);
+        setReleaseView({ revision: before.revision, projectId: before.lookProject });
+        return;
+      }
+      const saved = trustedRelease(after.beta?.release, after.home);
+      const destination = saved?.url ?? after.home;
+      if (destination) window.location.assign(destination);
+      else backToReview("Review complete. Open the self-hosting guide to continue.");
+    } catch {
+      if (mine === publishCheck.current)
+        backToReview("The current version could not be checked. Retry before publishing.");
+    } finally {
+      if (mine === publishCheck.current) setCheckingPublish(false);
+    }
+  };
   // Which windows are shown and where (studio-v3.md §8), kept in this browser.
   const [arrangement, setArrangement] = useArrangement();
   // A change's notice offers to undo it; errors stay until dismissed, other notices fade.
@@ -269,7 +330,6 @@ export function App() {
   // The preview's edges on the screen, which the floating panel hangs between.
   const [previewBox, setPreviewBox] = useState<HTMLDivElement | null>(null);
   const [over, setOver] = useState<Bounds>();
-  // biome-ignore lint/correctness/useExhaustiveDependencies: measured again as the preview's box changes
   useEffect(() => {
     const box = previewBox;
     if (!box) return;
@@ -295,15 +355,12 @@ export function App() {
       : isManualView(place.window)
         ? "manual"
         : "preview";
-  // Which of No code, Code and Summary the view shows; a phone without Code shows No code for it.
+  // Which of No code and Code the view shows; a phone without Code shows No code for it.
   const manual: ManualView =
     narrow && !phone.code && arrangement.manual === "code"
       ? "nocode"
       : (arrangement.manual ?? "nocode");
-  // Visualize: the app map's views over the windows, which stay as they are underneath (A 150).
-  const [visualize, setVisualize] = useState(false);
   const showWindow = (window: WindowId | PhoneWindow) => {
-    setVisualize(false);
     if (isManualView(window)) setArrangement({ ...arrangement, manual: window });
     setPlace((p) => ({
       ...p,
@@ -409,7 +466,7 @@ export function App() {
   // The sub-tabs a phone's window has: No code and Code, or Smith and Changes under him.
   const subStep = (content: string | undefined, direction: 1 | -1): boolean => {
     if (content === "manual") {
-      const subs: ManualView[] = phone.code ? ["nocode", "code", "summary"] : ["nocode", "summary"];
+      const subs: ManualView[] = phone.code ? ["nocode", "code"] : ["nocode"];
       const next = subs[subs.indexOf(manual) + direction];
       if (next) setArrangement({ ...arrangement, manual: next });
       return Boolean(next);
@@ -502,7 +559,6 @@ export function App() {
    * the only one in one window, and the window moved out takes its place, so none is lost.
    */
   const workIn = (window: WindowId) => {
-    setVisualize(false);
     if (floating && window === "smith") return setPanelOpen(true);
     if (window === "smith") setSmithHidden(false);
     const sub = isManualView(window) ? window : undefined;
@@ -925,7 +981,7 @@ export function App() {
       const target = event.target instanceof Element ? event.target : undefined;
       if (!target || target.closest("[data-guide-card]")) return;
       const manual = target.closest(
-        '[data-window="manual"], [data-window="nocode"], [data-window="code"], [data-window="summary"]',
+        '[data-window="manual"], [data-window="nocode"], [data-window="code"]',
       );
       const editable = target.closest(
         'input, textarea, select, [contenteditable="true"], [role="textbox"]',
@@ -1138,13 +1194,11 @@ export function App() {
     guiding && !narrow
       ? sideFor(lit?.anchor, lit?.box, window.innerWidth, window.innerHeight, over)
       : "right";
-  const smithVisible =
-    !visualize &&
-    (floating
-      ? panelOpen && side !== "fold"
-      : narrow
-        ? phoneWindow === "smith" && (!phone.changesUnderSmith || phoneSub === "smith")
-        : slotOf("smith") !== undefined);
+  const smithVisible = floating
+    ? panelOpen && side !== "fold"
+    : narrow
+      ? phoneWindow === "smith" && (!phone.changesUnderSmith || phoneSub === "smith")
+      : slotOf("smith") !== undefined;
   const onCall = Boolean(audio && audio.call !== "idle");
   const listening = Boolean(audio && (audio.listening || audio.auto));
   const speakingHidden = !smithVisible && Boolean(audio?.speaking);
@@ -1170,7 +1224,6 @@ export function App() {
     }
     setSmithHideHint(undefined);
     if (floating) {
-      setVisualize(false);
       setPanelOpen(true);
     } else if (narrow) {
       setPhoneSub("smith");
@@ -1268,11 +1321,17 @@ export function App() {
       Look
     </Button>
   );
-  const releaseLabel = release.error
-    ? "Review and publish (unavailable)"
-    : release.review
-      ? `Review and publish (${needsLook(release.review, { hosted: Boolean(project.home) })})`
-      : "Review and publish (reading…)";
+  const reviewCount = release.review
+    ? needsLook(release.review, { hosted: Boolean(project.home) })
+    : undefined;
+  const reviewLabel = release.error
+    ? "Review (unavailable)"
+    : reviewCount === undefined
+      ? "Review (reading…)"
+      : reviewCount
+        ? `Review (${reviewCount} open ${reviewCount === 1 ? "item" : "items"})`
+        : "Review";
+  const releaseStep = trustedRelease(project.beta?.release, project.home);
   const openPreviewWindow = () => (narrow ? showWindow("preview") : workIn("preview"));
   const openSettings = () => {
     if (narrow) showWindow("nocode");
@@ -1382,28 +1441,40 @@ export function App() {
                 )}
                 <Button
                   variant="ghost"
-                  data-guide="publish"
                   data-review-launch
-                  aria-label={releaseLabel}
-                  title={releaseLabel}
+                  aria-label={reviewLabel}
+                  title={reviewLabel}
                   className="relative px-2"
                   onClick={() => {
+                    closeRelease();
                     void release.reload(true);
-                    setReviewingRelease(true);
+                    setReleaseView("review");
                   }}
                 >
                   <ToolbarGlyph>
                     <path d="m3 7 2 2 3-4m-5 11 2 2 3-4m3-7h9m-9 9h9" />
                   </ToolbarGlyph>
-                  {release.review &&
-                    needsLook(release.review, { hosted: Boolean(project.home) }) > 0 && (
-                      <span
-                        aria-hidden="true"
-                        className="absolute -top-0.5 -right-0.5 rounded-full bg-accent px-1 text-[10px] text-panel"
-                      >
-                        {needsLook(release.review, { hosted: Boolean(project.home) })}
-                      </span>
-                    )}
+                  {Boolean(reviewCount) && (
+                    <span
+                      aria-hidden="true"
+                      className="absolute -top-0.5 -right-0.5 rounded-full bg-accent px-1 text-[10px] text-panel"
+                    >
+                      {reviewCount}
+                    </span>
+                  )}
+                </Button>
+                <Button
+                  variant="ghost"
+                  data-guide="publish"
+                  aria-label="Publish"
+                  title="Publish"
+                  className="px-2"
+                  disabled={checkingPublish}
+                  onClick={() => void checkPublish()}
+                >
+                  <ToolbarGlyph>
+                    <path d="M7 17H6a4 4 0 1 1 1-8 6 6 0 0 1 11-.5 4 4 0 0 1 0 8.5h-1M12 21V12m-3 3 3-3 3 3" />
+                  </ToolbarGlyph>
                 </Button>
                 {!narrow && (
                   <>
@@ -1530,34 +1601,19 @@ export function App() {
                       key={w}
                       className={cx(
                         "flex h-7 cursor-pointer items-center rounded px-2 text-xs font-medium has-focus-visible:ring-2 has-focus-visible:ring-accent/30",
-                        phoneWindow === w && !visualize ? "bg-panel shadow-xs" : "text-muted",
+                        phoneWindow === w ? "bg-panel shadow-xs" : "text-muted",
                       )}
                     >
                       <input
                         type="radio"
                         name="window"
                         className="sr-only"
-                        checked={phoneWindow === w && !visualize}
+                        checked={phoneWindow === w}
                         onChange={() => showWindow(w)}
                       />
                       {WINDOW_NAMES[w === "manual" ? manual : w]}
                     </label>
                   ))}
-                  {/* Visualize on a narrow screen too, over the window shown (A 150). */}
-                  <label
-                    className={cx(
-                      "flex h-7 cursor-pointer items-center rounded px-2 text-xs font-medium has-focus-visible:ring-2 has-focus-visible:ring-accent/30",
-                      visualize ? "bg-panel shadow-xs" : "text-muted",
-                    )}
-                  >
-                    <input
-                      type="checkbox"
-                      className="sr-only"
-                      checked={visualize}
-                      onChange={() => setVisualize(!visualize)}
-                    />
-                    Map
-                  </label>
                 </fieldset>
               ) : (
                 <>
@@ -1583,20 +1639,6 @@ export function App() {
                         {WINDOW_NAMES[mode]}
                       </label>
                     ))}
-                    <label
-                      className={cx(
-                        "flex h-7 cursor-pointer items-center rounded px-2 text-xs font-medium has-focus-visible:ring-2 has-focus-visible:ring-accent/30",
-                        visualize ? "bg-panel shadow-xs" : "text-muted",
-                      )}
-                    >
-                      <input
-                        type="checkbox"
-                        className="sr-only"
-                        checked={visualize}
-                        onChange={() => setVisualize(!visualize)}
-                      />
-                      Map
-                    </label>
                   </fieldset>
                 </>
               )}
@@ -1983,7 +2025,6 @@ export function App() {
                             ...(narrow && !phone.code
                               ? []
                               : [["code", WINDOW_NAMES.code] as [ManualView, string]]),
-                            ["summary", WINDOW_NAMES.summary],
                           ]}
                           value={manual}
                           onChange={(sub) => setArrangement({ ...arrangement, manual: sub })}
@@ -2032,25 +2073,6 @@ export function App() {
                               }}
                             />
                           </Suspense>
-                        ) : w === "summary" ? (
-                          <SummaryTab
-                            key={w}
-                            sections={sections}
-                            onOpen={(link) => {
-                              pauseGuide();
-                              if (link.in === "code") {
-                                window.dispatchEvent(
-                                  new CustomEvent(SHOW_CODE, {
-                                    detail: { file: link.file, path: link.path },
-                                  }),
-                                );
-                                return;
-                              }
-                              setPartToOpen(link.part);
-                              if (narrow) showWindow("nocode");
-                              else workIn("nocode");
-                            }}
-                          />
                         ) : w === "smith" ? (
                           <Panel
                             key={w}
@@ -2126,22 +2148,6 @@ export function App() {
                   </div>
                 );
               })}
-              {visualize && (
-                // Over the whole window below the header; the windows keep their state underneath.
-                <div className="absolute inset-0 z-20">
-                  <Visualize
-                    ir={spec.ir}
-                    auth={spec.auth}
-                    onOpen={(concept) => {
-                      workIn("nocode");
-                      // After No code is on screen to hear it.
-                      setTimeout(() =>
-                        window.dispatchEvent(new CustomEvent(OPEN_PART, { detail: concept })),
-                      );
-                    }}
-                  />
-                </div>
-              )}
             </main>
             {narrow && guiding && !guideBlocked && guideLine && phoneWindow !== "smith" && (
               // The guide's line where Smith's thread is not on screen: one line at the window's
@@ -2228,15 +2234,56 @@ export function App() {
           {smith(layer === "overlay" ? "overlay" : "panel")}
         </SmithLayer>
       )}
-      {reviewingRelease && (
+      {releaseView === "review" && (
         <ReleaseReview
           review={release.review}
           error={release.error}
           loading={release.loading}
           reload={release.reload}
           home={project.home}
-          release={trustedRelease(project.beta?.release, project.home)}
-          onClose={() => setReviewingRelease(false)}
+          notice={releaseNotice}
+          onClose={closeRelease}
+          summary={
+            <SummaryTab
+              sections={sections}
+              onOpen={(link) => {
+                closeRelease();
+                pauseGuide();
+                if (link.in === "code") {
+                  window.dispatchEvent(
+                    new CustomEvent(SHOW_CODE, { detail: { file: link.file, path: link.path } }),
+                  );
+                  return;
+                }
+                setPartToOpen(link.part);
+                if (narrow) showWindow("nocode");
+                else workIn("nocode");
+              }}
+            />
+          }
+          map={
+            <Visualize
+              ir={spec.ir}
+              auth={spec.auth}
+              onOpen={(concept) => {
+                closeRelease();
+                if (narrow) showWindow("nocode");
+                else workIn("nocode");
+                setTimeout(() =>
+                  window.dispatchEvent(new CustomEvent(OPEN_PART, { detail: concept })),
+                );
+              }}
+            />
+          }
+        />
+      )}
+      {releaseView && releaseView !== "review" && (
+        <PublishConfirmation
+          project={project.name}
+          busy={checkingPublish}
+          progress={releaseStep ? releaseProgress(releaseStep).line : undefined}
+          onConfirm={() => void checkPublish(releaseView)}
+          onClose={closeRelease}
         />
       )}
     </div>
