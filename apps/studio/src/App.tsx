@@ -1703,7 +1703,7 @@ export function App() {
                         <p role="status">
                           {smithHideHint === "call"
                             ? "You can hide Smith and keep talking."
-                            : "Click Smith’s face to show him again."}
+                            : "Click Smith to show him again."}
                         </p>
                       )}
                     </div>
