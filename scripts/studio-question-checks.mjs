@@ -288,10 +288,12 @@ export async function checkStudioQuestions(browser, base) {
     assert.equal(asks, 2);
     await page.evaluate((name) => localStorage.removeItem(`zoneAsked:${name}`), project.name);
     await page.reload();
+    await openSmith(page);
     await zone.waitFor();
     await zone.getByRole("button", { name: "Close question", exact: true }).click();
     await card.waitFor({ state: "detached" });
     await page.reload();
+    await openSmith(page);
     await page.getByRole("textbox", { name: "Describe a change, or ask a question" }).waitFor();
     assert.equal(await card.count(), 0, "dismissed questions returned after reload");
     const after = await (await page.request.get(`${base}/api/project`)).json();

@@ -62,6 +62,7 @@ export async function checkStudioUsage(browser, base) {
       ],
     };
     await page.reload();
+    await openSmith(page);
     await bar.waitFor();
     const toggle = bar.getByRole("button");
     assert.ok((await toggle.textContent()).includes("€0.20 of €0.50 used"));
