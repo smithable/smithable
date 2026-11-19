@@ -115,12 +115,12 @@ export function SelectedButton({
         }
       }}
     >
-      <header className="flex items-center gap-1">
-        <h2 id={heading} className="min-w-0 flex-1 text-sm font-semibold">
-          {button.label}
-        </h2>
-        {standalone && !narrow && <OverlayPositionControl label="selection" movement={movement} />}
-        {standalone && (
+      {standalone ? (
+        <header className="flex items-center gap-1">
+          <h2 id={heading} className="min-w-0 flex-1 text-sm font-semibold">
+            {button.label}
+          </h2>
+          {!narrow && <OverlayPositionControl label="selection" movement={movement} />}
           <button
             type="button"
             aria-label="Close selection"
@@ -131,8 +131,12 @@ export function SelectedButton({
           >
             <span aria-hidden="true">×</span>
           </button>
-        )}
-      </header>
+        </header>
+      ) : (
+        <h2 id={heading} className="text-sm font-semibold">
+          {button.label}
+        </h2>
+      )}
       <Tabs
         tabs={[
           ["look", "Look"],
@@ -199,7 +203,12 @@ export function SelectedButton({
       style={movement.position ?? position}
     >
       {narrow && (
-        <div aria-hidden="true" className="mx-auto mt-3 h-1 w-9 rounded-full bg-line-strong" />
+        <div
+          aria-hidden="true"
+          className="sticky top-0 z-10 flex justify-center bg-panel pt-3 pb-1"
+        >
+          <span className="h-1 w-9 rounded-full bg-line-strong" />
+        </div>
       )}
       {form}
     </div>
