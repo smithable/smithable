@@ -793,8 +793,10 @@ function withQuestion(module: string, action: StandardActionIR, ir: SpecIR, t: T
   const model = modelNamed(ir, action.on);
   const n = names(model, t);
   const text = t.actionConfirm(action);
-  const paths = [...new Set(["title", ...(text ? placeholdersOf(text) : [])])];
+  const paths = [...new Set(text ? placeholdersOf(text) : ["title"])];
   const refs = new Map<string, { field: FieldIR; other: ModelIR }>();
+  // A reference's record, read as the viewer reads it, in a local of the generator's own naming.
+  const local = (field: FieldIR) => `${field.name}Record`;
   const entries = paths.flatMap((path) => {
     if (path === "title")
       return [`"title": shown(${n.ui}, ${n.ui}.titleField, row) || String(row.id),`];
@@ -809,10 +811,11 @@ function withQuestion(module: string, action: StandardActionIR, ir: SpecIR, t: T
     if (!target) return [];
     refs.set(field.name, { field, other });
     return [
-      `${JSON.stringify(path)}: shown(${names(other, t).ui}, ${JSON.stringify(dataKey(target))}, ${field.name}),`,
+      `${JSON.stringify(path)}: shown(${names(other, t).ui}, ${JSON.stringify(dataKey(target))}, ${local(field)}),`,
     ];
   });
-  // The addresses a mail fired by this action goes to, on the record or one reference away.
+  // The addresses a mail fired by this action goes to, on the record or one reference away. A
+  // mail with a where is left out: whether it goes is settled by the change itself.
   const addresses = ir.outgoing.flatMap((o) =>
     "action" in o.when &&
     o.when.action === action.name &&
@@ -822,16 +825,19 @@ function withQuestion(module: string, action: StandardActionIR, ir: SpecIR, t: T
       ? [o.recipient.path]
       : [],
   );
+  // Known to be empty as the viewer reads the record: no reference, or a referenced record they
+  // may read without the address. One they may not read says nothing either way.
   const empty = addresses.flatMap(([first, second]) => {
     const field = model.fields.find((f) => f.name === first);
     if (!field) return [];
-    if (second === undefined) return [`!stored.${dataKey(field)}`];
+    if (second === undefined) return [`!row.${dataKey(field)}`];
     if (field.type.kind !== "relation") return [];
-    const other = names(modelNamed(ir, field.type.model), t);
-    const target = modelNamed(ir, field.type.model).fields.find((f) => f.name === second);
+    const other = modelNamed(ir, field.type.model);
+    const target = other.fields.find((f) => f.name === second);
     if (!target) return [];
+    refs.set(field.name, { field, other });
     return [
-      `(stored.${dataKey(field)} == null || !db.select({ v: ${other.table}.${dataKey(target)} }).from(${other.table}).where(same(${other.table}.id, stored.${dataKey(field)})).get()?.v)`,
+      `(row.${dataKey(field)} == null || (${local(field)} !== null && !${local(field)}.${dataKey(target)}))`,
     ];
   });
   const uis = new Map([[n.module, n.ui]]);
@@ -839,8 +845,7 @@ function withQuestion(module: string, action: StandardActionIR, ir: SpecIR, t: T
   const datas = [...refs.values()]
     .map(({ other }) => names(other, t))
     .filter((on) => on.data !== n.data);
-  const imports = `import { eq as same } from "drizzle-orm";
-import { app } from "#/generated/app";
+  const imports = `import { app } from "#/generated/app";
 import { formatValue } from "#/kit/format";
 import type { RecordFieldUi } from "#/kit/model";
 ${[...uis].map(([module, ui]) => `import { ${ui} } from "${module}";\n`).join("")}${[...new Map(datas.map((on) => [on.data, on])).values()].map((on) => `import { ${on.data} } from "${on.module}.server";\n`).join("")}`;
@@ -863,14 +868,11 @@ export async function ${a.question}(
 ): Promise<{ values: Record<string, string> } | { noRecipient: true }> {
   const row = await ${n.data}.get(viewer, id);
   if (!row) throw new AccessDenied(viewer !== null);
-  check(${a.access}, viewer, ${ownerOf(model, n)});${
-    empty.length
-      ? `
-  const stored = db.select().from(${n.table}).where(same(${n.table}.id, id)).get();
-  if (!stored || ${empty.join(" || ")}) return { noRecipient: true };`
-      : ""
-  }
-${[...refs.values()].map(({ field, other }) => `  const ${field.name} = row.${field.name} ? await ${names(other, t).data}.get(viewer, row.${field.name}.id) : null;\n`).join("")}  return {
+  check(${a.access}, viewer, ${ownerOf(model, n)});
+  if (!${a.fits}(row, viewer)) throw new Error("This cannot be done now.");
+${[...refs.values()].map(({ field, other }) => `  const ${local(field)} = row.${dataKey(field)} == null ? null : await ${names(other, t).data}.get(viewer, row.${dataKey(field)});\n`).join("")}${
+  empty.length ? `  if (${empty.join(" && ")}) return { noRecipient: true };\n` : ""
+}  return {
     values: {
 ${entries.map((e) => `      ${e}`).join("\n")}
     },

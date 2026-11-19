@@ -97,10 +97,9 @@ function inputRefused(
     const f = m.fields.find((x) => x.name === name);
     if (!f || seen.has(`${m.name}.${name}`)) return undefined;
     seen.add(`${m.name}.${name}`);
-    if (f.formula) return inputRefused(f.formula, m, models, seen);
     if (isUpload(f) || sensitiveKind(f))
       return `is worked out from ${m.name}.${name}, which ${notPrintable(f)}`;
-    return undefined;
+    return f.formula ? inputRefused(f.formula, m, models, seen) : undefined;
   };
   switch (expr.kind) {
     case "field":
@@ -227,7 +226,12 @@ export function readDocument(
         "invalid-document",
         `"note" of ${where} is one text field of ${model.name}${f ? `; ${name} is not text` : `, and it has no field "${name}"`}.`,
       );
-    else if (name !== undefined && f) doc.note = name;
+    else if (
+      name !== undefined &&
+      f &&
+      checkFields(ctx, [{ name, at: note.value }], model, models, `"note" of ${where}`).length
+    )
+      doc.note = name;
   }
   const to = byKey.get("to");
   if (to) {

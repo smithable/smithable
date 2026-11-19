@@ -6070,9 +6070,16 @@ async function invoiceMailFlow(dir, base) {
     const [sent, refused] = drafts;
     await signInAs(page, base, "admin");
     const markSent = page.getByRole("button", { name: "Mark sent" }).filter({ visible: true });
+    // Mark sent asks first; its dialog's own button runs it.
+    const confirmed = () =>
+      page
+        .getByRole("dialog", { name: "Mark sent" })
+        .getByRole("button", { name: "Mark sent" })
+        .click();
     let count = mails().length;
     await open(page, `${base}/invoices/${sent.id}`);
     await markSent.click();
+    await confirmed();
     marked = sent;
     for (let i = 0; i < 100 * P && mails().length <= count; i++) await page.waitForTimeout(100);
     const mail = mails()
@@ -6094,6 +6101,7 @@ async function invoiceMailFlow(dir, base) {
     count = mails().length;
     await open(page, `${base}/invoices/${refused.id}`);
     await markSent.click();
+    await confirmed();
     await page
       .getByText("Total has no value to send")
       .first()
@@ -6165,6 +6173,7 @@ async function copyFlow(base) {
       .getByText(/^Send invoice 2026-006 of .+ to Kallio Design at laskut@kallio\.example\?$/)
       .waitFor({ timeout: 10000 * P });
     await asked.getByRole("button", { name: "Mark sent" }).click();
+    await asked.waitFor({ state: "detached", timeout: 10000 * P });
     await markSent.waitFor({ state: "detached", timeout: 10000 * P });
     // The status is radio buttons (the ux file's control): Sent is checked once the form has the new value.
     for (
@@ -7024,8 +7033,8 @@ async function recordDocumentFlow(dir, base) {
          values ('DOC-002', last_insert_rowid(), '2026-11-01', '2026-12-01', 'draft', '${me.id}', 0, 0);
        insert into invoices (number, client_id, issued_on, due_on, status, owner_id, created_at, updated_at)
          values ('DOC-003', (select id from clients where name = 'Not Yours Client'), '2026-11-01', '2026-12-01', 'draft', 'doc-other', 0, 0);
-       insert into clients (name, owner_id, created_at, updated_at)
-         values ('No Mail Client', '${me.id}', 0, 0);
+       insert into clients (name, email, owner_id, created_at, updated_at)
+         values ('No Mail Client', '', '${me.id}', 0, 0);
        insert into invoices (number, client_id, issued_on, due_on, status, owner_id, created_at, updated_at)
          values ('DOC-004', last_insert_rowid(), '2026-11-01', '2026-12-01', 'draft', '${me.id}', 0, 0);`,
     );

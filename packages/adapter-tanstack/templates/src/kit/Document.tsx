@@ -32,6 +32,7 @@ function facts(app: AppUi, part: DocumentPart) {
     if (!field || value === null || value === undefined || value === "") return [];
     return [
       {
+        name: field.name,
         label: field.label,
         value: formatValue(field, value, app),
         numeric: NUMERIC.has(field.kind),
@@ -44,7 +45,7 @@ function Facts({ app, part, className }: { app: AppUi; part: DocumentPart; class
   return (
     <dl className={cn("grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm", className)}>
       {facts(app, part).map((fact) => (
-        <div key={fact.label} className="contents">
+        <div key={fact.name} className="contents">
           <dt className="text-muted-foreground">{fact.label}</dt>
           <dd className={cn(fact.numeric && "tabular-nums")}>{fact.value}</dd>
         </div>
@@ -58,7 +59,7 @@ function Lines({ app, part }: { app: AppUi; part: DocumentPart }) {
   return (
     <address className="text-sm not-italic">
       {facts(app, part).map((fact) => (
-        <div key={fact.label}>{fact.value}</div>
+        <div key={fact.name}>{fact.value}</div>
       ))}
     </address>
   );

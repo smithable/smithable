@@ -67,6 +67,13 @@ test("a document refuses files, lists, unknown fields and wrong blocks", () => {
   expect(messages("    document: { show: [number], note: dueOn }\n")).toContain(
     `"note" of "document" of page "invoices" is one text field of Invoice; dueOn is not text.`,
   );
+  // A note is printed as the other fields are, so it is refused as they are.
+  expect(
+    messages(
+      "    document: { show: [number], note: ssn }\n",
+      spec.split("      contract: file").join("      ssn: string\n      contract: file"),
+    ),
+  ).toEqual(expect.arrayContaining([expect.stringContaining("Invoice.ssn")]));
   expect(messages("    document: { to: { ref: client, show: [name] } }\n")).toContain(
     `"document" of page "invoices" needs "show": the record's fields it prints.`,
   );

@@ -40,14 +40,16 @@ test("the question reads what its text names as the viewer, and checks the mail'
   expect(server).toContain("const row = await invoiceData.get(viewer, id);");
   expect(server).toContain("check(markSentAccess, viewer, row.ownerId);");
   expect(server).toContain(
-    "const client = row.client ? await clientData.get(viewer, row.client.id) : null;",
+    "const clientRecord = row.clientId == null ? null : await clientData.get(viewer, row.clientId);",
   );
-  expect(server).toContain('"client.email": shown(clientUi, "email", client),');
+  expect(server).toContain('"client.email": shown(clientUi, "email", clientRecord),');
   expect(server).toContain('"total": shown(invoiceUi, "total", row),');
   // invoiceSent goes to client.email: with none, the question says the mail would reach nobody.
-  expect(server).toMatch(
-    /stored\.clientId == null \|\| !db\.select\(\{ v: schema\.clients\.email \}\)/,
+  // A client the viewer may not read says nothing about its address; none, or a blank one, does.
+  expect(server).toContain(
+    "if ((row.clientId == null || (clientRecord !== null && !clientRecord.email))) return { noRecipient: true };",
   );
+  expect(server.slice(server.indexOf("questionMarkSent("))).not.toContain("db.select");
   expect(page).toContain(
     'confirm={{ text: "Send invoice {number} of {total} to {client} at {client.email}?", load: () => markSentQuestion({ data: row.id }) }}',
   );
@@ -60,7 +62,8 @@ test("without a text it asks with the title only; without confirm there is no qu
   expect(server).toContain(
     '"title": shown(invoiceUi, invoiceUi.titleField, row) || String(row.id),',
   );
-  expect(server).not.toContain("clientData");
+  expect(server).not.toContain('"client.email":');
+  expect(server).not.toContain('"number":');
   expect(page).toContain("confirm={{ load: () => markSentQuestion({ data: row.id }) }}");
   const plain = files(at("smithable.yml").replace(/\n {4}confirm: true.*\n/, "\n"), content);
   expect(plain.server).not.toContain("questionMarkSent");

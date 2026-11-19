@@ -48658,11 +48658,12 @@ import { afterChange } from "#/generated/hooks";
 import { invoiceSettable } from "#/generated/invoice.schema";
 import { invoiceData } from "#/generated/invoice.server";
 import { markSentAccess, markSentFits } from "./mark-sent";
-import { eq as same } from "drizzle-orm";
 import { app } from "#/generated/app";
 import { formatValue } from "#/kit/format";
 import type { RecordFieldUi } from "#/kit/model";
 import { invoiceUi } from "#/generated/invoice";
+import { clientUi } from "#/generated/client";
+import { clientData } from "#/generated/client.server";
 
 type Row = NonNullable<Awaited<ReturnType<typeof invoiceData.get>>>;
 
@@ -48745,8 +48746,9 @@ export async function questionMarkSent(
   const row = await invoiceData.get(viewer, id);
   if (!row) throw new AccessDenied(viewer !== null);
   check(markSentAccess, viewer, row.ownerId);
-  const stored = db.select().from(schema.invoices).where(same(schema.invoices.id, id)).get();
-  if (!stored || (stored.clientId == null || !db.select({ v: schema.clients.email }).from(schema.clients).where(same(schema.clients.id, stored.clientId)).get()?.v)) return { noRecipient: true };
+  if (!markSentFits(row, viewer)) throw new Error("This cannot be done now.");
+  const clientRecord = row.clientId == null ? null : await clientData.get(viewer, row.clientId);
+  if ((row.clientId == null || (clientRecord !== null && !clientRecord.email))) return { noRecipient: true };
   return {
     values: {
       "title": shown(invoiceUi, invoiceUi.titleField, row) || String(row.id),
@@ -55410,6 +55412,7 @@ type Picked = { id: number } & { [key: string]: Value };
 const READ = { refused: "read" as const };
 const SETTINGS = { refused: "settings" as const };
 
+
 /** The named fields of a part, and nothing else. */
 function pick(row: Found, keys: string[]): Picked {
   return { id: row.id, ...Object.fromEntries(keys.map((k) => [k, (row[k] ?? null) as Value])) };
@@ -56751,7 +56754,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/generated/actions/mark-overdue.ts": "0a89cc21 generated",
   "src/generated/actions/mark-paid.server.ts": "3fe1938a generated",
   "src/generated/actions/mark-paid.ts": "9047ea54 generated",
-  "src/generated/actions/mark-sent.server.ts": "12365797 generated",
+  "src/generated/actions/mark-sent.server.ts": "c0c78d52 generated",
   "src/generated/actions/mark-sent.ts": "89323f1d generated",
   "src/generated/activity.server.ts": "2b56b888 generated",
   "src/generated/app.ts": "74f19a10 generated",
@@ -56798,7 +56801,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/Combobox.tsx": "c3a18c75 kit",
   "src/kit/Consent.tsx": "c5ee7e50 kit",
   "src/kit/Dashboard.tsx": "98bcd927 kit",
-  "src/kit/Document.tsx": "343fd9e6 kit",
+  "src/kit/Document.tsx": "697cd7bc kit",
   "src/kit/FieldInput.tsx": "39e40fcb kit",
   "src/kit/FileInput.tsx": "5d567f82 kit",
   "src/kit/Filters.tsx": "ceea52dc kit",
@@ -56897,7 +56900,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/index.tsx": "268208f5 generated",
   "src/routes/invoices/$id.tsx": "5ccd9637 generated",
-  "src/routes/invoices/$id_.document.tsx": "99536aef generated",
+  "src/routes/invoices/$id_.document.tsx": "7fe724b7 generated",
   "src/routes/invoices/index.tsx": "40be869e generated",
   "src/routes/invoices/new.tsx": "8fcd2b9f generated",
   "src/routes/overview/index.tsx": "254c2c93 generated",

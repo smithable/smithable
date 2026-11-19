@@ -176,13 +176,17 @@ ${own}      try {
   const title = words.title ?? n.label;
   const { title: _title, ...blockWords } = words;
   if (Object.keys(blockWords).length) props.push(`words={${literal(blockWords)}}`);
+  // Whether a part may be refused (not readable, the settings missing, a value not there yet):
+  // a document of the record's own stored fields alone never is.
+  const reads = body.some((line) => line.includes("return READ"));
+  const refuses = reads || Boolean(settings) || checks.length > 0;
   return `${HEADER}import { createFileRoute, notFound } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 ${doc.lines || settings ? 'import { eq } from "drizzle-orm";\n' : ""}import { z } from "zod";
 ${doc.lines || settings ? `import { db } from "#/db";\n${SCHEMA_IMPORT}\n` : ""}import { app } from "#/generated/app";
 import { pageAccess } from "#/generated/pages";
 ${[...imports].map(([module, ns]) => `import { ${[...new Set(ns)].sort().join(", ")} } from "${module}";`).join("\n")}
-import { DocumentRefused, RecordDocument } from "#/kit/Document";
+import { ${refuses ? "DocumentRefused, " : ""}RecordDocument } from "#/kit/Document";
 import { guardPage } from "#/kit/page-guard";
 import { currentViewer } from "#/lib/viewer.server";
 
@@ -191,7 +195,7 @@ type Found = { id: number } & Record<string, unknown>;
 type Value = string | number | boolean | null | Date | Value[] | { [key: string]: Value };
 type Picked = { id: number } & { [key: string]: Value };
 
-const READ = { refused: "read" as const };${settings ? '\nconst SETTINGS = { refused: "settings" as const };' : ""}
+${reads ? 'const READ = { refused: "read" as const };\n' : ""}${settings ? 'const SETTINGS = { refused: "settings" as const };\n' : ""}
 
 /** The named fields of a part, and nothing else. */
 function pick(row: Found, keys: string[]): Picked {
@@ -236,9 +240,13 @@ ${guard(`pageAccess[${JSON.stringify(page.id)}]`)}  loader: async ({ params }) =
 });
 
 function ${component}() {
-  const found = Route.useLoaderData();
+  const found = Route.useLoaderData();${
+    refuses
+      ? `
   if (found.refused)
-    return <DocumentRefused refusal={found}${settingsPage ? ` settings=${JSON.stringify(settingsPage.route)}` : ""} />;
+    return <DocumentRefused refusal={found}${settingsPage ? ` settings=${JSON.stringify(settingsPage.route)}` : ""} />;`
+      : ""
+  }
   return (
     <RecordDocument
       app={app}
