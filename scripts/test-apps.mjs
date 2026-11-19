@@ -6985,6 +6985,100 @@ async function invoicePaymentFlow(dir, base) {
   }
 }
 
+/**
+ * The invoice as a document (record-documents.md §4, §8): Print on the invoice opens it with the
+ * owner's own business details, the client and the lines, and only the named fields; an admin
+ * printing a member's invoice gets the member's details, not their own or another's; a part the
+ * person may not read refuses the document; another user's invoice is not found.
+ */
+async function recordDocumentFlow(dir, base) {
+  const browser = await chromium.launch();
+  const page = await browser.newPage();
+  try {
+    await signInAs(page, base, "member");
+    const [me] = query(
+      dir,
+      "select id from user where role = 'member' and id not in ('other-user', 'doc-other') order by created_at desc limit 1",
+    );
+    write(
+      dir,
+      `insert into user (id, name, email, email_verified, role, created_at, updated_at)
+         values ('doc-other', 'Doc Other', 'doc-other@example.com', 1, 'member', 0, 0);
+       insert into business_profiles (business_name, iban, payment_term_days, owner_id, created_at, updated_at)
+         values ('Someone Else Oy', 'SE00 OTHER', 30, 'doc-other', 0, 0);
+       insert into clients (name, email, address, owner_id, created_at, updated_at)
+         values ('Printed Client', 'hidden@client.example.com', 'Storgatan 1', '${me.id}', 0, 0);
+       insert into invoices (number, client_id, issued_on, due_on, status, owner_id, created_at, updated_at)
+         values ('DOC-001', last_insert_rowid(), '2026-11-01', '2026-12-01', 'draft', '${me.id}', 0, 0);
+       insert into invoice_lines (invoice_id, description, quantity, unit_price, owner_id, created_at, updated_at)
+         values ((select id from invoices where number = 'DOC-001'), 'Logo design', 2, 15000, '${me.id}', 0, 0);
+       insert into clients (name, email, owner_id, created_at, updated_at)
+         values ('Not Yours Client', 'x@other.example.com', 'doc-other', 0, 0);
+       insert into invoices (number, client_id, issued_on, due_on, status, owner_id, created_at, updated_at)
+         values ('DOC-002', last_insert_rowid(), '2026-11-01', '2026-12-01', 'draft', '${me.id}', 0, 0);
+       insert into invoices (number, client_id, issued_on, due_on, status, owner_id, created_at, updated_at)
+         values ('DOC-003', (select id from clients where name = 'Not Yours Client'), '2026-11-01', '2026-12-01', 'draft', 'doc-other', 0, 0);`,
+    );
+    const id = (number) => query(dir, `select id from invoices where number = '${number}'`)[0].id;
+    await open(page, `${base}/invoices/${id("DOC-001")}`);
+    await hydrated(page);
+    await page.getByRole("link", { name: "Print", exact: true }).click();
+    await page.waitForURL(`${base}/invoices/${id("DOC-001")}/document`);
+    await page.getByRole("heading", { name: "Invoice", exact: true }).waitFor();
+    await page.getByRole("button", { name: "Print or save as PDF" }).waitFor();
+    for (const text of [
+      "Åland Design Studio Ab",
+      "Printed Client",
+      "Storgatan 1",
+      "DOC-001",
+      "Logo design",
+    ])
+      await page
+        .getByText(text, { exact: true })
+        .first()
+        .waitFor({ timeout: 5000 * P });
+    const html = await page.content();
+    if (!/300/.test(await page.locator("table").innerText()))
+      throw new Error("the line's amount (2 × 150) is not on the document");
+    // Only the named fields leave the server: not the client's email, nor the business's term.
+    for (const hidden of ["hidden@client.example.com", "Someone Else Oy"])
+      if (html.includes(hidden)) throw new Error(`the document holds "${hidden}"`);
+    console.log(
+      "  ✓ browser: Print opens the invoice as a document with the owner's details, the client and its lines, and nothing unnamed",
+    );
+    // The client is another user's: the person may not read that block, so nothing prints.
+    await open(page, `${base}/invoices/${id("DOC-002")}/document`);
+    await page
+      .getByRole("alert")
+      .getByText("cannot be printed")
+      .waitFor({ timeout: 5000 * P });
+    if ((await page.content()).includes("Not Yours Client"))
+      throw new Error("a refused document shows the unreadable client");
+    await open(page, `${base}/invoices/${id("DOC-003")}/document`);
+    await page.getByRole("heading", { name: "Not found" }).waitFor({ timeout: 5000 * P });
+    console.log(
+      "  ✓ browser: a document with a part the person may not read is refused, another user's is not found",
+    );
+    // An admin printing the member's invoice gets the member's business details.
+    await page.context().clearCookies();
+    await signInAs(page, base, "admin");
+    await open(page, `${base}/invoices/${id("DOC-001")}/document`);
+    await page.getByText("Åland Design Studio Ab", { exact: true }).waitFor({ timeout: 5000 * P });
+    if ((await page.content()).includes("Someone Else Oy"))
+      throw new Error("the admin's print shows another member's business details");
+    console.log(
+      "  ✓ browser: an admin's print of a member's invoice carries the member's own details",
+    );
+  } catch (error) {
+    console.log(
+      `  ✗ browser: ${error.message.split("\n")[0]}\n    at ${page.url()}, see ${await screenshot(page)}`,
+    );
+    failures.push("invoicing record document flow");
+  } finally {
+    await browser.close();
+  }
+}
+
 /** In the invoicing app, a member never sees another user's invoices, even by their id. */
 async function isolationFlow(dir, base) {
   write(
@@ -9562,6 +9656,7 @@ test("the session cookie's name and attributes", async () => {
         await pickFlow(dir, base);
         await addChildFlow(base);
         await onboardingFlow(base);
+        await recordDocumentFlow(dir, base);
         await isolationFlow(dir, base);
         await invoicePaymentFlow(dir, base);
       }
