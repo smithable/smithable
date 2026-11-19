@@ -33,10 +33,11 @@ export function AppName() {
   const inUse = offer && splitAddress(offer.current, offer.offer);
   const unchanged = Boolean(inUse && inUse.name === wanted && inUse.domain === domain);
 
-  // The one check call, a moment after the owner stops typing; an older answer never wins.
+  // The one check call, a moment after the owner stops typing; an older answer never wins. Typing
+  // clears the line, so a save's own sentence stays until the owner types again.
   useEffect(() => {
     const mine = ++typed.current;
-    if (!offer || !wanted || unchanged) return setLine(undefined);
+    if (!offer || !wanted || unchanged) return;
     const timer = setTimeout(() => {
       void checkName(wanted, domain).then((r) => {
         if (mine !== typed.current) return;
@@ -82,7 +83,11 @@ export function AppName() {
           autoComplete="off"
           spellCheck={false}
           autoCapitalize="none"
-          onChange={(e) => setName(e.target.value)}
+          disabled={busy}
+          onChange={(e) => {
+            setLine(undefined);
+            setName(e.target.value);
+          }}
         />
         <span aria-hidden="true">.</span>
         {offer.offer.length > 1 ? (
@@ -90,14 +95,18 @@ export function AppName() {
             aria-label="Domain"
             value={domain}
             options={offer.offer}
-            onChange={(e) => setDomain(e.target.value)}
+            disabled={busy}
+            onChange={(e) => {
+              setLine(undefined);
+              setDomain(e.target.value);
+            }}
             className="w-auto"
           />
         ) : (
           <span className="whitespace-nowrap">{domain}</span>
         )}
       </div>
-      <p aria-live="polite" className={line?.ok ? "text-muted" : "text-danger"}>
+      <p aria-live="polite" className={line && !line.ok ? "text-danger" : "text-muted"}>
         {line?.text ?? (offer.current ? `The app answers at ${offer.current}.` : "")}
       </p>
       <div className="flex flex-wrap gap-2">
