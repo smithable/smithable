@@ -86,7 +86,6 @@ export interface Speech {
   needsLocalCheck: boolean;
   checkingHearing: boolean;
   hearingNote: string | undefined;
-  mic: "off" | "press";
   /** Automatic mode (§4.2): chosen per visit, never saved; back to press to talk by itself. */
   auto: boolean;
   setAuto: (on: boolean) => void;
@@ -102,9 +101,8 @@ export interface Speech {
   /** The line was shown once: the mic's first press shows it before asking the browser. */
   told: boolean;
   notice?: string;
-  /** Starts listening (held, or one utterance); finals arrive through onFinal. */
-  listen: (hold: boolean) => void;
-  release: () => void;
+  /** Starts or stops manual listening; finals arrive through onFinal. */
+  toggleMic: () => void;
   speak: (text: string) => void;
   stopSpeaking: () => void;
   speaking: boolean;
@@ -230,9 +228,10 @@ export function useSpeech(
   speakingNow.current = speaking;
   // A recognition that failed to open beside the detector's stream (§4.1's two captures).
   const clash = useRef(false);
+  const manualListening = useRef(false);
   // biome-ignore lint/correctness/useExhaustiveDependencies: settings are read as they are now
   const listen = useCallback(
-    (hold: boolean) => {
+    (manual = false) => {
       if (inputBlockedNow.current || rec.current || !mayHear() || !Rec) return;
       setHearingError(undefined);
       if (!settings.told) {
@@ -245,7 +244,7 @@ export function useSpeech(
       const r = new Rec();
       r.lang = "en-US";
       r.interimResults = true;
-      r.continuous = hold;
+      r.continuous = true;
       if (onDeviceOnly && "processLocally" in r) r.processLocally = true;
       let heardAny = false;
       r.onresult = (e) => {
@@ -279,6 +278,7 @@ export function useSpeech(
           );
       };
       r.onend = () => {
+        manualListening.current = false;
         rec.current = undefined;
         setListening(false);
         setInterim("");
@@ -291,12 +291,14 @@ export function useSpeech(
         }
       };
       rec.current = r;
+      manualListening.current = manual;
       channel.current?.postMessage("listening");
       try {
         r.start();
       } catch {
         // A start the browser refuses leaves nothing listening, and the mic free for the next try.
         rec.current = undefined;
+        manualListening.current = false;
         setHearingError(
           "The browser could not start speech recognition. Check microphone permission for this Studio address and try again.",
         );
@@ -307,7 +309,6 @@ export function useSpeech(
     },
     [Rec, canHear, onDeviceOnly, localHearing, checkingHearing, stopSpeaking, settings],
   );
-  const release = useCallback(() => rec.current?.stop(), []);
 
   // Automatic mode: the detector opens its own stream; an onset starts recognition (while Smith
   // is silent), about 800 ms of silence ends it, and what was heard is sent as with a release.
@@ -376,10 +377,15 @@ export function useSpeech(
                 rec.current?.abort();
                 return;
               }
-              const event = segments.push(await found.detect(frame));
+              const probability = await found.detect(frame);
+              if (manualListening.current) {
+                segments.reset();
+                return;
+              }
+              const event = segments.push(probability);
               if (event === "start") {
                 lastHeard.current = Date.now();
-                listenNow.current(true);
+                listenNow.current();
               } else if (event === "end") rec.current?.stop();
               else if (event === "misfire") rec.current?.abort();
             })
@@ -436,6 +442,7 @@ export function useSpeech(
     () => () => {
       generation.current++;
       ear.current?.stop();
+      rec.current?.abort();
     },
     [],
   );
@@ -486,7 +493,6 @@ export function useSpeech(
           : !canHear
             ? why
             : undefined),
-    mic: settings.mic,
     auto,
     setAuto: (on) => (on ? void startAuto() : stopAuto()),
     ...(autoNote ? { autoNote } : {}),
@@ -496,8 +502,10 @@ export function useSpeech(
     where: whereLine("browser", browser, onDeviceOnly && localHearing === true),
     told: Boolean(settings.told),
     ...(notice ? { notice } : {}),
-    listen,
-    release,
+    toggleMic: () => {
+      if (rec.current) rec.current.stop();
+      else listen(true);
+    },
     speak,
     stopSpeaking,
     speaking,

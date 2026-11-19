@@ -326,6 +326,7 @@ export function Ask({
   const sendNow = useRef<() => void>(() => {});
   const guidingNow = useRef(guiding);
   guidingNow.current = guiding;
+  const [topicsOpen, setTopicsOpen] = useState(false);
   const speech = useSpeech(
     speechProviders,
     (text) => {
@@ -349,41 +350,15 @@ export function Ask({
   }, [speech.auto]);
   const speechNow = useRef(speech);
   speechNow.current = speech;
-  // Hold Ctrl+Shift+Space to talk anywhere in Studio (the preview's keys are its own page's);
-  // a repeat is ignored, and letting go of any of the three, or leaving the tab, releases.
-  // The keys are listened to once; the speech is read through a ref, so a hold that changes the
-  // settings (the first use) does not lose its release.
+  // Ctrl+Shift+Space toggles the mic from anywhere in Studio.
   useEffect(() => {
-    let held = false;
-    const speech = () => speechNow.current;
     const down = (e: KeyboardEvent) => {
       if (!(e.ctrlKey && e.shiftKey && e.code === "Space")) return;
       e.preventDefault();
-      if (e.repeat || held || guidingNow.current) return;
-      held = true;
-      speech().listen(true);
-    };
-    const up = (e: KeyboardEvent) => {
-      if (
-        !held ||
-        !["Space", "ControlLeft", "ControlRight", "ShiftLeft", "ShiftRight"].includes(e.code)
-      )
-        return;
-      held = false;
-      speech().release();
-    };
-    const away = () => {
-      if (held) speech().release();
-      held = false;
+      if (!e.repeat && !guidingNow.current) speechNow.current.toggleMic();
     };
     window.addEventListener("keydown", down);
-    window.addEventListener("keyup", up);
-    window.addEventListener("blur", away);
-    return () => {
-      window.removeEventListener("keydown", down);
-      window.removeEventListener("keyup", up);
-      window.removeEventListener("blur", away);
-    };
+    return () => window.removeEventListener("keydown", down);
   }, []);
   const apply = async () => {
     if (!proposal) return;
@@ -861,6 +836,8 @@ export function Ask({
             !quiet &&
             !history.waiting && (
               <ReadyChips
+                open={topicsOpen}
+                setOpen={setTopicsOpen}
                 history={
                   trace && lastLine(trace)
                     ? ["What have I changed?", justApplied ? "Undo that" : "Undo the last change"]
@@ -1397,6 +1374,8 @@ function BetaLines({ beta, left }: { beta: Beta; left: number | undefined }) {
 
 /** The ready prompts, under the box: resting while words are in it, and saying so. */
 function ReadyChips({
+  open,
+  setOpen,
   disabled,
   resting = false,
   onPick,
@@ -1406,6 +1385,8 @@ function ReadyChips({
   onSay,
   onFeedback,
 }: {
+  open: boolean;
+  setOpen: (open: boolean) => void;
   /** The chip that opens Leave feedback (A 242). */
   onFeedback?: () => void;
   /** The history's chips when a line is still in place (ask-flows.md §8), said as if typed. */
@@ -1425,45 +1406,54 @@ function ReadyChips({
     ["publish", "How do I publish?"],
   ];
   return (
-    <fieldset aria-label="Ready prompts" disabled={disabled} className="flex flex-wrap gap-1.5">
-      <legend className="sr-only">Ready prompts</legend>
-      {chips.map(([id, label]) => (
-        <button
-          key={id}
-          type="button"
-          onClick={() => onPick(id)}
-          className={cx(CHIP, "disabled:pointer-events-none disabled:opacity-50")}
-        >
-          {label}
-        </button>
-      ))}
-      {history.map((text) => (
-        <button
-          key={text}
-          type="button"
-          onClick={() => onSay?.(text)}
-          className={cx(CHIP, "disabled:pointer-events-none disabled:opacity-50")}
-        >
-          {text}
-        </button>
-      ))}
-      {onFeedback && (
-        <button type="button" onClick={onFeedback} className={CHIP}>
-          Leave feedback
-        </button>
-      )}
-      {leftOpen.map((a) => (
-        <button
-          key={a.question}
-          type="button"
-          onClick={() => onReask?.(a)}
-          className={cx(CHIP, "disabled:pointer-events-none disabled:opacity-50")}
-        >
-          You left open: {a.question}
-        </button>
-      ))}
-      {resting && <p className="w-full text-xs text-quiet">Send or clear the box to use these.</p>}
-    </fieldset>
+    <details open={open} onToggle={(event) => setOpen(event.currentTarget.open)}>
+      <summary className="cursor-pointer text-xs font-medium text-muted">Suggested topics</summary>
+      <fieldset
+        aria-label="Ready prompts"
+        disabled={disabled}
+        className="mt-1.5 flex flex-wrap gap-1.5"
+      >
+        <legend className="sr-only">Ready prompts</legend>
+        {chips.map(([id, label]) => (
+          <button
+            key={id}
+            type="button"
+            onClick={() => onPick(id)}
+            className={cx(CHIP, "disabled:pointer-events-none disabled:opacity-50")}
+          >
+            {label}
+          </button>
+        ))}
+        {history.map((text) => (
+          <button
+            key={text}
+            type="button"
+            onClick={() => onSay?.(text)}
+            className={cx(CHIP, "disabled:pointer-events-none disabled:opacity-50")}
+          >
+            {text}
+          </button>
+        ))}
+        {onFeedback && (
+          <button type="button" onClick={onFeedback} className={CHIP}>
+            Leave feedback
+          </button>
+        )}
+        {leftOpen.map((a) => (
+          <button
+            key={a.question}
+            type="button"
+            onClick={() => onReask?.(a)}
+            className={cx(CHIP, "disabled:pointer-events-none disabled:opacity-50")}
+          >
+            You left open: {a.question}
+          </button>
+        ))}
+        {resting && (
+          <p className="w-full text-xs text-quiet">Send or clear the box to use these.</p>
+        )}
+      </fieldset>
+    </details>
   );
 }
 

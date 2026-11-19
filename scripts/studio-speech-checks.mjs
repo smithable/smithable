@@ -35,6 +35,7 @@ export async function checkStudioSpeech(
             );
             if (window.speechFixture.behavior === "automatic") return;
             window.speechFixture.local = this.processLocally;
+            if (window.speechFixture.behavior === "manual") return;
             if (window.speechFixture.behavior === "throw") throw new Error("fixture refused");
             if (window.speechFixture.behavior === "transcript") {
               queueMicrotask(() => {
@@ -313,6 +314,14 @@ export async function checkStudioSpeech(
         });
         await page.getByRole("button", { name: /^Mic:/ }).click();
         await page.getByText(/The browser could not start speech recognition/).waitFor();
+        await page.evaluate(() => {
+          window.speechFixture.behavior = "manual";
+        });
+        const mic = page.getByRole("button", { name: /^Mic:/ });
+        await mic.click();
+        await page.getByRole("button", { name: "Mic: on", pressed: true }).waitFor();
+        await mic.click();
+        await page.getByRole("button", { name: "Mic: off", pressed: false }).waitFor();
         await page.evaluate(() => {
           window.speechFixture.hold = true;
         });

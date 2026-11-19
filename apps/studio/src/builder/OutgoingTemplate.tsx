@@ -16,9 +16,11 @@ import {
   titleField,
   USER_MODEL,
 } from "@smithable/core";
-import { useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { parse } from "yaml";
+import { Button, Input } from "../ui";
 import type { Run } from "./ChangeForms";
+import { usePendingEdit } from "./pending-edit";
 
 /** A field a placeholder or a mail's list can name, as core's validator has it. */
 const sendable = (f: FieldIR) => !f.formula && !notSendable(f);
@@ -80,6 +82,7 @@ export function OutgoingTemplate({
   contentText,
   samples,
   run,
+  onClose,
 }: {
   entry: string;
   ir: SpecIR;
@@ -89,34 +92,67 @@ export function OutgoingTemplate({
   /** Each model's sample records file (samples/<Model>.yml), as text. */
   samples: Record<string, string>;
   run: Run;
+  onClose?: () => void;
 }) {
   const o = ir.outgoing.find((x) => x.name === entry);
   const [copied, setCopied] = useState<string>();
-  if (!o) return null;
-  if ("custom" in o.when)
-    return (
-      <p className="w-full text-xs text-muted">
-        A custom action's mail shows what it was given and what it gave back, so its texts take no
-        placeholders.
-      </p>
-    );
-  const on = o.when.model;
+  const subjectId = useId();
+  const dialog = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    dialog.current?.showModal();
+  }, []);
+  const on = o && "model" in o.when ? o.when.model : undefined;
   const model = ir.models.find((m) => m.name === on);
-  if (!model) return null;
-  const changed = "event" in o.when && o.when.event === "changed";
-  const offered = placeholders(model, changed);
-  const fields = model.fields.filter(sendable);
-  const listed = o.show === "none" ? [] : (o.show ?? fields.map((f) => f.name));
-  // The entry's own words in the content file, and the model's first sample record.
-  let words: { subject?: string; text?: string } = {};
+  const changed = o && "event" in o.when && o.when.event === "changed";
+  const list = o?.list;
+  const offered = list ? ["count", "date"] : model ? placeholders(model, Boolean(changed)) : [];
+  const fields = model?.fields.filter(sendable) ?? [];
+  const listed = o?.show === "none" ? [] : (o?.show ?? fields.map((f) => f.name));
+  let saved: Partial<Record<"subject" | "text", string>> = {};
   try {
-    words =
-      (parse(contentText ?? "") as { outgoing?: Record<string, typeof words> })?.outgoing?.[
+    saved =
+      (parse(contentText ?? "") as { outgoing?: Record<string, typeof saved> })?.outgoing?.[
         entry
       ] ?? {};
   } catch {}
-  const sample = records(samples, on)[0] ?? {};
-  const further = hops(model, o, ir, auth);
+  const [draft, setDraft] = useState<
+    Partial<Record<"subject" | "text", { text: string; base: string | undefined }>>
+  >({});
+  const [saving, setSaving] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const words = {
+    subject: draft.subject?.text ?? saved.subject,
+    text: draft.text?.text ?? saved.text,
+  };
+  const dirty = (["subject", "text"] as const).filter(
+    (field) => (words[field] ?? "") !== (saved[field] ?? ""),
+  );
+  const conflicted = dirty.some((field) => draft[field]?.base !== saved[field]);
+  usePendingEdit(saving || dirty.length > 0);
+  if (!o) return null;
+  const edit = (field: "subject" | "text", text: string) => {
+    setFailed(false);
+    setDraft((current) => ({
+      ...current,
+      [field]: { text, base: current[field] ? current[field].base : saved[field] },
+    }));
+  };
+  const save = async () => {
+    setSaving(true);
+    setFailed(false);
+    try {
+      const texts = Object.fromEntries(
+        dirty.map((field) => [`outgoing.${entry}.${field}`, words[field] ?? ""]),
+      );
+      if (await run("setTexts", { texts })) setDraft({});
+      else setFailed(true);
+    } finally {
+      setSaving(false);
+    }
+  };
+  const sampleRecords = on ? records(samples, on) : [];
+  const sample = sampleRecords[0] ?? {};
+  const further = model && !list ? hops(model, o, ir, auth) : [];
   // What the validator says about the texts' placeholders, warnings included ({by} to an address).
   const problems = [
     ...new Set([...placeholdersOf(words.subject ?? ""), ...placeholdersOf(words.text ?? "")]),
@@ -126,6 +162,13 @@ export function OutgoingTemplate({
   });
   // A sample names a referenced record by its title: {customer.name} is that record's field.
   const value = (path: string): string | undefined => {
+    if (list) {
+      if (path === "count") return String(sampleRecords.length);
+      if (path === "date")
+        return new Intl.DateTimeFormat(undefined, { dateStyle: "short" }).format();
+      return undefined;
+    }
+    if (!model) return undefined;
     if (path === "title") return shown(sample[titleField(model)]);
     if (path === "link") return "https://your-app.example/…";
     if (path === "by") return "Sam Sample";
@@ -137,7 +180,7 @@ export function OutgoingTemplate({
     }
     const v = sample[first];
     if (second === undefined) return shown(v);
-    const type = model.fields.find((x) => x.name === first)?.type;
+    const type = model?.fields.find((x) => x.name === first)?.type;
     const target =
       type?.kind === "relation" ? ir.models.find((m) => m.name === type.model) : undefined;
     if (!target) return undefined;
@@ -151,31 +194,15 @@ export function OutgoingTemplate({
     } catch {}
   };
   const setShow = (show: string[]) => void run("setOutgoingBody", { outgoing: entry, show });
-  return (
-    <section
-      aria-label={`The words of ${entry}`}
-      data-outgoing={entry}
-      className="w-full space-y-3 rounded-md bg-subtle p-2 text-xs"
-    >
-      <div className="space-y-1">
-        <p className="font-medium">Placeholders for the subject and text</p>
-        <div className="flex flex-wrap gap-1">
-          {offered.map((p) => (
-            <button
-              key={p}
-              type="button"
-              title="Copy, to paste into the subject or the text"
-              onClick={() => void copy(p)}
-              className="rounded-full border border-line bg-panel px-2 py-0.5 font-mono hover:border-accent hover:text-accent"
-            >
-              {`{${p}}`}
-            </button>
-          ))}
-        </div>
-        {further.map(({ ref, paths }) => (
-          <div key={ref} className="flex flex-wrap items-center gap-1">
-            <span className="text-quiet">{humanize(ref)}:</span>
-            {paths.map((p) => (
+  const settings = (
+    <div className="space-y-3 text-xs">
+      {!model ? (
+        <p className="text-muted">The texts for a custom action take no placeholders.</p>
+      ) : (
+        <div className="space-y-1">
+          <p className="font-medium">Placeholders for the subject and text</p>
+          <div className="flex flex-wrap gap-1">
+            {offered.map((p) => (
               <button
                 key={p}
                 type="button"
@@ -187,20 +214,36 @@ export function OutgoingTemplate({
               </button>
             ))}
           </div>
-        ))}
-        {copied && <p className="text-quiet">{`{${copied}}`} copied: paste it into a text.</p>}
-        {problems.map((p) => (
-          <p
-            key={p.path}
-            role={p.warning ? undefined : "alert"}
-            className={p.warning ? "text-warning" : "text-red-700"}
-          >
-            {p.message}
-            {p.hint ? ` ${p.hint}` : ""}
-          </p>
-        ))}
-      </div>
-      {o.to === "mail" && (
+          {further.map(({ ref, paths }) => (
+            <div key={ref} className="flex flex-wrap items-center gap-1">
+              <span className="text-quiet">{humanize(ref)}:</span>
+              {paths.map((p) => (
+                <button
+                  key={p}
+                  type="button"
+                  title="Copy, to paste into the subject or the text"
+                  onClick={() => void copy(p)}
+                  className="rounded-full border border-line bg-panel px-2 py-0.5 font-mono hover:border-accent hover:text-accent"
+                >
+                  {`{${p}}`}
+                </button>
+              ))}
+            </div>
+          ))}
+          {copied && <p className="text-quiet">{`{${copied}}`} copied: paste it into a text.</p>}
+          {problems.map((p) => (
+            <p
+              key={p.path}
+              role={p.warning ? undefined : "alert"}
+              className={p.warning ? "text-warning" : "text-red-700"}
+            >
+              {p.message}
+              {p.hint ? ` ${p.hint}` : ""}
+            </p>
+          ))}
+        </div>
+      )}
+      {onClose && model && !list && (
         <fieldset className="space-y-1">
           <legend className="font-medium">Listed under the text</legend>
           <div className="flex flex-wrap gap-x-3 gap-y-1">
@@ -255,27 +298,106 @@ export function OutgoingTemplate({
           )}
         </fieldset>
       )}
-      {o.to === "mail" && (
-        <div className="space-y-1" data-preview>
-          <p className="font-medium">
-            {Object.keys(sample).length
-              ? `Preview, from the first sample ${model.name.toLowerCase()}`
-              : `Preview: no sample ${model.name.toLowerCase()} yet (samples/${model.name}.yml), so its values are left out`}
-          </p>
-          <div className="space-y-2 rounded-md border border-line bg-panel p-2 whitespace-pre-wrap">
-            <p className="font-semibold">
-              {/* A subject is one line: a value's newlines become spaces. */}
-              {fillText(words.subject ?? `${humanize(model.name)}: {title}`, value, true)}
-            </p>
-            {words.text && <p>{fillText(words.text, value)}</p>}
-            {listed.length > 0 && (
-              <p className="text-muted">
-                {listed.map((n) => `${humanize(n)}: ${value(n) ?? ""}`).join("\n")}
+    </div>
+  );
+  if (!onClose)
+    return (
+      <section aria-label={`The words of ${entry}`} className="w-full rounded-md bg-subtle p-2">
+        {settings}
+      </section>
+    );
+  const title = `Edit mail template for ${humanize(entry)}`;
+  return (
+    <dialog
+      ref={dialog}
+      aria-label={title}
+      onCancel={(event) => {
+        if (saving) event.preventDefault();
+      }}
+      onClose={onClose}
+      className="m-auto max-h-[90dvh] w-[min(72rem,94vw)] overflow-auto rounded-lg bg-panel p-0 text-fg shadow-xl backdrop:bg-black/40"
+    >
+      <div className="space-y-4 p-5">
+        <h2 className="text-base font-semibold">{title}</h2>
+        <div className="grid items-start gap-5 md:grid-cols-2">
+          <div className="min-w-0 space-y-3">
+            <label htmlFor={subjectId} className="block space-y-1 text-sm font-medium">
+              Subject
+              <Input
+                id={subjectId}
+                value={words.subject ?? ""}
+                disabled={saving}
+                onChange={(event) => edit("subject", event.target.value)}
+              />
+            </label>
+            <label className="block space-y-1 text-sm font-medium">
+              Text
+              <textarea
+                value={words.text ?? ""}
+                disabled={saving}
+                onChange={(event) => edit("text", event.target.value)}
+                rows={7}
+                className="w-full rounded-md border border-line bg-surface px-2 py-1 text-sm"
+              />
+            </label>
+            {settings}
+          </div>
+          <section aria-label="Mail preview" className="min-w-0 space-y-2" data-preview>
+            <h3 className="text-sm font-semibold">Mail preview</h3>
+            {model && (
+              <p className="text-xs text-muted">
+                {sampleRecords.length
+                  ? list
+                    ? "Using the sample records"
+                    : `From the first sample ${model.name.toLowerCase()}`
+                  : `No sample ${model.name.toLowerCase()} yet (samples/${model.name}.yml)`}
               </p>
             )}
-          </div>
+            <div className="space-y-2 rounded-md border border-line bg-surface p-3 text-sm whitespace-pre-wrap wrap-break-word">
+              <p className="font-semibold">
+                {fillText(
+                  words.subject || (model ? `${humanize(model.name)}: {title}` : humanize(entry)),
+                  value,
+                  true,
+                )}
+              </p>
+              {words.text && <p>{fillText(words.text, value)}</p>}
+              {list && sampleRecords.length > 0 && (
+                <p className="text-muted">
+                  {sampleRecords
+                    .map((record) =>
+                      list.columns.map((column) => shown(record[column]) ?? "").join(" · "),
+                    )
+                    .join("\n")}
+                </p>
+              )}
+              {!list && listed.length > 0 && (
+                <p className="text-muted">
+                  {listed.map((n) => `${humanize(n)}: ${value(n) ?? ""}`).join("\n")}
+                </p>
+              )}
+            </div>
+          </section>
         </div>
-      )}
-    </section>
+        {conflicted && (
+          <p role="alert" className="text-sm text-red-700">
+            This template changed while you were editing. Reopen it to edit the latest version.
+          </p>
+        )}
+        {failed && (
+          <p role="alert" className="text-sm text-red-700">
+            The template could not be saved. Check its content and try again.
+          </p>
+        )}
+        <div className="flex justify-end gap-2">
+          <Button variant="ghost" disabled={saving} onClick={() => dialog.current?.close()}>
+            {dirty.length ? "Discard and close" : "Close"}
+          </Button>
+          <Button disabled={saving || conflicted || !dirty.length} onClick={() => void save()}>
+            {saving ? "Saving…" : "Save template"}
+          </Button>
+        </div>
+      </div>
+    </dialog>
   );
 }
