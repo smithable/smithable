@@ -22,6 +22,7 @@ The entries are filled in from the merged pull requests at each release. A fix t
 
 ### Fixes
 
+- Generated apps: text in a theme's primary colour (links, eyebrows, the active menu item, a day's number) is darkened or lightened until it reads at 4.5:1, while buttons keep the theme's primary; a record's rows edited in place stack one value under another on a phone, and a dashboard tile's title wraps there instead of being cut (`fixes/readable-primary-text.yml`).
 - Generated apps: the build leaves out the sample pictures nothing in the app names (those `public/images/pictures.json` records as samples, unchanged); the owner's own pictures, the hero, the mark and any picture a page names still ship (`fixes/unused-sample-pictures.yml`).
 - Generated apps: Ask and the inspector can pause and resume answer playback, sample a voice, and choose the speaking speed; Ask keeps its mark at the lower left of its label (`fixes/ask-sound-controls.yml`).
 
