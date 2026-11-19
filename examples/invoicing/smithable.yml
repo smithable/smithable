@@ -37,7 +37,7 @@ models:
         default: DATEADD(issuedOn, 30, "day")
         locked: { status: [sent, paid, overdue] }
       deliveryDate: { type: date, locked: { status: [sent, paid, overdue] } }
-      status: draft | sent | paid | overdue
+      status: { type: draft | sent | paid | overdue, default: draft, by: app }
       sentAt: { type: datetime, by: app }
       vatNote: { type: text, locked: { status: [sent, paid, overdue] } }
       contract: file                   # the agreement the invoice is for, as a PDF or a document
@@ -76,7 +76,7 @@ actions:
   markSent:
     on: Invoice
     when: { status: draft }
-    set: { status: sent }
+    set: { status: sent, sentAt: NOW() }
     intent: The invoice went to the client another way.
   markPaid:
     on: Invoice

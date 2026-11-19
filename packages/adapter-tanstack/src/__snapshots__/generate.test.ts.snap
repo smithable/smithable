@@ -48719,6 +48719,7 @@ import * as schema from "#/db/schema";
 import { AccessDenied, allows, check, type Viewer } from "#/kit/access";
 import { audit } from "#/kit/audit.server";
 import { outgoing } from "#/generated/outgoing.server";
+import { F } from "#/kit/formula";
 import { afterChange } from "#/generated/hooks";
 import { invoiceSettable } from "#/generated/invoice.schema";
 import { invoiceData } from "#/generated/invoice.server";
@@ -48732,6 +48733,7 @@ function plan(_viewer: Viewer | null, row: Row) {
     id: row.id,
     values: invoiceSettable.partial().parse({
       status: "sent",
+      sentAt: new Date(F.NOW()),
     }),
 
   };
@@ -48744,7 +48746,7 @@ export async function runMarkSent(viewer: Viewer | null, id: number) {
   check(markSentAccess, viewer, row.ownerId);
   if (!markSentFits(row, viewer)) throw new Error("This cannot be done now.");
   const one = plan(viewer, row);
-  return invoiceData.update(viewer, id, one.values, "markSent", ["status"]);
+  return invoiceData.update(viewer, id, one.values, "markSent", ["status","sentAt"]);
 }
 
 /**
@@ -48769,9 +48771,9 @@ export async function runMarkSentMany(viewer: Viewer | null, ids: number[]) {
   const written = db.transaction((tx) => plans.map((p) => {
       const before = tx.select().from(schema.invoices).where(eq(schema.invoices.id, p.id)).get();
       if (!before) throw new AccessDenied(viewer !== null);
-      const checked = invoiceData.checkUpdate(tx, viewer, p.id, p.values, before, "markSent", ["status"]);
+      const checked = invoiceData.checkUpdate(tx, viewer, p.id, p.values, before, "markSent", ["status","sentAt"]);
       const changed = tx.update(schema.invoices).set(checked).where(eq(schema.invoices.id, p.id)).returning().get();
-      audit(tx, viewer, { action: "markSent", model: "Invoice", record: changed.id, fields: ["status"] });
+      audit(tx, viewer, { action: "markSent", model: "Invoice", record: changed.id, fields: ["status","sentAt"] });
       outgoing(tx, viewer, "Invoice", "markSent", changed, before);
       const inserted = [
 
@@ -50884,7 +50886,7 @@ export const CARDS: Record<string, CardFacts> = {
           label: "Mark sent",
           kind: "change",
           on: "Invoice",
-          sets: ["Status"],
+          sets: ["Status", "Sent at"],
           when: "status is draft",
         },
         {
@@ -52038,12 +52040,6 @@ const MOVES: Record<string, DoorMove[]> = {
         { field: "issuedOn", required: true, kind: "date" },
         { field: "dueOn", required: true, kind: "date" },
         { field: "deliveryDate", required: false, kind: "date" },
-        {
-          field: "status",
-          required: true,
-          kind: "choice",
-          values: ["draft", "sent", "paid", "overdue"],
-        },
         { field: "vatNote", required: false, kind: "text" },
       ],
     },
@@ -52057,12 +52053,6 @@ const MOVES: Record<string, DoorMove[]> = {
         { field: "issuedOn", required: true, kind: "date" },
         { field: "dueOn", required: true, kind: "date" },
         { field: "deliveryDate", required: false, kind: "date" },
-        {
-          field: "status",
-          required: true,
-          kind: "choice",
-          values: ["draft", "sent", "paid", "overdue"],
-        },
         { field: "vatNote", required: false, kind: "text" },
       ],
     },
@@ -52197,12 +52187,6 @@ const MOVES: Record<string, DoorMove[]> = {
         { field: "issuedOn", required: true, kind: "date" },
         { field: "dueOn", required: true, kind: "date" },
         { field: "deliveryDate", required: false, kind: "date" },
-        {
-          field: "status",
-          required: true,
-          kind: "choice",
-          values: ["draft", "sent", "paid", "overdue"],
-        },
         { field: "vatNote", required: false, kind: "text" },
       ],
     },
@@ -52216,12 +52200,6 @@ const MOVES: Record<string, DoorMove[]> = {
         { field: "issuedOn", required: true, kind: "date" },
         { field: "dueOn", required: true, kind: "date" },
         { field: "deliveryDate", required: false, kind: "date" },
-        {
-          field: "status",
-          required: true,
-          kind: "choice",
-          values: ["draft", "sent", "paid", "overdue"],
-        },
         { field: "vatNote", required: false, kind: "text" },
       ],
     },
@@ -52888,9 +52866,9 @@ export const invoiceSettable = createInsertSchema(schema.invoices, {
   deliveryDate: (s) => s.regex(/^\\d{4}-\\d{2}-\\d{2}$/, w.enterValidDate),
   vatNote: (s) => s.max(10000, w.atMostCharacters(10000)),
   contract: z.object({ file: z.string().regex(/^invoice\\/[a-f0-9]{24}\\.[a-z0-9]{2,4}$/), name: z.string().max(200), type: z.string().max(100), size: z.int().nonnegative(), receipt: z.string().max(64).optional() }).nullish(),
-}).omit({ id: true, ownerId: true, createdAt: true, updatedAt: true }).partial({ sentAt: true });
+}).omit({ id: true, ownerId: true, createdAt: true, updatedAt: true }).partial({ status: true, sentAt: true });
 /** What a invoice's form sends, checked: never what the app fills. */
-export const invoiceSchema = invoiceSettable.omit({ sentAt: true });
+export const invoiceSchema = invoiceSettable.omit({ status: true, sentAt: true });
 
 export type InvoiceSettable = z.output<typeof invoiceSettable>;
 export type InvoiceValues = z.output<typeof invoiceSchema>;
@@ -53633,6 +53611,7 @@ export const invoiceUi: RecordUi<InvoiceRow> = {
       label: "Status",
       kind: "choice",
       required: true,
+      byApp: true,
       choices: [
         { value: "draft", label: "Draft" },
         { value: "sent", label: "Sent" },
@@ -57355,7 +57334,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/generated/actions/mark-overdue.ts": "0a89cc21 generated",
   "src/generated/actions/mark-paid.server.ts": "3632f851 generated",
   "src/generated/actions/mark-paid.ts": "9047ea54 generated",
-  "src/generated/actions/mark-sent.server.ts": "28ca2a99 generated",
+  "src/generated/actions/mark-sent.server.ts": "4c60f9fa generated",
   "src/generated/actions/mark-sent.ts": "ca912866 generated",
   "src/generated/actions/send-invoice.server.ts": "6302d21a generated",
   "src/generated/actions/send-invoice.ts": "2efd6b21 generated",
@@ -57365,7 +57344,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/generated/business-profile.schema.ts": "7037e2dd generated",
   "src/generated/business-profile.server.ts": "cf159176 generated",
   "src/generated/business-profile.ts": "734f08c4 generated",
-  "src/generated/card.server.ts": "2fd662a8 generated",
+  "src/generated/card.server.ts": "eacbd913 generated",
   "src/generated/card.ts": "5cab12e4 generated",
   "src/generated/client.import.server.ts": "254b9c3a generated",
   "src/generated/client.import.ts": "343dac71 generated",
@@ -57373,7 +57352,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/generated/client.server.ts": "d4609a8c generated",
   "src/generated/client.ts": "ef4091ce generated",
   "src/generated/custom.ts": "5801b2b0 generated",
-  "src/generated/dev-door.server.ts": "caaca992 generated",
+  "src/generated/dev-door.server.ts": "a2aa07de generated",
   "src/generated/hooks.ts": "f860bab0 generated",
   "src/generated/invoice-line.formulas.test.ts": "f67cb44c generated",
   "src/generated/invoice-line.formulas.ts": "9a593ba5 generated",
@@ -57384,9 +57363,9 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/generated/invoice.formulas.ts": "ac175676 generated",
   "src/generated/invoice.import.server.ts": "5d63bdd7 generated",
   "src/generated/invoice.import.ts": "92bad053 generated",
-  "src/generated/invoice.schema.ts": "1f1e1640 generated",
+  "src/generated/invoice.schema.ts": "fc241430 generated",
   "src/generated/invoice.server.ts": "d6f05e64 generated",
-  "src/generated/invoice.ts": "c5238064 generated",
+  "src/generated/invoice.ts": "99ac7b80 generated",
   "src/generated/my-time.ts": "c315432b generated",
   "src/generated/outgoing.server.ts": "85ef1ab0 generated",
   "src/generated/pages.ts": "97850e87 generated",

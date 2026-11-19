@@ -6057,7 +6057,7 @@ async function invoiceMailFlow(dir, base) {
     existsSync(outbox) ? readdirSync(outbox).filter((f) => !f.startsWith(".")) : [];
   const drafts = query(
     dir,
-    `select i.id, i.number, i.owner_id as owner, sum(round(l.quantity * l.unit_price) + round(round(l.quantity * l.unit_price) * l.vat_rate / 100)) as cents, min(l.id) as line, min(l.quantity) as quantity
+    `select i.id, i.number, i.owner_id as owner, sum(round(l.quantity * l.unit_price) + round(round(l.quantity * l.unit_price) * l.vat_rate / 100)) as cents, min(l.id) as line
        from invoices i join invoice_lines l on l.invoice_id = i.id
        join clients c on c.id = i.client_id
       where i.status = 'draft' and c.email is not null and c.email != ''
@@ -6131,8 +6131,9 @@ async function invoiceMailFlow(dir, base) {
     );
 
     // A line whose quantity is no number leaves the total without a value.
+    const [original] = query(dir, `select quantity from invoice_lines where id = ${refused.line}`);
     write(dir, `UPDATE invoice_lines SET quantity = 'x' WHERE id = ${refused.line}`);
-    broken = refused;
+    broken = { ...refused, quantity: original.quantity };
     count = mails().length;
     await open(page, `${base}/invoices/${refused.id}`);
     await sendInvoice.click();
@@ -6271,7 +6272,8 @@ async function sentLinkFlow(dir, base) {
     failures.push("sent link");
   } finally {
     // Later checks want the drafts as the samples have them.
-    if (invoice) write(dir, `UPDATE invoices SET status = 'draft' WHERE id = ${invoice.id}`);
+    if (invoice)
+      write(dir, `UPDATE invoices SET status = 'draft', sent_at = null WHERE id = ${invoice.id}`);
     if (changed)
       write(
         dir,
@@ -6289,8 +6291,9 @@ async function copyFlow(dir, base) {
     await signInAs(page, base, "admin");
     await open(page, `${base}/invoices`);
     const first = page.locator("tbody tr").first();
-    await first.getByRole("button", { name: "Duplicate" }).waitFor();
-    await first.getByRole("button", { name: "Duplicate" }).click();
+    // Drafts have three actions. Duplicate is in the overflow.
+    await first.locator('summary[aria-label="More"]').click();
+    await first.getByRole("button", { name: "Duplicate", exact: true }).click();
     const dialog = page.getByRole("dialog", { name: "Duplicate" });
     await dialog.getByLabel("Number").fill("COPY-900");
     await dialog.getByRole("button", { name: "Duplicate" }).click();
@@ -6323,19 +6326,19 @@ async function copyFlow(dir, base) {
     await markSent.click();
     await markSent.waitFor({ state: "detached", timeout: 10000 * P });
     if (mailCount() !== before) throw new Error("Mark sent queued an email");
-    // The status is radio buttons (the ux file's control): Sent is checked once the form has the new value.
-    for (
-      let i = 0;
-      !(await page.getByRole("radio", { name: "Sent", exact: true }).isChecked());
-      i++
-    ) {
-      if (i === 50 * P) throw new Error("the form still shows the status from before the action");
-      await page.waitForTimeout(100);
-    }
+    await page
+      .locator('[data-kit="record-summary"][data-place="header"]')
+      .getByText("Sent", { exact: true })
+      .waitFor({ timeout: 10000 * P });
+    const [sent] = query(dir, "select status, sent_at from invoices where number = '2026-006'");
+    if (sent.status !== "sent" || !sent.sent_at)
+      throw new Error("Mark sent did not record the status and date");
+    if (await page.getByLabel("Status", { exact: true }).count())
+      throw new Error("the form still lets the user change the status");
     // The record's own history, for administrators: the action, with the field it changed.
     await page
       .locator('[data-kit="activity-log"] [data-part="line"]', { hasText: "mark sent" })
-      .getByText("(status)")
+      .getByText(/status/)
       .first()
       .waitFor({ timeout: 10000 * P });
     console.log(
@@ -6522,11 +6525,9 @@ async function formulaFlow(base) {
     const issued = await page.getByLabel("Issued on *").inputValue();
     const dueOn = await page.getByLabel("Due on *").inputValue();
     if (issued !== today || dueOn !== due) throw new Error(`defaults were ${issued} and ${dueOn}`);
-    // A choice as radio buttons is a group named by its field's label.
-    await page.getByRole("radiogroup", { name: /^Status/ }).waitFor({ timeout: 5000 * P });
-    console.log(
-      "  ✓ browser: formula defaults fill a new invoice (today, today + 30 days); its status buttons are a group named Status",
-    );
+    if (await page.getByLabel("Status", { exact: true }).count())
+      throw new Error("new invoices should start as draft without asking for a status");
+    console.log("  ✓ browser: formula defaults fill a new invoice (today, today + 30 days)");
   } catch (error) {
     console.log(
       `  ✗ browser: ${error.message.split("\n")[0]}\n    at ${page.url()}, see ${await screenshot(page)}`,
@@ -7190,6 +7191,11 @@ async function recordDocumentFlow(dir, base) {
     const id = (number) => query(dir, `select id from invoices where number = '${number}'`)[0].id;
     await open(page, `${base}/invoices/${id("DOC-001")}`);
     await hydrated(page);
+    // Duplicate was installed earlier in this app test, so Print is in the overflow.
+    await page
+      .locator("summary")
+      .filter({ hasText: /^More$/ })
+      .click();
     await page.getByRole("link", { name: "Print", exact: true }).click();
     await page.waitForURL(`${base}/invoices/${id("DOC-001")}/document`);
     await page.getByRole("heading", { name: "Invoice", exact: true }).waitFor();

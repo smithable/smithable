@@ -2523,6 +2523,15 @@ exports[`valid specs > ../../../examples/invoicing/smithable.yml 1`] = `
           "field": "status",
           "value": "sent",
         },
+        {
+          "field": "sentAt",
+          "formula": {
+            "args": [],
+            "kind": "call",
+            "name": "NOW",
+          },
+          "text": "NOW()",
+        },
       ],
       "when": {
         "status": "draft",
@@ -2809,6 +2818,7 @@ exports[`valid specs > ../../../examples/invoicing/smithable.yml 1`] = `
           "unique": false,
         },
         {
+          "byApp": true,
           "default": "draft",
           "name": "status",
           "required": true,
