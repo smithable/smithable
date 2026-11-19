@@ -201,7 +201,7 @@ export function Guide({
   // stop's.
   const own = step === "smith" || step === "byHand" || step === "code";
   const place = own ? stepPlace : current?.element;
-  // The place in view (on a phone, its panel scrolled to), then measured; again on resizing.
+  // Keep the measured place as the windows scroll or change layout during the tour.
   // biome-ignore lint/correctness/useExhaustiveDependencies: each place once, as it opens (onStop is made anew each render)
   useLayoutEffect(() => {
     if (!active) {
@@ -216,22 +216,28 @@ export function Guide({
       own ? place : document.querySelector<HTMLElement>(`[data-guide="${current.stop.anchor}"]`);
     locate()?.scrollIntoView({ block: "nearest", inline: "nearest" });
     const anchor = own ? `shown-${step}` : current.stop.anchor;
+    let frame: number;
+    let previous: DOMRect | undefined;
     const measure = () => {
+      frame = requestAnimationFrame(measure);
       const target = locate();
       if (!target?.isConnected) return;
       const now = target.getBoundingClientRect();
+      if (!now.width || !now.height) return;
+      if (
+        previous &&
+        now.x === previous.x &&
+        now.y === previous.y &&
+        now.width === previous.width &&
+        now.height === previous.height
+      )
+        return;
+      previous = now;
       setBox(now);
       onPlace?.(anchor, now);
     };
     measure();
-    const later = setTimeout(measure, 350);
-    const settled = setTimeout(measure, 800);
-    window.addEventListener("resize", measure);
-    return () => {
-      clearTimeout(later);
-      clearTimeout(settled);
-      window.removeEventListener("resize", measure);
-    };
+    return () => cancelAnimationFrame(frame);
   }, [active, current, place]);
 
   // The line said now: a stop of the tour, or a step of the shown change with its own chips.

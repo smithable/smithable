@@ -99,7 +99,7 @@ async function step(name, fn, shotPage = page) {
     console.log(`  ✓ ${name}`);
   } catch (error) {
     const shot = join(root, "failure.png");
-    await shotPage.screenshot({ path: shot }).catch(() => {});
+    if (!existsSync(shot)) await shotPage.screenshot({ path: shot }).catch(() => {});
     // What Code mode's Problems list said, for a failure the picture alone cannot explain (CI).
     const problems = await shotPage
       .getByRole("list", { name: "Problems" })
@@ -648,22 +648,42 @@ try {
           if (!(await fresh.locator(`[data-guide="${at}"]`).first().isVisible()))
             throw new Error(`the line for ${at} points at nothing`);
           await fresh.locator(`[data-guide-lit="${at}"]`).waitFor({ state: "attached" });
-          await fresh.waitForFunction(
-            (anchor) => {
-              const target = document.querySelector(`[data-guide="${anchor}"]`);
-              const ring = document.querySelector(`[data-guide-lit="${anchor}"]`);
-              if (!target || !ring) return false;
-              const box = target.getBoundingClientRect();
-              const lit = ring.getBoundingClientRect();
-              return (
-                box.width > 0 &&
-                Math.abs(lit.left - box.left + 4) < 2 &&
-                Math.abs(lit.top - box.top + 4) < 2
-              );
-            },
-            at,
-            { timeout: 5000 * P },
-          );
+          const waitForHighlight = () =>
+            fresh
+              .waitForFunction(
+                (anchor) => {
+                  const target = document.querySelector(`[data-guide="${anchor}"]`);
+                  const ring = document.querySelector(`[data-guide-lit="${anchor}"]`);
+                  if (!target || !ring) return false;
+                  const box = target.getBoundingClientRect();
+                  const lit = ring.getBoundingClientRect();
+                  return (
+                    box.width > 0 &&
+                    Math.abs(lit.left - box.left + 4) < 2 &&
+                    Math.abs(lit.top - box.top + 4) < 2
+                  );
+                },
+                at,
+                { timeout: 5000 * P },
+              )
+              .catch((error) => {
+                throw new Error(`The guide highlight is out of place at "${at}"`, { cause: error });
+              });
+          await waitForHighlight();
+          if (at === "changes") {
+            // A notice can move the window after it has settled, without a viewport resize.
+            const header = fresh.locator("[data-studio-header]");
+            await header.evaluate(async (element) => {
+              await new Promise((resolve) => setTimeout(resolve, 1100));
+              element.style.paddingBottom = "72px";
+            });
+            try {
+              await waitForHighlight();
+            } finally {
+              await header.evaluate((element) => element.style.removeProperty("padding-bottom"));
+            }
+            await waitForHighlight();
+          }
           if ((await fresh.locator("[data-guide-card]:visible").count()) !== 1)
             throw new Error(`the guide for ${at} is shown more than once`);
           await card.getByRole("button", { name: i === 6 ? "Done" : "Next", exact: true }).click();
@@ -775,6 +795,9 @@ try {
           .waitFor();
         if (await fresh.getByRole("dialog", { name: /^Smith presents / }).count())
           throw new Error("Present the app again opened the overlay");
+      } catch (error) {
+        await fresh.screenshot({ path: join(root, "failure.png") }).catch(() => {});
+        throw error;
       } finally {
         await fresh.close();
       }
