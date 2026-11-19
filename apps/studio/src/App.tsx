@@ -290,6 +290,7 @@ export function App() {
   const [selecting, setSelecting] = useState(false);
   const [shiftSelect, setShiftSelect] = useState(false);
   const [selectedPart, setSelectedPart] = useState<Selection>();
+  const [selectionHost, setSelectionHost] = useState<HTMLDivElement | null>(null);
   const clearSelection = useCallback(() => {
     setSelectedPart(undefined);
     setSelecting(false);
@@ -1199,9 +1200,6 @@ export function App() {
   };
   if (!project) return <p className="p-6 text-sm text-quiet">Opening the project…</p>;
   const button = selectedButton(selectedPart, spec);
-  const selectedButtonForm = button && (
-    <SelectedButton key={selectedPart?.concept} button={button} run={run} close={clearSelection} />
-  );
   const selectionAnchor = selectedPart?.anchor;
   const previewFrame = () =>
     previewBox?.querySelector<HTMLIFrameElement>('iframe[title="App preview"]');
@@ -1225,10 +1223,11 @@ export function App() {
   const layerOn = !project.making && (overlaid || floating);
   const smith = (stage: "overlay" | "panel" | "window") => (
     <div data-guide="change" className="flex h-full min-h-0 flex-col">
-      {smithVisible && stage !== "overlay" && selectedButtonForm && (
-        <div className="max-h-[50vh] shrink-0 overflow-auto border-b border-line">
-          {selectedButtonForm}
-        </div>
+      {smithVisible && stage !== "overlay" && button && (
+        <div
+          ref={setSelectionHost}
+          className="max-h-[50vh] shrink-0 overflow-auto border-b border-line"
+        />
       )}
       <Ask
         {...(project.ai ? { ai: project.ai } : {})}
@@ -2374,13 +2373,15 @@ export function App() {
           onClose={closeRelease}
         />
       )}
-      {!smithVisible && selectedButtonForm && (
-        <div
-          className="fixed inset-x-0 bottom-0 z-30 max-h-[65dvh] overflow-auto rounded-t-xl border border-line bg-panel shadow-xl lg:inset-x-auto lg:bottom-auto lg:w-80 lg:rounded-lg"
-          style={narrow ? undefined : selectionPosition}
-        >
-          {selectedButtonForm}
-        </div>
+      {button && (
+        <SelectedButton
+          key={selectedPart?.concept}
+          button={button}
+          run={run}
+          close={clearSelection}
+          host={smithVisible && !overlaid ? selectionHost : undefined}
+          position={narrow ? undefined : selectionPosition}
+        />
       )}
     </div>
   );

@@ -1,5 +1,6 @@
 import { humanize, SECTION_LOOKS } from "@smithable/core";
-import { useId, useState } from "react";
+import { type CSSProperties, useId, useState } from "react";
+import { createPortal } from "react-dom";
 import type { Spec } from "../engine";
 import type { Selection } from "../preview";
 import { Button, Select, Tabs } from "../ui";
@@ -36,10 +37,14 @@ export function SelectedButton({
   button,
   run,
   close,
+  host,
+  position,
 }: {
   button: NonNullable<ReturnType<typeof selectedButton>>;
   run: Run;
   close: () => void;
+  host?: HTMLDivElement | null;
+  position?: CSSProperties;
 }) {
   const [tab, setTab] = useState<"look" | "text" | "behavior">("look");
   const [layout, setLayout] = useState<string>();
@@ -55,7 +60,8 @@ export function SelectedButton({
       : tab === "text"
         ? Boolean(text.trim() && text.trim() !== button.label)
         : target !== button.target;
-  return (
+  if (host === null) return null;
+  const form = (
     <form
       aria-labelledby={heading}
       className="space-y-3 p-3"
@@ -147,5 +153,15 @@ export function SelectedButton({
         </Button>
       </div>
     </form>
+  );
+  return host ? (
+    createPortal(form, host)
+  ) : (
+    <div
+      className="fixed inset-x-0 bottom-0 z-30 max-h-[65dvh] overflow-auto rounded-t-xl border border-line bg-panel shadow-xl lg:inset-x-auto lg:bottom-auto lg:w-80 lg:rounded-lg"
+      style={position}
+    >
+      {form}
+    </div>
   );
 }

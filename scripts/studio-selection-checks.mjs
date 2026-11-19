@@ -53,13 +53,19 @@ export async function checkStudioSelection(browser, base) {
       await form.waitFor({ state: "hidden" });
     };
     await text.click();
-    await form.getByRole("textbox", { name: "Button text", exact: true }).fill("Abandoned draft");
+    const buttonText = form.getByRole("textbox", { name: "Button text", exact: true });
+    await buttonText.fill("Abandoned draft");
+    await openSmith(page);
+    await page
+      .locator("[data-guide=change]")
+      .getByRole("form", { name: "See the schedule", exact: true })
+      .waitFor();
+    assert.equal(await buttonText.inputValue(), "Abandoned draft");
     await cancel.click();
     await form.waitFor({ state: "hidden" });
     assert.equal(await link.getAttribute("href"), originalHref);
     await hero.locator("[data-sm-selected]").waitFor({ state: "hidden" });
 
-    await openSmith(page);
     await page.locator('iframe[title="App preview"]').focus();
     await page.keyboard.down("Shift");
     await link.click({ modifiers: ["Shift"] });
