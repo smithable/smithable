@@ -2280,6 +2280,7 @@ export function App() {
       {releaseView && releaseView !== "review" && (
         <PublishConfirmation
           project={project.name}
+          hosted={Boolean(project.home)}
           busy={checkingPublish}
           progress={releaseStep ? releaseProgress(releaseStep).line : undefined}
           onConfirm={() => void checkPublish(releaseView)}

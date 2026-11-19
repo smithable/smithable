@@ -1,4 +1,5 @@
 import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
+import { AppName } from "./AppName";
 import { api, type Project, type ReleaseReview as Review } from "./api";
 import { checksPassed, needsLook, reviewSections } from "./release-review";
 import { Button, Tabs } from "./ui";
@@ -414,12 +415,15 @@ const reviewDialog =
 
 export function PublishConfirmation({
   project,
+  hosted,
   busy,
   progress,
   onConfirm,
   onClose,
 }: {
   project: string;
+  /** On the hosted service: the app's address on a shared domain (T771). */
+  hosted?: boolean;
   busy: boolean;
   progress?: string;
   onConfirm: () => void;
@@ -439,6 +443,7 @@ export function PublishConfirmation({
         Publish {project}?
       </h2>
       <p className="rounded-md bg-subtle p-3 text-sm">Review complete · 0 open items</p>
+      {hosted && <AppName />}
       <p className="my-3 text-sm">{progress ?? "Continue to publishing for this version."}</p>
       <div className="flex flex-wrap gap-2">
         <Button variant="ghost" onClick={() => dialog.current?.close()}>
