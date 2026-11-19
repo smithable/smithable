@@ -249,6 +249,7 @@ export function App() {
   const compact = useMedia("(max-width: 1439px), (max-height: 799px)");
   const floating = !narrow && !compact && smithAt === "floating";
   const [panelOpen, setPanelOpen] = useState(true);
+  const [smithHidden, setSmithHidden] = useState(false);
   // The preview's edges on the screen, which the floating panel hangs between.
   const [previewBox, setPreviewBox] = useState<HTMLDivElement | null>(null);
   const [over, setOver] = useState<Bounds>();
@@ -362,19 +363,28 @@ export function App() {
   const slots: SlotContent[] = narrow
     ? phoneList.map((w) => (w === "smith" && phone.changesUnderSmith ? "smith+changes" : w))
     : laid;
-  const shown = (narrow ? slots.map((_, i) => i) : shownSlots(layout, hidden)) as (0 | 1 | 2)[];
+  const arrangedShown = shownSlots(layout, hidden);
+  const shown: (0 | 1 | 2)[] = narrow
+    ? slots.map((_, i) => i as 0 | 1 | 2)
+    : arrangedShown.filter((i) => !smithHidden || slots[i] !== "smith");
+  if (!shown.length) shown.push((previewAt >= 0 ? previewAt : 0) as 0 | 1 | 2);
+  const dockedSmithSlot = arrangedShown.find(
+    (i) => slots[i] === "smith" || slots[i] === "smith+changes",
+  );
   const phoneIndex = Math.max(0, phoneList.indexOf(phoneWindow));
   /**
    * The slot a window is drawn in among those shown (the first that names it), or none. No code
    * and Code are in the view's slot when it shows them.
    */
   const placed = (window: WindowId) =>
-    shown.find(
-      (s) =>
-        slots[s] === window ||
-        (slots[s] === "smith+changes" && (window === "smith" || window === "changes")) ||
-        (slots[s] === "manual" && window === manual),
-    );
+    !narrow && smithHidden && window === "smith"
+      ? undefined
+      : shown.find(
+          (s) =>
+            slots[s] === window ||
+            (slots[s] === "smith+changes" && (window === "smith" || window === "changes")) ||
+            (slots[s] === "manual" && window === manual),
+        );
   /** The slot a window is on screen in, or none: on a phone, only the window the row shows. */
   const slotOf = (window: WindowId) => {
     const at = placed(window);
@@ -478,6 +488,7 @@ export function App() {
   const workIn = (window: WindowId) => {
     setVisualize(false);
     if (floating && window === "smith") return setPanelOpen(true);
+    if (window === "smith") setSmithHidden(false);
     const sub = isManualView(window) ? window : undefined;
     const kept = { ...arrangement, ...(sub ? { manual: sub } : {}) };
     if (slotOf(window) !== undefined) return;
@@ -486,7 +497,7 @@ export function App() {
       (s) =>
         s === content || (s === "smith+changes" && (window === "smith" || window === "changes")),
     );
-    if (from >= 0 && shown.includes(from as 0 | 1 | 2)) return setArrangement(kept);
+    if (from >= 0 && arrangedShown.includes(from as 0 | 1 | 2)) return setArrangement(kept);
     if (from === 0 && hidden.left) {
       setHidden((h) => ({ ...h, left: false }));
       return setArrangement(kept);
@@ -1032,6 +1043,7 @@ export function App() {
   const [guided, setGuided] = useState(false);
   // Docked again: his place back in the arrangement if a move took it, and the window shown.
   const dock = () => {
+    setSmithHidden(false);
     if (!arrangement.slots.some((s) => s === "smith" || s === "smith+changes")) {
       const next = [...arrangement.slots] as typeof arrangement.slots;
       next[Math.max(0, next.indexOf("changes"))] = "smith+changes";
@@ -1040,7 +1052,7 @@ export function App() {
     setHidden((h) => ({ ...h, left: false }));
     setSmithAt("docked");
   };
-  const float = () => {
+  const undock = () => {
     setPanelOpen(true);
     setSmithAt("floating");
     setHidden((h) => ({ ...h, left: true }));
@@ -1090,7 +1102,7 @@ export function App() {
         onDone={() => void refresh()}
         onBeginChange={pauseGuide}
         studioQuestion={studioQuestion}
-        questionVisible={(!floating || panelOpen) && (!narrow || phoneWindow === "smith")}
+        questionVisible={stage === "overlay" || smithVisible}
         ready={{
           sections,
           parts,
@@ -1109,6 +1121,26 @@ export function App() {
     guiding && !narrow
       ? sideFor(lit?.anchor, lit?.box, window.innerWidth, window.innerHeight, over)
       : "right";
+  const smithVisible =
+    !visualize &&
+    (floating
+      ? panelOpen && side !== "fold"
+      : narrow
+        ? phoneWindow === "smith" && (!phone.changesUnderSmith || phoneSub === "smith")
+        : slotOf("smith") !== undefined);
+  const toggleSmith = () => {
+    if (floating) {
+      setVisualize(false);
+      setPanelOpen(!smithVisible);
+    } else if (narrow) {
+      if (!smithVisible) setPhoneSub("smith");
+      showWindow(smithVisible ? "preview" : "smith");
+    } else if (smithVisible) {
+      setSmithHidden(true);
+    } else {
+      workIn("smith");
+    }
+  };
   const guideInSmith = smithSays && (!floating || (panelOpen && side !== "fold"));
   // One change shown three ways after "Ask me" (smith-first.md §12.5): a notes field on the first
   // kind of record without one, by Smith, then by hand and in the text, kept or undone.
@@ -1349,14 +1381,24 @@ export function App() {
             >
               Sample users{people?.running ? " (running)" : ""}
             </button>
-            <button
-              type="button"
-              title="The mail the preview kept instead of sending: invitations, sign-in codes"
+            <Button
+              variant="ghost"
+              aria-label="Outbox"
+              title="Outbox"
               onClick={() => setOutbox(true)}
-              className="text-xs font-medium text-muted hover:underline"
             >
-              Outbox
-            </button>
+              <svg
+                aria-hidden="true"
+                viewBox="0 0 24 24"
+                className="size-4"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <rect x="3" y="5" width="18" height="14" rx="2" />
+                <path d="m3 7 9 6 9-6" />
+              </svg>
+            </Button>
             <a
               href="https://docs.smithable.ai/start.html"
               target="_blank"
@@ -1374,6 +1416,8 @@ export function App() {
             </button>
             <Button
               variant="ghost"
+              aria-label="Undo"
+              title="Undo"
               onClick={undo}
               disabled={
                 busy ||
@@ -1381,35 +1425,50 @@ export function App() {
                 !project.trace.some((t) => !t.undone && !t.isUndo)
               }
             >
-              Undo
+              <svg
+                aria-hidden="true"
+                viewBox="0 0 24 24"
+                className="size-4"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M4 10a8 8 0 1 1 1 8M4 4v6h6" />
+              </svg>
             </Button>
             <Button
               variant="ghost"
+              aria-label="Redo"
+              title="Redo"
               onClick={redo}
               disabled={busy || Boolean(project.making) || !project.canRedo}
             >
-              Redo
+              <svg
+                aria-hidden="true"
+                viewBox="0 0 24 24"
+                className="size-4"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M20 10a8 8 0 1 0-1 8M20 4v6h-6" />
+              </svg>
             </Button>
             {!project.making && (
-              // Smith's button, his face (smith-first.md §12.3): opens and closes the floating
-              // panel, or brings his window on screen.
+              // Smith's face toggles his thread in its current presentation.
               <button
                 type="button"
                 aria-label={questionWaiting ? "Smith, a question is waiting" : "Smith"}
-                aria-pressed={floating ? panelOpen : undefined}
-                title={floating ? (panelOpen ? "Close Smith" : "Ask Smith") : "Ask Smith"}
-                onClick={() =>
-                  floating
-                    ? setPanelOpen(!panelOpen)
-                    : narrow
-                      ? showWindow("smith")
-                      : workIn("smith")
-                }
+                aria-pressed={smithVisible}
+                title={smithVisible ? "Hide Smith" : "Show Smith"}
+                onClick={toggleSmith}
                 className={cx(
                   "smith-chip relative -my-1 flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-full border",
-                  floating && panelOpen
-                    ? "border-accent bg-accent-soft"
-                    : "border-line hover:border-accent",
+                  smithVisible ? "border-accent bg-accent-soft" : "border-line hover:border-accent",
                 )}
               >
                 <span className="scale-[0.8]">
@@ -1609,7 +1668,7 @@ export function App() {
                       transform: `translateX(calc(${(-phoneIndex * 100) / slots.length}% + ${rowPan.dx}px))`,
                       transition: rowPan.dx ? "none" : "transform 250ms ease-out",
                     }
-                  : gridOf(layout, shown, slots)
+                  : gridOf(shown.length === 1 ? "one" : layout, shown, slots)
               }
             >
               <div
@@ -1683,13 +1742,12 @@ export function App() {
                   />
                 )}
               </div>
-              {shown.map((s) => {
+              {(narrow ? shown : arrangedShown).map((s) => {
                 const content = slots[s] as SlotContent;
-                if (
-                  content === "preview" ||
-                  placed(windowsIn(content, manual)[0] as WindowId) !== s
-                )
-                  return null;
+                const windows = windowsIn(content, manual);
+                const first = windows[0] as WindowId;
+                const slot = !narrow && first === "smith" ? dockedSmithSlot : placed(first);
+                if (content === "preview" || slot !== s) return null;
                 return (
                   <div
                     key={content}
@@ -1704,7 +1762,10 @@ export function App() {
                         (content === "smith" || content === "smith+changes") &&
                         "relative z-50 bg-panel",
                     )}
-                    style={{ gridArea: area(s) }}
+                    style={{
+                      gridArea: area(s),
+                      display: !narrow && smithHidden && content === "smith" ? "none" : undefined,
+                    }}
                   >
                     {narrow && content === "smith+changes" && (
                       // A phone: Smith or Changes, by these tabs or a swipe in the window.
@@ -1742,7 +1803,7 @@ export function App() {
                         />
                       </div>
                     )}
-                    {(content === "manual" ? [manual] : windowsIn(content)).map((w) => {
+                    {windows.map((w) => {
                       const made =
                         w === "nocode" ? (
                           <NoCode
@@ -1807,18 +1868,18 @@ export function App() {
                           <Panel
                             key={w}
                             title="Ask Smith"
-                            className="min-h-0 flex-[3]"
+                            className={cx("min-h-0 flex-[3]", !narrow && smithHidden && "hidden")}
                             scroll={false}
                             actions={
                               !compact &&
                               !narrow && (
                                 <button
                                   type="button"
-                                  onClick={float}
+                                  onClick={undock}
                                   title="Smith over the preview, opened from his face in the top bar"
                                   className="text-xs font-medium text-muted hover:underline"
                                 >
-                                  Float
+                                  Undock
                                 </button>
                               )
                             }

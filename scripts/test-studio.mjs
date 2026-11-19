@@ -256,6 +256,12 @@ try {
     ).json();
     if (!answer.ok) throw new Error(`${name}: ${answer.output}`);
   };
+  const openSuggestedTopics = async (scope) => {
+    const summary = scope.getByText("Suggested topics", { exact: true });
+    await summary.waitFor();
+    if (!(await summary.evaluate((element) => element.parentElement.open))) await summary.click();
+    return scope.getByRole("group", { name: "Ready prompts" });
+  };
   // No code's sub views.
   const sub = (name) => page.getByRole("tab", { name, exact: true }).click();
   // Behavior's form: an area of the spec (models, pages…) and an entry in it, opened.
@@ -329,8 +335,20 @@ try {
       await face.click();
       await panel.getByLabel("Describe a change").waitFor();
       await panel.getByRole("button", { name: "Dock" }).click();
-      await page.getByRole("heading", { name: "Ask Smith", exact: true }).waitFor();
+      const docked = page.getByRole("heading", { name: "Ask Smith", exact: true });
+      await docked.waitFor();
+      await page.getByRole("button", { name: "Undock", exact: true }).waitFor();
+      await openSuggestedTopics(page);
+      await face.click();
+      await docked.waitFor({ state: "hidden" });
       await page.locator("iframe[title='App preview']").waitFor();
+      if ((await face.getAttribute("aria-pressed")) !== "false")
+        throw new Error("the hidden docked Smith is still pressed");
+      await face.click();
+      await docked.waitFor();
+      if (!(await page.getByRole("group", { name: "Ready prompts" }).isVisible()))
+        throw new Error("hiding docked Smith reset his thread controls");
+      await page.getByText("Suggested topics", { exact: true }).click();
       // Nothing to choose between No code and Code in the header (smith-first.md §6).
       if (await page.getByRole("tab", { name: "Behavior" }).count())
         throw new Error("No code shows before the arrow opens it");
@@ -346,6 +364,21 @@ try {
       if (made.length) throw new Error(`a new app has changes: ${JSON.stringify(made[0])}`);
     },
   );
+  await step("The toolbar names its three icons and opens the Outbox", async () => {
+    const header = page.locator("header");
+    for (const name of ["Undo", "Redo", "Outbox"]) {
+      const button = header.getByRole("button", { name, exact: true });
+      if (
+        (await button.getAttribute("title")) !== name ||
+        (await button.locator("svg").count()) !== 1
+      )
+        throw new Error(`${name} is not a named icon with a tooltip`);
+    }
+    await header.getByRole("button", { name: "Outbox", exact: true }).click();
+    const outbox = page.getByRole("dialog", { name: "Outbox" });
+    await outbox.getByRole("button", { name: "Close", exact: true }).click();
+    await outbox.waitFor({ state: "hidden" });
+  });
   await step("Edit look shares the current preview and keeps drafts read-only", async () => {
     // The main preview's legacy sign-in can still be completing after its sign-in HTML hydrates.
     // Establish its actual app session before taking the editor's no-write baseline.
@@ -1864,7 +1897,10 @@ try {
       await page
         .getByText(/^Hi! How can I help you with your .+ app\?$/)
         .waitFor({ timeout: 10000 * P });
-      const prompts = page.getByRole("group", { name: "Ready prompts" });
+      await page.getByText("Suggested topics", { exact: true }).waitFor();
+      if (await page.getByRole("button", { name: "How do I publish?" }).isVisible())
+        throw new Error("suggested topics are open by default");
+      const prompts = await openSuggestedTopics(page);
       await prompts.getByRole("button", { name: "How do I publish?" }).click();
       const how = page.getByRole("region", { name: "How to publish" });
       if (
@@ -2255,8 +2291,7 @@ try {
         .first()
         .filter({ hasText: `#${newest} ` })
         .waitFor({ timeout: 30000 * P });
-      await page
-        .getByRole("group", { name: "Ready prompts" })
+      await (await openSuggestedTopics(page))
         .getByRole("button", { name: "What have I changed?" })
         .click({ timeout: 30000 * P });
       // The lines start with their numbers, newest first, and say what undo puts back.
@@ -2312,8 +2347,7 @@ try {
         await fresh.getByRole("heading", { name: "Ask Smith", exact: true }).waitFor();
         const changes = fresh.getByRole("list", { name: "Change trace" });
         if (await changes.count()) throw new Error("Changes is open at first");
-        await fresh
-          .getByRole("group", { name: "Ready prompts" })
+        await (await openSuggestedTopics(fresh))
           .getByRole("button", { name: "What have I changed?" })
           .click({ timeout: 30000 * P });
         await fresh
@@ -3207,6 +3241,42 @@ try {
       await sub("Behavior");
     },
   );
+  await step("A mail template opens in a wide editor with a live sample", async () => {
+    await op("addOutgoing", {
+      outgoing: "customerWelcome",
+      when: "Customer created",
+      recipient: "email",
+    });
+    await sub("Content");
+    const title = "Edit mail template for Customer welcome";
+    const edit = page.getByRole("button", { name: title, exact: true });
+    await edit.click({ timeout: 30000 * P });
+    const dialog = page.getByRole("dialog", { name: title });
+    const subject = dialog.getByRole("textbox", { name: "Subject", exact: true });
+    const sample = dialog.getByRole("region", { name: "Mail preview" });
+    const subjectBox = await subject.boundingBox();
+    const sampleBox = await sample.boundingBox();
+    if (!subjectBox || !sampleBox || sampleBox.x < subjectBox.x + subjectBox.width)
+      throw new Error("the editor and sample are not side by side");
+    await subject.fill("Welcome, {title}");
+    await dialog
+      .getByRole("textbox", { name: "Text", exact: true })
+      .fill("Thank you for joining us.");
+    await sample.getByText("Welcome, Nordic Timber Oy", { exact: true }).waitFor();
+    await sample.getByText("Thank you for joining us.", { exact: true }).waitFor();
+    await dialog.getByRole("button", { name: "Save template" }).click();
+    await dialog.getByRole("button", { name: "Close", exact: true }).click({ timeout: 60000 * P });
+    await dialog.waitFor({ state: "hidden" });
+    await edit.click();
+    if ((await subject.inputValue()) !== "Welcome, {title}")
+      throw new Error("the saved subject was not loaded");
+    await dialog.getByRole("button", { name: "Close", exact: true }).click();
+    await op("setTexts", {
+      texts: { "outgoing.customerWelcome.subject": "", "outgoing.customerWelcome.text": "" },
+    });
+    await op("removeOutgoing", { outgoing: "customerWelcome" });
+    await sub("Behavior");
+  });
   await step(
     "Behavior: a kind of record's description changed there lands in smithable.yml",
     async () => {

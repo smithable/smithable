@@ -272,6 +272,8 @@ const choicesOf = (files: Project["files"], file: EditableFile) => {
 
 /** An area's own way of adding (the creation wizard), by its path; the plain name box for most. */
 const Adder = createContext<(path: Path) => React.ReactNode>(() => undefined);
+/** Entries with a dedicated editor beside the form. */
+const OmitEntry = createContext<(path: Path) => boolean>(() => false);
 /** What an entry can do beyond its settings (EntryTools.tsx), by its path; nothing for most. */
 const Tools = createContext<(path: Path) => React.ReactNode>(() => undefined);
 
@@ -299,6 +301,7 @@ export function SpecForm({
   tools,
   adder,
   omit = [],
+  omitEntry,
   createReference,
 }: {
   files: Project["files"];
@@ -312,6 +315,7 @@ export function SpecForm({
   adder?: (path: Path) => React.ReactNode;
   /** Root settings that have a dedicated control beside this form. */
   omit?: string[];
+  omitEntry?: (path: Path) => boolean;
   createReference?: CreateReference;
 }) {
   const hostedCreation = useContext(ReferenceCreation);
@@ -360,7 +364,9 @@ export function SpecForm({
                                     : undefined
                                 }
                               >
-                                <Value schema={schema} value={read(files[key])} path={[]} />
+                                <OmitEntry.Provider value={omitEntry ?? (() => false)}>
+                                  <Value schema={schema} value={read(files[key])} path={[]} />
+                                </OmitEntry.Provider>
                               </References.Provider>
                             </Omitted.Provider>
                           </InContent.Provider>
@@ -421,6 +427,7 @@ function Value({
   const tools = useContext(Tools);
   const adder = useContext(Adder);
   const omitted = useContext(Omitted);
+  const omitEntry = useContext(OmitEntry);
   const shaped = useContext(Shape)(path, value);
   const references = useContext(References);
   const inDraft = useContext(InDraft);
@@ -751,10 +758,11 @@ function Value({
     }
     case "entries": {
       const entries = Object.entries((value ?? {}) as Record<string, unknown>);
+      const visibleEntries = entries.filter(([name]) => !omitEntry([...path, name]));
       const keys = references && referenceKeys(path, references.document, references.ir);
       return (
         <div className="space-y-1">
-          {entries.map(([name, v]) => (
+          {visibleEntries.map(([name, v]) => (
             <details
               key={name}
               data-path={JSON.stringify([...path, name])}

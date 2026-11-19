@@ -2,7 +2,7 @@
 // Who can and Content (the texts, with Languages under them). What the preview reports in it
 // lands here: a part picked in Select opens Behavior at it, columns dragged and texts changed in
 // place are made as changes.
-import { formatFormula, humanize, kebab, type ModelIR } from "@smithable/core";
+import { channelsOf, formatFormula, humanize, kebab, type ModelIR } from "@smithable/core";
 import { describeChange } from "@smithable/index";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Project } from "../api";
@@ -15,7 +15,7 @@ import {
   type Selection,
 } from "../preview";
 import { keptPage } from "../shared";
-import { Panel, Tabs } from "../ui";
+import { Button, Panel, Tabs } from "../ui";
 import { ActionPicture } from "./ActionPicture";
 import { AddEntryForm } from "./AddEntryForm";
 import type { Run } from "./ChangeForms";
@@ -129,6 +129,8 @@ export function NoCode({
 }) {
   const root = useRef<HTMLDivElement>(null);
   const edits = usePendingEdits();
+  const [editingMail, setEditingMail] = useState<string>();
+  const mail = spec.ir?.outgoing.filter((entry) => channelsOf(entry)?.includes("mail")) ?? [];
   const [contextPage, setContextPage] = useState(place.page ?? "");
   const pending = useRef<{ page: string; context: number }>(undefined);
   const navigation = useRef(new PreviewNavigation());
@@ -531,6 +533,34 @@ export function NoCode({
             ) : (
               <div className="divide-y divide-line">
                 <ContentIdentity spec={spec} run={run} />
+                {mail.length > 0 && (
+                  <section aria-label="Mail templates" className="space-y-2 p-4">
+                    <h2 className="text-xs font-semibold tracking-wide text-quiet uppercase">
+                      Mail templates
+                    </h2>
+                    <ul className="space-y-1">
+                      {mail.map((entry) => (
+                        <li key={entry.name}>
+                          <Button variant="ghost" onClick={() => setEditingMail(entry.name)}>
+                            Edit mail template for {humanize(entry.name)}
+                          </Button>
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+                )}
+                {editingMail && spec.ir && mail.some((entry) => entry.name === editingMail) && (
+                  <OutgoingTemplate
+                    key={editingMail}
+                    entry={editingMail}
+                    ir={spec.ir}
+                    auth={spec.auth}
+                    contentText={project.files.content}
+                    samples={project.samples ?? {}}
+                    run={run}
+                    onClose={() => setEditingMail(undefined)}
+                  />
+                )}
                 <SpecForm
                   key={JSON.stringify(opened ?? null)}
                   files={project.files}
@@ -539,11 +569,17 @@ export function NoCode({
                   parts={["content"]}
                   omit={["logo", "language", "languages"]}
                   open={opened}
+                  omitEntry={(path) =>
+                    path.length === 2 &&
+                    path[0] === "outgoing" &&
+                    mail.some((entry) => entry.name === path[1])
+                  }
                   tools={(path) =>
                     spec.ir &&
                     path.length === 2 &&
                     path[0] === "outgoing" &&
-                    typeof path[1] === "string" ? (
+                    typeof path[1] === "string" &&
+                    !mail.some((entry) => entry.name === path[1]) ? (
                       <OutgoingTemplate
                         key={path[1]}
                         entry={path[1]}

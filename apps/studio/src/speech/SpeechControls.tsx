@@ -1,7 +1,4 @@
-// Smith's speech controls beside the chat box (docs/design/smith-speech.md §2): the mic (off,
-// press to talk; a click without holding listens for one utterance), sound on or off, and the
-// voice. The first press of the mic says where the voice goes before the browser asks for it.
-import { useRef } from "react";
+// Smith’s speech controls beside the chat box. The first mic press explains where voice goes.
 import { cx } from "../ui";
 import { SpeechTest } from "./SpeechTest";
 import type { Speech } from "./useSpeech";
@@ -16,27 +13,6 @@ export function SpeechControls({
   speech: Speech;
   inputDisabled?: boolean;
 }) {
-  // Held past a moment it listens until let go; a shorter click listens for one utterance.
-  const holding = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  const held = useRef(false);
-  const down = () => {
-    held.current = false;
-    holding.current = setTimeout(() => {
-      holding.current = undefined;
-      held.current = true;
-      speech.listen(true);
-    }, 250);
-  };
-  const up = () => {
-    if (holding.current) {
-      clearTimeout(holding.current);
-      holding.current = undefined;
-      speech.listen(false);
-    } else if (held.current) {
-      held.current = false;
-      speech.release();
-    }
-  };
   if (!speech.canHear && !speech.canSpeak)
     return (
       <p data-speech-off className="text-xs text-quiet">
@@ -55,35 +31,18 @@ export function SpeechControls({
               speech.needsLocalCheck
                 ? "Check whether speech recognition can run on this computer"
                 : speech.canHear
-                  ? "Hold to talk (or Ctrl+Shift+Space); click to say one thing"
+                  ? speech.listening
+                    ? "Turn microphone off"
+                    : "Turn microphone on"
                   : speech.why
             }
             aria-label={
               speech.needsLocalCheck
                 ? "Check on-device speech support"
-                : `Mic: ${speech.mic === "off" ? "off" : "press to talk"}${speech.listening ? ", listening" : ""}`
+                : `Mic: ${speech.listening ? "on" : "off"}`
             }
             aria-pressed={speech.listening}
-            onPointerDown={(e) => {
-              e.preventDefault();
-              // Let go anywhere still releases (the pointer stays the button's).
-              e.currentTarget.setPointerCapture(e.pointerId);
-              down();
-            }}
-            onPointerUp={up}
-            onPointerCancel={up}
-            onLostPointerCapture={() => held.current && up()}
-            onKeyDown={(e) => {
-              if (e.key !== " " || e.repeat) return;
-              e.preventDefault();
-              down();
-            }}
-            onKeyUp={(e) => {
-              if (e.key !== " ") return;
-              e.preventDefault();
-              up();
-            }}
-            onClick={(e) => e.preventDefault()}
+            onClick={speech.toggleMic}
           >
             <MicIcon />
           </button>
