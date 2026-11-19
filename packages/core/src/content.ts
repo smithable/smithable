@@ -1047,7 +1047,7 @@ function checkOutgoingTexts(
     const where = `"${key}" of outgoing "${name}"`;
     for (const path of new Set(placeholdersOf(value.value))) {
       // A link or a name reveals nothing of the record, nor do a list mail's count and day; the rest does.
-      const quiet = entry.list ? ["link", "by", "count", "date"] : ["link", "by", "pay"];
+      const quiet = entry.list ? ["link", "by", "count", "date"] : ["link", "by", "pay", "view"];
       if (!quiet.includes(path)) any = true;
       const problem = placeholderProblem(path, entry, ir, auth);
       if (!problem) continue;
@@ -1178,6 +1178,7 @@ export function placeholderProblem(
     "link",
     "by",
     ...(ir.payments?.some((p) => p.on === model.name) ? ["pay"] : []),
+    ...(!entry.list && documentOf(model.name, ir) ? ["view"] : []),
     ...(changed ? ["before.<field>"] : []),
   ];
   const unknown = (of: { name: string; fields: { name: string }[] }, name: string) =>
@@ -1207,6 +1208,16 @@ export function placeholderProblem(
         : bad(
             `"{pay}" is the address where a ${model.name} is paid, and no entry under "payments" is on ${model.name}.`,
           );
+    // The link to a copy of what was sent (record-documents.md §5), for one record's mail.
+    if (first === "view") {
+      if (!documentOf(model.name, ir))
+        return bad(
+          `"{view}" links to a copy of the ${model.name}'s document as sent, and no crud page of ${model.name} has a "document".`,
+        );
+      return entry.list
+        ? bad(`"{view}" links to one record's copy, and this mail lists several.`)
+        : undefined;
+    }
     if (first === "by") {
       const r = entry.recipient;
       if (r && (r.kind === "field" || (r.kind === "list" && r.each.kind === "field")))
@@ -1298,4 +1309,10 @@ function readTexts(
     if (text !== undefined) texts[key] = text;
   }
   return texts;
+}
+
+/** The document a crud page of the model has, if any (record-documents.md §4). */
+function documentOf(model: string, ir: SpecIR) {
+  return ir.pages?.find((p) => p.pattern.kind === "crud" && p.pattern.model === model && p.document)
+    ?.document;
 }

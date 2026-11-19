@@ -217,6 +217,7 @@ exports[`the keys left to editSpec, as reviewed: every other key has its operati
   "smithable.yml:outgoing.*.recipient",
   "smithable.yml:outgoing.*.show",
   "smithable.yml:outgoing.*.show.*",
+  "smithable.yml:outgoing.*.viewDays",
   "smithable.yml:outgoing.*.when",
   "smithable.yml:outgoing.*.where",
   "smithable.yml:outgoing.*.where.*",
