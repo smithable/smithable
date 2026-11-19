@@ -842,11 +842,11 @@ function withQuestion(module: string, action: StandardActionIR, ir: SpecIR, t: T
   const imports = `import { eq as same } from "drizzle-orm";
 import { app } from "#/generated/app";
 import { formatValue } from "#/kit/format";
-import type { FieldUi } from "#/kit/model";
+import type { RecordFieldUi } from "#/kit/model";
 ${[...uis].map(([module, ui]) => `import { ${ui} } from "${module}";\n`).join("")}${[...new Map(datas.map((on) => [on.data, on])).values()].map((on) => `import { ${on.data} } from "${on.module}.server";\n`).join("")}`;
   const body = `
 /** A value as the record's page writes it; empty when there is none, or the record cannot be read. */
-function shown(ui: { fields: FieldUi[] }, name: string, row: unknown): string {
+function shown(ui: { fields: RecordFieldUi<never>[] }, name: string, row: unknown): string {
   const field = ui.fields.find((f) => f.name === name);
   if (!field || !row) return "";
   const value = field.get(row as never);

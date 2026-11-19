@@ -48661,7 +48661,7 @@ import { markSentAccess, markSentFits } from "./mark-sent";
 import { eq as same } from "drizzle-orm";
 import { app } from "#/generated/app";
 import { formatValue } from "#/kit/format";
-import type { FieldUi } from "#/kit/model";
+import type { RecordFieldUi } from "#/kit/model";
 import { invoiceUi } from "#/generated/invoice";
 
 type Row = NonNullable<Awaited<ReturnType<typeof invoiceData.get>>>;
@@ -48727,7 +48727,7 @@ export async function runMarkSentMany(viewer: Viewer | null, ids: number[]) {
 }
 
 /** A value as the record's page writes it; empty when there is none, or the record cannot be read. */
-function shown(ui: { fields: FieldUi[] }, name: string, row: unknown): string {
+function shown(ui: { fields: RecordFieldUi<never>[] }, name: string, row: unknown): string {
   const field = ui.fields.find((f) => f.name === name);
   if (!field || !row) return "";
   const value = field.get(row as never);
@@ -56751,7 +56751,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/generated/actions/mark-overdue.ts": "0a89cc21 generated",
   "src/generated/actions/mark-paid.server.ts": "3fe1938a generated",
   "src/generated/actions/mark-paid.ts": "9047ea54 generated",
-  "src/generated/actions/mark-sent.server.ts": "3db08ab3 generated",
+  "src/generated/actions/mark-sent.server.ts": "12365797 generated",
   "src/generated/actions/mark-sent.ts": "89323f1d generated",
   "src/generated/activity.server.ts": "2b56b888 generated",
   "src/generated/app.ts": "74f19a10 generated",
