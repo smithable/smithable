@@ -1,9 +1,10 @@
 import { humanize, SECTION_LOOKS } from "@smithable/core";
-import { type CSSProperties, useId, useState } from "react";
+import { type CSSProperties, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { Spec } from "../engine";
 import type { Selection } from "../preview";
-import { Button, Select, Tabs } from "../ui";
+import { OverlayPositionControl, useOverlayPosition } from "../StudioOverlay";
+import { Button, Select, Tabs, useMedia } from "../ui";
 import type { Run } from "./ChangeForms";
 import { SectionChoice } from "./Look";
 
@@ -53,6 +54,10 @@ export function SelectedButton({
   const [saving, setSaving] = useState(false);
   const heading = useId();
   const control = useId();
+  const panel = useRef<HTMLDivElement>(null);
+  const narrow = useMedia("(max-width: 1023px)");
+  const standalone = host === undefined;
+  const movement = useOverlayPosition("selection", panel, standalone && !narrow);
   const layouts = SECTION_LOOKS.hero?.layout;
   const meaningful =
     tab === "look"
@@ -95,9 +100,24 @@ export function SelectedButton({
         }
       }}
     >
-      <h2 id={heading} className="text-sm font-semibold">
-        {button.label}
-      </h2>
+      <header className="flex items-center gap-1">
+        <h2 id={heading} className="min-w-0 flex-1 text-sm font-semibold">
+          {button.label}
+        </h2>
+        {standalone && !narrow && <OverlayPositionControl label="selection" movement={movement} />}
+        {standalone && (
+          <button
+            type="button"
+            aria-label="Close selection"
+            title="Close selection"
+            disabled={saving}
+            className="grid size-8 shrink-0 place-items-center rounded text-muted hover:bg-subtle disabled:opacity-40"
+            onClick={close}
+          >
+            <span aria-hidden="true">×</span>
+          </button>
+        )}
+      </header>
       <Tabs
         tabs={[
           ["look", "Look"],
@@ -158,9 +178,14 @@ export function SelectedButton({
     createPortal(form, host)
   ) : (
     <div
-      className="fixed inset-x-0 bottom-0 z-30 max-h-[65dvh] overflow-auto rounded-t-xl border border-line bg-panel shadow-xl lg:inset-x-auto lg:bottom-auto lg:w-80 lg:rounded-lg"
-      style={position}
+      ref={panel}
+      data-studio-overlay="selection"
+      className="fixed inset-x-1.5 bottom-1.5 z-30 max-h-[65dvh] overflow-auto overscroll-contain rounded-2xl border border-line bg-panel shadow-xl lg:inset-x-auto lg:bottom-auto lg:w-80"
+      style={movement.position ?? position}
     >
+      {narrow && (
+        <div aria-hidden="true" className="mx-auto mt-3 h-1 w-9 rounded-full bg-line-strong" />
+      )}
       {form}
     </div>
   );
