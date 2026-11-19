@@ -10,7 +10,7 @@ import type { GuideLine } from "../GuideTour";
 import { lastLine } from "../history";
 import { usageReceipt } from "../receipt";
 import { SpeechControls } from "../speech/SpeechControls";
-import { useSpeech } from "../speech/useSpeech";
+import { type Speech, useSpeech } from "../speech/useSpeech";
 import type { StudioQuestion } from "../studio-questions";
 import { Button, cx, Input } from "../ui";
 import { useVerified, Verified } from "../Verified";
@@ -42,6 +42,11 @@ interface Said {
   reply: string;
 }
 
+export type AudioActivity = Pick<
+  Speech,
+  "auto" | "call" | "listening" | "speaking" | "endCall" | "stopListening"
+>;
+
 export function Ask({
   ai,
   aiEu,
@@ -68,9 +73,11 @@ export function Ask({
   onShowChanges,
   onFeedback,
   speech: speechProviders = [],
+  onAudioActivity,
 }: {
   /** Where Smith may hear and speak, from the host's policy layer (smith-speech.md §3). */
   speech?: { name: "browser" | "service"; onDeviceOnly?: true }[];
+  onAudioActivity?: (activity: AudioActivity | undefined) => void;
   /** Opens Leave feedback (A 242), with the words said to Smith when there are some. */
   onFeedback?: (prefill: string) => void;
   /** Opens the Changes window, at a change when one is given (ask-flows.md §8). */
@@ -350,6 +357,18 @@ export function Ask({
   }, [speech.auto]);
   const speechNow = useRef(speech);
   speechNow.current = speech;
+  const { auto, call, listening, speaking } = speech;
+  useEffect(() => {
+    onAudioActivity?.({
+      auto,
+      call,
+      listening,
+      speaking,
+      endCall: () => speechNow.current.endCall(),
+      stopListening: () => speechNow.current.stopListening(),
+    });
+  }, [onAudioActivity, auto, call, listening, speaking]);
+  useEffect(() => () => onAudioActivity?.(undefined), [onAudioActivity]);
   // Ctrl+Shift+Space toggles the mic from anywhere in Studio.
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
