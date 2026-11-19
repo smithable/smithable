@@ -54,6 +54,26 @@ function settingsModel(ir: SpecIR): ModelIR | undefined {
   return page?.pattern.kind === "settings" ? modelNamed(ir, page.pattern.model) : undefined;
 }
 
+/** The models documents read (the record, whom it is for, its lines, the settings): their data reads at once on a connection too. */
+export function documentReads(ir: SpecIR): Set<string> {
+  const reads = new Set<string>();
+  const target = (model: ModelIR, name: string) => {
+    const f = fieldOf(model, name);
+    if (f.type.kind === "relation") reads.add(f.type.model);
+  };
+  for (const page of ir.pages) {
+    const doc = page.document;
+    if (page.pattern.kind !== "crud" || !doc) continue;
+    const model = modelNamed(ir, page.pattern.model);
+    reads.add(model.name);
+    if (doc.to) target(model, doc.to.ref);
+    if (doc.lines) target(model, doc.lines.list);
+    const settings = doc.from && settingsModel(ir);
+    if (settings) reads.add(settings.name);
+  }
+  return reads;
+}
+
 /** The document's route file, or none for a page without a document. */
 export function documentRoute(
   page: PageIR,

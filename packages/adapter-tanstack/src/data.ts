@@ -1,4 +1,5 @@
 // Part of the TanStack adapter's generator (generate.ts), split out by concern (C7).
+
 import {
   type AuthIR,
   apiOffers,
@@ -47,6 +48,7 @@ import {
   occupying,
 } from "./occupies.js";
 import { OUTGOING_IMPORT, toldAbout } from "./outgoing.js";
+import { documentReads } from "./pages/document.js";
 import { describeCode, payToCreate } from "./payments.js";
 import {
   addable,
@@ -1896,6 +1898,49 @@ ${dropPictures(
           ),
         ].join("")}    });\n`
       : "";
+  // A model a document reads is read at once on a connection given as well, so a sent copy is
+  // read in its action's transaction with the same rules (record-documents.md §5).
+  const read = documentReads(ir).has(model.name);
+  const getMember = (
+    sync: boolean,
+  ) => `${sync ? '\n  /** As get, at once on the connection given: a document read in an action\'s transaction (record-documents.md §5). */\n  getIn(q: Pick<typeof db, "query">, viewer: Viewer | null, id: number)' : "  async get(viewer: Viewer | null, id: number)"} {
+    const fetched = ${sync ? "q" : "await db"}.query.${n.tableKey}.findFirst({
+      where: and(eq(${n.table}.id, id), ${self}.readable(viewer)),${withClause(getWith, "      ")}
+    })${sync ? ".sync()" : ""};
+    const ${ownedAuto || ownedLists.length ? "found" : "row"} = fetched && ${shownOne("fetched")};${
+      !ownedLists.length
+        ? ownedAuto
+          ? "\n    const row = found && shownTo(viewer, found);"
+          : ""
+        : `\n    const row = found && { ...${ownedAuto ? "shownTo(viewer, found)" : "found"}${ownedLists
+            .map(
+              (f) =>
+                `, ${f.name}: found.${f.name}.map((r) => ${names(modelNamed(ir, f.type.model), t).data}.shownTo(viewer, r))`,
+            )
+            .join("")} };`
+    }
+${
+  hiddenTotals.length
+    ? `    if (!row) return null;
+    // Totals count every related record, as in lists; the related records shown are the viewer's.
+    const all = ${sync ? "q" : "await db"}.query.${n.tableKey}.findFirst({ where: eq(${n.table}.id, id), with: { ${hiddenTotals.map(liveList).join(", ")} } })${sync ? ".sync()" : ""};
+    return { ...${compute(`{ ...${veils.length ? "veiled(viewer, [row])[0]" : "row"}, ${hiddenTotals.map((l) => `${l}: all?.${l} ?? []`).join(", ")} }`)}, ${hiddenTotals.map((l) => `${l}: row.${l}`).join(", ")} };`
+    : `    return row ? ${compute(veils.length ? "veiled(viewer, [row])[0]" : "row")} : null;`
+}
+  },
+`;
+  const firstMember = (
+    sync: boolean,
+  ) => `  /** The viewer's ${inert(n.label.toLowerCase())} for a settings page: the first one they may read, or null. */
+  ${sync ? 'firstIn(q: Pick<typeof db, "query">, viewer: Viewer | null)' : "async first(viewer: Viewer | null)"} {
+    if (readScope(${n.access}.read, viewer) === "none") throw new AccessDenied(viewer !== null);
+    const ${ownedAuto ? "found" : "rows"} = ${self}.shownRefs(viewer, ${sync ? "q" : "await db"}.query.${n.tableKey}.findMany({
+      where: ${self}.readable(viewer),${withClause(listWith, "      ")}
+      orderBy: (t, { asc }) => [asc(t.id)],
+      limit: 1,
+    })${sync ? ".sync()" : ""});${ownedAuto ? "\n    const rows = found.map((row) => shownTo(viewer, row));" : ""}
+    ${asListed("rows", "return ", "[0] ?? null")}
+  },`;
   return `${HEADER}import { ${paged ? "type AnyColumn, " : ""}${[...new Set(drizzle)].sort().join(", ")}, type SQL } from "drizzle-orm";
 import { db } from "#/db";
 ${SCHEMA_IMPORT}
@@ -2377,21 +2422,7 @@ ${
       orderBy: (t, { desc }) => [${ordered ? "...(order ? [order] : []), " : ""}desc(t.id)],${capped ? "\n      limit," : ""}
     }));${ownedAuto ? "\n    const rows = found.map((row) => shownTo(viewer, row));" : ""}
     ${asListed("rows", "return ")}
-  },${
-    single
-      ? `
-  /** The viewer's ${inert(n.label.toLowerCase())} for a settings page: the first one they may read, or null. */
-  async first(viewer: Viewer | null) {
-    if (readScope(${n.access}.read, viewer) === "none") throw new AccessDenied(viewer !== null);
-    const ${ownedAuto ? "found" : "rows"} = ${self}.shownRefs(viewer, await db.query.${n.tableKey}.findMany({
-      where: ${self}.readable(viewer),${withClause(listWith, "      ")}
-      orderBy: (t, { asc }) => [asc(t.id)],
-      limit: 1,
-    }));${ownedAuto ? "\n    const rows = found.map((row) => shownTo(viewer, row));" : ""}
-    ${asListed("rows", "return ", "[0] ?? null")}
-  },`
-      : ""
-  }${
+  },${single ? `${firstMember(false)}${read ? firstMember(true) : ""}` : ""}${
     articleDates.length
       ? `
   /** The ${inert(n.pluralLabel.toLowerCase())} the viewer may read for an articles page that fit \`where\`: newest first${byDate.length ? " by `by` (none last)" : ""}, then by creation, or the other way round. */
@@ -2762,32 +2793,7 @@ ${
 
 `
     : ""
-}${occ ? freeTimesMember(occ, names(occ.resource, t).data, occ.lengthTarget && names(occ.lengthTarget.model, t).data) : ""}${occ && signedIn ? cancelMembers(occ, model, n, owner) : ""}  async get(viewer: Viewer | null, id: number) {
-    const fetched = await db.query.${n.tableKey}.findFirst({
-      where: and(eq(${n.table}.id, id), ${self}.readable(viewer)),${withClause(getWith, "      ")}
-    });
-    const ${ownedAuto || ownedLists.length ? "found" : "row"} = fetched && ${shownOne("fetched")};${
-      !ownedLists.length
-        ? ownedAuto
-          ? "\n    const row = found && shownTo(viewer, found);"
-          : ""
-        : `\n    const row = found && { ...${ownedAuto ? "shownTo(viewer, found)" : "found"}${ownedLists
-            .map(
-              (f) =>
-                `, ${f.name}: found.${f.name}.map((r) => ${names(modelNamed(ir, f.type.model), t).data}.shownTo(viewer, r))`,
-            )
-            .join("")} };`
-    }
-${
-  hiddenTotals.length
-    ? `    if (!row) return null;
-    // Totals count every related record, as in lists; the related records shown are the viewer's.
-    const all = await db.query.${n.tableKey}.findFirst({ where: eq(${n.table}.id, id), with: { ${hiddenTotals.map(liveList).join(", ")} } });
-    return { ...${compute(`{ ...${veils.length ? "veiled(viewer, [row])[0]" : "row"}, ${hiddenTotals.map((l) => `${l}: all?.${l} ?? []`).join(", ")} }`)}, ${hiddenTotals.map((l) => `${l}: row.${l}`).join(", ")} };`
-    : `    return row ? ${compute(veils.length ? "veiled(viewer, [row])[0]" : "row")} : null;`
-}
-  },
-
+}${occ ? freeTimesMember(occ, names(occ.resource, t).data, occ.lengthTarget && names(occ.lengthTarget.model, t).data) : ""}${occ && signedIn ? cancelMembers(occ, model, n, owner) : ""}${getMember(false)}${read ? getMember(true) : ""}
 ${
   mailsOwner
     ? `  /** Who owns a ${inert(n.label.toLowerCase())} the viewer may read, for the server only (a message to its owner). */
