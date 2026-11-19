@@ -117,7 +117,8 @@ export async function checkStudioSmoke(browser, base, evidence) {
       await page.locator("[data-guide-card]").waitFor({ timeout: 45000 });
       await page.getByRole("button", { name: "Skip guide", exact: true }).click();
       await page.locator("[data-guide-card]").waitFor({ state: "detached" });
-      await page.locator('iframe[title="App preview"]').waitFor();
+      // Skipping the guide after its fallback can still precede a cold preview's startup.
+      await page.locator('iframe[title="App preview"]').waitFor({ timeout: 60000 });
 
       console.log(`  ${layout}: returning browser, Look, Summary, No code, Code and preview`);
       await page.reload();
