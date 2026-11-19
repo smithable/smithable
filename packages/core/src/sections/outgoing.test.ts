@@ -424,9 +424,25 @@ test("show and previous: the fields the mail lists, none, and what changed; refu
   const codes = (o: string) => read(o).diagnostics.map((d) => d.code);
   const made = (rest: string) =>
     `  made:\n    when: Customer created\n    to: mail\n    recipient: owner\n${rest}`;
-  // A list of other records, a worked-out field, an unknown field, a word that is not none.
+  // A list of other records, an unknown field, a word that is not none.
   expect(codes(made("    show: [bookings]\n"))).toContain("invalid-outgoing");
-  expect(codes(made("    show: [count]\n"))).toContain("invalid-outgoing");
+  // A worked-out field of the record itself goes in a mail (record-documents.md §3), worked out
+  // when it is written; not in a call, and not in a deleted record's mail.
+  expect(read(made("    show: [name, count]\n")).diagnostics.map((d) => d.message)).toEqual([]);
+  expect(
+    read(
+      "  made:\n    when: Customer created\n    to: statusFeed\n    show: [count]\n",
+    ).diagnostics.map((d) => d.message),
+  ).toContainEqual(
+    expect.stringContaining(
+      "Customer.count is worked out when the record is read, which a call does not do",
+    ),
+  );
+  expect(
+    read(
+      "  made:\n    when: Customer deleted\n    to: mail\n    recipient: owner\n    show: [count]\n",
+    ).diagnostics.map((d) => d.message),
+  ).toContainEqual(expect.stringContaining("a deleted record is gone"));
   expect(codes(made("    show: [nothing]\n"))).toContain("invalid-outgoing");
   expect(codes(made("    show: all\n"))).toContain("invalid-outgoing");
   // What a field was goes with a change only; a custom action has no record.

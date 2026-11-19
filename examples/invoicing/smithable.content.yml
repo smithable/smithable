@@ -15,7 +15,7 @@ models:
 outgoing:
   invoiceSent:
     subject: Your invoice
-    text: Here is your invoice. The due date, the amount and the account to pay to are on it. If anything looks wrong, reply to this mail and I will sort it out. Thank you for your business.
+    text: Here is your invoice {number} for {total}, due {dueOn}. The account to pay to is on it. If anything looks wrong, reply to this mail and I will sort it out. Thank you for your business.
 
 pages:
   home:

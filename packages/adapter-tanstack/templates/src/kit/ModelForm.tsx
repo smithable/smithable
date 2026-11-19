@@ -770,6 +770,8 @@ function failureMessage(ui: ModelUi, error: unknown, timeZone?: string): string 
   const noRight = /^no-right:(.+)$/.exec(message)?.[1];
   if (noRight) return w.noRightToDelete(noRight);
   if (message === "full") return w.noPlacesLeft;
+  const missing = /^no-value:(.+)$/.exec(message)?.[1];
+  if (missing) return w.noValue(missing);
   if (message === "closed") return w.bookingClosed;
   if (message === "cancel-closed") return w.cancellingClosed;
   const booked = /^booked:(\d+)$/.exec(message)?.[1];

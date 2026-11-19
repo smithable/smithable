@@ -14,7 +14,7 @@ import { channelsOf, type ModelIR, type OutgoingIR, type SpecIR, USER_MODEL } fr
 import { capitalize, humanize, plural } from "./naming.js";
 import { patternInfo } from "./patterns.js";
 import { titleField } from "./samples.js";
-import { notSendable } from "./sections/outgoing.js";
+import { notSendable, workedOutFrom, workedOutRefused } from "./sections/outgoing.js";
 import { didYouMean } from "./suggest.js";
 import { placeholdersOf } from "./template.js";
 import { rejectUnsafeText } from "./text-safety.js";
@@ -1124,8 +1124,15 @@ export function placeholderProblem(
       `"{${path}}" is not a field, or a reference's field one hop away, like {number} or {customer.name}.`,
     );
   const [first = "", second] = parts;
+  // A worked-out field of the record itself, worked out when the mail is written (record-documents.md §3).
+  const worked = workedOutRefused(Boolean(channelsOf(entry)), entry.when);
   const offered = () => [
-    ...model.fields.filter((f) => !f.formula && !notSendable(f)).map((f) => f.name),
+    ...model.fields
+      .filter(
+        (f) =>
+          (f.formula ? !worked && !workedOutFrom(f, model, ir.models) : true) && !notSendable(f),
+      )
+      .map((f) => f.name),
     "title",
     "link",
     "by",
@@ -1139,10 +1146,15 @@ export function placeholderProblem(
         `The placeholders here: ${offered().join(", ")}.`,
       "unknown-placeholder",
     );
-  const cannot = (of: string, f: { name: string; formula?: unknown; type: OutgoingFieldType }) => {
-    const why = f.formula
-      ? "is worked out when the record is read, which a mail or a call does not do"
-      : notSendable(f as Parameters<typeof notSendable>[0]);
+  const cannot = (
+    of: string,
+    f: { name: string; formula?: unknown; type: OutgoingFieldType },
+    formula = worked,
+  ) => {
+    const field = f as Parameters<typeof notSendable>[0];
+    const why =
+      (f.formula ? (formula ?? workedOutFrom(field, model, ir.models)) : undefined) ??
+      notSendable(field);
     return why ? bad(`${of}.${f.name} ${why}, so it cannot fill a placeholder.`) : undefined;
   };
   if (second === undefined) {
@@ -1178,7 +1190,7 @@ export function placeholderProblem(
       );
     const f = model.fields.find((x) => x.name === second);
     if (!f) return unknown(model, second);
-    return cannot(model.name, f);
+    return cannot(model.name, f, "is worked out when the record is read, and not kept from before");
   }
   const ref = model.fields.find((x) => x.name === first);
   if (!ref) return unknown(model, first);
@@ -1191,7 +1203,11 @@ export function placeholderProblem(
   if (!other) return undefined;
   const f = other.fields.find((x) => x.name === second);
   if (!f) return unknown(other, second);
-  const why = cannot(other.name, f);
+  const why = cannot(
+    other.name,
+    f,
+    "is worked out on its own record, one hop away, which a mail does not read",
+  );
   if (why) return why;
   // The recipient's view (§4): the referenced record's title is in every mail already; another
   // of its fields only for a role that may read the other model.

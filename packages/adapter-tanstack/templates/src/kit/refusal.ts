@@ -81,6 +81,10 @@ export function conflict(code: string): string {
   if (code.startsWith("in-use"))
     return "It is still used by other records, so it cannot be deleted.";
   if (code === "full") return "No places left.";
+  // A worked-out value a mail names, with no value (record-documents.md §3).
+  const missing = /^no-value:(.+)$/.exec(code)?.[1];
+  if (missing)
+    return `${missing} has no value to send, so nothing was changed and nothing was sent.`;
   if (code === "closed") return "Booking has closed.";
   if (code === "cancel-closed") return "Cancelling has closed.";
   const booked = /^booked:(\d+)$/.exec(code)?.[1];

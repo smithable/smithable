@@ -234,7 +234,7 @@ test("what a list mail refuses, each with its reason", () => {
     ],
     [
       list("{ model: Booking, columns: [places] }"),
-      'Outgoing "x": Booking.places is worked out when the record is read, which a mail or a call does not do, so it cannot be shown.',
+      'Outgoing "x": Booking.places is worked out when the record is read, which a list mail does not do, so it cannot be shown.',
     ],
     [
       list("{ model: Booking, columns: [sessions] }"),

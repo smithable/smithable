@@ -285,6 +285,8 @@ export const w = {
   noModelToAsk:
     "Appens assistent har ingen modell än som kan svara på det här; fråga den som driver appen.",
   noPlacesLeft: "Inga platser kvar.",
+  noValue: (label: string) =>
+    `${label} har inget värde att skicka, så inget ändrades och inget skickades.`,
   nobodyYet: "Ingen ännu. Bjud in den första personen ovan.",
   notAllowed: "Du får inte göra det här.",
   notAllowedTitle: "Inte för din roll",

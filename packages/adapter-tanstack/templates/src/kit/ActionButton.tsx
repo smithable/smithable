@@ -59,7 +59,15 @@ export function ActionButton({
     try {
       await onRun();
     } catch (error) {
-      setFailure(error instanceof Error ? error.message : w.somethingWentWrong);
+      // A worked-out value the mail names, with no value (record-documents.md §3).
+      const missing = error instanceof Error && /^no-value:(.+)$/.exec(error.message)?.[1];
+      setFailure(
+        missing
+          ? w.noValue(missing)
+          : error instanceof Error
+            ? error.message
+            : w.somethingWentWrong,
+      );
     }
     setBusy(false);
   };

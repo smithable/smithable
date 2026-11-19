@@ -301,6 +301,73 @@ pages:
   expect(module).toContain("before: changedBefore(SENT[model]?.(before) ?? {}, sent, entry.show)");
 });
 
+test("a worked-out field a mail names is worked out in the change's transaction, with the lines it sums (record-documents.md §3)", () => {
+  const spec = validateSpec({
+    path: "smithable.yml",
+    text: `smithable: 0.1
+app: { name: Bills }
+models:
+  Invoice:
+    trash: true
+    fields:
+      number: string!
+      email: email
+      status: draft | sent
+      lines: Line[]
+      total: { type: money, formula: SUM(lines.amount) }
+  Line:
+    trash: true
+    fields:
+      invoice: Invoice!
+      amount: money!
+actions:
+  send:
+    on: Invoice
+    when: { status: draft }
+    set: { status: sent }
+outgoing:
+  invoiceSent:
+    when: send
+    show: [number, total]
+    to: mail
+    recipient: email
+  plain:
+    when: Invoice created
+    to: mail
+    recipient: email
+pages:
+  invoices: { crud: Invoice }
+`,
+  }).ir as SpecIR;
+  const content = emptyContent();
+  content.outgoing = { invoiceSent: { subject: "Invoice {number}", text: "You owe {total}." } };
+  const files = generateApp(spec, { smithableVersion: "0.0.0", auth, content });
+  const module = files.find((f) => f.path === "src/generated/outgoing.server.ts")?.content ?? "";
+  // Read again in the transaction, after the action's writes, with its live lines only.
+  expect(module).toContain(
+    "const row = tx.query.invoices.findFirst({ where: (t, { eq }) => eq(t.id, id), with: { lines: { where: (t, { isNull }) => isNull(t.deletedAt) } } }).sync();",
+  );
+  // Written as the record page writes it, by the kit's one formatter.
+  expect(module).toContain(
+    '"total": ["total", "Total", () => row && invoiceFormulas.total(row), (v) => formatValue({ name: "total", label: "Total", kind: "money", required: false }, v, app)],',
+  );
+  expect(module).toContain(
+    "return workedOut(named.flatMap((name) => (all[name] ? [all[name]] : [])));",
+  );
+  expect(module).toContain('import { invoiceFormulas } from "./invoice.formulas";');
+  // Listed under the text only where show names it.
+  expect(module).toContain(
+    "const labels = worked && Array.isArray(entry.show) ? [...pageLabels, ...worked.labels] : pageLabels;",
+  );
+  expect(module).toContain('type Tx = Pick<typeof db, "select" | "insert" | "query">;');
+  // Named once though show and the text both name it; an entry naming none has no list.
+  expect(module).toContain('show: ["number","total"],\n    worked: ["total"],');
+  expect(module.match(/worked: \[/g)).toHaveLength(1);
+  expect(module).toContain(
+    "const worked = entry.worked ? WORKED[model]?.(tx, record.id as number, entry.worked) : undefined;",
+  );
+});
+
 test("an app whose only mail goes to a list's addresses still imports what the query needs", () => {
   const only = validateSpec({
     path: "smithable.yml",

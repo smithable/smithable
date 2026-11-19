@@ -285,6 +285,8 @@ export const w = {
   noAnswer: "I don't know that. Here is what I can answer about:",
   noModelToAsk: "The app's assistant has no model yet to answer this; ask whoever runs the app.",
   noPlacesLeft: "No places left.",
+  noValue: (label: string) =>
+    `${label} has no value to send, so nothing was changed and nothing was sent.`,
   nobodyYet: "Nobody yet. Invite the first person above.",
   notAllowed: "You are not allowed to do this.",
   notAllowedTitle: "Not for your role",
