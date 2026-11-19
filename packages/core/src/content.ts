@@ -1177,7 +1177,6 @@ export function placeholderProblem(
     "title",
     "link",
     "by",
-    ...(ir.payments?.some((p) => p.on === model.name) ? ["pay"] : []),
     ...(!entry.list && documentOf(model.name, ir) ? ["view"] : []),
     ...(changed ? ["before.<field>"] : []),
   ];
@@ -1201,13 +1200,11 @@ export function placeholderProblem(
   };
   if (second === undefined) {
     if (first === "title" || first === "link") return undefined;
-    // The pay link (payments.md §4.1): a page with the amount and Pay, for a record paid for.
+    // The pay link (payments.md §4.1) is planned and not built: a mail would go out without it.
     if (first === "pay")
-      return ir.payments?.some((p) => p.on === model.name)
-        ? undefined
-        : bad(
-            `"{pay}" is the address where a ${model.name} is paid, and no entry under "payments" is on ${model.name}.`,
-          );
+      return bad(
+        `"{pay}" would be the address where a ${model.name} is paid without an account, and that page is not built yet: link to the record ({link}) instead.`,
+      );
     // The link to a copy of what was sent (record-documents.md §5), for one record's mail.
     if (first === "view") {
       if (!documentOf(model.name, ir))
