@@ -26,9 +26,11 @@ function route(spec: string, signIn?: AuthIR["signIn"]): string | undefined {
     { path: "smithable.content.yml", text: at("smithable.content.yml") },
     ir,
   ).content as ContentIR;
-  return generateApp(ir, { smithableVersion: "0.0.0", auth, content }).find((f) =>
-    f.path.endsWith("/invoices/$id_.document.tsx"),
-  )?.content;
+  // The page's route and the reader it calls (the same reader a sent copy is made with).
+  const files = generateApp(ir, { smithableVersion: "0.0.0", auth, content });
+  const page = files.find((f) => f.path.endsWith("/invoices/$id_.document.tsx"))?.content;
+  const reader = files.find((f) => f.path.endsWith("/invoice.document.server.ts"))?.content;
+  return page && reader && `${page}\n${reader}`;
 }
 
 test("the document sends only its named fields, also after a column is added to a part's table", () => {
@@ -41,8 +43,8 @@ test("the document sends only its named fields, also after a column is added to 
   expect(before).toContain('to: to && pick(to, ["name", "address", "vatNumber"])');
   expect(before).toContain('from: pick(from, ["businessName", "vatNumber", "iban"])');
   // Each part is read by its own read rule, and private business details are the record owner's.
-  expect(before).toContain("await invoiceLineData.get(viewer, line.id)");
-  expect(before).toContain("await clientData.get(viewer, Number(toId))");
+  expect(before).toContain("invoiceLineData.getIn(q, viewer, line.id)");
+  expect(before).toContain("clientData.getIn(q, viewer, Number(toId))");
   expect(before).toContain("if (businessProfileAccess.read.owner)");
   // A worked-out value missing refuses the document instead of printing a blank.
   expect(before).toContain(

@@ -51,6 +51,7 @@ import { liveModels, liveRoute, outgoingModule, pushEntries, smsEntries } from "
 import { publicArticles } from "./pages/articles.js";
 import { CUSTOM_PROPS, customPageStub, customSectionStub } from "./pages/custom.js";
 import { activityModule, hasInspector } from "./pages/data.js";
+import { documentReader } from "./pages/document.js";
 import { PAGE_GENERATORS, pageRoutes } from "./pages/index.js";
 import { siteModule } from "./pages/landing.js";
 import { privacyFacts, privacyFingerprint } from "./pages/legal.js";
@@ -1180,6 +1181,18 @@ const SECTION_GENERATORS: SectionGenerator[] = [
             ? [generated(`${base}.name.ts`, nameModule(ir, model, t, ux))]
             : []),
           generated(`${base}.server.ts`, dataModule(model, t, ir, auth, ux)),
+          // A record as its document, read by its page and by a mail that sends it (record-documents.md §5).
+          ...ir.pages
+            .filter(
+              (p) => p.pattern.kind === "crud" && p.pattern.model === model.name && p.document,
+            )
+            .slice(0, 1)
+            .map((p) =>
+              generated(
+                `${base}.document.server.ts`,
+                documentReader(p, model, ir, t, auth) as string,
+              ),
+            ),
           // Import from a file, and a JSON list in the API (A 238).
           ...(importing
             ? [
