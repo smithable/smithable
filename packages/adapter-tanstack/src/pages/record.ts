@@ -466,6 +466,7 @@ export function detailRoute(
       `${action.name}Fits`,
       ...(askedFields(action).length ? [`${action.name}AskUi`, `${action.name}Asks`] : []),
       ...(askOptions(action, ir, t) ? [actionNames(action).askOptions] : []),
+      ...(action.confirm ? [actionNames(action).questionFn] : []),
     ]);
   // A merge: "Merge into…" the record picked, which stays (intents.md §3).
   const merges = within ? [] : mergeActions(page, ir).filter((a) => a.merge?.into !== "new");
@@ -1145,12 +1146,18 @@ export function actionButton(
     ? `await navigate({ to: ${JSON.stringify(join(route, "$id"))}, params: { id: String(copy) } });`
     : "await router.invalidate();";
   const help = t.actionHelp(action);
+  const question = t.actionConfirm(action);
   return `<ActionButton
                 label=${attr(t.action(action))}${help ? `\n                help=${attr(help)}` : ""}
                 concept="action:${action.name}"${
                   asks
                     ? `
                 ask={{ ui: ${action.name}AskUi, schema: ${action.name}Asks, initial: ${row}, app${askOptions(action, ir, t) ? `, loadOptions: ${actionNames(action).askOptions}` : ""} }}`
+                    : ""
+                }${
+                  action.confirm
+                    ? `
+                confirm={{ ${question ? `text: ${JSON.stringify(question)}, ` : ""}load: () => ${actionNames(action).questionFn}({ data: ${row}.id }) }}`
                     : ""
                 }
                 onRun={async (${asks ? "values" : ""}) => {

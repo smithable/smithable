@@ -972,6 +972,10 @@
             },
             "description": "A new record from this one instead of a change: what differs, as in set (a value, a formula, ME() or nothing to ask); {} copies as is. For a split: the fields the new record takes, e.g. [customer, deliverTo]."
           },
+          "confirm": {
+            "type": "boolean",
+            "description": "Asks before it runs: its question is the content file's actions.<name>.confirm, else its label and the record's title. An action whose mail would reach nobody says so instead."
+          },
           "with": {
             "type": "array",
             "items": {

@@ -710,6 +710,11 @@ export interface StandardActionIR extends ActionBase {
    * app's, the pictures, the documents and the lists.
    */
   split?: { move: string; copy: string[] };
+  /**
+   * Its button asks before it runs (docs/design/record-documents.md §6): the content file's
+   * `confirm` text, filled from the record as it is, else the action's label and the record's title.
+   */
+  confirm?: true;
 }
 
 export type MergeInto = "chosen" | "new";

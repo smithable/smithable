@@ -129,6 +129,11 @@ export const actionsSection: SpecSection<"actions"> = {
           description:
             "A new record from this one instead of a change: what differs, as in set (a value, a formula, ME() or nothing to ask); {} copies as is. For a split: the fields the new record takes, e.g. [customer, deliverTo].",
         },
+        confirm: {
+          type: "boolean",
+          description:
+            "Asks before it runs: its question is the content file's actions.<name>.confirm, else its label and the record's title. An action whose mail would reach nobody says so instead.",
+        },
         with: {
           type: "array",
           items: { type: "string" },
@@ -480,9 +485,9 @@ function readAction(
       "examples",
       "split",
       "move",
+      "confirm",
       ...TEXT_KEYS,
     ],
-    later: ["confirm"],
     content: ["label", "title"],
     moved: {
       allow: `who may run ${name} is said by the roles in smithable.auth.yml: a custom action under roles.<role>.actions, a standard one by "write" on its model.`,
@@ -494,6 +499,18 @@ function readAction(
     ...readSemanticText(ctx, known),
   };
   const custom = byKey.get("custom");
+  // Asks before it runs (record-documents.md §6): a change or a copy of one record, whose button
+  // runs at once otherwise; a merge, a split and custom code have their own dialog or none.
+  const confirmEntry = byKey.get("confirm");
+  const confirm =
+    confirmEntry && readBoolean(ctx, confirmEntry.value, `"confirm" of ${where}`) === true;
+  const notStandard = ["custom", "merge", "split"].find((k) => byKey.has(k));
+  if (confirmEntry && notStandard)
+    ctx.error(
+      confirmEntry.keyNode,
+      "invalid-action",
+      `"confirm" of ${where} goes with a standard action that changes or copies a record, not with "${notStandard}".`,
+    );
   const standard = ["on", "when", "set", "add", "copy", "with"]
     .map((k) => byKey.get(k))
     .filter((e) => e !== undefined);
@@ -574,7 +591,10 @@ function readAction(
         `"${key}" of ${where} is a custom action's contract: it goes with "custom: true".`,
       );
   }
-  if (standard.length) return readStandardAction(ctx, where, keyNode, byKey, models, common);
+  if (standard.length) {
+    const action = readStandardAction(ctx, where, keyNode, byKey, models, common);
+    return action && confirm && !notStandard ? { ...action, confirm: true } : action;
+  }
   if (!custom || readBoolean(ctx, custom.value, `"custom"`) !== true) {
     ctx.error(
       custom?.value ?? keyNode,

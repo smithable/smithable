@@ -2487,6 +2487,7 @@ exports[`valid specs > ../../../examples/invoicing/smithable.yml 1`] = `
 {
   "actions": [
     {
+      "confirm": true,
       "custom": false,
       "input": [],
       "intent": "The invoice went to the client.",

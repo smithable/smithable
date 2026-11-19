@@ -737,6 +737,7 @@ export function listParts(
       actionNames(a).fits,
       ...(askedFields(a).length ? [actionNames(a).askUi, actionNames(a).asks] : []),
       ...(askOptions(a, ir, t) ? [actionNames(a).askOptions] : []),
+      ...(a.confirm ? [actionNames(a).questionFn] : []),
     );
   if (offered.length)
     view
@@ -957,7 +958,7 @@ ${
             {
               label: ${JSON.stringify(t.action(a))},${t.actionHelp(a) ? `\n              help: ${JSON.stringify(t.actionHelp(a))},` : ""}
               concept: "action:${a.name}",
-              applies: chosen.filter((row) => ${fits(a)}).length,${askedFields(a).length ? `\n              ask: { ui: ${actionNames(a).askUi}, schema: ${actionNames(a).asks}${askOptions(a, ir, t) ? `, loadOptions: ${actionNames(a).askOptions}` : ""} },` : ""}
+              applies: chosen.filter((row) => ${fits(a)}).length,${a.confirm ? "\n              confirm: true," : ""}${askedFields(a).length ? `\n              ask: { ui: ${actionNames(a).askUi}, schema: ${actionNames(a).asks}${askOptions(a, ir, t) ? `, loadOptions: ${actionNames(a).askOptions}` : ""} },` : ""}
               run: (${askedFields(a).length ? "values" : ""}) => ${actionNames(a).many}({ data: { ids: chosen.map((row) => row.id)${askedFields(a).length ? ", values: values as never" : ""} } }),
             },`,
             )

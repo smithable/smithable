@@ -12,6 +12,10 @@ models:
     fields:
       vatNumber: { label: VAT number }
 
+actions:
+  markSent:
+    confirm: Send invoice {number} of {total} to {client} at {client.email}?
+
 outgoing:
   invoiceSent:
     subject: Your invoice

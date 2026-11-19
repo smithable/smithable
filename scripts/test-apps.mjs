@@ -6159,6 +6159,12 @@ async function copyFlow(base) {
     await page.getByRole("heading", { name: "2026-006", exact: true }).waitFor();
     const markSent = page.getByRole("button", { name: "Mark sent" }).filter({ visible: true });
     await markSent.click();
+    // It asks first, in the content file's words, filled from the invoice and its client.
+    const asked = page.getByRole("dialog", { name: "Mark sent" });
+    await asked
+      .getByText(/^Send invoice 2026-006 of .+ to Kallio Design at laskut@kallio\.example\?$/)
+      .waitFor({ timeout: 10000 * P });
+    await asked.getByRole("button", { name: "Mark sent" }).click();
     await markSent.waitFor({ state: "detached", timeout: 10000 * P });
     // The status is radio buttons (the ux file's control): Sent is checked once the form has the new value.
     for (
@@ -7017,7 +7023,11 @@ async function recordDocumentFlow(dir, base) {
        insert into invoices (number, client_id, issued_on, due_on, status, owner_id, created_at, updated_at)
          values ('DOC-002', last_insert_rowid(), '2026-11-01', '2026-12-01', 'draft', '${me.id}', 0, 0);
        insert into invoices (number, client_id, issued_on, due_on, status, owner_id, created_at, updated_at)
-         values ('DOC-003', (select id from clients where name = 'Not Yours Client'), '2026-11-01', '2026-12-01', 'draft', 'doc-other', 0, 0);`,
+         values ('DOC-003', (select id from clients where name = 'Not Yours Client'), '2026-11-01', '2026-12-01', 'draft', 'doc-other', 0, 0);
+       insert into clients (name, owner_id, created_at, updated_at)
+         values ('No Mail Client', '${me.id}', 0, 0);
+       insert into invoices (number, client_id, issued_on, due_on, status, owner_id, created_at, updated_at)
+         values ('DOC-004', last_insert_rowid(), '2026-11-01', '2026-12-01', 'draft', '${me.id}', 0, 0);`,
     );
     const id = (number) => query(dir, `select id from invoices where number = '${number}'`)[0].id;
     await open(page, `${base}/invoices/${id("DOC-001")}`);
@@ -7059,6 +7069,19 @@ async function recordDocumentFlow(dir, base) {
     console.log(
       "  ✓ browser: a document with a part the person may not read is refused, another user's is not found",
     );
+    // Mark sent asks first (record-documents.md §6); its mail would reach nobody here, so it says
+    // so and offers no Mark sent.
+    await open(page, `${base}/invoices/${id("DOC-004")}`);
+    await hydrated(page);
+    await page.getByRole("button", { name: "Mark sent" }).filter({ visible: true }).click();
+    const nobody = page.getByRole("dialog", { name: "Mark sent" });
+    await nobody.getByText("would reach nobody").waitFor({ timeout: 5000 * P });
+    if (await nobody.getByRole("button", { name: "Mark sent" }).isVisible())
+      throw new Error("the question offers Mark sent although the mail would reach nobody");
+    await nobody.getByRole("button", { name: "Close" }).click();
+    if (query(dir, `select status from invoices where number = 'DOC-004'`)[0].status !== "draft")
+      throw new Error("the invoice whose mail would reach nobody was marked sent");
+    console.log("  ✓ browser: an action whose mail would reach nobody says so instead of asking");
     // An admin printing the member's invoice gets the member's business details.
     await page.context().clearCookies();
     await signInAs(page, base, "admin");

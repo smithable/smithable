@@ -1,5 +1,6 @@
 // Smithable app kit: a button that runs an action on a record, then shows the record as it is now.
-// An action that asks for values opens a dialog with the form's own fields first.
+// An action that asks for values opens a dialog with the form's own fields first; one that asks
+// before it runs (record-documents.md §6) puts its question first, filled from the record as it is.
 import { useRef, useState } from "react";
 import type { z } from "zod";
 import { Button } from "#/components/ui/button";
@@ -14,6 +15,7 @@ export function ActionButton({
   concept,
   onRun,
   ask,
+  confirm,
 }: {
   label: string;
   /** What it does, in the app's words (the content file's help): the tooltip and the dialog's line. */
@@ -31,6 +33,15 @@ export function ActionButton({
     /** The choices of the references it asks for, loaded when the dialog opens. */
     loadOptions?: () => Promise<Options>;
   };
+  /**
+   * Asks before it runs: the content file's text, its {placeholders} filled with what `load`
+   * gives (the record as it is now, its values written out), else the label and the title. A
+   * message that would reach nobody is said instead, and the action is not offered.
+   */
+  confirm?: {
+    text?: string;
+    load?: () => Promise<{ values: Record<string, string> } | { noRecipient: true }>;
+  };
 }) {
   // The app's texts in the language now (languages.md §4).
   const label = tx(own);
@@ -39,6 +50,31 @@ export function ActionButton({
   const [failure, setFailure] = useState<string>();
   const dialog = useRef<HTMLDialogElement>(null);
   const [options, setOptions] = useState<Options>();
+  const asking = useRef<HTMLDialogElement>(null);
+  const [question, setQuestion] = useState<{ text: string; offered: boolean }>();
+  const confirmFirst = async () => {
+    setBusy(true);
+    setFailure(undefined);
+    try {
+      const got = confirm?.load ? await confirm.load() : { values: {} as Record<string, string> };
+      setQuestion(
+        "noRecipient" in got
+          ? { text: w.asksFirst.noRecipient, offered: false }
+          : {
+              text: confirm?.text
+                ? fill(tx(confirm.text), got.values)
+                : w.asksFirst.question(label, got.values.title),
+              offered: true,
+            },
+      );
+      asking.current?.showModal();
+    } catch (error) {
+      setFailure(error instanceof Error ? error.message : w.somethingWentWrong);
+    } finally {
+      setBusy(false);
+    }
+  };
+  const go = () => (ask ? void open() : run());
   const open = async () => {
     if (ask?.loadOptions && !options) {
       setBusy(true);
@@ -82,7 +118,7 @@ export function ActionButton({
         variant="outline"
         title={help}
         disabled={busy}
-        onClick={() => (ask ? void open() : run())}
+        onClick={() => (confirm ? void confirmFirst() : go())}
       >
         {/* Its words are the content file's: changed in place in the preview (A 169). */}
         <span {...(concept ? textMarker(`actions.${concept.slice("action:".length)}.label`) : {})}>
@@ -93,6 +129,34 @@ export function ActionButton({
         <span role="alert" className="text-sm text-destructive">
           {failure}
         </span>
+      )}
+      {confirm && (
+        <dialog
+          ref={asking}
+          aria-label={label}
+          className="m-auto w-full max-w-md bg-transparent p-0 backdrop:bg-black/50"
+        >
+          <Card className="space-y-4 rounded-xl p-card text-left">
+            <h2 className="text-lg font-semibold">{label}</h2>
+            <p className="text-sm">{question?.text}</p>
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="outline" onClick={() => asking.current?.close()}>
+                {question?.offered ? w.cancel : w.asksFirst.close}
+              </Button>
+              {question?.offered && (
+                <Button
+                  type="button"
+                  onClick={() => {
+                    asking.current?.close();
+                    go();
+                  }}
+                >
+                  {label}
+                </Button>
+              )}
+            </div>
+          </Card>
+        </dialog>
       )}
       {ask && (
         <dialog
@@ -123,5 +187,12 @@ export function ActionButton({
         </dialog>
       )}
     </span>
+  );
+}
+
+/** The {placeholders} of a question filled; one not given is left empty. */
+function fill(text: string, values: Record<string, string>): string {
+  return text.replace(/\{([^{}]+)\}/g, (_, path: string) =>
+    Object.hasOwn(values, path.trim()) ? (values[path.trim()] ?? "") : "",
   );
 }

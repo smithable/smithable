@@ -120,6 +120,8 @@ export function texts(content: ContentIR) {
       content.actions[action.name]?.label ?? humanize(action.name),
     /** What an action does, in the app's words: its button's tooltip and its dialog's line. */
     actionHelp: (action: { name: string }) => content.actions[action.name]?.help,
+    /** What an action that asks first asks (record-documents.md §6), with its placeholders. */
+    actionConfirm: (action: { name: string }) => content.actions[action.name]?.confirm,
     modelLabel: (model: ModelIR) => content.models[model.name]?.label ?? humanize(model.name),
     modelPluralLabel: (model: ModelIR) => {
       const own = content.models[model.name];

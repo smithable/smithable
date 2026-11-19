@@ -1,6 +1,7 @@
 import { isScalar, isSeq, LineCounter, type ParsedNode, parseDocument } from "yaml";
 import { modelAccess } from "./access.js";
 import type { AuthIR } from "./auth.js";
+import { confirmPlaceholderProblem } from "./confirm-text.js";
 import {
   checkKeys,
   type Entry,
@@ -44,7 +45,7 @@ export interface ContentIR {
   pages: Record<string, PageContent>;
   menus: Record<string, { label?: string }>;
   /** An action's button and page title (label, else its name in words) and what it does (help: its tooltip and its dialog's line), by its name in smithable.yml. */
-  actions: Record<string, { label?: string; help?: string }>;
+  actions: Record<string, { label?: string; help?: string; confirm?: string }>;
   /** An outgoing mail's subject and the text above the record (integrations.md §4.1b). */
   outgoing: Record<string, { subject?: string; text?: string }>;
   /** The consent bar's own words (docs/design/analytics.md §3), where the kit's are not wanted. */
@@ -469,10 +470,12 @@ export function validateContent(
         ir.actions.map((a) => a.name),
         "action",
       )) {
-        content.actions[action.key] = readTexts(ctx, action.value, `action "${action.key}"`, [
-          "label",
-          "help",
-        ]);
+        const where = `action "${action.key}"`;
+        const texts = checkKeys(ctx, mapEntries(ctx, action.value, where) ?? [], where, {
+          allowed: ["label", "help", "confirm"],
+        });
+        content.actions[action.key] = readTexts(ctx, action.value, where, [], texts);
+        checkConfirmText(ctx, texts, action.key, ir);
       }
     }
     if (key === "outgoing") {
@@ -992,6 +995,37 @@ function named(
     );
     return false;
   });
+}
+
+/**
+ * An action's question before it runs (record-documents.md §6): only for one that asks
+ * (`confirm: true`), with placeholders of the record it runs on.
+ */
+function checkConfirmText(ctx: ParseContext, texts: Entry[], name: string, ir: SpecIR): void {
+  const entry = texts.find((t) => t.key === "confirm");
+  if (!entry || !isScalar(entry.value) || typeof entry.value.value !== "string") return;
+  const action = ir.actions.find((a) => a.name === name);
+  if (!action || action.custom || !action.confirm) {
+    ctx.error(
+      entry.keyNode,
+      "invalid-confirm",
+      `"confirm" of action "${name}" is the question its button asks first, and the action does not ask.`,
+      action && !action.custom
+        ? `Add "confirm: true" to action ${name} in smithable.yml.`
+        : undefined,
+    );
+    return;
+  }
+  for (const path of new Set(placeholdersOf(entry.value.value))) {
+    const problem = confirmPlaceholderProblem(path, action, ir);
+    if (problem)
+      ctx.error(
+        entry.value,
+        "invalid-placeholder",
+        `"confirm" of action "${name}": ${problem.message}`,
+        problem.hint,
+      );
+  }
 }
 
 /**

@@ -903,6 +903,13 @@ export const w = {
   mergeStayed: (n: number) =>
     `${n} ${n === 1 ? "thing was" : "things were"} changed since the merge, or ${n === 1 ? "is" : "are"} not yours to change, and stay as ${n === 1 ? "it is" : "they are"}.`,
   /** The app card (kit AppCard, docs/design/app-card.md), for the administrators. */
+  /** The question before an action that asks first (record-documents.md §6), unless the content file gives one. */
+  asksFirst: {
+    question: (label: string, title?: string) => (title ? `${label} "${title}"?` : `${label}?`),
+    noRecipient:
+      "Its message would reach nobody: this record has no address to send it to. Add one first.",
+    close: "Close",
+  },
   /** A record as a document (record-documents.md §4.2): the words the maker did not give. */
   document: {
     print: "Print or save as PDF",

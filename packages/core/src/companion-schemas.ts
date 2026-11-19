@@ -981,11 +981,19 @@ export const CONTENT_SCHEMA: JsonSchema = {
       title: "Actions",
       type: "object",
       description:
-        "An action's words, by its name in smithable.yml: { resolve: { label: Mark as resolved, help: Closes the case for good. } }. The label is its button and its page's title, else its name in words; the help is the button's tooltip and a line under its dialog's title.",
+        "An action's words, by its name in smithable.yml: { resolve: { label: Mark as resolved, help: Closes the case for good. } }. The label is its button and its page's title, else its name in words; the help is the button's tooltip and a line under its dialog's title; confirm is the question an action with confirm: true asks first, with {field}, {reference}, {reference.field} and {title} of the record as it is.",
       additionalProperties: {
         type: "object",
         additionalProperties: false,
-        properties: { label: { type: "string" }, help: { type: "string" } },
+        properties: {
+          label: { type: "string" },
+          help: { type: "string" },
+          confirm: {
+            type: "string",
+            description:
+              "The question an action with confirm: true asks before it runs, e.g. Send invoice {number} to {client.email}?",
+          },
+        },
       },
     },
     outgoing: {

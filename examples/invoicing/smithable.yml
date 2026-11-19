@@ -62,6 +62,7 @@ actions:
     on: Invoice
     when: { status: draft }
     set: { status: sent }
+    confirm: true                    # asks first: the mail below goes out
     intent: The invoice went to the client.
   markPaid:
     on: Invoice

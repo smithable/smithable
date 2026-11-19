@@ -340,6 +340,7 @@ const LEFT_OUT: Record<string, string> = {
   "smithable.yml:models.*.schedule.**": "booking rules",
   "smithable.yml:models.*.occupies.**": "booking rules",
   "smithable.yml:actions.*.with": "what a copy takes along",
+  "smithable.yml:actions.*.confirm": "the question its button asks first",
   "smithable.yml:actions.*.into": "where a merge keeps its record",
   "smithable.yml:actions.*.fields": "a merge's rule per field",
   "smithable.yml:actions.*.move": "what a split moves",
