@@ -335,13 +335,27 @@ export function notSendable(f: FieldIR): string | undefined {
 }
 
 /**
+ * Why an entry cannot name a worked-out field of its record (docs/design/record-documents.md
+ * §3), or undefined when it may: a mail, push or text on a record that is still there works it
+ * out in the change's own transaction; a call and a deleted record's mail do not (a list mail's
+ * columns never: readList says so).
+ */
+export function workedOutRefused(told: boolean, when: When): string | undefined {
+  if (!told) return "is worked out when the record is read, which a call does not do";
+  if ("event" in when && when.event === "deleted")
+    return "is worked out from the record as it is, and a deleted record is gone";
+  return undefined;
+}
+
+/**
  * `show` (or a list mail's `columns`): the fields the mail lists and a call carries, each one
- * the record page shows.
+ * the record page shows; a worked-out one where `worked` says nothing against it.
  */
 function readShow(
   names: string[],
   model: ModelIR,
-  key = "show",
+  key: string,
+  worked: string | undefined,
 ): { show: string[] } | { problem: string } {
   if (!names.length)
     return {
@@ -356,9 +370,7 @@ function readShow(
       );
       return { problem: `${model.name} has no field named "${name}".${hint ? ` ${hint}` : ""}` };
     }
-    const why = f.formula
-      ? "is worked out when the record is read, which a mail or a call does not do"
-      : notSendable(f);
+    const why = f.formula ? worked : notSendable(f);
     if (why) return { problem: `${model.name}.${name} ${why}, so it cannot be shown.` };
   }
   return { show: [...new Set(names)] };
@@ -372,6 +384,7 @@ function readBody(
   body: { show?: string[] | "none"; previous?: boolean },
   when: When,
   model: ModelIR,
+  told = false,
 ): { show?: string[] | "none"; previous?: boolean } | { problem: string } {
   const out: { show?: string[] | "none"; previous?: boolean } = {};
   if (body.show !== undefined) {
@@ -380,7 +393,7 @@ function readBody(
       (Array.isArray(body.show) && body.show.length === 1 && body.show[0] === "none");
     if (none) out.show = "none";
     else {
-      const r = readShow(body.show as string[], model);
+      const r = readShow(body.show as string[], model, "show", workedOutRefused(told, when));
       if ("problem" in r) return r;
       out.show = r.show;
     }
@@ -503,7 +516,12 @@ function readList(
       key: "list",
       problem: `"list" needs "columns": the fields the mail's table shows, in order, like [session, attendee].`,
     };
-  const columns = readShow(input.columns, model, "columns");
+  const columns = readShow(
+    input.columns,
+    model,
+    "columns",
+    "is worked out when the record is read, which a list mail does not do",
+  );
   if ("problem" in columns) return { key: "columns", problem: columns.problem };
   list.columns = columns.show;
   return { list };
@@ -939,7 +957,8 @@ const addOutgoing: Operation<
       const f = readFields(fields, read.when, model);
       if ("problem" in f) throw new OperationError(f.problem);
     }
-    const body = "custom" in read.when ? {} : readBody({ show, previous }, read.when, model);
+    const body =
+      "custom" in read.when ? {} : readBody({ show, previous }, read.when, model, "channels" in t);
     if ("problem" in body) throw new OperationError(body.problem);
     if ("channels" in t) {
       if (!recipient) throw new OperationError(missingRecipient(t.channels));
@@ -1131,7 +1150,7 @@ const setOutgoingBody: Operation<{ outgoing: string; show?: string[]; previous?:
       if (show.length === 1 && show[0] === "default") {
         if (spec.has([...at, "show"])) spec.remove([...at, "show"]);
       } else {
-        const r = readBody({ show }, o.when, model);
+        const r = readBody({ show }, o.when, model, Boolean(channelsOf(o)));
         if ("problem" in r) throw new OperationError(r.problem);
         if (spec.has([...at, "show"])) spec.set([...at, "show"], r.show ?? "none");
         else spec.add(at, "show", r.show ?? "none");
@@ -1373,7 +1392,7 @@ export const outgoingSection: SpecSection<"outgoing"> = {
           if (!isSeq(showEntry.value)) continue;
           show = names;
         }
-        const b = readBody({ show }, read.when, model);
+        const b = readBody({ show }, read.when, model, "channels" in t);
         if ("problem" in b) {
           ctx.error(showEntry.value, "invalid-outgoing", `${capital(where)}: ${b.problem}`);
           continue;

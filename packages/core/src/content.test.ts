@@ -507,3 +507,33 @@ test("an outgoing text's placeholders follow a renamed field, and hold a removed
   expect(removed.ok).toBe(false);
   if (!removed.ok) expect(removed.message).toContain("{state}");
 });
+
+test("a worked-out field of the record itself fills a mail's placeholder; not a call's, a deleted record's, one hop away or before", () => {
+  const spec = validateSpec({
+    path: "smithable.yml",
+    text: TEMPLATE_SPEC.replace(
+      "outgoing:\n",
+      "outgoing:\n  grew:\n    when: Customer changed\n    to: mail\n    recipient: owner\n  gone:\n    when: Customer deleted\n    to: mail\n    recipient: owner\n  feed:\n    when: Customer created\n    to: statusFeed\n",
+    ),
+  }).ir;
+  if (!spec) throw new Error("spec");
+  const messages = (entry: string, subject: string) =>
+    validateContent(
+      {
+        path: "smithable.content.yml",
+        text: `smithableContent: 0.1\noutgoing:\n  ${entry}: { subject: ${JSON.stringify(subject)} }\n`,
+      },
+      spec,
+    ).diagnostics.map((d) => d.message);
+  expect(messages("grew", "{name} has {count} bookings")).toEqual([]);
+  expect(messages("grew", "Was {before.count}")).toEqual([
+    expect.stringContaining("not kept from before"),
+  ]);
+  expect(messages("gone", "{count}")).toEqual([
+    expect.stringContaining("a deleted record is gone"),
+  ]);
+  expect(messages("feed", "{count}")).toEqual([
+    expect.stringContaining("which a call does not do"),
+  ]);
+  expect(messages("moved", "{customer.count}")).toEqual([expect.stringContaining("one hop away")]);
+});
