@@ -395,7 +395,7 @@ export function Preview({
           <fieldset
             ref={address}
             aria-label="Preview page"
-            className="relative min-w-0"
+            className="relative flex min-w-0 items-center gap-1"
             onKeyDown={(event) => {
               if (!addressOpen || event.key !== "Escape") return;
               event.preventDefault();
@@ -426,6 +426,30 @@ export function Preview({
                 <path d="m5 6 3 3 3-3" />
               </svg>
             </button>
+            {onFollowing && (
+              <button
+                type="button"
+                aria-pressed={Boolean(following)}
+                aria-label="Link the editors to the preview"
+                title={
+                  following
+                    ? "Linked: the editors open the page the preview shows. Click to unlink."
+                    : "Not linked: the editors stay where they are. Click to open the page the preview shows."
+                }
+                onClick={() => onFollowing(!following)}
+                className={cx(
+                  "grid h-7 w-7 shrink-0 place-items-center rounded-md border border-line",
+                  following ? "bg-accent-soft" : "text-quiet hover:bg-subtle",
+                )}
+              >
+                <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" fill="none">
+                  <g stroke="currentColor" strokeWidth="1.5" transform="rotate(-45 8 8)">
+                    <rect x="1.5" y="5.5" width="7" height="5" rx="2.5" />
+                    <rect x="7.5" y="5.5" width="7" height="5" rx="2.5" />
+                  </g>
+                </svg>
+              </button>
+            )}
             <div
               id={`${listId}-address`}
               className={cx(
@@ -507,30 +531,6 @@ export function Preview({
                       </div>
                     ))}
                   </div>
-                )}
-                {onFollowing && (
-                  <button
-                    type="button"
-                    aria-pressed={Boolean(following)}
-                    aria-label="Link the editors to the preview"
-                    title={
-                      following
-                        ? "Linked: the editors open the page the preview shows. Click to unlink."
-                        : "Not linked: the editors stay where they are. Click to open the page the preview shows."
-                    }
-                    onClick={() => onFollowing(!following)}
-                    className={cx(
-                      "grid h-7 w-7 place-items-center rounded-md border border-line",
-                      following ? "bg-accent-soft" : "text-quiet hover:bg-subtle",
-                    )}
-                  >
-                    <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" fill="none">
-                      <g stroke="currentColor" strokeWidth="1.5" transform="rotate(-45 8 8)">
-                        <rect x="1.5" y="5.5" width="7" height="5" rx="2.5" />
-                        <rect x="7.5" y="5.5" width="7" height="5" rx="2.5" />
-                      </g>
-                    </svg>
-                  </button>
                 )}
               </div>
               {addressError && (
