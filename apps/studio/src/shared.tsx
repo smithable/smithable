@@ -459,7 +459,7 @@ export function Preview({
             >
               {/* No form: a lone text field in a form that submits is what password managers take for
               an identity or address form (T969); Enter opens the page from the key handler. */}
-              <div className="relative flex items-center gap-1">
+              <div className="flex flex-col gap-1">
                 <Input
                   ref={addressInput}
                   type="text"
@@ -501,14 +501,14 @@ export function Preview({
                       openAddress(listing && chosen ? chosen[0] : typed);
                     }
                   }}
-                  className="h-8 min-w-0 flex-1 font-mono text-xs"
+                  className="h-8 min-w-0 font-mono text-xs"
                 />
                 {listing && matches.length > 0 && (
                   <div
                     id={listId}
                     role="listbox"
                     aria-label="Pages"
-                    className="absolute top-8 left-0 z-30 w-full rounded-md border border-line bg-panel py-1 shadow-lg"
+                    className="max-h-[40dvh] overflow-auto rounded-md border border-line bg-panel py-1"
                   >
                     {matches.map(([route, title], index) => (
                       // biome-ignore lint/a11y/useKeyWithClickEvents: the keys are the address field's (a combobox)
