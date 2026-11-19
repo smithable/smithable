@@ -156,13 +156,18 @@ function documentParts(page: PageIR, model: ModelIR, ir: SpecIR, t: Texts, auth:
     add(serverImports, server(settings), sn.data, sn.access);
     add(uiImports, sn.module, sn.ui);
     add(serverImports, "#/kit/access", "AccessDenied");
-    // Whose business details: where they are each person's own, those of the record's owner (a
-    // record with no owner, a seeded sample, is from whoever reads or sends it: their own, never
-    // another member's); where they are the app's, the app's.
+    // Whose business details: where they are each person's own, those of the record's owner, read
+    // from the row itself, since a reader by another rule sees no owner on the record (a record
+    // with no owner, a seeded sample, is from whoever reads or sends it: their own, never another
+    // member's); where they are the app's, the app's.
     const own =
       hasSignIn(auth) && !addressOwned(model) && !addressOwned(settings) && creatorOwned(settings)
         ? `  if (${sn.access}.read.owner) {
-    const owner = record.${ownerKey(model)} ?? viewer?.id;
+    const row = q.query.${n.tableKey}
+      .findFirst({ where: eq(${n.table}.id, id), columns: { ${ownerKey(model)}: true } })
+      .sync();
+    if (!row) return null;
+    const owner = row.${ownerKey(model)} ?? viewer?.id;
     const theirs =
       owner == null
         ? undefined

@@ -1,0 +1,8 @@
+id: document-owner-from-row
+title: A document could show the reader's own business details as the sender when they could read another member's record by a rule other than owning it.
+severity: fix
+exposure: Only in apps built from main since f90f37937 (2026-11-19) where each person keeps their own business details and a record can be read by someone other than its owner. Such a reader saw their own details as the sender, and a mail with a document link that they sent could hold a copy with their details instead of the owner's. Nobody saw another member's details.
+introduced: f90f37937
+affects:
+  features: [page:settings]
+migration: none
