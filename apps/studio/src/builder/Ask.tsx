@@ -67,6 +67,7 @@ export function Ask({
   words,
   making = false,
   waiting = [],
+  selection,
   trace,
   ready,
   peopleRunning = false,
@@ -111,6 +112,8 @@ export function Ask({
   aiEu?: true;
   /** The privacy page covering Smith's model (the hosted service's); none self-hosted. */
   aiPrivacy?: string;
+  /** The stable spec reference for a part selected in the preview. */
+  selection?: string;
   /** A change was made. */
   onDone?: () => void;
   onEdit?: (prefill: Prefill) => void;
@@ -276,11 +279,14 @@ export function Ask({
     }
     try {
       const next = await api.ask(text, {
-        conversation: trace
-          ? threadLines(trace, said, words)
-              .slice(-6)
-              .map(({ request, reply }) => ({ request: request ?? "", reply }))
-          : [],
+        conversation: [
+          ...(trace
+            ? threadLines(trace, said, words)
+                .slice(-6)
+                .map(({ request, reply }) => ({ request: request ?? "", reply }))
+            : []),
+          ...(selection ? [{ request: "Current preview selection", reply: selection }] : []),
+        ],
         docs: found.map(({ title, url, text, score }) => ({ title, url, text, score })),
       });
       last.current = { text, at: Date.now(), question: next.kind === "question" };

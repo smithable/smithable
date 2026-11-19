@@ -6,10 +6,12 @@ import { join, resolve } from "node:path";
 import { chromium } from "playwright";
 import { checkFirstLook } from "./first-look-checks.mjs";
 import { checkPorts } from "./ports.mjs";
+import { checkStudioSelection } from "./studio-selection-checks.mjs";
 import { checkStudioSmoke } from "./studio-smoke-checks.mjs";
 
 const repo = resolve(import.meta.dirname, "..");
 const smoke = process.argv.includes("--smoke");
+const selection = process.argv.includes("--selection");
 const root = mkdtempSync(
   join(tmpdir(), smoke ? "smithable-studio-smoke-" : "smithable-first-look-"),
 );
@@ -28,7 +30,15 @@ let server,
 try {
   execFileSync(
     process.execPath,
-    [cli, "new", dir, "--starter", "crm", "--admin", "studio-test@example.invalid"],
+    [
+      cli,
+      "new",
+      dir,
+      "--starter",
+      selection ? "booking" : "crm",
+      "--admin",
+      "studio-test@example.invalid",
+    ],
     { cwd: repo, env, stdio: "pipe", timeout: 120000 },
   );
   server = spawn(process.execPath, [cli, "studio", dir, "--port", String(port)], {
@@ -56,6 +66,7 @@ try {
   if (!ready) throw new Error(`Studio startup timeout: ${log}`);
   browser = await chromium.launch();
   if (smoke) await checkStudioSmoke(browser, base, root);
+  else if (selection) await checkStudioSelection(browser, base);
   else await checkFirstLook(browser, base);
 } catch (error) {
   if (smoke) {
