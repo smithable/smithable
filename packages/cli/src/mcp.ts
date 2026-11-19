@@ -20,6 +20,7 @@ import { type Io, keepStdoutForProtocol } from "./io.js";
 import { runOperation } from "./op.js";
 import { loadPlugins } from "./plugins.js";
 import { projectIndex } from "./rules.js";
+import { childEnv } from "./secrets.js";
 import { undo } from "./undo.js";
 import { loadSpec } from "./validate.js";
 import { verify } from "./verify.js";
@@ -183,7 +184,7 @@ function tools(dir: string): Tool[] {
           cwd: dir,
           encoding: "utf8",
           stdio: ["ignore", "pipe", "pipe"],
-          env: { ...process.env, NO_COLOR: "1" },
+          env: childEnv({ ...process.env, NO_COLOR: "1" }),
         });
         // The summary and any failures; the full log would waste the agent's context.
         const lines = `${result.stdout}${result.stderr}`.split("\n");

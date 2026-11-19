@@ -11,11 +11,11 @@ import { randomBytes } from "node:crypto";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { providersFor } from "./ask.js";
-
 import { generate } from "./generate.js";
 import { type Io, tool } from "./io.js";
 import { doorAt, projectPeople } from "./sample-people.js";
 import { type FeedLine, sampleRunner } from "./sample-run.js";
+import { childEnv } from "./secrets.js";
 
 /** A feed line as the terminal shows it. */
 export function feedText(line: FeedLine): string {
@@ -64,7 +64,7 @@ export async function preview(
     ...tool(dir, "vite", ["dev", "--port", String(options.port), "--strictPort"]),
     {
       cwd: dir,
-      env: { ...process.env, DEV_DOOR_SECRET: secret, BETTER_AUTH_URL: base },
+      env: childEnv({ ...process.env, DEV_DOOR_SECRET: secret, BETTER_AUTH_URL: base }),
       // With sample users acting, the server's own lines (a line per request) would bury theirs.
       stdio: ["ignore", options.live ? "ignore" : "inherit", "inherit"],
       detached: true,

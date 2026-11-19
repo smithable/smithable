@@ -1,6 +1,7 @@
 import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { join, resolve } from "node:path";
+import { childEnv } from "./secrets.js";
 
 /** Where commands write their output; tests capture it. */
 export interface Io {
@@ -76,7 +77,7 @@ function spawned(command: string, args: string[]): [string, string[], { shell?: 
 /** Runs a command and shows its output only when it fails (a tool that talks while it works). */
 export function execQuiet(command: string, args: string[], cwd: string): number {
   const [run, given, shell] = spawned(command, args);
-  const result = spawnSync(run, given, { cwd, encoding: "utf8", ...shell });
+  const result = spawnSync(run, given, { env: childEnv(), cwd, encoding: "utf8", ...shell });
   if (result.status !== 0) process.stderr.write(`${result.stdout ?? ""}${result.stderr ?? ""}`);
   return result.status ?? 1;
 }
@@ -84,6 +85,6 @@ export function execQuiet(command: string, args: string[], cwd: string): number 
 /** Runs a command with inherited output. Returns its exit code. */
 export function exec(command: string, args: string[], cwd: string): number {
   const [run, given, shell] = spawned(command, args);
-  const result = spawnSync(run, given, { cwd, stdio: childStdio, ...shell });
+  const result = spawnSync(run, given, { env: childEnv(), cwd, stdio: childStdio, ...shell });
   return result.status ?? 1;
 }

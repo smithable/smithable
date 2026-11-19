@@ -15,6 +15,7 @@ import { discardChanges, ensureRepository, git, uncommitted, uncommittedRefusal 
 import { hostedLevel, levelLine } from "./hosted-level.js";
 import type { Io } from "./io.js";
 import { beginChecks, projectRevision, recordChecks } from "./release-review.js";
+import { childEnv } from "./secrets.js";
 import { loadSpec } from "./validate.js";
 import { assetReview } from "./website-assets.js";
 
@@ -95,7 +96,8 @@ export interface Result {
 }
 
 const has = (command: string) =>
-  spawnSync("sh", ["-c", `command -v ${command}`], { encoding: "utf8" }).status === 0;
+  spawnSync("sh", ["-c", `command -v ${command}`], { env: childEnv(), encoding: "utf8" }).status ===
+  0;
 
 /**
  * Runs a tool on the project, mounted at /src when it runs in Docker. `args` get the project
@@ -110,7 +112,12 @@ function runTool(
   const installed = has(tool.binary);
   if (!installed && !has("docker")) return undefined;
   const [command, ...rest] = commandLine(tool, installed, dir, args, docker);
-  const r = spawnSync(command as string, rest, { cwd: dir, encoding: "utf8", maxBuffer: 1 << 28 });
+  const r = spawnSync(command as string, rest, {
+    env: childEnv(),
+    cwd: dir,
+    encoding: "utf8",
+    maxBuffer: 1 << 28,
+  });
   return {
     status: r.status,
     stdout: r.stdout,
@@ -491,7 +498,12 @@ export function readZap(r: Ran, text: string | undefined): Result {
 
 /** Runs a check that is a project command, e.g. the type check. */
 function command(dir: string, what: string, args: string[]): Result {
-  const r = spawnSync("pnpm", args, { cwd: dir, encoding: "utf8", maxBuffer: 1 << 28 });
+  const r = spawnSync("pnpm", args, {
+    env: childEnv(),
+    cwd: dir,
+    encoding: "utf8",
+    maxBuffer: 1 << 28,
+  });
   const output = `${r.stdout}${r.stderr}`.trim().split("\n").slice(-8);
   return {
     what,
@@ -581,7 +593,8 @@ export async function security(dir: string, io: Io, level: Level): Promise<numbe
     return report(io, level, results);
   }
   const name = appName(dir);
-  const docker = (args: string[]) => spawnSync("docker", args, { cwd: dir, encoding: "utf8" });
+  const docker = (args: string[]) =>
+    spawnSync("docker", args, { env: childEnv(), cwd: dir, encoding: "utf8" });
   if (!has("docker")) {
     io.err("Release checks build and run the app's image: they need Docker.\n");
     return 1;

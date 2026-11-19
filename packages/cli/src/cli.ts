@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { parseArgs } from "node:util";
 import { STARTER_TEXTS } from "@smithable/ai";
 import {
@@ -34,6 +35,7 @@ import { preview } from "./preview.js";
 import { projectRevision } from "./project-revision.js";
 import { redo } from "./redo.js";
 import { report } from "./report.js";
+import { holdSecrets, holdSecretsFromJson } from "./secrets.js";
 import { type Level, security, updateSecurity } from "./security.js";
 import { staticPages } from "./static.js";
 import { studio } from "./studio.js";
@@ -63,6 +65,19 @@ export {
 export { VERSION } from "./version.js";
 
 export async function run(argv: string[], io: Io = processIo): Promise<number> {
+  // Studio's token and the model key leave the environment before anything runs (secrets.ts).
+  holdSecrets();
+  // Or they come on standard input, never in the environment (a hosted workspace's start).
+  const fromStdin = argv.indexOf("--secrets-stdin");
+  if (fromStdin >= 0) {
+    argv = argv.filter((_, i) => i !== fromStdin);
+    try {
+      holdSecretsFromJson(readFileSync(0, "utf8"));
+    } catch (error) {
+      io.err(`${(error as Error).message}\n`);
+      return 2;
+    }
+  }
   // The shells' completion asks here; the words may hold options this parser does not know.
   if (argv[0] === "__complete") {
     const at = argv.lastIndexOf("--");

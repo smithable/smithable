@@ -3,6 +3,7 @@ import { appendFileSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { CutOffAnswerError, type Provider } from "@smithable/ai";
+import { childEnv } from "./secrets.js";
 
 /**
  * Prices per million tokens of Claude through Amazon Bedrock's EU inference profiles (eu-north-1,
@@ -71,7 +72,7 @@ export function bedrock(model: string, region: string, usageLog?: string): Provi
               "--output",
               "json",
             ],
-            { stdio: ["ignore", "pipe", "pipe"] },
+            { env: childEnv(), stdio: ["ignore", "pipe", "pipe"] },
           );
           let stdout = "";
           let stderr = "";

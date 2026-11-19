@@ -19,6 +19,7 @@ import { type FilesPlan, lostFields, runFilesChange } from "./op.js";
 import { loadPlugins } from "./plugins.js";
 import { ProjectBusyError, ProjectLockError, withProjectMutationSync } from "./project-mutation.js";
 import { projectRevision } from "./project-revision.js";
+import { childEnv } from "./secrets.js";
 import { projectThemes } from "./validate.js";
 import { installing } from "./vite-cache.js";
 
@@ -233,6 +234,7 @@ export function revertedFiles(
   const files: FilesPlan["files"] = {};
   const show = (rev: string, path: string) => {
     const r = spawnSync("git", ["show", `${rev}:${path}`], {
+      env: childEnv(),
       cwd: dir,
       encoding: "utf8",
       stdio: ["ignore", "pipe", "ignore"],
@@ -258,6 +260,7 @@ export function revertedFiles(
       writeFileSync(names[1] as string, base);
       writeFileSync(names[2] as string, other);
       const merged = spawnSync("git", ["merge-file", "-p", ...names], {
+        env: childEnv(),
         cwd: dir,
         encoding: "utf8",
       });

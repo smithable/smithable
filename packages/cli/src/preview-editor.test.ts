@@ -392,7 +392,7 @@ test("on a host the preview takes Studio's token on every request, requests and 
     const res = { statusCode: 200, headers: {} as Record<string, string>, body: "" };
     let passed = false;
     guard(
-      { headers: token === undefined ? {} : { "x-smithable-studio-token": token } },
+      { headers: token === undefined ? {} : { "x-smithable-preview-token": token } },
       {
         get statusCode() {
           return res.statusCode;
@@ -420,6 +420,14 @@ test("on a host the preview takes Studio's token on every request, requests and 
   expect(call(guard, "wrong")).toBe("401 The preview needs Studio's token.");
   expect(call(guard)).toBe("401 The preview needs Studio's token.");
   expect(call(guard, "secret-token-longer")).toBe("401 The preview needs Studio's token.");
+  // The right value in Studio's own header is not the preview's credential.
+  const old = { headers: { "x-smithable-studio-token": "secret-token" } };
+  let oldPassed = false;
+  const oldRes = { statusCode: 200, setHeader: () => undefined, end: () => undefined };
+  guard(old, oldRes, () => {
+    oldPassed = true;
+  });
+  expect(oldPassed).toBe(false);
   // Asked to guard without a digest: closed, not open.
   expect(call(tokenGuard(undefined), "secret-token")).toBe(
     "503 The preview has no token to check.",
@@ -427,14 +435,14 @@ test("on a host the preview takes Studio's token on every request, requests and 
   // Once checked, the token is gone from the request, parsed and raw: the app's own code in the
   // preview never sees it.
   const passing = {
-    headers: { host: "p.example", "x-smithable-studio-token": "secret-token" } as Record<
+    headers: { host: "p.example", "x-smithable-preview-token": "secret-token" } as Record<
       string,
       string | string[] | undefined
     >,
-    rawHeaders: ["Host", "p.example", "X-Smithable-Studio-Token", "secret-token", "Accept", "*/*"],
+    rawHeaders: ["Host", "p.example", "X-Smithable-Preview-Token", "secret-token", "Accept", "*/*"],
     headersDistinct: {
       host: ["p.example"],
-      "x-smithable-studio-token": ["secret-token"],
+      "x-smithable-preview-token": ["secret-token"],
     } as Record<string, string[] | undefined>,
   };
   let passedOn = false;
@@ -467,7 +475,7 @@ test("on a host the preview takes Studio's token on every request, requests and 
     let destroyed = false;
     for (const l of listeners.get("upgrade") ?? [])
       l(
-        { url, headers: token === undefined ? {} : { "x-smithable-studio-token": token } },
+        { url, headers: token === undefined ? {} : { "x-smithable-preview-token": token } },
         {
           write: (t: string) => void written.push(t),
           destroy: () => {

@@ -37,7 +37,6 @@ import { logTokens } from "./context.js";
 import { customize } from "./customize.js";
 import { devServerEnv } from "./dev.js";
 import { backFromFix, rememberBeforeFix } from "./fix-open.js";
-import { warmTools } from "./generate.js";
 import {
   generationId,
   generationReceipt,
@@ -68,11 +67,14 @@ import { type LibraryVersion, libraryVersion } from "./picture-style.js";
 import { declaredPlugins, loadPlugins, pluginPath } from "./plugins.js";
 import {
   PREVIEW_TOKEN_DIGEST,
+  PREVIEW_TOKEN_HEADER,
   previewConfig,
+  previewTokenOf,
   tokenDigest,
   writePreviewConfig as writeConfig,
 } from "./preview-editor.js";
 import { projectRevision } from "./project-revision.js";
+import { warmTools } from "./project-worker.js";
 import { redo, redoTarget } from "./redo.js";
 import { releaseReview } from "./release-review.js";
 import {
@@ -98,6 +100,7 @@ import {
 import { projectIndex } from "./rules.js";
 import { doorAt, projectPeople } from "./sample-people.js";
 import { sampleRunner } from "./sample-run.js";
+import { childEnv, studioToken } from "./secrets.js";
 import {
   pictureHashes,
   pictureStyleCards,
@@ -477,7 +480,7 @@ export async function studio(
 ): Promise<number> {
   // On the network, Studio without a token would let anyone who reaches it change the project:
   // a workspace image started without one refuses to run rather than run open.
-  if (options.host && !process.env.SMITHABLE_STUDIO_TOKEN && !options.insecure) {
+  if (options.host && !studioToken() && !options.insecure) {
     io.err(
       `Studio would listen on ${options.host} without a token. Set SMITHABLE_STUDIO_TOKEN (the proxy sends it as X-Smithable-Studio-Token), or pass --insecure to allow anyone who can reach it to change the project.\n`,
     );
@@ -516,14 +519,16 @@ export async function studio(
   // new each start and never the Studio bearer, since the preview's process holds it in full
   // (SMITHABLE_LOOK_KEY) to verify tickets. Of the Studio bearer the preview gets the digest only.
   const lookKey = randomBytes(32).toString("hex");
-  // Behind a proxy the preview takes Studio's token on every request (the editor plugin's guard):
-  // the daemon's own requests to it carry it too. The preview's process gets the token's digest
-  // only, so the app's code running in it cannot use the token on Studio.
-  const previewToken = options.host ? process.env.SMITHABLE_STUDIO_TOKEN : undefined;
+  // Behind a proxy the preview takes a credential of its own on every request (the editor plugin's
+  // guard), derived from Studio's token and refused by Studio; the daemon's own requests to it carry
+  // it too. The preview's process gets the credential's digest only, and Studio's token never.
+  const hostToken = options.host ? studioToken() : undefined;
+  const previewToken = hostToken ? previewTokenOf(hostToken) : undefined;
   const previewHeaders: Record<string, string> = previewToken
-    ? { "x-smithable-studio-token": previewToken }
+    ? { [PREVIEW_TOKEN_HEADER]: previewToken }
     : {};
-  const { SMITHABLE_STUDIO_TOKEN: _studioToken, ...previewEnv } = process.env;
+  // Neither Studio's token nor the model key: the app's code runs in this process (secrets.ts).
+  const previewEnv = childEnv();
   if (previewToken) previewEnv[PREVIEW_TOKEN_DIGEST] = tokenDigest(previewToken);
   previewEnv.SMITHABLE_LOOK_KEY = lookKey;
   // The development door's secret (sample-users.md §4), new each start: the sample users act
@@ -662,7 +667,7 @@ export async function studio(
       ]),
       {
         cwd: dir,
-        env: { ...devServerEnv(previewEnv), BETTER_AUTH_URL: preview, NO_COLOR: "1" },
+        env: childEnv({ ...devServerEnv(previewEnv), BETTER_AUTH_URL: preview, NO_COLOR: "1" }),
         detached: true,
       },
     );
@@ -1026,13 +1031,7 @@ export async function studio(
     };
     const body = () => readJson(req, req.headers["content-length"]);
     try {
-      const refused = refusal(
-        req.headers,
-        options.host,
-        process.env.SMITHABLE_STUDIO_TOKEN,
-        req.method,
-        url.pathname,
-      );
+      const refused = refusal(req.headers, options.host, studioToken(), req.method, url.pathname);
       if (refused) return json({ ok: false, output: refused.message }, refused.status);
       // Someone is using Studio: running sample users keep going.
       if (req.method === "POST") people.touch();
@@ -1919,7 +1918,7 @@ export async function studio(
     }
   });
   server.listen(port, options.host ?? "127.0.0.1");
-  if (options.host && !process.env.SMITHABLE_STUDIO_TOKEN)
+  if (options.host && !studioToken())
     io.err(`Studio listens on ${options.host} without a token (--insecure).\n`);
   io.out(`Smithable Studio: http://localhost:${port} (the app's preview runs on ${preview})\n`);
   await new Promise<void>((resolve) => {

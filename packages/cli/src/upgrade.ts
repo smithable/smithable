@@ -7,6 +7,7 @@ import { migrationConsequences, migrationKind, type SchemaSnapshot } from "./fix
 import { generate, projectProfile } from "./generate.js";
 import { discardChanges, ensureRepository, git, uncommitted, uncommittedRefusal } from "./git.js";
 import type { Io } from "./io.js";
+import { childEnv } from "./secrets.js";
 import { loadSpec } from "./validate.js";
 import { VERSION } from "./version.js";
 
@@ -67,7 +68,12 @@ export async function upgrade(dir: string, io: Io): Promise<number> {
     ["type check", ["typecheck"]],
     ["tests", ["test"]],
   ] as const) {
-    const run = spawnSync("pnpm", [...args], { cwd: dir, encoding: "utf8", maxBuffer: 1 << 26 });
+    const run = spawnSync("pnpm", [...args], {
+      env: childEnv(),
+      cwd: dir,
+      encoding: "utf8",
+      maxBuffer: 1 << 26,
+    });
     if (run.status !== 0) {
       const output = `${run.stdout}${run.stderr}`;
       // The app's own code is where a changed contract breaks: show it first.
