@@ -22,8 +22,8 @@ pages:
     form:
       sections:                          # who and what state first, then the dates as a pair, then the agreement
         - { name: invoice, fields: [number, client, status] }
-        - { name: dates, fields: [issuedOn, dueOn] }
-        - { name: documents, fields: [contract] }
+        - { name: dates, fields: [issuedOn, deliveryDate, dueOn] }
+        - { name: documents, fields: [contract, vatNote] }
       columns: 2
       control: { status: radio }         # the four states shown at once
       aside: summary                     # the status, the total and the dates beside the form

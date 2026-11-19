@@ -38,10 +38,12 @@ test("the document sends only its named fields, also after a column is added to 
   const before = route(spec);
   if (!before) throw new Error("no document route");
   expect(before).toContain(
-    'lines: lines.map((line) => pick(line, ["description", "quantity", "unitPrice", "amount"]))',
+    'lines: lines.map((line) => pick(line, ["description", "quantity", "unitPrice", "amount", "vatRate", "vatAmount"]))',
   );
   expect(before).toContain('to: to && pick(to, ["name", "address", "vatNumber"])');
-  expect(before).toContain('from: pick(from, ["businessName", "vatNumber", "iban"])');
+  expect(before.replace(/\s/g, "")).toContain(
+    'from:pick(from,["businessName","businessId","registeredOffice","address","vatNumber","iban",])',
+  );
   // Each part is read by its own read rule, and private business details are the record owner's.
   expect(before).toContain("invoiceLineData.getIn(q, viewer, line.id)");
   expect(before).toContain("clientData.getIn(q, viewer, Number(toId))");
@@ -50,7 +52,7 @@ test("the document sends only its named fields, also after a column is added to 
   expect(before).toContain("const owner = record.ownerId ?? viewer?.id;");
   // A worked-out value missing refuses the document instead of printing a blank.
   expect(before).toContain(
-    'lines.map((line) => missing(line, [["amount", "Amount"]])).find(Boolean)',
+    'lines.map((line) => missing(line, [["amount", "Net amount"], ["vatAmount", "VAT amount"]])).find(Boolean)',
   );
   const added = spec
     .split("      description: string!\n      quantity: decimal! = 1\n")
@@ -138,11 +140,8 @@ test("a mail that says {view} makes the link's page, and the document page lists
 
 test("without a {view} mail there is no link page and no Sent list", () => {
   const words = at("smithable.content.yml");
-  expect(words).toContain(" You can open it at {view} and");
-  const app = files(
-    at("smithable.yml"),
-    words.split(" You can open it at {view} and").join(" And"),
-  );
+  expect(words).toContain(" See it here: {view}");
+  const app = files(at("smithable.yml"), words.split(" See it here: {view}").join(""));
   expect([...app.keys()].some((p) => p.endsWith("routes/d.$token.tsx"))).toBe(false);
   expect([...app.keys()].some((p) => p.endsWith("kit/view.server.ts"))).toBe(false);
   const page = [...app].find(([path]) => path.endsWith("/invoices/$id_.document.tsx"))?.[1];

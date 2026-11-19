@@ -6047,7 +6047,7 @@ async function documentFlow(dir, base) {
 /**
  * The invoice mail names the invoice's total, a worked-out field (record-documents.md §3): it
  * carries the total as the page writes it, summed from the lines in the action's transaction, not
- * zero; and when the total has no value, Mark sent is refused and nothing changes or is sent.
+ * zero; and when the total has no value, Send invoice is refused and nothing changes or is sent.
  */
 async function invoiceMailFlow(dir, base) {
   const browser = await chromium.launch();
@@ -6057,7 +6057,7 @@ async function invoiceMailFlow(dir, base) {
     existsSync(outbox) ? readdirSync(outbox).filter((f) => !f.startsWith(".")) : [];
   const drafts = query(
     dir,
-    `select i.id, i.number, i.owner_id as owner, sum(l.quantity * l.unit_price) as cents, min(l.id) as line, min(l.quantity) as quantity
+    `select i.id, i.number, i.owner_id as owner, sum(round(l.quantity * l.unit_price) + round(round(l.quantity * l.unit_price) * l.vat_rate / 100)) as cents, min(l.id) as line, min(l.quantity) as quantity
        from invoices i join invoice_lines l on l.invoice_id = i.id
        join clients c on c.id = i.client_id
       where i.status = 'draft' and c.email is not null and c.email != ''
@@ -6069,16 +6069,18 @@ async function invoiceMailFlow(dir, base) {
     if (drafts.length < 2) throw new Error(`${drafts.length} draft invoices with lines, too few`);
     const [sent, refused] = drafts;
     await signInAs(page, base, "admin");
-    const markSent = page.getByRole("button", { name: "Mark sent" }).filter({ visible: true });
-    // Mark sent asks first; its dialog's own button runs it.
+    const sendInvoice = page
+      .getByRole("button", { name: "Send invoice" })
+      .filter({ visible: true });
+    // Send invoice asks first; its dialog's own button runs it.
     const confirmed = () =>
       page
-        .getByRole("dialog", { name: "Mark sent" })
-        .getByRole("button", { name: "Mark sent" })
+        .getByRole("dialog", { name: "Send invoice" })
+        .getByRole("button", { name: "Send invoice" })
         .click();
     let count = mails().length;
     // The mail links to the invoice as a document, which says whom it is from: without the
-    // owner's business details Mark sent is refused, and nothing changes or goes (record-documents.md §4).
+    // owner's business details Send invoice is refused, and nothing changes or goes (record-documents.md §4).
     // A sample invoice has no owner: it is from whoever sends it, the admin signed in now.
     const [{ id: sender }] = query(
       dir,
@@ -6088,7 +6090,7 @@ async function invoiceMailFlow(dir, base) {
     const profile = `select id from business_profiles where owner_id = '${owner}'`;
     if (!query(dir, profile).length) {
       await open(page, `${base}/invoices/${sent.id}`);
-      await markSent.click();
+      await sendInvoice.click();
       await confirmed();
       await page
         .getByText("Fill in your business details before sending the document.")
@@ -6099,30 +6101,33 @@ async function invoiceMailFlow(dir, base) {
       if (status !== "draft") throw new Error(`the refused invoice is ${status}, not draft`);
       if (mails().length !== count) throw new Error("a mail went out without business details");
       console.log(
-        "  ✓ browser: without business details Mark sent is refused: the invoice stays a draft and no mail goes",
+        "  ✓ browser: without business details Send invoice is refused: the invoice stays a draft and no mail goes",
       );
       write(
         dir,
-        `insert into business_profiles (business_name, iban, payment_term_days, owner_id, created_at, updated_at)
-           values ('Sender Design Oy', 'FI00 SENDER', 30, '${owner}', 0, 0)`,
+        `insert into business_profiles (business_name, business_id, registered_office, address, iban, payment_term_days, owner_id, created_at, updated_at)
+           values ('Sender Design Oy', 'DEMO-1001', 'Mariehamn', 'Example Quay 1', 'FI00 SENDER', 30, '${owner}', 0, 0)`,
       );
     }
     await open(page, `${base}/invoices/${sent.id}`);
-    await markSent.click();
+    await sendInvoice.click();
     await confirmed();
     marked = sent;
+    const [saved] = query(dir, `select status, sent_at from invoices where id = ${sent.id}`);
+    if (saved.status !== "sent" || !saved.sent_at)
+      throw new Error("sending did not record when it went");
     for (let i = 0; i < 100 * P && mails().length <= count; i++) await page.waitForTimeout(100);
     const mail = mails()
       .map((f) => quotedPrintable(readFileSync(join(outbox, f), "latin1")))
-      .find((m) => m.includes(`invoice ${sent.number} for`));
+      .find((m) => m.includes(`Invoice ${sent.number}:`));
     if (!mail) throw new Error(`no mail names invoice ${sent.number}`);
     const total = new Intl.NumberFormat("en", { style: "currency", currency: "EUR" }).format(
       Math.round(sent.cents) / 100,
     );
-    if (!mail.includes(`invoice ${sent.number} for ${total},`))
+    if (!mail.includes(`Invoice ${sent.number}: ${total},`))
       throw new Error(`the mail does not say ${total}: ${mail.slice(0, 600)}`);
     console.log(
-      `  ✓ browser: Mark sent mails the invoice's total as the page writes it (${total})`,
+      `  ✓ browser: Send invoice mails the invoice's total as the page writes it (${total})`,
     );
 
     // A line whose quantity is no number leaves the total without a value.
@@ -6130,7 +6135,7 @@ async function invoiceMailFlow(dir, base) {
     broken = refused;
     count = mails().length;
     await open(page, `${base}/invoices/${refused.id}`);
-    await markSent.click();
+    await sendInvoice.click();
     await confirmed();
     await page
       .getByText("Total has no value to send")
@@ -6141,7 +6146,7 @@ async function invoiceMailFlow(dir, base) {
     if (status !== "draft") throw new Error(`the refused invoice is ${status}, not draft`);
     if (mails().length !== count) throw new Error("a mail went out for the refused change");
     console.log(
-      "  ✓ browser: a total with no value refuses Mark sent: the invoice stays a draft and no mail goes",
+      "  ✓ browser: a total with no value refuses Send invoice: the invoice stays a draft and no mail goes",
     );
   } catch (error) {
     console.log(
@@ -6150,7 +6155,8 @@ async function invoiceMailFlow(dir, base) {
     failures.push("invoice mail");
   } finally {
     // Later checks (the row menu) want the drafts as the samples have them.
-    if (marked) write(dir, `UPDATE invoices SET status = 'draft' WHERE id = ${marked.id}`);
+    if (marked)
+      write(dir, `UPDATE invoices SET status = 'draft', sent_at = null WHERE id = ${marked.id}`);
     if (broken)
       write(
         dir,
@@ -6161,7 +6167,7 @@ async function invoiceMailFlow(dir, base) {
 }
 
 /**
- * A sent invoice's link (record-documents.md §5, §8): Mark sent's mail carries a link of its own
+ * A sent invoice's link (record-documents.md §5, §8): Send invoice's mail carries a link of its own
  * to a copy of the invoice as it was sent, served without caching or indexing; a later change to
  * the invoice does not reach the copy; the invoice's document page lists the link, and Withdraw
  * ends it for good, after which it answers like a link that never was.
@@ -6174,7 +6180,7 @@ async function sentLinkFlow(dir, base) {
     existsSync(outbox) ? readdirSync(outbox).filter((f) => !f.startsWith(".")) : [];
   const [invoice] = query(
     dir,
-    `select i.id, i.number, sum(l.quantity * l.unit_price) as cents, min(l.id) as line
+    `select i.id, i.number, sum(round(l.quantity * l.unit_price) + round(round(l.quantity * l.unit_price) * l.vat_rate / 100)) as cents, min(l.id) as line
        from invoices i join invoice_lines l on l.invoice_id = i.id
        join clients c on c.id = i.client_id
       where i.status = 'draft' and c.email is not null and c.email != ''
@@ -6186,17 +6192,17 @@ async function sentLinkFlow(dir, base) {
     await signInAs(page, base, "admin");
     const before = new Set(mails());
     await open(page, `${base}/invoices/${invoice.id}`);
-    await page.getByRole("button", { name: "Mark sent" }).filter({ visible: true }).click();
+    await page.getByRole("button", { name: "Send invoice" }).filter({ visible: true }).click();
     await page
-      .getByRole("dialog", { name: "Mark sent" })
-      .getByRole("button", { name: "Mark sent" })
+      .getByRole("dialog", { name: "Send invoice" })
+      .getByRole("button", { name: "Send invoice" })
       .click();
     for (let i = 0; i < 100 * P && mails().every((m) => before.has(m)); i++)
       await page.waitForTimeout(100);
     const mail = mails()
       .filter((m) => !before.has(m))
       .map((m) => quotedPrintable(readFileSync(join(outbox, m), "latin1")))
-      .find((m) => m.includes(`invoice ${invoice.number} for`));
+      .find((m) => m.includes(`Invoice ${invoice.number}:`));
     const token = mail?.match(/\/d\/([A-Za-z0-9_-]{43})\b/)?.[1];
     if (!token) throw new Error(`no link in the mail: ${mail?.slice(0, 600)}`);
     const total = new Intl.NumberFormat("en", { style: "currency", currency: "EUR" }).format(
@@ -6212,7 +6218,7 @@ async function sentLinkFlow(dir, base) {
     if (!body.includes(invoice.number) || !body.includes(total))
       throw new Error(`the copy does not show ${invoice.number} for ${total}`);
     console.log(
-      "  ✓ browser: Mark sent's mail links to the invoice as sent, not cached or indexed",
+      "  ✓ browser: Send invoice's mail links to the invoice as sent, not cached or indexed",
     );
 
     // A later change to the invoice does not reach the copy.
@@ -6276,7 +6282,7 @@ async function sentLinkFlow(dir, base) {
 }
 
 /** A copy: Duplicate asks for the new invoice's number and opens the copy, with the lines. */
-async function copyFlow(base) {
+async function copyFlow(dir, base) {
   const browser = await chromium.launch();
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
   try {
@@ -6308,18 +6314,15 @@ async function copyFlow(base) {
     // "Save changes" afterwards cannot quietly undo it.
     await open(page, `${base}/invoices`);
     await page.getByRole("cell", { name: "2026-006", exact: true }).click();
-    // The list's rows have their own Mark sent until the record's page has replaced it.
     await page.getByRole("heading", { name: "2026-006", exact: true }).waitFor();
-    const markSent = page.getByRole("button", { name: "Mark sent" }).filter({ visible: true });
+    const markSent = page
+      .getByRole("button", { name: "Mark sent", exact: true })
+      .filter({ visible: true });
+    const mailCount = () => query(dir, "select count(*) as count from outgoing_mail")[0].count;
+    const before = mailCount();
     await markSent.click();
-    // It asks first, in the content file's words, filled from the invoice and its client.
-    const asked = page.getByRole("dialog", { name: "Mark sent" });
-    await asked
-      .getByText(/^Send invoice 2026-006 of .+ to Kallio Design at laskut@kallio\.example\?$/)
-      .waitFor({ timeout: 10000 * P });
-    await asked.getByRole("button", { name: "Mark sent" }).click();
-    await asked.waitFor({ state: "detached", timeout: 10000 * P });
     await markSent.waitFor({ state: "detached", timeout: 10000 * P });
+    if (mailCount() !== before) throw new Error("Mark sent queued an email");
     // The status is radio buttons (the ux file's control): Sent is checked once the form has the new value.
     for (
       let i = 0;
@@ -7224,18 +7227,18 @@ async function recordDocumentFlow(dir, base) {
     console.log(
       "  ✓ browser: a document with a part the person may not read is refused, another user's is not found",
     );
-    // Mark sent asks first (record-documents.md §6); its mail would reach nobody here, so it says
-    // so and offers no Mark sent.
+    // Send invoice asks first (record-documents.md §6); its mail would reach nobody here, so it says
+    // so and offers no Send invoice.
     await open(page, `${base}/invoices/${id("DOC-004")}`);
     await hydrated(page);
-    await page.getByRole("button", { name: "Mark sent" }).filter({ visible: true }).click();
-    const nobody = page.getByRole("dialog", { name: "Mark sent" });
+    await page.getByRole("button", { name: "Send invoice" }).filter({ visible: true }).click();
+    const nobody = page.getByRole("dialog", { name: "Send invoice" });
     await nobody.getByText("would reach nobody").waitFor({ timeout: 5000 * P });
-    if (await nobody.getByRole("button", { name: "Mark sent" }).isVisible())
-      throw new Error("the question offers Mark sent although the mail would reach nobody");
+    if (await nobody.getByRole("button", { name: "Send invoice" }).isVisible())
+      throw new Error("the question offers Send invoice although the mail would reach nobody");
     await nobody.getByRole("button", { name: "Close" }).click();
     if (query(dir, `select status from invoices where number = 'DOC-004'`)[0].status !== "draft")
-      throw new Error("the invoice whose mail would reach nobody was marked sent");
+      throw new Error("the invoice whose mail would reach nobody was sent");
     console.log("  ✓ browser: an action whose mail would reach nobody says so instead of asking");
     // An admin printing the member's invoice gets the member's business details.
     await page.context().clearCookies();
@@ -9827,7 +9830,7 @@ test("the session cookie's name and attributes", async () => {
       if (example === "invoicing") {
         await invoiceMailFlow(dir, base);
         await sentLinkFlow(dir, base);
-        await copyFlow(base);
+        await copyFlow(dir, base);
         await documentFlow(dir, base);
         await formulaFlow(base);
         await periodFlow(dir, base);

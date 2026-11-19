@@ -47652,6 +47652,9 @@ export const businessProfiles = sqliteTable(
   {
     id: integer().primaryKey({ autoIncrement: true }),
     businessName: text().notNull(),
+    businessId: text(),
+    registeredOffice: text(),
+    address: text(),
     vatNumber: text(),
     iban: text(),
     paymentTermDays: integer().notNull().default(30),
@@ -47693,9 +47696,14 @@ export const invoices = sqliteTable(
     clientId: integer().notNull().references(() => clients.id, { onDelete: "restrict" }),
     issuedOn: text().notNull(),
     dueOn: text().notNull(),
+    deliveryDate: text(),
     status: text({ enum: ["draft", "sent", "paid", "overdue"] }).notNull().default("draft"),
+    sentAt: integer({ mode: "timestamp_ms" }),
+    vatNote: text(),
     contract: text({ mode: "json" }).$type<StoredFile>(),
     total: integer(),
+    netTotal: integer(),
+    vatTotal: integer(),
     ownerId: text().references(() => user.id, { onDelete: "set null" }),
     createdAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
     updatedAt: integer({ mode: "timestamp_ms" })
@@ -47715,6 +47723,8 @@ export const invoiceLines = sqliteTable(
     quantity: real().notNull().default(1),
     unitPrice: integer().notNull(),
     amount: integer(),
+    vatRate: real().notNull().default(0),
+    vatAmount: integer(),
     ownerId: text().references(() => user.id, { onDelete: "set null" }),
     createdAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
     updatedAt: integer({ mode: "timestamp_ms" })
@@ -47749,14 +47759,14 @@ import * as schema from "./schema";
 if (db.select().from(schema.businessProfiles).limit(1).all().length === 0) {
   db.insert(schema.businessProfiles)
     .values([
-    { businessName: "Business profile 1", vatNumber: "VAT-1001", iban: "iban 1", paymentTermDays: 1, invoiceFooter: "A short description of Business profile 1." },
-    { businessName: "Business profile 2", vatNumber: "VAT-1002", iban: "iban 2", paymentTermDays: 8, invoiceFooter: "A short description of Business profile 2." },
-    { businessName: "Business profile 3", vatNumber: "VAT-1003", iban: "iban 3", paymentTermDays: 15, invoiceFooter: "A short description of Business profile 3." },
-    { businessName: "Business profile 4", vatNumber: "VAT-1004", iban: "iban 4", paymentTermDays: 2, invoiceFooter: "A short description of Business profile 4." },
-    { businessName: "Business profile 5", vatNumber: "VAT-1005", iban: "iban 5", paymentTermDays: 9, invoiceFooter: "A short description of Business profile 5." },
-    { businessName: "Business profile 6", vatNumber: "VAT-1006", iban: "iban 6", paymentTermDays: 16, invoiceFooter: "A short description of Business profile 6." },
-    { businessName: "Business profile 7", vatNumber: "VAT-1007", iban: "iban 7", paymentTermDays: 3, invoiceFooter: "A short description of Business profile 7." },
-    { businessName: "Business profile 8", vatNumber: "VAT-1008", iban: "iban 8", paymentTermDays: 10, invoiceFooter: "A short description of Business profile 8." },
+    { businessName: "Business profile 1", businessId: "business id 1", registeredOffice: "registered office 1", address: "A short description of Business profile 1.", vatNumber: "VAT-1001", iban: "iban 1", paymentTermDays: 1, invoiceFooter: "A short description of Business profile 1." },
+    { businessName: "Business profile 2", businessId: "business id 2", registeredOffice: "registered office 2", address: "A short description of Business profile 2.", vatNumber: "VAT-1002", iban: "iban 2", paymentTermDays: 8, invoiceFooter: "A short description of Business profile 2." },
+    { businessName: "Business profile 3", businessId: "business id 3", registeredOffice: "registered office 3", address: "A short description of Business profile 3.", vatNumber: "VAT-1003", iban: "iban 3", paymentTermDays: 15, invoiceFooter: "A short description of Business profile 3." },
+    { businessName: "Business profile 4", businessId: "business id 4", registeredOffice: "registered office 4", address: "A short description of Business profile 4.", vatNumber: "VAT-1004", iban: "iban 4", paymentTermDays: 2, invoiceFooter: "A short description of Business profile 4." },
+    { businessName: "Business profile 5", businessId: "business id 5", registeredOffice: "registered office 5", address: "A short description of Business profile 5.", vatNumber: "VAT-1005", iban: "iban 5", paymentTermDays: 9, invoiceFooter: "A short description of Business profile 5." },
+    { businessName: "Business profile 6", businessId: "business id 6", registeredOffice: "registered office 6", address: "A short description of Business profile 6.", vatNumber: "VAT-1006", iban: "iban 6", paymentTermDays: 16, invoiceFooter: "A short description of Business profile 6." },
+    { businessName: "Business profile 7", businessId: "business id 7", registeredOffice: "registered office 7", address: "A short description of Business profile 7.", vatNumber: "VAT-1007", iban: "iban 7", paymentTermDays: 3, invoiceFooter: "A short description of Business profile 7." },
+    { businessName: "Business profile 8", businessId: "business id 8", registeredOffice: "registered office 8", address: "A short description of Business profile 8.", vatNumber: "VAT-1008", iban: "iban 8", paymentTermDays: 10, invoiceFooter: "A short description of Business profile 8." },
     ])
     .run();
 }
@@ -47779,14 +47789,14 @@ if (db.select().from(schema.clients).limit(1).all().length === 0) {
 if (db.select().from(schema.invoices).limit(1).all().length === 0) {
   db.insert(schema.invoices)
     .values([
-    { number: "INV-1001", clientId: 1, issuedOn: "2026-04-15", dueOn: "2026-05-15", status: "draft", contract: null },
-    { number: "INV-1002", clientId: 2, issuedOn: "2026-05-08", dueOn: "2026-06-07", status: "sent", contract: null },
-    { number: "INV-1003", clientId: 3, issuedOn: "2026-05-31", dueOn: "2026-06-30", status: "paid", contract: null },
-    { number: "INV-1004", clientId: 4, issuedOn: "2026-06-23", dueOn: "2026-07-23", status: "overdue", contract: null },
-    { number: "INV-1005", clientId: 5, issuedOn: "2026-07-16", dueOn: "2026-08-15", status: "draft", contract: null },
-    { number: "INV-1006", clientId: 6, issuedOn: "2026-08-08", dueOn: "2026-09-07", status: "sent", contract: null },
-    { number: "INV-1007", clientId: 7, issuedOn: "2026-08-31", dueOn: "2026-09-30", status: "paid", contract: null },
-    { number: "INV-1008", clientId: 8, issuedOn: "2026-09-23", dueOn: "2026-10-23", status: "overdue", contract: null },
+    { number: "INV-1001", clientId: 1, issuedOn: "2026-04-15", dueOn: "2026-05-15", deliveryDate: "2026-06-14", status: "draft", sentAt: new Date("2026-09-01T08:00:00.000Z"), vatNote: "A short description of INV-1001.", contract: null },
+    { number: "INV-1002", clientId: 2, issuedOn: "2026-05-08", dueOn: "2026-06-07", deliveryDate: "2026-07-07", status: "sent", sentAt: new Date("2026-09-02T10:00:00.000Z"), vatNote: "A short description of INV-1002.", contract: null },
+    { number: "INV-1003", clientId: 3, issuedOn: "2026-05-31", dueOn: "2026-06-30", deliveryDate: "2026-07-30", status: "paid", sentAt: new Date("2026-09-03T12:00:00.000Z"), vatNote: "A short description of INV-1003.", contract: null },
+    { number: "INV-1004", clientId: 4, issuedOn: "2026-06-23", dueOn: "2026-07-23", deliveryDate: "2026-08-22", status: "overdue", sentAt: new Date("2026-09-04T08:00:00.000Z"), vatNote: "A short description of INV-1004.", contract: null },
+    { number: "INV-1005", clientId: 5, issuedOn: "2026-07-16", dueOn: "2026-08-15", deliveryDate: "2026-09-14", status: "draft", sentAt: new Date("2026-09-05T10:00:00.000Z"), vatNote: "A short description of INV-1005.", contract: null },
+    { number: "INV-1006", clientId: 6, issuedOn: "2026-08-08", dueOn: "2026-09-07", deliveryDate: "2026-10-07", status: "sent", sentAt: new Date("2026-09-06T12:00:00.000Z"), vatNote: "A short description of INV-1006.", contract: null },
+    { number: "INV-1007", clientId: 7, issuedOn: "2026-08-31", dueOn: "2026-09-30", deliveryDate: "2026-10-30", status: "paid", sentAt: new Date("2026-09-07T08:00:00.000Z"), vatNote: "A short description of INV-1007.", contract: null },
+    { number: "INV-1008", clientId: 8, issuedOn: "2026-09-23", dueOn: "2026-10-23", deliveryDate: "2026-11-22", status: "overdue", sentAt: new Date("2026-09-08T10:00:00.000Z"), vatNote: "A short description of INV-1008.", contract: null },
     ])
     .run();
 }
@@ -47794,14 +47804,14 @@ if (db.select().from(schema.invoices).limit(1).all().length === 0) {
 if (db.select().from(schema.invoiceLines).limit(1).all().length === 0) {
   db.insert(schema.invoiceLines)
     .values([
-    { invoiceId: 1, description: "description 1", quantity: 1, unitPrice: 12000 },
-    { invoiceId: 2, description: "description 2", quantity: 4.7, unitPrice: 48000 },
-    { invoiceId: 3, description: "description 3", quantity: 4.4, unitPrice: 125000 },
-    { invoiceId: 4, description: "description 4", quantity: 4.1, unitPrice: 230000 },
-    { invoiceId: 5, description: "description 5", quantity: 3.8, unitPrice: 7500 },
-    { invoiceId: 6, description: "description 6", quantity: 3.5, unitPrice: 96000 },
-    { invoiceId: 7, description: "description 7", quantity: 3.2, unitPrice: 340000 },
-    { invoiceId: 8, description: "description 8", quantity: 2.9, unitPrice: 64000 },
+    { invoiceId: 1, description: "description 1", quantity: 1, unitPrice: 12000, vatRate: 1 },
+    { invoiceId: 2, description: "description 2", quantity: 4.7, unitPrice: 48000, vatRate: 4.7 },
+    { invoiceId: 3, description: "description 3", quantity: 4.4, unitPrice: 125000, vatRate: 4.4 },
+    { invoiceId: 4, description: "description 4", quantity: 4.1, unitPrice: 230000, vatRate: 4.1 },
+    { invoiceId: 5, description: "description 5", quantity: 3.8, unitPrice: 7500, vatRate: 3.8 },
+    { invoiceId: 6, description: "description 6", quantity: 3.5, unitPrice: 96000, vatRate: 3.5 },
+    { invoiceId: 7, description: "description 7", quantity: 3.2, unitPrice: 340000, vatRate: 3.2 },
+    { invoiceId: 8, description: "description 8", quantity: 2.9, unitPrice: 64000, vatRate: 2.9 },
     ])
     .run();
 }
@@ -47823,6 +47833,7 @@ import { businessProfileData } from "./business-profile.server";
 import { clientData } from "./client.server";
 import { invoiceData } from "./invoice.server";
 import { invoiceLineData } from "./invoice-line.server";
+import { runSendInvoice, runSendInvoiceMany } from "./actions/send-invoice.server";
 import { runMarkSent, runMarkSentMany } from "./actions/mark-sent.server";
 import { runMarkPaid, runMarkPaidMany } from "./actions/mark-paid.server";
 import { runMarkOverdue, runMarkOverdueMany } from "./actions/mark-overdue.server";
@@ -47871,7 +47882,7 @@ async function reads(
 
 function businessProfileValues(_owner: string | null) {
   const n = next();
-  return { businessName: \`BusinessProfile businessName \${n}\`, vatNumber: null, iban: null, paymentTermDays: n, invoiceFooter: null } as const;
+  return { businessName: \`BusinessProfile businessName \${n}\`, businessId: null, registeredOffice: null, address: null, vatNumber: null, iban: null, paymentTermDays: n, invoiceFooter: null } as const;
 }
 
 function insertBusinessProfile(owner: string | null, values: Record<string, unknown> = {}) {
@@ -47897,7 +47908,7 @@ function insertClient(owner: string | null, values: Record<string, unknown> = {}
 
 function invoiceValues(owner: string | null) {
   const n = next();
-  return { number: \`Invoice number \${n}\`, clientId: insertClient(owner).id, issuedOn: "2099-01-15", dueOn: "2099-01-15", status: "draft", contract: null } as const;
+  return { number: \`Invoice number \${n}\`, clientId: insertClient(owner).id, issuedOn: "2099-01-15", dueOn: "2099-01-15", deliveryDate: null, status: "draft", sentAt: null, vatNote: null, contract: null } as const;
 }
 
 function insertInvoice(owner: string | null, values: Record<string, unknown> = {}) {
@@ -47910,7 +47921,7 @@ function insertInvoice(owner: string | null, values: Record<string, unknown> = {
 
 function invoiceLineValues(owner: string | null) {
   const n = next();
-  return { invoiceId: insertInvoice(owner).id, description: \`InvoiceLine description \${n}\`, quantity: 1.5, unitPrice: 1000 } as const;
+  return { invoiceId: insertInvoice(owner).id, description: \`InvoiceLine description \${n}\`, quantity: 1.5, unitPrice: 1000, vatRate: 1.5 } as const;
 }
 
 function insertInvoiceLine(owner: string | null, values: Record<string, unknown> = {}) {
@@ -48070,8 +48081,8 @@ describe("Invoice", () => {
       readOthers: await reads(invoiceData, viewer, others.id),
       readOwn: await reads(invoiceData, viewer, own.id),
       create: await can(() => invoiceData.create(viewer, invoiceValues(viewer.id))),
-      changeOthers: await can(() => invoiceData.update(viewer, others.id, invoiceValues(stranger.id))),
-      changeOwn: await can(() => invoiceData.update(viewer, own.id, invoiceValues(viewer.id))),
+      changeOthers: await can(() => invoiceData.update(viewer, others.id, { ...invoiceValues(stranger.id), number: others.number, clientId: others.clientId, issuedOn: others.issuedOn, dueOn: others.dueOn, deliveryDate: others.deliveryDate, vatNote: others.vatNote })),
+      changeOwn: await can(() => invoiceData.update(viewer, own.id, { ...invoiceValues(viewer.id), number: own.number, clientId: own.clientId, issuedOn: own.issuedOn, dueOn: own.dueOn, deliveryDate: own.deliveryDate, vatNote: own.vatNote })),
       deleteOthers: await can(() => invoiceData.remove(viewer, others.id)),
       deleteOwn: await can(() => invoiceData.remove(viewer, own.id)),
     }).toEqual({
@@ -48093,8 +48104,8 @@ describe("Invoice", () => {
       readOthers: await reads(invoiceData, viewer, others.id),
       readOwn: await reads(invoiceData, viewer, own.id),
       create: await can(() => invoiceData.create(viewer, invoiceValues(viewer.id))),
-      changeOthers: await can(() => invoiceData.update(viewer, others.id, invoiceValues(stranger.id))),
-      changeOwn: await can(() => invoiceData.update(viewer, own.id, invoiceValues(viewer.id))),
+      changeOthers: await can(() => invoiceData.update(viewer, others.id, { ...invoiceValues(stranger.id), number: others.number, clientId: others.clientId, issuedOn: others.issuedOn, dueOn: others.dueOn, deliveryDate: others.deliveryDate, vatNote: others.vatNote })),
+      changeOwn: await can(() => invoiceData.update(viewer, own.id, { ...invoiceValues(viewer.id), number: own.number, clientId: own.clientId, issuedOn: own.issuedOn, dueOn: own.dueOn, deliveryDate: own.deliveryDate, vatNote: own.vatNote })),
       deleteOthers: await can(() => invoiceData.remove(viewer, others.id)),
       deleteOwn: await can(() => invoiceData.remove(viewer, own.id)),
     }).toEqual({
@@ -48115,7 +48126,7 @@ describe("Invoice", () => {
       readOthers: await reads(invoiceData, viewer, others.id),
       readOwn: false,
       create: await can(() => invoiceData.create(viewer, invoiceValues(null))),
-      changeOthers: await can(() => invoiceData.update(viewer, others.id, invoiceValues(stranger.id))),
+      changeOthers: await can(() => invoiceData.update(viewer, others.id, { ...invoiceValues(stranger.id), number: others.number, clientId: others.clientId, issuedOn: others.issuedOn, dueOn: others.dueOn, deliveryDate: others.deliveryDate, vatNote: others.vatNote })),
       changeOwn: false,
       deleteOthers: await can(() => invoiceData.remove(viewer, others.id)),
       deleteOwn: false,
@@ -48204,6 +48215,60 @@ describe("InvoiceLine", () => {
       deleteOthers: false,
       deleteOwn: false,
     });
+  });
+});
+
+describe("the sendInvoice action", () => {
+  test("admin", async () => {
+    const viewer = signedIn("admin");
+    const others = insertInvoice(stranger.id, {"status":"draft"});
+    const own = insertInvoice(viewer.id, {"status":"draft"});
+    expect({
+      others: await can(() => runSendInvoice(viewer, others.id)),
+      own: await can(() => runSendInvoice(viewer, own.id)),
+    }).toEqual({ others: true, own: true });
+  });
+
+  test("member", async () => {
+    const viewer = signedIn("member");
+    const others = insertInvoice(stranger.id, {"status":"draft"});
+    const othersBefore = JSON.stringify(db.select().from(schema.invoices).where(eq(schema.invoices.id, others.id)).get());
+    const own = insertInvoice(viewer.id, {"status":"draft"});
+    expect({
+      others: await can(() => runSendInvoice(viewer, others.id)),
+      own: await can(() => runSendInvoice(viewer, own.id)),
+    }).toEqual({ others: false, own: true });
+    expect(JSON.stringify(db.select().from(schema.invoices).where(eq(schema.invoices.id, others.id)).get())).toBe(othersBefore);
+  });
+
+  test("a visitor who has not signed in", async () => {
+    const viewer = null;
+    const others = insertInvoice(stranger.id, {"status":"draft"});
+    const othersBefore = JSON.stringify(db.select().from(schema.invoices).where(eq(schema.invoices.id, others.id)).get());
+    expect({
+      others: await can(() => runSendInvoice(viewer, others.id)),
+      own: false,
+    }).toEqual({ others: false, own: false });
+    expect(JSON.stringify(db.select().from(schema.invoices).where(eq(schema.invoices.id, others.id)).get())).toBe(othersBefore);
+  });
+
+  test("refused on a record where status is not draft", async () => {
+    const viewer = signedIn("admin");
+    const record = insertInvoice(viewer.id, {"status":"sent"});
+    await expect(runSendInvoice(viewer, record.id)).rejects.toThrow("This cannot be done now.");
+  });
+
+  test("over chosen records, only those it fits and may run on change", async () => {
+    const viewer = signedIn("admin");
+    const fitting = insertInvoice(viewer.id, {"status":"draft"});
+    const notFitting = insertInvoice(viewer.id, {"status":"sent"});
+    const notFittingBefore = JSON.stringify(db.select().from(schema.invoices).where(eq(schema.invoices.id, notFitting.id)).get());
+    expect(await runSendInvoiceMany(viewer, [fitting.id, fitting.id, notFitting.id])).toEqual({ changed: 1, skipped: 1 });
+    expect(JSON.stringify(db.select().from(schema.invoices).where(eq(schema.invoices.id, notFitting.id)).get())).toBe(notFittingBefore);
+    const again = insertInvoice(viewer.id, {"status":"draft"});
+    const againBefore = JSON.stringify(db.select().from(schema.invoices).where(eq(schema.invoices.id, again.id)).get());
+    await runSendInvoiceMany(null, [again.id]).catch(() => undefined);
+    expect(JSON.stringify(db.select().from(schema.invoices).where(eq(schema.invoices.id, again.id)).get())).toBe(againBefore);
   });
 });
 
@@ -48478,7 +48543,7 @@ export async function runMarkOverdueMany(viewer: Viewer | null, ids: number[]) {
   const written = db.transaction((tx) => plans.map((p) => {
       const before = tx.select().from(schema.invoices).where(eq(schema.invoices.id, p.id)).get();
       if (!before) throw new AccessDenied(viewer !== null);
-      const checked = invoiceData.checkUpdate(tx, viewer, p.id, p.values, before);
+      const checked = invoiceData.checkUpdate(tx, viewer, p.id, p.values, before, "markOverdue", ["status"]);
       const changed = tx.update(schema.invoices).set(checked).where(eq(schema.invoices.id, p.id)).returning().get();
       audit(tx, viewer, { action: "markOverdue", model: "Invoice", record: changed.id, fields: ["status"] });
       outgoing(tx, viewer, "Invoice", "markOverdue", changed, before);
@@ -48591,7 +48656,7 @@ export async function runMarkPaidMany(viewer: Viewer | null, ids: number[]) {
   const written = db.transaction((tx) => plans.map((p) => {
       const before = tx.select().from(schema.invoices).where(eq(schema.invoices.id, p.id)).get();
       if (!before) throw new AccessDenied(viewer !== null);
-      const checked = invoiceData.checkUpdate(tx, viewer, p.id, p.values, before);
+      const checked = invoiceData.checkUpdate(tx, viewer, p.id, p.values, before, "markPaid", ["status"]);
       const changed = tx.update(schema.invoices).set(checked).where(eq(schema.invoices.id, p.id)).returning().get();
       audit(tx, viewer, { action: "markPaid", model: "Invoice", record: changed.id, fields: ["status"] });
       outgoing(tx, viewer, "Invoice", "markPaid", changed, before);
@@ -48658,12 +48723,6 @@ import { afterChange } from "#/generated/hooks";
 import { invoiceSettable } from "#/generated/invoice.schema";
 import { invoiceData } from "#/generated/invoice.server";
 import { markSentAccess, markSentFits } from "./mark-sent";
-import { app } from "#/generated/app";
-import { formatValue } from "#/kit/format";
-import type { RecordFieldUi } from "#/kit/model";
-import { invoiceUi } from "#/generated/invoice";
-import { clientUi } from "#/generated/client";
-import { clientData } from "#/generated/client.server";
 
 type Row = NonNullable<Awaited<ReturnType<typeof invoiceData.get>>>;
 
@@ -48710,10 +48769,131 @@ export async function runMarkSentMany(viewer: Viewer | null, ids: number[]) {
   const written = db.transaction((tx) => plans.map((p) => {
       const before = tx.select().from(schema.invoices).where(eq(schema.invoices.id, p.id)).get();
       if (!before) throw new AccessDenied(viewer !== null);
-      const checked = invoiceData.checkUpdate(tx, viewer, p.id, p.values, before);
+      const checked = invoiceData.checkUpdate(tx, viewer, p.id, p.values, before, "markSent", ["status"]);
       const changed = tx.update(schema.invoices).set(checked).where(eq(schema.invoices.id, p.id)).returning().get();
       audit(tx, viewer, { action: "markSent", model: "Invoice", record: changed.id, fields: ["status"] });
       outgoing(tx, viewer, "Invoice", "markSent", changed, before);
+      const inserted = [
+
+      ] as const;
+
+      return { changed, inserted };
+    }));
+  for (const w of written) {
+    await afterChange("afterUpdate", "Invoice", w.changed, viewer);
+
+  }
+  return { changed: plans.length, skipped: unique.length - plans.length };
+}
+"
+`;
+
+exports[`../../../examples/invoicing/smithable.yml > file list and generated code > src/generated/actions/mark-sent.ts 1`] = `
+"// Generated by Smithable from smithable.yml. Do not edit: this file is overwritten on every change.
+import { createServerFn } from "@tanstack/react-start";
+import { z } from "zod";
+import type { Rule } from "#/kit/access";
+import { getRequestHeaders } from "@tanstack/react-start/server";
+import { writeAllowed } from "#/kit/limit";
+import { currentViewer } from "#/lib/viewer.server";
+import { runMarkSent, runMarkSentMany } from "./mark-sent.server";
+
+/** Who may run the "markSent" action: whoever may edit the invoice. */
+export const markSentAccess: Rule = { public: false, roles: ["admin"], owner: true };
+
+/** Whether the "markSent" action fits the invoice: it is offered and allowed only then. */
+export function markSentFits(row: { status?: unknown }, _viewer: { id: string } | null): boolean {
+  return row.status === "draft";
+}
+
+/** The viewer about to run it, counted against how often one may write (see src/kit/limit.ts). */
+async function writer() {
+  const viewer = await currentViewer();
+  writeAllowed(viewer, getRequestHeaders());
+  return viewer;
+}
+
+export const markSent = createServerFn({ method: "POST" })
+  .validator(z.number().int())
+  .handler(async ({ data }) => runMarkSent(await writer(), data));
+
+/** The "markSent" action on the chosen invoices (at most 1,000 at once). */
+export const markSentMany = createServerFn({ method: "POST" })
+  .validator(z.object({ ids: z.array(z.number().int()).max(1000) }))
+  .handler(async ({ data }) => runMarkSentMany(await writer(), data.ids));
+"
+`;
+
+exports[`../../../examples/invoicing/smithable.yml > file list and generated code > src/generated/actions/send-invoice.server.ts 1`] = `
+"// Generated by Smithable from smithable.yml. Do not edit: this file is overwritten on every change.
+import { eq } from "drizzle-orm";
+import { db } from "#/db";
+import * as schema from "#/db/schema";
+import { AccessDenied, allows, check, type Viewer } from "#/kit/access";
+import { audit } from "#/kit/audit.server";
+import { outgoing } from "#/generated/outgoing.server";
+import { F } from "#/kit/formula";
+import { afterChange } from "#/generated/hooks";
+import { invoiceSettable } from "#/generated/invoice.schema";
+import { invoiceData } from "#/generated/invoice.server";
+import { sendInvoiceAccess, sendInvoiceFits } from "./send-invoice";
+import { app } from "#/generated/app";
+import { formatValue } from "#/kit/format";
+import type { RecordFieldUi } from "#/kit/model";
+import { invoiceUi } from "#/generated/invoice";
+import { clientUi } from "#/generated/client";
+import { clientData } from "#/generated/client.server";
+
+type Row = NonNullable<Awaited<ReturnType<typeof invoiceData.get>>>;
+
+/** The invoice's new values (only the fields the action sets), worked out on it as it was. */
+function plan(_viewer: Viewer | null, row: Row) {
+  return {
+    id: row.id,
+    values: invoiceSettable.partial().parse({
+      status: "sent",
+      sentAt: new Date(F.NOW()),
+    }),
+
+  };
+}
+
+/** Runs the "sendInvoice" action on the invoice as the viewer. */
+export async function runSendInvoice(viewer: Viewer | null, id: number) {
+  const row = await invoiceData.get(viewer, id);
+  if (!row) throw new AccessDenied(viewer !== null);
+  check(sendInvoiceAccess, viewer, row.ownerId);
+  if (!sendInvoiceFits(row, viewer)) throw new Error("This cannot be done now.");
+  const one = plan(viewer, row);
+  return invoiceData.update(viewer, id, one.values, "sendInvoice", ["status","sentAt"]);
+}
+
+/**
+ * Runs the "sendInvoice" action on each chosen invoice it fits and the viewer may run it on
+ * (docs/design/actions.md §9); the others are skipped. All or none: one that is refused stops
+ * them all, and is named.
+ */
+export async function runSendInvoiceMany(viewer: Viewer | null, ids: number[]) {
+  const plans: ReturnType<typeof plan>[] = [];
+  // An id given twice is one record, run once.
+  const unique = [...new Set(ids)];
+  for (const id of unique) {
+    const row = await invoiceData.get(viewer, id);
+    if (!row || !allows(sendInvoiceAccess, viewer, row.ownerId) || !sendInvoiceFits(row, viewer)) continue;
+    try {
+      plans.push(plan(viewer, row));
+    } catch (error) {
+      const why = error instanceof Error ? error.message : String(error);
+      throw new Error(\`Invoice "\${String(row.number ?? row.id)}": \${why}\`);
+    }
+  }
+  const written = db.transaction((tx) => plans.map((p) => {
+      const before = tx.select().from(schema.invoices).where(eq(schema.invoices.id, p.id)).get();
+      if (!before) throw new AccessDenied(viewer !== null);
+      const checked = invoiceData.checkUpdate(tx, viewer, p.id, p.values, before, "sendInvoice", ["status","sentAt"]);
+      const changed = tx.update(schema.invoices).set(checked).where(eq(schema.invoices.id, p.id)).returning().get();
+      audit(tx, viewer, { action: "sendInvoice", model: "Invoice", record: changed.id, fields: ["status","sentAt"] });
+      outgoing(tx, viewer, "Invoice", "sendInvoice", changed, before);
       const inserted = [
 
       ] as const;
@@ -48736,17 +48916,17 @@ function shown(ui: { fields: RecordFieldUi<never>[] }, name: string, row: unknow
 }
 
 /**
- * What the "markSent" action asks before it runs (record-documents.md §6), on the
+ * What the "sendInvoice" action asks before it runs (record-documents.md §6), on the
  * invoice as the viewer may read it now; or that the mail it sends would reach nobody.
  */
-export async function questionMarkSent(
+export async function questionSendInvoice(
   viewer: Viewer | null,
   id: number,
 ): Promise<{ values: Record<string, string> } | { noRecipient: true }> {
   const row = await invoiceData.get(viewer, id);
   if (!row) throw new AccessDenied(viewer !== null);
-  check(markSentAccess, viewer, row.ownerId);
-  if (!markSentFits(row, viewer)) throw new Error("This cannot be done now.");
+  check(sendInvoiceAccess, viewer, row.ownerId);
+  if (!sendInvoiceFits(row, viewer)) throw new Error("This cannot be done now.");
   const clientRecord = row.clientId == null ? null : await clientData.get(viewer, row.clientId);
   if ((row.clientId == null || (clientRecord !== null && !clientRecord.email))) return { noRecipient: true };
   return {
@@ -48758,7 +48938,7 @@ export async function questionMarkSent(
 "
 `;
 
-exports[`../../../examples/invoicing/smithable.yml > file list and generated code > src/generated/actions/mark-sent.ts 1`] = `
+exports[`../../../examples/invoicing/smithable.yml > file list and generated code > src/generated/actions/send-invoice.ts 1`] = `
 "// Generated by Smithable from smithable.yml. Do not edit: this file is overwritten on every change.
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
@@ -48766,13 +48946,13 @@ import type { Rule } from "#/kit/access";
 import { getRequestHeaders } from "@tanstack/react-start/server";
 import { writeAllowed } from "#/kit/limit";
 import { currentViewer } from "#/lib/viewer.server";
-import { runMarkSent, runMarkSentMany, questionMarkSent } from "./mark-sent.server";
+import { runSendInvoice, runSendInvoiceMany, questionSendInvoice } from "./send-invoice.server";
 
-/** Who may run the "markSent" action: whoever may edit the invoice. */
-export const markSentAccess: Rule = { public: false, roles: ["admin"], owner: true };
+/** Who may run the "sendInvoice" action: whoever may edit the invoice. */
+export const sendInvoiceAccess: Rule = { public: false, roles: ["admin"], owner: true };
 
-/** Whether the "markSent" action fits the invoice: it is offered and allowed only then. */
-export function markSentFits(row: { status?: unknown }, _viewer: { id: string } | null): boolean {
+/** Whether the "sendInvoice" action fits the invoice: it is offered and allowed only then. */
+export function sendInvoiceFits(row: { status?: unknown }, _viewer: { id: string } | null): boolean {
   return row.status === "draft";
 }
 
@@ -48783,19 +48963,19 @@ async function writer() {
   return viewer;
 }
 
-export const markSent = createServerFn({ method: "POST" })
+export const sendInvoice = createServerFn({ method: "POST" })
   .validator(z.number().int())
-  .handler(async ({ data }) => runMarkSent(await writer(), data));
+  .handler(async ({ data }) => runSendInvoice(await writer(), data));
 
-/** What the "markSent" action asks before it runs, from the invoice as it is now. */
-export const markSentQuestion = createServerFn({ method: "POST" })
+/** What the "sendInvoice" action asks before it runs, from the invoice as it is now. */
+export const sendInvoiceQuestion = createServerFn({ method: "POST" })
   .validator(z.number().int())
-  .handler(async ({ data }) => questionMarkSent(await currentViewer(), data));
+  .handler(async ({ data }) => questionSendInvoice(await currentViewer(), data));
 
-/** The "markSent" action on the chosen invoices (at most 1,000 at once). */
-export const markSentMany = createServerFn({ method: "POST" })
+/** The "sendInvoice" action on the chosen invoices (at most 1,000 at once). */
+export const sendInvoiceMany = createServerFn({ method: "POST" })
   .validator(z.object({ ids: z.array(z.number().int()).max(1000) }))
-  .handler(async ({ data }) => runMarkSentMany(await writer(), data.ids));
+  .handler(async ({ data }) => runSendInvoiceMany(await writer(), data.ids));
 "
 `;
 
@@ -48958,6 +49138,7 @@ import { businessProfileUi } from "./business-profile";
 import { clientUi } from "./client";
 import { invoiceLineUi } from "./invoice-line";
 import { invoiceUi } from "./invoice";
+import { runSendInvoice } from "./actions/send-invoice.server";
 import { runMarkSent } from "./actions/mark-sent.server";
 import { runMarkPaid } from "./actions/mark-paid.server";
 import { runMarkOverdue } from "./actions/mark-overdue.server";
@@ -48975,6 +49156,11 @@ const amount = (v: unknown, field: string) => {
   if (Number.isFinite(n)) return n;
   throw new BadInput(\`"\${field}" must be an amount, like "12.50".\`);
 };
+const moment = (v: unknown, field: string) => {
+  const d = typeof v === "string" ? new Date(v) : undefined;
+  if (d && !Number.isNaN(d.getTime())) return d;
+  throw new BadInput(\`"\${field}" must be a date and time, like "2026-10-04T09:30:00Z".\`);
+};
 
 /** The body as an object of known fields, or a refusal naming the first unknown one. */
 function fieldsOf(body: unknown, known: readonly string[]): Record<string, unknown> {
@@ -48989,6 +49175,9 @@ export function businessProfileToApi(row: Record<string, any>) {
   return {
     id: row.id as number,
     businessName: row.businessName ?? null,
+    businessId: row.businessId ?? null,
+    registeredOffice: row.registeredOffice ?? null,
+    address: row.address ?? null,
     vatNumber: row.vatNumber ?? null,
     iban: row.iban ?? null,
     paymentTermDays: row.paymentTermDays ?? null,
@@ -49000,12 +49189,30 @@ export function businessProfileToApi(row: Record<string, any>) {
 
 /** A business profile's values from a body: all of them, or a change to \`current\`. */
 export function businessProfileFromApi(body: unknown, current?: Record<string, unknown>) {
-  const given = fieldsOf(body, ["businessName", "vatNumber", "iban", "paymentTermDays", "invoiceFooter"]);
+  const given = fieldsOf(body, [
+  "businessName",
+  "businessId",
+  "registeredOffice",
+  "address",
+  "vatNumber",
+  "iban",
+  "paymentTermDays",
+  "invoiceFooter",
+]);
   const values: Record<string, unknown> = { ...current };
   for (const [key, v] of Object.entries(given))
     switch (key) {
       case "businessName":
         values.businessName = v;
+        break;
+      case "businessId":
+        values.businessId = v;
+        break;
+      case "registeredOffice":
+        values.registeredOffice = v;
+        break;
+      case "address":
+        values.address = v;
         break;
       case "vatNumber":
         values.vatNumber = v;
@@ -49078,8 +49285,13 @@ export function invoiceToApi(row: Record<string, any>) {
     client: row.clientId ?? null,
     issuedOn: row.issuedOn ?? null,
     dueOn: row.dueOn ?? null,
+    deliveryDate: row.deliveryDate ?? null,
     status: row.status ?? null,
+    sentAt: row.sentAt instanceof Date ? row.sentAt.toISOString() : (row.sentAt ?? null),
+    vatNote: row.vatNote ?? null,
     total: row.total == null ? null : (Number(row.total) / 100).toFixed(2),
+    netTotal: row.netTotal == null ? null : (Number(row.netTotal) / 100).toFixed(2),
+    vatTotal: row.vatTotal == null ? null : (Number(row.vatTotal) / 100).toFixed(2),
     createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
     updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : row.updatedAt,
   };
@@ -49087,7 +49299,16 @@ export function invoiceToApi(row: Record<string, any>) {
 
 /** A invoice's values from a body: all of them, or a change to \`current\`. */
 export function invoiceFromApi(body: unknown, current?: Record<string, unknown>) {
-  const given = fieldsOf(body, ["number", "client", "issuedOn", "dueOn", "status"]);
+  const given = fieldsOf(body, [
+  "number",
+  "client",
+  "issuedOn",
+  "dueOn",
+  "deliveryDate",
+  "status",
+  "sentAt",
+  "vatNote",
+]);
   const values: Record<string, unknown> = { ...current };
   for (const [key, v] of Object.entries(given))
     switch (key) {
@@ -49103,8 +49324,17 @@ export function invoiceFromApi(body: unknown, current?: Record<string, unknown>)
       case "dueOn":
         values.dueOn = v;
         break;
+      case "deliveryDate":
+        values.deliveryDate = v;
+        break;
       case "status":
         values.status = v;
+        break;
+      case "sentAt":
+        values.sentAt = v === null ? null : moment(v, "sentAt");
+        break;
+      case "vatNote":
+        values.vatNote = v;
         break;
     }
   // Checked whole, as a form is; a change then writes only what it changes, so a field another
@@ -49125,6 +49355,8 @@ export function invoiceLineToApi(row: Record<string, any>) {
     quantity: row.quantity ?? null,
     unitPrice: row.unitPrice == null ? null : (Number(row.unitPrice) / 100).toFixed(2),
     amount: row.amount == null ? null : (Number(row.amount) / 100).toFixed(2),
+    vatRate: row.vatRate ?? null,
+    vatAmount: row.vatAmount == null ? null : (Number(row.vatAmount) / 100).toFixed(2),
     createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
     updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : row.updatedAt,
   };
@@ -49132,7 +49364,7 @@ export function invoiceLineToApi(row: Record<string, any>) {
 
 /** A invoice line's values from a body: all of them, or a change to \`current\`. */
 export function invoiceLineFromApi(body: unknown, current?: Record<string, unknown>) {
-  const given = fieldsOf(body, ["invoice", "description", "quantity", "unitPrice"]);
+  const given = fieldsOf(body, ["invoice", "description", "quantity", "unitPrice", "vatRate"]);
   const values: Record<string, unknown> = { ...current };
   for (const [key, v] of Object.entries(given))
     switch (key) {
@@ -49147,6 +49379,9 @@ export function invoiceLineFromApi(body: unknown, current?: Record<string, unkno
         break;
       case "unitPrice":
         values.unitPrice = v === null ? null : Math.round(amount(v, "unitPrice") * 100);
+        break;
+      case "vatRate":
+        values.vatRate = v;
         break;
     }
   // Checked whole, as a form is; a change then writes only what it changes, so a field another
@@ -49164,7 +49399,7 @@ export function invoiceLineFromApi(body: unknown, current?: Record<string, unkno
  */
 const OFFERS: Record<string, Offer & { describe: Record<string, string> }> = {
   "admin": {
-    "summary": "Invoicely: Simple invoicing for freelancers. Each user manages their own clients and invoices.\\nBusinessProfile (business profiles): businessName*, vatNumber, iban, paymentTermDays* (number), invoiceFooter. Title: businessName.\\nClient (clients): name*, email*, address, vatNumber. Title: name.\\nInvoice (invoices): number*, client* -> Client, issuedOn* (date), dueOn* (date), status* (draft | sent | paid | overdue), contract (document), total (money, computed). Title: number.\\nInvoiceLine (invoice lines): invoice* -> Invoice, description*, quantity* (number), unitPrice* (money), amount (money, computed). Title: description.\\n* required. You act as someone with the role admin.\\nAnswer with what a tool returned; a number, a name or \\"none\\" you did not get from a tool is not an answer.",
+    "summary": "Invoicely: Simple invoicing for freelancers. Each user manages their own clients and invoices.\\nBusinessProfile (business profiles): businessName*, businessId, registeredOffice, address, vatNumber, iban, paymentTermDays* (number), invoiceFooter. Title: businessName.\\nClient (clients): name*, email*, address, vatNumber. Title: name.\\nInvoice (invoices): number*, client* -> Client, issuedOn* (date), dueOn* (date), deliveryDate (date), status* (draft | sent | paid | overdue), sentAt (datetime), vatNote, contract (document), total (money, computed), netTotal (money, computed), vatTotal (money, computed). Title: number.\\nInvoiceLine (invoice lines): invoice* -> Invoice, description*, quantity* (number), unitPrice* (money), amount (money, computed), vatRate* (number), vatAmount (money, computed). Title: description.\\n* required. You act as someone with the role admin.\\nAnswer with what a tool returned; a number, a name or \\"none\\" you did not get from a tool is not an answer.",
     "tools": [
       {
         "name": "find",
@@ -49316,14 +49551,14 @@ const OFFERS: Record<string, Offer & { describe: Record<string, string> }> = {
       }
     ],
     "describe": {
-      "BusinessProfile": "BusinessProfile: The freelancer's own business details, printed on their invoices.\\nFields:\\n- businessName*: Business name.\\n- vatNumber: Vat number.\\n- iban: Iban.\\n- paymentTermDays* (number): Payment term days. Starts as 30.\\n- invoiceFooter: Invoice footer.",
+      "BusinessProfile": "BusinessProfile: The freelancer's own business details, printed on their invoices.\\nFields:\\n- businessName*: Business name.\\n- businessId: Business id.\\n- registeredOffice: Registered office.\\n- address: Address.\\n- vatNumber: Vat number.\\n- iban: Iban.\\n- paymentTermDays* (number): Payment term days. Starts as 30.\\n- invoiceFooter: Invoice footer.",
       "Client": "Client\\nFields:\\n- name*: Name.\\n- email*: Email.\\n- address: Address.\\n- vatNumber: Vat number.",
-      "Invoice": "Invoice\\nFields:\\n- number*: Number. Unique.\\n- client* -> Client: Client.\\n- issuedOn* (date): Issued on.\\n- dueOn* (date): Due on.\\n- status* (draft | sent | paid | overdue): Status. Starts as draft.\\n- contract (document): Contract.\\n- total (money, computed): Total.\\nRules:\\n- Invoice numbers are sequential per user, like 2026-001, 2026-002.\\n- A sent or paid invoice can no longer be edited, only credited.",
-      "InvoiceLine": "InvoiceLine\\nFields:\\n- invoice* -> Invoice: Invoice.\\n- description*: Description.\\n- quantity* (number): Quantity. Starts as 1.\\n- unitPrice* (money): Unit price.\\n- amount (money, computed): Amount."
+      "Invoice": "Invoice\\nFields:\\n- number*: Number. Unique.\\n- client* -> Client: Client.\\n- issuedOn* (date): Issued on.\\n- dueOn* (date): Due on.\\n- deliveryDate (date): Delivery date.\\n- status* (draft | sent | paid | overdue): Status. Starts as draft.\\n- sentAt (datetime): Sent at.\\n- vatNote: Vat note.\\n- contract (document): Contract.\\n- total (money, computed): Total.\\n- netTotal (money, computed): Net total.\\n- vatTotal (money, computed): Vat total.\\nRules:\\n- Invoice numbers are sequential per user, like 2026-001, 2026-002.\\n- A sent or paid invoice can no longer be edited, only credited.",
+      "InvoiceLine": "InvoiceLine\\nFields:\\n- invoice* -> Invoice: Invoice.\\n- description*: Description.\\n- quantity* (number): Quantity. Starts as 1.\\n- unitPrice* (money): Unit price.\\n- amount (money, computed): Amount.\\n- vatRate* (number): Vat rate. Starts as 0.\\n- vatAmount (money, computed): Vat amount."
     }
   },
   "member": {
-    "summary": "Invoicely: Simple invoicing for freelancers. Each user manages their own clients and invoices.\\nBusinessProfile (business profiles): businessName*, vatNumber, iban, paymentTermDays* (number), invoiceFooter. Title: businessName.\\nClient (clients): name*, email*, address, vatNumber. Title: name.\\nInvoice (invoices): number*, client* -> Client, issuedOn* (date), dueOn* (date), status* (draft | sent | paid | overdue), contract (document), total (money, computed). Title: number.\\nInvoiceLine (invoice lines): invoice* -> Invoice, description*, quantity* (number), unitPrice* (money), amount (money, computed). Title: description.\\n* required. You act as someone with the role member.\\nAnswer with what a tool returned; a number, a name or \\"none\\" you did not get from a tool is not an answer.",
+    "summary": "Invoicely: Simple invoicing for freelancers. Each user manages their own clients and invoices.\\nBusinessProfile (business profiles): businessName*, businessId, registeredOffice, address, vatNumber, iban, paymentTermDays* (number), invoiceFooter. Title: businessName.\\nClient (clients): name*, email*, address, vatNumber. Title: name.\\nInvoice (invoices): number*, client* -> Client, issuedOn* (date), dueOn* (date), deliveryDate (date), status* (draft | sent | paid | overdue), sentAt (datetime), vatNote, contract (document), total (money, computed), netTotal (money, computed), vatTotal (money, computed). Title: number.\\nInvoiceLine (invoice lines): invoice* -> Invoice, description*, quantity* (number), unitPrice* (money), amount (money, computed), vatRate* (number), vatAmount (money, computed). Title: description.\\n* required. You act as someone with the role member.\\nAnswer with what a tool returned; a number, a name or \\"none\\" you did not get from a tool is not an answer.",
     "tools": [
       {
         "name": "find",
@@ -49475,10 +49710,10 @@ const OFFERS: Record<string, Offer & { describe: Record<string, string> }> = {
       }
     ],
     "describe": {
-      "BusinessProfile": "BusinessProfile: The freelancer's own business details, printed on their invoices.\\nFields:\\n- businessName*: Business name.\\n- vatNumber: Vat number.\\n- iban: Iban.\\n- paymentTermDays* (number): Payment term days. Starts as 30.\\n- invoiceFooter: Invoice footer.",
+      "BusinessProfile": "BusinessProfile: The freelancer's own business details, printed on their invoices.\\nFields:\\n- businessName*: Business name.\\n- businessId: Business id.\\n- registeredOffice: Registered office.\\n- address: Address.\\n- vatNumber: Vat number.\\n- iban: Iban.\\n- paymentTermDays* (number): Payment term days. Starts as 30.\\n- invoiceFooter: Invoice footer.",
       "Client": "Client\\nFields:\\n- name*: Name.\\n- email*: Email.\\n- address: Address.\\n- vatNumber: Vat number.",
-      "Invoice": "Invoice\\nFields:\\n- number*: Number. Unique.\\n- client* -> Client: Client.\\n- issuedOn* (date): Issued on.\\n- dueOn* (date): Due on.\\n- status* (draft | sent | paid | overdue): Status. Starts as draft.\\n- contract (document): Contract.\\n- total (money, computed): Total.\\nRules:\\n- Invoice numbers are sequential per user, like 2026-001, 2026-002.\\n- A sent or paid invoice can no longer be edited, only credited.",
-      "InvoiceLine": "InvoiceLine\\nFields:\\n- invoice* -> Invoice: Invoice.\\n- description*: Description.\\n- quantity* (number): Quantity. Starts as 1.\\n- unitPrice* (money): Unit price.\\n- amount (money, computed): Amount."
+      "Invoice": "Invoice\\nFields:\\n- number*: Number. Unique.\\n- client* -> Client: Client.\\n- issuedOn* (date): Issued on.\\n- dueOn* (date): Due on.\\n- deliveryDate (date): Delivery date.\\n- status* (draft | sent | paid | overdue): Status. Starts as draft.\\n- sentAt (datetime): Sent at.\\n- vatNote: Vat note.\\n- contract (document): Contract.\\n- total (money, computed): Total.\\n- netTotal (money, computed): Net total.\\n- vatTotal (money, computed): Vat total.\\nRules:\\n- Invoice numbers are sequential per user, like 2026-001, 2026-002.\\n- A sent or paid invoice can no longer be edited, only credited.",
+      "InvoiceLine": "InvoiceLine\\nFields:\\n- invoice* -> Invoice: Invoice.\\n- description*: Description.\\n- quantity* (number): Quantity. Starts as 1.\\n- unitPrice* (money): Unit price.\\n- amount (money, computed): Amount.\\n- vatRate* (number): Vat rate. Starts as 0.\\n- vatAmount (money, computed): Vat amount."
     }
   }
 };
@@ -49491,9 +49726,9 @@ export function offerFor(viewer: Viewer | null): Offer & { describe: Record<stri
 
 /** Each kind's data functions and conversions, its title field, and its references' titles. */
 const KINDS = {
-  BusinessProfile: { data: businessProfileData, toApi: businessProfileToApi, fromApi: businessProfileFromApi, title: "businessName", refs: {}, searched: ["businessName","vatNumber","iban","invoiceFooter"], lists: {} as Record<string, { kind: string; ref: string }>, label: "business profile", named: (viewer: Viewer | null, text: string) => businessProfileData.named(viewer, text) },
+  BusinessProfile: { data: businessProfileData, toApi: businessProfileToApi, fromApi: businessProfileFromApi, title: "businessName", refs: {}, searched: ["businessName","businessId","registeredOffice","address","vatNumber","iban","invoiceFooter"], lists: {} as Record<string, { kind: string; ref: string }>, label: "business profile", named: (viewer: Viewer | null, text: string) => businessProfileData.named(viewer, text) },
   Client: { data: clientData, toApi: clientToApi, fromApi: clientFromApi, title: "name", refs: {}, searched: ["name","email","address","vatNumber"], lists: {"invoices":{"kind":"Invoice","ref":"client"}} as Record<string, { kind: string; ref: string }>, label: "client", named: (viewer: Viewer | null, text: string) => clientData.named(viewer, text) },
-  Invoice: { data: invoiceData, toApi: invoiceToApi, fromApi: invoiceFromApi, title: "number", refs: {"client":"name"}, searched: ["number"], lists: {"lines":{"kind":"InvoiceLine","ref":"invoice"}} as Record<string, { kind: string; ref: string }>, label: "invoice", named: (viewer: Viewer | null, text: string) => invoiceData.named(viewer, text) },
+  Invoice: { data: invoiceData, toApi: invoiceToApi, fromApi: invoiceFromApi, title: "number", refs: {"client":"name"}, searched: ["number","vatNote"], lists: {"lines":{"kind":"InvoiceLine","ref":"invoice"}} as Record<string, { kind: string; ref: string }>, label: "invoice", named: (viewer: Viewer | null, text: string) => invoiceData.named(viewer, text) },
   InvoiceLine: { data: invoiceLineData, toApi: invoiceLineToApi, fromApi: invoiceLineFromApi, title: "description", refs: {"invoice":"number"}, searched: ["description"], lists: {} as Record<string, { kind: string; ref: string }>, label: "invoice line", named: (viewer: Viewer | null, text: string) => invoiceLineData.named(viewer, text) },
 };
 type Kind = (typeof KINDS)[keyof typeof KINDS];
@@ -49671,6 +49906,10 @@ export async function callTool(viewer: Viewer | null, name: string, args: Record
       return { description: offerFor(viewer).describe[args.kind as string] };
     case "run":
       switch (args.action) {
+    case "sendInvoice": {
+      const row = await found(KINDS.Invoice, viewer, args.id, "change");
+      return invoiceToApi(await runSendInvoice(keyed(viewer), row.id));
+    }
     case "markSent": {
       const row = await found(KINDS.Invoice, viewer, args.id, "change");
       return invoiceToApi(await runMarkSent(keyed(viewer), row.id));
@@ -49716,16 +49955,16 @@ function kindWords(ui: ModelUi, fields: string[], filters: AskFilter[], numbers:
 /** Each caller's kinds of record in the words people use, for the wording rules (read when asked, in the language then). */
 const WORDS: Record<string, () => AskKind[]> = {
   "admin": () => [
-    kindWords(businessProfileUi, ["businessName","vatNumber","iban","paymentTermDays","invoiceFooter"], [{"field":"businessName","by":"text"},{"field":"vatNumber","by":"text"},{"field":"iban","by":"text"},{"field":"paymentTermDays","by":"number"}], ["paymentTermDays"], []),
+    kindWords(businessProfileUi, ["businessName","businessId","registeredOffice","address","vatNumber","iban","paymentTermDays","invoiceFooter"], [{"field":"businessName","by":"text"},{"field":"businessId","by":"text"},{"field":"registeredOffice","by":"text"},{"field":"vatNumber","by":"text"},{"field":"iban","by":"text"},{"field":"paymentTermDays","by":"number"}], ["paymentTermDays"], []),
     kindWords(clientUi, ["name","email","address","vatNumber"], [{"field":"name","by":"text"},{"field":"email","by":"text"},{"field":"vatNumber","by":"text"}], [], [], "/clients"),
-    kindWords(invoiceUi, ["number","client","issuedOn","dueOn","status","contract"], [{"field":"number","by":"text"},{"field":"client","by":"reference","model":"Client"},{"field":"issuedOn","by":"date"},{"field":"dueOn","by":"date"},{"field":"status","by":"value","values":["draft","sent","paid","overdue"]}], [], ["client","issuedOn","dueOn","status"], "/invoices"),
-    kindWords(invoiceLineUi, ["invoice","description","quantity","unitPrice"], [{"field":"invoice","by":"reference","model":"Invoice"},{"field":"description","by":"text"},{"field":"quantity","by":"number"},{"field":"unitPrice","by":"number"}], ["quantity","unitPrice"], ["invoice"]),
+    kindWords(invoiceUi, ["number","client","issuedOn","dueOn","deliveryDate","status","sentAt","vatNote","contract"], [{"field":"number","by":"text"},{"field":"client","by":"reference","model":"Client"},{"field":"issuedOn","by":"date"},{"field":"dueOn","by":"date"},{"field":"deliveryDate","by":"date"},{"field":"status","by":"value","values":["draft","sent","paid","overdue"]},{"field":"sentAt","by":"date"}], [], ["client","issuedOn","dueOn","deliveryDate","status","sentAt"], "/invoices"),
+    kindWords(invoiceLineUi, ["invoice","description","quantity","unitPrice","vatRate"], [{"field":"invoice","by":"reference","model":"Invoice"},{"field":"description","by":"text"},{"field":"quantity","by":"number"},{"field":"unitPrice","by":"number"},{"field":"vatRate","by":"number"}], ["quantity","unitPrice","vatRate"], ["invoice"]),
   ],
   "member": () => [
-    kindWords(businessProfileUi, ["businessName","vatNumber","iban","paymentTermDays","invoiceFooter"], [{"field":"businessName","by":"text"},{"field":"vatNumber","by":"text"},{"field":"iban","by":"text"},{"field":"paymentTermDays","by":"number"}], ["paymentTermDays"], []),
+    kindWords(businessProfileUi, ["businessName","businessId","registeredOffice","address","vatNumber","iban","paymentTermDays","invoiceFooter"], [{"field":"businessName","by":"text"},{"field":"businessId","by":"text"},{"field":"registeredOffice","by":"text"},{"field":"vatNumber","by":"text"},{"field":"iban","by":"text"},{"field":"paymentTermDays","by":"number"}], ["paymentTermDays"], []),
     kindWords(clientUi, ["name","email","address","vatNumber"], [{"field":"name","by":"text"},{"field":"email","by":"text"},{"field":"vatNumber","by":"text"}], [], [], "/clients"),
-    kindWords(invoiceUi, ["number","client","issuedOn","dueOn","status","contract"], [{"field":"number","by":"text"},{"field":"client","by":"reference","model":"Client"},{"field":"issuedOn","by":"date"},{"field":"dueOn","by":"date"},{"field":"status","by":"value","values":["draft","sent","paid","overdue"]}], [], ["client","issuedOn","dueOn","status"], "/invoices"),
-    kindWords(invoiceLineUi, ["invoice","description","quantity","unitPrice"], [{"field":"invoice","by":"reference","model":"Invoice"},{"field":"description","by":"text"},{"field":"quantity","by":"number"},{"field":"unitPrice","by":"number"}], ["quantity","unitPrice"], ["invoice"]),
+    kindWords(invoiceUi, ["number","client","issuedOn","dueOn","deliveryDate","status","sentAt","vatNote","contract"], [{"field":"number","by":"text"},{"field":"client","by":"reference","model":"Client"},{"field":"issuedOn","by":"date"},{"field":"dueOn","by":"date"},{"field":"deliveryDate","by":"date"},{"field":"status","by":"value","values":["draft","sent","paid","overdue"]},{"field":"sentAt","by":"date"}], [], ["client","issuedOn","dueOn","deliveryDate","status","sentAt"], "/invoices"),
+    kindWords(invoiceLineUi, ["invoice","description","quantity","unitPrice","vatRate"], [{"field":"invoice","by":"reference","model":"Invoice"},{"field":"description","by":"text"},{"field":"quantity","by":"number"},{"field":"unitPrice","by":"number"},{"field":"vatRate","by":"number"}], ["quantity","unitPrice","vatRate"], ["invoice"]),
   ],
 };
 
@@ -49768,6 +50007,9 @@ import { w } from "#/kit/words";
 /** What a business profile may be given: a form's values and what the app fills (an action's set). */
 export const businessProfileSettable = createInsertSchema(schema.businessProfiles, {
   businessName: (s) => s.trim().min(1, w.required).max(200, w.atMostCharacters(200)),
+  businessId: (s) => s.max(200, w.atMostCharacters(200)),
+  registeredOffice: (s) => s.max(200, w.atMostCharacters(200)),
+  address: (s) => s.max(10000, w.atMostCharacters(10000)),
   vatNumber: (s) => s.max(200, w.atMostCharacters(200)),
   iban: (s) => s.max(200, w.atMostCharacters(200)),
   invoiceFooter: (s) => s.max(10000, w.atMostCharacters(10000)),
@@ -49816,6 +50058,9 @@ function shownTo<R extends { ownerId: string | null }>(viewer: Viewer | null, ro
 /** What \`where\` may name, and how: the stored fields, by kind. */
 const FILTERABLE: Record<string, Filterable> = {
   businessName: { kind: "text", column: schema.businessProfiles.businessName },
+  businessId: { kind: "text", column: schema.businessProfiles.businessId },
+  registeredOffice: { kind: "text", column: schema.businessProfiles.registeredOffice },
+  address: { kind: "text", column: schema.businessProfiles.address },
   vatNumber: { kind: "text", column: schema.businessProfiles.vatNumber },
   iban: { kind: "text", column: schema.businessProfiles.iban },
   paymentTermDays: { kind: "number", column: schema.businessProfiles.paymentTermDays },
@@ -49823,7 +50068,7 @@ const FILTERABLE: Record<string, Filterable> = {
 };
 
 /** What the records can be sorted by. */
-const SORTABLE = { id: schema.businessProfiles.id, businessName: schema.businessProfiles.businessName, vatNumber: schema.businessProfiles.vatNumber, iban: schema.businessProfiles.iban, paymentTermDays: schema.businessProfiles.paymentTermDays, invoiceFooter: schema.businessProfiles.invoiceFooter, createdAt: schema.businessProfiles.createdAt };
+const SORTABLE = { id: schema.businessProfiles.id, businessName: schema.businessProfiles.businessName, businessId: schema.businessProfiles.businessId, registeredOffice: schema.businessProfiles.registeredOffice, address: schema.businessProfiles.address, vatNumber: schema.businessProfiles.vatNumber, iban: schema.businessProfiles.iban, paymentTermDays: schema.businessProfiles.paymentTermDays, invoiceFooter: schema.businessProfiles.invoiceFooter, createdAt: schema.businessProfiles.createdAt };
 
 /** The number fields \`measure\` adds up; amounts are stored in cents. */
 const NUMBERS: Record<string, AnyColumn> = { paymentTermDays: schema.businessProfiles.paymentTermDays };
@@ -50139,7 +50384,7 @@ export const businessProfileData = {
       businessProfileData.readable(viewer),
       whereOf(FILTERABLE, where, viewer ? eq(schema.businessProfiles.ownerId, viewer.id) : undefined, viewer?.id, {}),
       // Every word somewhere in the texts ("ship lamp" finds "ship's lamp").
-      ...wordsOf(search).map((word) => contains([schema.businessProfiles.businessName, schema.businessProfiles.vatNumber, schema.businessProfiles.iban, schema.businessProfiles.invoiceFooter], word)),
+      ...wordsOf(search).map((word) => contains([schema.businessProfiles.businessName, schema.businessProfiles.businessId, schema.businessProfiles.registeredOffice, schema.businessProfiles.address, schema.businessProfiles.vatNumber, schema.businessProfiles.iban, schema.businessProfiles.invoiceFooter], word)),
     );
   },
 
@@ -50313,7 +50558,13 @@ export const businessProfileUi: RecordUi<BusinessProfileRow> = {
   label: "Business profile",
   pluralLabel: "Business profiles",
   titleField: "businessName",
-  columns: ["businessName", "paymentTermDays", "vatNumber", "iban"],
+  columns: [
+    "businessName",
+    "paymentTermDays",
+    "businessId",
+    "registeredOffice",
+    "vatNumber",
+  ],
   fields: [
     {
       name: "businessName",
@@ -50321,6 +50572,27 @@ export const businessProfileUi: RecordUi<BusinessProfileRow> = {
       kind: "string",
       required: true,
       get: (row) => row.businessName,
+    },
+    {
+      name: "businessId",
+      label: "Business id",
+      kind: "string",
+      required: false,
+      get: (row) => row.businessId,
+    },
+    {
+      name: "registeredOffice",
+      label: "Registered office",
+      kind: "string",
+      required: false,
+      get: (row) => row.registeredOffice,
+    },
+    {
+      name: "address",
+      label: "Address",
+      kind: "text",
+      required: false,
+      get: (row) => row.address,
     },
     {
       name: "vatNumber",
@@ -50420,6 +50692,14 @@ export const CARDS: Record<string, CardFacts> = {
           plural: "Business profiles",
           fields: [
             { name: "businessName", label: "Business name", kind: "string", required: true },
+            { name: "businessId", label: "Business id", kind: "string", required: false },
+            {
+              name: "registeredOffice",
+              label: "Registered office",
+              kind: "string",
+              required: false,
+            },
+            { name: "address", label: "Address", kind: "text", required: false },
             { name: "vatNumber", label: "Vat number", kind: "string", required: false },
             { name: "iban", label: "Iban", kind: "string", required: false },
             {
@@ -50477,6 +50757,7 @@ export const CARDS: Record<string, CardFacts> = {
             },
             { name: "issuedOn", label: "Issued on", kind: "date", required: true },
             { name: "dueOn", label: "Due on", kind: "date", required: true },
+            { name: "deliveryDate", label: "Delivery date", kind: "date", required: false },
             {
               name: "status",
               label: "Status",
@@ -50484,6 +50765,8 @@ export const CARDS: Record<string, CardFacts> = {
               required: true,
               choices: ["Draft", "Sent", "Paid", "Overdue"],
             },
+            { name: "sentAt", label: "Sent at", kind: "datetime", required: false },
+            { name: "vatNote", label: "Vat note", kind: "text", required: false },
             { name: "contract", label: "Contract", kind: "file", required: false },
             {
               name: "lines",
@@ -50495,6 +50778,20 @@ export const CARDS: Record<string, CardFacts> = {
             {
               name: "total",
               label: "Total",
+              kind: "money",
+              required: false,
+              computed: true,
+            },
+            {
+              name: "netTotal",
+              label: "Net total",
+              kind: "money",
+              required: false,
+              computed: true,
+            },
+            {
+              name: "vatTotal",
+              label: "Vat total",
               kind: "money",
               required: false,
               computed: true,
@@ -50524,6 +50821,14 @@ export const CARDS: Record<string, CardFacts> = {
             {
               name: "amount",
               label: "Amount",
+              kind: "money",
+              required: false,
+              computed: true,
+            },
+            { name: "vatRate", label: "Vat rate", kind: "decimal", required: true },
+            {
+              name: "vatAmount",
+              label: "Vat amount",
               kind: "money",
               required: false,
               computed: true,
@@ -50566,6 +50871,14 @@ export const CARDS: Record<string, CardFacts> = {
         },
       ],
       actions: [
+        {
+          name: "sendInvoice",
+          label: "Send invoice",
+          kind: "change",
+          on: "Invoice",
+          sets: ["Status", "Sent at"],
+          when: "status is draft",
+        },
         {
           name: "markSent",
           label: "Mark sent",
@@ -50640,6 +50953,7 @@ export const CARDS: Record<string, CardFacts> = {
           ],
           pages: ["home", "overview", "invoices", "clients", "privacy", "settings", "welcome"],
           actions: [
+            { action: "sendInvoice", all: true, own: false, while: "status is draft" },
             { action: "markSent", all: true, own: false, while: "status is draft" },
             {
               action: "markPaid",
@@ -50686,6 +51000,7 @@ export const CARDS: Record<string, CardFacts> = {
           ],
           pages: ["home", "overview", "invoices", "clients", "privacy", "settings", "welcome"],
           actions: [
+            { action: "sendInvoice", all: false, own: true, while: "status is draft" },
             { action: "markSent", all: false, own: true, while: "status is draft" },
             {
               action: "markPaid",
@@ -50742,7 +51057,7 @@ export const CARDS: Record<string, CardFacts> = {
           name: "invoiceSent",
           to: "mail",
           fields: "all",
-          text: "When “Mark sent” runs on a invoice: mails client's email.",
+          text: "When “Send invoice” runs on a invoice: mails client's email.",
         },
       ],
       push: [],
@@ -51640,6 +51955,8 @@ import { invoiceSchema, invoiceSettable } from "#/generated/invoice.schema";
 import { invoiceLineAccess, invoiceLineData } from "#/generated/invoice-line.server";
 import { invoiceLineSchema, invoiceLineSettable } from "#/generated/invoice-line.schema";
 import { invoiceUi } from "#/generated/invoice";
+import { runSendInvoice } from "./actions/send-invoice.server";
+import { sendInvoiceAccess, sendInvoiceFits } from "./actions/send-invoice";
 import { runMarkSent } from "./actions/mark-sent.server";
 import { markSentAccess, markSentFits } from "./actions/mark-sent";
 import { runMarkPaid } from "./actions/mark-paid.server";
@@ -51663,6 +51980,9 @@ const MOVES: Record<string, DoorMove[]> = {
       model: "BusinessProfile",
       slots: [
         { field: "businessName", required: true, kind: "text" },
+        { field: "businessId", required: false, kind: "text" },
+        { field: "registeredOffice", required: false, kind: "text" },
+        { field: "address", required: false, kind: "text" },
         { field: "vatNumber", required: false, kind: "text" },
         { field: "iban", required: false, kind: "text" },
         { field: "paymentTermDays", required: true, kind: "number" },
@@ -51675,6 +51995,9 @@ const MOVES: Record<string, DoorMove[]> = {
       model: "BusinessProfile",
       slots: [
         { field: "businessName", required: true, kind: "text" },
+        { field: "businessId", required: false, kind: "text" },
+        { field: "registeredOffice", required: false, kind: "text" },
+        { field: "address", required: false, kind: "text" },
         { field: "vatNumber", required: false, kind: "text" },
         { field: "iban", required: false, kind: "text" },
         { field: "paymentTermDays", required: true, kind: "number" },
@@ -51714,12 +52037,14 @@ const MOVES: Record<string, DoorMove[]> = {
         { field: "client", required: true, kind: "reference", model: "Client" },
         { field: "issuedOn", required: true, kind: "date" },
         { field: "dueOn", required: true, kind: "date" },
+        { field: "deliveryDate", required: false, kind: "date" },
         {
           field: "status",
           required: true,
           kind: "choice",
           values: ["draft", "sent", "paid", "overdue"],
         },
+        { field: "vatNote", required: false, kind: "text" },
       ],
     },
     {
@@ -51731,12 +52056,14 @@ const MOVES: Record<string, DoorMove[]> = {
         { field: "client", required: true, kind: "reference", model: "Client" },
         { field: "issuedOn", required: true, kind: "date" },
         { field: "dueOn", required: true, kind: "date" },
+        { field: "deliveryDate", required: false, kind: "date" },
         {
           field: "status",
           required: true,
           kind: "choice",
           values: ["draft", "sent", "paid", "overdue"],
         },
+        { field: "vatNote", required: false, kind: "text" },
       ],
     },
     { id: "delete:Invoice", kind: "delete", model: "Invoice" },
@@ -51749,6 +52076,7 @@ const MOVES: Record<string, DoorMove[]> = {
         { field: "description", required: true, kind: "text" },
         { field: "quantity", required: true, kind: "number" },
         { field: "unitPrice", required: true, kind: "money" },
+        { field: "vatRate", required: true, kind: "number", min: 0, max: 100 },
       ],
     },
     {
@@ -51760,9 +52088,18 @@ const MOVES: Record<string, DoorMove[]> = {
         { field: "description", required: true, kind: "text" },
         { field: "quantity", required: true, kind: "number" },
         { field: "unitPrice", required: true, kind: "money" },
+        { field: "vatRate", required: true, kind: "number", min: 0, max: 100 },
       ],
     },
     { id: "delete:InvoiceLine", kind: "delete", model: "InvoiceLine" },
+    {
+      id: "run:sendInvoice",
+      kind: "run",
+      action: "sendInvoice",
+      model: "Invoice",
+      when: { status: "draft" },
+      slots: [],
+    },
     {
       id: "run:markSent",
       kind: "run",
@@ -51802,6 +52139,9 @@ const MOVES: Record<string, DoorMove[]> = {
       model: "BusinessProfile",
       slots: [
         { field: "businessName", required: true, kind: "text" },
+        { field: "businessId", required: false, kind: "text" },
+        { field: "registeredOffice", required: false, kind: "text" },
+        { field: "address", required: false, kind: "text" },
         { field: "vatNumber", required: false, kind: "text" },
         { field: "iban", required: false, kind: "text" },
         { field: "paymentTermDays", required: true, kind: "number" },
@@ -51814,6 +52154,9 @@ const MOVES: Record<string, DoorMove[]> = {
       model: "BusinessProfile",
       slots: [
         { field: "businessName", required: true, kind: "text" },
+        { field: "businessId", required: false, kind: "text" },
+        { field: "registeredOffice", required: false, kind: "text" },
+        { field: "address", required: false, kind: "text" },
         { field: "vatNumber", required: false, kind: "text" },
         { field: "iban", required: false, kind: "text" },
         { field: "paymentTermDays", required: true, kind: "number" },
@@ -51853,12 +52196,14 @@ const MOVES: Record<string, DoorMove[]> = {
         { field: "client", required: true, kind: "reference", model: "Client" },
         { field: "issuedOn", required: true, kind: "date" },
         { field: "dueOn", required: true, kind: "date" },
+        { field: "deliveryDate", required: false, kind: "date" },
         {
           field: "status",
           required: true,
           kind: "choice",
           values: ["draft", "sent", "paid", "overdue"],
         },
+        { field: "vatNote", required: false, kind: "text" },
       ],
     },
     {
@@ -51870,12 +52215,14 @@ const MOVES: Record<string, DoorMove[]> = {
         { field: "client", required: true, kind: "reference", model: "Client" },
         { field: "issuedOn", required: true, kind: "date" },
         { field: "dueOn", required: true, kind: "date" },
+        { field: "deliveryDate", required: false, kind: "date" },
         {
           field: "status",
           required: true,
           kind: "choice",
           values: ["draft", "sent", "paid", "overdue"],
         },
+        { field: "vatNote", required: false, kind: "text" },
       ],
     },
     { id: "delete:Invoice", kind: "delete", model: "Invoice" },
@@ -51888,6 +52235,7 @@ const MOVES: Record<string, DoorMove[]> = {
         { field: "description", required: true, kind: "text" },
         { field: "quantity", required: true, kind: "number" },
         { field: "unitPrice", required: true, kind: "money" },
+        { field: "vatRate", required: true, kind: "number", min: 0, max: 100 },
       ],
     },
     {
@@ -51899,9 +52247,18 @@ const MOVES: Record<string, DoorMove[]> = {
         { field: "description", required: true, kind: "text" },
         { field: "quantity", required: true, kind: "number" },
         { field: "unitPrice", required: true, kind: "money" },
+        { field: "vatRate", required: true, kind: "number", min: 0, max: 100 },
       ],
     },
     { id: "delete:InvoiceLine", kind: "delete", model: "InvoiceLine" },
+    {
+      id: "run:sendInvoice",
+      kind: "run",
+      action: "sendInvoice",
+      model: "Invoice",
+      when: { status: "draft" },
+      slots: [],
+    },
     {
       id: "run:markSent",
       kind: "run",
@@ -52011,6 +52368,9 @@ const OPEN: Record<string, (viewer: Viewer | null, move: DoorMove) => Promise<Op
   "delete:InvoiceLine": async (viewer, move) => ready({ ...move,
       records: await invoiceLineData.candidateIds(viewer, (row) => allows(invoiceLineAccess.delete, viewer, row.ownerId as string | null)),
     }),
+  "run:sendInvoice": async (viewer, move) => ready({ ...move,
+      records: await invoiceData.candidateIds(viewer, (row) => allows(sendInvoiceAccess, viewer, row.ownerId as string | null) && sendInvoiceFits(row as never, viewer)),
+    }),
   "run:markSent": async (viewer, move) => ready({ ...move,
       records: await invoiceData.candidateIds(viewer, (row) => allows(markSentAccess, viewer, row.ownerId as string | null) && markSentFits(row as never, viewer)),
     }),
@@ -52076,6 +52436,9 @@ const ACTS: Record<string, (viewer: Viewer | null, move: DoorMove, body: DoorBod
   },
   "add:BusinessProfile": async (viewer, move, body) => businessProfileData.create(viewer, businessProfileSchema.parse(stored(move.slots ?? [], body.values, {
   businessName: "businessName",
+  businessId: "businessId",
+  registeredOffice: "registeredOffice",
+  address: "address",
   vatNumber: "vatNumber",
   iban: "iban",
   paymentTermDays: "paymentTermDays",
@@ -52083,6 +52446,9 @@ const ACTS: Record<string, (viewer: Viewer | null, move: DoorMove, body: DoorBod
 }))),
   "change:BusinessProfile": async (viewer, move, body) => businessProfileData.update(viewer, record(body), businessProfileSettable.partial().parse(stored(move.slots ?? [], body.values, {
   businessName: "businessName",
+  businessId: "businessId",
+  registeredOffice: "registeredOffice",
+  address: "address",
   vatNumber: "vatNumber",
   iban: "iban",
   paymentTermDays: "paymentTermDays",
@@ -52109,20 +52475,30 @@ const ACTS: Record<string, (viewer: Viewer | null, move: DoorMove, body: DoorBod
   client: "clientId",
   issuedOn: "issuedOn",
   dueOn: "dueOn",
+  deliveryDate: "deliveryDate",
   status: "status",
+  sentAt: "sentAt",
+  vatNote: "vatNote",
   contract: "contract",
   lines: "linesId",
   total: "total",
+  netTotal: "netTotal",
+  vatTotal: "vatTotal",
 }))),
   "change:Invoice": async (viewer, move, body) => invoiceData.update(viewer, record(body), invoiceSettable.partial().parse(stored(move.slots ?? [], body.values, {
   number: "number",
   client: "clientId",
   issuedOn: "issuedOn",
   dueOn: "dueOn",
+  deliveryDate: "deliveryDate",
   status: "status",
+  sentAt: "sentAt",
+  vatNote: "vatNote",
   contract: "contract",
   lines: "linesId",
   total: "total",
+  netTotal: "netTotal",
+  vatTotal: "vatTotal",
 }))),
   "delete:Invoice": async (viewer, _move, body) => invoiceData.remove(viewer, record(body)),
   "add:InvoiceLine": async (viewer, move, body) => invoiceLineData.create(viewer, invoiceLineSchema.parse(stored(move.slots ?? [], body.values, {
@@ -52131,6 +52507,8 @@ const ACTS: Record<string, (viewer: Viewer | null, move: DoorMove, body: DoorBod
   quantity: "quantity",
   unitPrice: "unitPrice",
   amount: "amount",
+  vatRate: "vatRate",
+  vatAmount: "vatAmount",
 }))),
   "change:InvoiceLine": async (viewer, move, body) => invoiceLineData.update(viewer, record(body), invoiceLineSettable.partial().parse(stored(move.slots ?? [], body.values, {
   invoice: "invoiceId",
@@ -52138,8 +52516,11 @@ const ACTS: Record<string, (viewer: Viewer | null, move: DoorMove, body: DoorBod
   quantity: "quantity",
   unitPrice: "unitPrice",
   amount: "amount",
+  vatRate: "vatRate",
+  vatAmount: "vatAmount",
 }))),
   "delete:InvoiceLine": async (viewer, _move, body) => invoiceLineData.remove(viewer, record(body)),
+  "run:sendInvoice": async (viewer, _move, body) => runSendInvoice(viewer, record(body)),
   "run:markSent": async (viewer, _move, body) => runMarkSent(viewer, record(body)),
   "run:markPaid": async (viewer, _move, body) => runMarkPaid(viewer, record(body)),
   "run:markOverdue": async (viewer, _move, body) => runMarkOverdue(viewer, record(body)),
@@ -52334,9 +52715,25 @@ export function readInvoiceDocument(q: Pick<typeof db, "query">, viewer: Viewer 
     }
     if (!from) return SETTINGS;
   }
-  const label = missing(record, [["total", "Total"]]) ?? lines.map((line) => missing(line, [["amount", "Amount"]])).find(Boolean);
+  const label = missing(record, [["netTotal", "Net total"], ["vatTotal", "Vat total"], ["total", "Total"]]) ?? lines.map((line) => missing(line, [["amount", "Amount"], ["vatAmount", "Vat amount"]])).find(Boolean);
   if (label) return { refused: "missing" as const, label };
-  return { row: pick(record, ["number", "issuedOn", "dueOn", "total"]), to: to && pick(to, ["name", "address", "vatNumber"]), lines: lines.map((line) => pick(line, ["description", "quantity", "unitPrice", "amount"])), from: pick(from, ["businessName", "vatNumber", "iban"]) };
+  return { row: pick(record, [
+  "number",
+  "issuedOn",
+  "deliveryDate",
+  "dueOn",
+  "netTotal",
+  "vatTotal",
+  "total",
+  "vatNote",
+]), to: to && pick(to, ["name", "address", "vatNumber"]), lines: lines.map((line) => pick(line, ["description", "quantity", "unitPrice", "amount", "vatRate", "vatAmount"])), from: pick(from, [
+  "businessName",
+  "businessId",
+  "registeredOffice",
+  "address",
+  "vatNumber",
+  "iban",
+]) };
 }
 "
 `;
@@ -52350,7 +52747,9 @@ type Row = Record<string, unknown>;
 
 /** Computed fields of Invoice, on records as stored (money in cents). */
 export const invoiceFormulas = {
-  total: (r: Row): number => F.toCents(F.SUM(F.list(r.lines).map((x1) => F.fromCents(invoiceLineFormulas.amount(x1))))),
+  total: (r: Row): number => F.toCents((F.fromCents(invoiceFormulas.netTotal(r)) + F.fromCents(invoiceFormulas.vatTotal(r)))),
+  netTotal: (r: Row): number => F.toCents(F.SUM(F.list(r.lines).map((x1) => F.fromCents(invoiceLineFormulas.amount(x1))))),
+  vatTotal: (r: Row): number => F.toCents(F.SUM(F.list(r.lines).map((x1) => F.fromCents(invoiceLineFormulas.vatAmount(x1))))),
 };
 
 /** Values suggested when a Invoice is created. */
@@ -52360,8 +52759,8 @@ export const invoiceDefaults = {
 };
 
 /** The record with its computed fields. */
-export function withInvoiceFormulas<T extends Row>(row: T): T & { total: number } {
-  return { ...row, total: invoiceFormulas.total(row) };
+export function withInvoiceFormulas<T extends Row>(row: T): T & { total: number; netTotal: number; vatTotal: number } {
+  return { ...row, total: invoiceFormulas.total(row), netTotal: invoiceFormulas.netTotal(row), vatTotal: invoiceFormulas.vatTotal(row) };
 }
 "
 `;
@@ -52486,10 +52885,12 @@ export const invoiceSettable = createInsertSchema(schema.invoices, {
   number: (s) => s.trim().min(1, w.required).max(200, w.atMostCharacters(200)),
   issuedOn: (s) => s.regex(/^\\d{4}-\\d{2}-\\d{2}$/, w.enterValidDate),
   dueOn: (s) => s.regex(/^\\d{4}-\\d{2}-\\d{2}$/, w.enterValidDate),
+  deliveryDate: (s) => s.regex(/^\\d{4}-\\d{2}-\\d{2}$/, w.enterValidDate),
+  vatNote: (s) => s.max(10000, w.atMostCharacters(10000)),
   contract: z.object({ file: z.string().regex(/^invoice\\/[a-f0-9]{24}\\.[a-z0-9]{2,4}$/), name: z.string().max(200), type: z.string().max(100), size: z.int().nonnegative(), receipt: z.string().max(64).optional() }).nullish(),
-}).omit({ id: true, ownerId: true, createdAt: true, updatedAt: true });
-/** What a invoice's form sends, checked. */
-export const invoiceSchema = invoiceSettable;
+}).omit({ id: true, ownerId: true, createdAt: true, updatedAt: true }).partial({ sentAt: true });
+/** What a invoice's form sends, checked: never what the app fills. */
+export const invoiceSchema = invoiceSettable.omit({ sentAt: true });
 
 export type InvoiceSettable = z.output<typeof invoiceSettable>;
 export type InvoiceValues = z.output<typeof invoiceSchema>;
@@ -52507,7 +52908,9 @@ import { refusal } from "#/kit/log.server";
 import { outgoing } from "#/generated/outgoing.server";
 import { contains } from "#/kit/search";
 import { BadInput } from "#/kit/refusal";
+import { fits } from "#/kit/model";
 import { aggregate, type Filterable, nearest, sortOf, whereOf, wordsOf } from "#/kit/where";
+import { w } from "#/kit/words";
 import { deleteFile } from "#/kit/uploads";
 import { acceptFiles, cleanUploads, keepsUpload } from "#/kit/receipts.server";
 import { afterChange, afterDelete } from "./hooks";
@@ -52565,18 +52968,21 @@ const FILTERABLE: Record<string, Filterable> = {
   client: { kind: "reference", column: schema.invoices.clientId },
   issuedOn: { kind: "date", column: schema.invoices.issuedOn },
   dueOn: { kind: "date", column: schema.invoices.dueOn },
+  deliveryDate: { kind: "date", column: schema.invoices.deliveryDate },
   status: { kind: "choice", column: schema.invoices.status, values: ["draft","sent","paid","overdue"] },
+  sentAt: { kind: "instant", column: schema.invoices.sentAt },
+  vatNote: { kind: "text", column: schema.invoices.vatNote },
 };
 
 /** What the records can be sorted by. */
-const SORTABLE = { id: schema.invoices.id, number: schema.invoices.number, issuedOn: schema.invoices.issuedOn, dueOn: schema.invoices.dueOn, status: schema.invoices.status, createdAt: schema.invoices.createdAt };
+const SORTABLE = { id: schema.invoices.id, number: schema.invoices.number, issuedOn: schema.invoices.issuedOn, dueOn: schema.invoices.dueOn, deliveryDate: schema.invoices.deliveryDate, status: schema.invoices.status, sentAt: schema.invoices.sentAt, vatNote: schema.invoices.vatNote, createdAt: schema.invoices.createdAt };
 
 /** The number fields \`measure\` adds up; amounts are stored in cents. */
 const NUMBERS: Record<string, AnyColumn> = {  };
-const MONEY: string[] = ["total"];
+const MONEY: string[] = ["total","netTotal","vatTotal"];
 
 /** Computed number fields \`measure\` adds up from the records themselves. */
-const COMPUTED: string[] = ["total"];
+const COMPUTED: string[] = ["total","netTotal","vatTotal"];
 
 /** The titles of the referenced records \`measureBy\` splits by, to name its groups. */
 function titlesOf(viewer: Viewer | null, by: string, ids: number[]): Map<unknown, string> {
@@ -52589,7 +52995,7 @@ function titlesOf(viewer: Viewer | null, by: string, ids: number[]): Map<unknown
 }
 
 /** What \`measureBy\` may split by: choices, yes/no, references, and dates by month. */
-const BY: string[] = ["client","issuedOn","dueOn","status"];
+const BY: string[] = ["client","issuedOn","dueOn","deliveryDate","status","sentAt"];
 
 
 /** Each picture or document new to the record must come with the receipt its upload gave the viewer (src/kit/receipts.server.ts); the receipts are not kept. */
@@ -52647,10 +53053,20 @@ export const invoiceData = {
    * its files and references, holds, capacity, the record's rules and its time. update() and an
    * action that changes it in a transaction of its own call it; access stays with the caller.
    */
-  checkUpdate(_tx: Tx, viewer: Viewer | null, _id: number, given: Partial<InvoiceSettable>, before: typeof schema.invoices.$inferSelect): Partial<InvoiceSettable> {
+  checkUpdate(_tx: Tx, viewer: Viewer | null, _id: number, given: Partial<InvoiceSettable>, before: typeof schema.invoices.$inferSelect, what = "changed", frees: readonly string[] = []): Partial<InvoiceSettable> {
     const updated = checkFiles(viewer, given, before);
     checkReferences(viewer, updated);
 
+      if (before) {
+        const given: Record<string, unknown> = updated;
+        const was: Record<string, unknown> = before;
+        if ((what === "changed" || !frees.includes("number")) && "number" in given && JSON.stringify(given.number ?? null) !== JSON.stringify(before.number ?? null) && fits({ status: ["sent", "paid", "overdue"] }, was)) throw new BadInput(w.cannotChangeNow("Number"));
+        if ((what === "changed" || !frees.includes("clientId")) && "clientId" in given && JSON.stringify(given.clientId ?? null) !== JSON.stringify(before.clientId ?? null) && fits({ status: ["sent", "paid", "overdue"] }, was)) throw new BadInput(w.cannotChangeNow("Client"));
+        if ((what === "changed" || !frees.includes("issuedOn")) && "issuedOn" in given && JSON.stringify(given.issuedOn ?? null) !== JSON.stringify(before.issuedOn ?? null) && fits({ status: ["sent", "paid", "overdue"] }, was)) throw new BadInput(w.cannotChangeNow("Issued on"));
+        if ((what === "changed" || !frees.includes("dueOn")) && "dueOn" in given && JSON.stringify(given.dueOn ?? null) !== JSON.stringify(before.dueOn ?? null) && fits({ status: ["sent", "paid", "overdue"] }, was)) throw new BadInput(w.cannotChangeNow("Due on"));
+        if ((what === "changed" || !frees.includes("deliveryDate")) && "deliveryDate" in given && JSON.stringify(given.deliveryDate ?? null) !== JSON.stringify(before.deliveryDate ?? null) && fits({ status: ["sent", "paid", "overdue"] }, was)) throw new BadInput(w.cannotChangeNow("Delivery date"));
+        if ((what === "changed" || !frees.includes("vatNote")) && "vatNote" in given && JSON.stringify(given.vatNote ?? null) !== JSON.stringify(before.vatNote ?? null) && fits({ status: ["sent", "paid", "overdue"] }, was)) throw new BadInput(w.cannotChangeNow("Vat note"));
+      }
     return updated;
   },
 
@@ -52938,7 +53354,7 @@ export const invoiceData = {
       invoiceData.readable(viewer),
       whereOf(FILTERABLE, where, viewer ? eq(schema.invoices.ownerId, viewer.id) : undefined, viewer?.id, {client: { find: (text: string) => clientData.named(viewer, text), titles: () => clientData.titles(viewer) }}),
       // Every word somewhere in the texts ("ship lamp" finds "ship's lamp").
-      ...wordsOf(search).map((word) => contains([schema.invoices.number], word)),
+      ...wordsOf(search).map((word) => contains([schema.invoices.number, schema.invoices.vatNote], word)),
     );
   },
 
@@ -52991,7 +53407,7 @@ export const invoiceData = {
 
   /** Changes the record; \`what\` names the change in the audit log (an action's name). */
   /** Changes the fields given; what names the action ("changed" for a form), frees the fields it may change although locked (its own set). */
-  async update(viewer: Viewer | null, id: number, values: Partial<InvoiceSettable>, what = "changed", _frees: readonly string[] = []) {
+  async update(viewer: Viewer | null, id: number, values: Partial<InvoiceSettable>, what = "changed", frees: readonly string[] = []) {
     const row = db
       .select({ ownerId: schema.invoices.ownerId, contract: schema.invoices.contract })
       .from(schema.invoices)
@@ -53016,9 +53432,9 @@ export const invoiceData = {
         else if (before.ownerId !== row.ownerId && !(!!viewer && (!!viewer.system || invoiceAccess.write.roles.includes(viewer.role))))
           throw new AccessDenied(true);
         const updated = withOwner(before);
-        const checked = invoiceData.checkUpdate(tx, viewer, id, updated, before);
+        const checked = invoiceData.checkUpdate(tx, viewer, id, updated, before, what, frees);
         const after = tx.update(schema.invoices).set(checked).where(eq(schema.invoices.id, id)).returning().get();
-        audit(tx, viewer, { action: what, model: "Invoice", record: id, fields: before && changedFields(before, after, Object.keys(updated).filter((k) => !["total"].includes(k))) });
+        audit(tx, viewer, { action: what, model: "Invoice", record: id, fields: before && changedFields(before, after, Object.keys(updated).filter((k) => !["total", "netTotal", "vatTotal"].includes(k))) });
         outgoing(tx, viewer, "Invoice", what, after, before);
         return after;
       });
@@ -53160,6 +53576,8 @@ async function writer() {
 export type InvoiceRow = typeof schema.invoices.$inferSelect & {
   client?: { id: number; name: string } | null;
   total?: unknown;
+  netTotal?: unknown;
+  vatTotal?: unknown;
 };
 
 export const invoiceUi: RecordUi<InvoiceRow> = {
@@ -53174,6 +53592,7 @@ export const invoiceUi: RecordUi<InvoiceRow> = {
       label: "Number",
       kind: "string",
       required: true,
+      locked: { status: ["sent", "paid", "overdue"] },
       get: (row) => row.number,
     },
     {
@@ -53181,6 +53600,7 @@ export const invoiceUi: RecordUi<InvoiceRow> = {
       label: "Client",
       kind: "relation",
       required: true,
+      locked: { status: ["sent", "paid", "overdue"] },
       relation: { key: "client", titleField: "name" },
       get: (row) => row.client?.name ?? null,
     },
@@ -53189,6 +53609,7 @@ export const invoiceUi: RecordUi<InvoiceRow> = {
       label: "Issued on",
       kind: "date",
       required: true,
+      locked: { status: ["sent", "paid", "overdue"] },
       get: (row) => row.issuedOn,
     },
     {
@@ -53196,7 +53617,16 @@ export const invoiceUi: RecordUi<InvoiceRow> = {
       label: "Due on",
       kind: "date",
       required: true,
+      locked: { status: ["sent", "paid", "overdue"] },
       get: (row) => row.dueOn,
+    },
+    {
+      name: "deliveryDate",
+      label: "Delivery date",
+      kind: "date",
+      required: false,
+      locked: { status: ["sent", "paid", "overdue"] },
+      get: (row) => row.deliveryDate,
     },
     {
       name: "status",
@@ -53213,6 +53643,22 @@ export const invoiceUi: RecordUi<InvoiceRow> = {
       get: (row) => row.status,
     },
     {
+      name: "sentAt",
+      label: "Sent at",
+      kind: "datetime",
+      required: false,
+      byApp: true,
+      get: (row) => row.sentAt,
+    },
+    {
+      name: "vatNote",
+      label: "Vat note",
+      kind: "text",
+      required: false,
+      locked: { status: ["sent", "paid", "overdue"] },
+      get: (row) => row.vatNote,
+    },
+    {
       name: "contract",
       label: "Contract",
       kind: "file",
@@ -53227,6 +53673,22 @@ export const invoiceUi: RecordUi<InvoiceRow> = {
       required: false,
       computed: true,
       get: (row) => row.total,
+    },
+    {
+      name: "netTotal",
+      label: "Net total",
+      kind: "money",
+      required: false,
+      computed: true,
+      get: (row) => row.netTotal,
+    },
+    {
+      name: "vatTotal",
+      label: "Vat total",
+      kind: "money",
+      required: false,
+      computed: true,
+      get: (row) => row.vatTotal,
     },
   ],
   compute: withInvoiceFormulas,
@@ -53306,7 +53768,8 @@ type Row = Record<string, unknown>;
 
 /** Computed fields of InvoiceLine, on records as stored (money in cents). */
 export const invoiceLineFormulas = {
-  amount: (r: Row): number => F.toCents((F.n(r.quantity) * F.fromCents(r.unitPrice))),
+  amount: (r: Row): number => F.toCents(F.ROUND((F.n(r.quantity) * F.fromCents(r.unitPrice)), 2)),
+  vatAmount: (r: Row): number => F.toCents(F.ROUND(((F.fromCents(invoiceLineFormulas.amount(r)) * F.n(r.vatRate)) / 100), 2)),
 };
 
 /** Values suggested when a InvoiceLine is created. */
@@ -53315,8 +53778,8 @@ export const invoiceLineDefaults = {
 };
 
 /** The record with its computed fields. */
-export function withInvoiceLineFormulas<T extends Row>(row: T): T & { amount: number } {
-  return { ...row, amount: invoiceLineFormulas.amount(row) };
+export function withInvoiceLineFormulas<T extends Row>(row: T): T & { amount: number; vatAmount: number } {
+  return { ...row, amount: invoiceLineFormulas.amount(row), vatAmount: invoiceLineFormulas.vatAmount(row) };
 }
 "
 `;
@@ -53331,6 +53794,7 @@ import { w } from "#/kit/words";
 /** What a invoice line may be given: a form's values and what the app fills (an action's set). */
 export const invoiceLineSettable = createInsertSchema(schema.invoiceLines, {
   description: (s) => s.trim().min(1, w.required).max(200, w.atMostCharacters(200)),
+  vatRate: (s) => s.min(0).max(100),
 }).omit({ id: true, ownerId: true, createdAt: true, updatedAt: true });
 /** What a invoice line's form sends, checked. */
 export const invoiceLineSchema = invoiceLineSettable;
@@ -53387,17 +53851,18 @@ const FILTERABLE: Record<string, Filterable> = {
   description: { kind: "text", column: schema.invoiceLines.description },
   quantity: { kind: "number", column: schema.invoiceLines.quantity },
   unitPrice: { kind: "money", column: schema.invoiceLines.unitPrice },
+  vatRate: { kind: "number", column: schema.invoiceLines.vatRate },
 };
 
 /** What the records can be sorted by. */
-const SORTABLE = { id: schema.invoiceLines.id, description: schema.invoiceLines.description, quantity: schema.invoiceLines.quantity, unitPrice: schema.invoiceLines.unitPrice, createdAt: schema.invoiceLines.createdAt };
+const SORTABLE = { id: schema.invoiceLines.id, description: schema.invoiceLines.description, quantity: schema.invoiceLines.quantity, unitPrice: schema.invoiceLines.unitPrice, vatRate: schema.invoiceLines.vatRate, createdAt: schema.invoiceLines.createdAt };
 
 /** The number fields \`measure\` adds up; amounts are stored in cents. */
-const NUMBERS: Record<string, AnyColumn> = { quantity: schema.invoiceLines.quantity, unitPrice: schema.invoiceLines.unitPrice };
-const MONEY: string[] = ["unitPrice","amount"];
+const NUMBERS: Record<string, AnyColumn> = { quantity: schema.invoiceLines.quantity, unitPrice: schema.invoiceLines.unitPrice, vatRate: schema.invoiceLines.vatRate };
+const MONEY: string[] = ["unitPrice","amount","vatAmount"];
 
 /** Computed number fields \`measure\` adds up from the records themselves. */
-const COMPUTED: string[] = ["amount"];
+const COMPUTED: string[] = ["amount","vatAmount"];
 
 /** The titles of the referenced records \`measureBy\` splits by, to name its groups. */
 function titlesOf(viewer: Viewer | null, by: string, ids: number[]): Map<unknown, string> {
@@ -53782,7 +54247,7 @@ export const invoiceLineData = {
         const updated = withOwner(before);
         const checked = invoiceLineData.checkUpdate(tx, viewer, id, updated, before);
         const after = tx.update(schema.invoiceLines).set(checked).where(eq(schema.invoiceLines.id, id)).returning().get();
-        audit(tx, viewer, { action: what, model: "InvoiceLine", record: id, fields: before && changedFields(before, after, Object.keys(updated).filter((k) => !["amount"].includes(k))) });
+        audit(tx, viewer, { action: what, model: "InvoiceLine", record: id, fields: before && changedFields(before, after, Object.keys(updated).filter((k) => !["amount", "vatAmount"].includes(k))) });
         return after;
       });
     } catch (error) {
@@ -53882,6 +54347,7 @@ async function writer() {
 export type InvoiceLineRow = typeof schema.invoiceLines.$inferSelect & {
   invoice?: { id: number; number: string } | null;
   amount?: unknown;
+  vatAmount?: unknown;
 };
 
 export const invoiceLineUi: RecordUi<InvoiceLineRow> = {
@@ -53889,7 +54355,7 @@ export const invoiceLineUi: RecordUi<InvoiceLineRow> = {
   label: "Invoice line",
   pluralLabel: "Invoice lines",
   titleField: "description",
-  columns: ["description", "invoiceId", "quantity", "unitPrice", "amount"],
+  columns: ["description", "invoiceId", "quantity", "unitPrice", "vatRate"],
   fields: [
     {
       name: "invoiceId",
@@ -53928,6 +54394,24 @@ export const invoiceLineUi: RecordUi<InvoiceLineRow> = {
       required: false,
       computed: true,
       get: (row) => row.amount,
+    },
+    {
+      name: "vatRate",
+      label: "Vat rate",
+      kind: "decimal",
+      required: true,
+      default: 0,
+      min: 0,
+      max: 100,
+      get: (row) => row.vatRate,
+    },
+    {
+      name: "vatAmount",
+      label: "Vat amount",
+      kind: "money",
+      required: false,
+      computed: true,
+      get: (row) => row.vatAmount,
     },
   ],
   compute: withInvoiceLineFormulas,
@@ -54058,13 +54542,17 @@ const SHOWN: Record<string, (tx: Tx, r: Row) => Shown> = {
   ["client", "Client"],
   ["issuedOn", "Issued on"],
   ["dueOn", "Due on"],
+  ["deliveryDate", "Delivery date"],
   ["status", "Status"],
+  ["sentAt", "Sent at"],
+  ["vatNote", "Vat note"],
 ],
       values: {
         "number": formatValue({ name: "number", label: "Number", kind: "string", required: false }, r.number, app),
         "client": String(one(tx, schema.clients, schema.clients.id, schema.clients.name, r.clientId) ?? "—"),
         "issuedOn": formatValue({ name: "issuedOn", label: "Issued on", kind: "date", required: false }, r.issuedOn, app),
         "dueOn": formatValue({ name: "dueOn", label: "Due on", kind: "date", required: false }, r.dueOn, app),
+        "deliveryDate": formatValue({ name: "deliveryDate", label: "Delivery date", kind: "date", required: false }, r.deliveryDate, app),
         "status": formatValue({
   name: "status",
   label: "Status",
@@ -54077,6 +54565,8 @@ const SHOWN: Record<string, (tx: Tx, r: Row) => Shown> = {
     { value: "overdue", label: "Overdue" },
   ],
 }, r.status, app),
+        "sentAt": formatValue({ name: "sentAt", label: "Sent at", kind: "datetime", required: false }, r.sentAt, app),
+        "vatNote": formatValue({ name: "vatNote", label: "Vat note", kind: "text", required: false }, r.vatNote, app),
       },
       link: \`/invoices/\${r.id}\`,
     };
@@ -54107,7 +54597,7 @@ const ENTRIES: {
   {
     name: "invoiceSent",
     model: "Invoice",
-    when: "markSent",
+    when: "sendInvoice",
     to: (tx, r) => [{ email: one(tx, schema.clients, schema.clients.id, schema.clients.email, r.clientId) as string | null }],
   },
 ];
@@ -55382,7 +55872,8 @@ import { app } from "#/generated/app";
 import { pageAccess, pageUi, pageHead } from "#/generated/pages";
 import { deleteInvoice, getInvoice, invoiceUi, updateInvoice } from "#/generated/invoice";
 import { invoiceSchema } from "#/generated/invoice.schema";
-import { markSent, markSentAccess, markSentFits, markSentQuestion } from "#/generated/actions/mark-sent";
+import { sendInvoice, sendInvoiceAccess, sendInvoiceFits, sendInvoiceQuestion } from "#/generated/actions/send-invoice";
+import { markSent, markSentAccess, markSentFits } from "#/generated/actions/mark-sent";
 import { markPaid, markPaidAccess, markPaidFits } from "#/generated/actions/mark-paid";
 import { buttonVariants } from "#/components/ui/button";
 import { invoiceLineUi } from "#/generated/invoice-line";
@@ -55393,6 +55884,7 @@ import { ActionButton } from "#/kit/ActionButton";
 import { ActivityLog } from "#/kit/ActivityLog";
 import { BackTo, LastChange, PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
+import { Overflow } from "#/kit/Overflow";
 import { w } from "#/kit/words";
 import { currentViewer } from "#/lib/viewer.server";
 import { ModelTable } from "#/kit/ModelTable";
@@ -55447,12 +55939,22 @@ function InvoicePage() {
       <PageHeader
         title={row.number || \`Invoice #\${row.id}\`}
         actions={
-          <>
+          <Overflow>
+            {allows(sendInvoiceAccess, viewer, row.ownerId) && sendInvoiceFits(row, viewer) && (
+              <ActionButton
+                label="Send invoice"
+                concept="action:sendInvoice"
+                confirm={{ load: () => sendInvoiceQuestion({ data: row.id }) }}
+                onRun={async () => {
+                  await sendInvoice({ data: row.id });
+                  await router.invalidate();
+                }}
+              />
+            )}
             {allows(markSentAccess, viewer, row.ownerId) && markSentFits(row, viewer) && (
               <ActionButton
                 label="Mark sent"
                 concept="action:markSent"
-                confirm={{ load: () => markSentQuestion({ data: row.id }) }}
                 onRun={async () => {
                   await markSent({ data: row.id });
                   await router.invalidate();
@@ -55472,7 +55974,7 @@ function InvoicePage() {
             <Link to="/invoices/$id/document" params={{ id: String(row.id) }} className={buttonVariants({ variant: "outline" })}>
               {w.document.open}
             </Link>
-          </>
+          </Overflow>
         }
       />
       <LastChange at={history?.[0]?.at ?? row.updatedAt} who={history?.[0]?.who} app={app} />
@@ -55565,11 +56067,19 @@ function InvoiceDocumentPage() {
     <RecordDocument
       app={app}
       title="Invoice"
-      record={{ ui: invoiceUi, row: found.row, show: ["number", "issuedOn", "dueOn"] }}
-      totals={["total"]}
+      record={{ ui: invoiceUi, row: found.row, show: ["number", "issuedOn", "deliveryDate", "dueOn"] }}
+      totals={["netTotal", "vatTotal", "total"]}
+      note="vatNote"
       to={found.to ? { ui: clientUi, row: found.to, show: ["name", "address", "vatNumber"] } : undefined}
-      lines={{ ui: invoiceLineUi, rows: found.lines, show: ["description", "quantity", "unitPrice", "amount"] }}
-      from={found.from ? { ui: businessProfileUi, row: found.from, show: ["businessName", "vatNumber", "iban"] } : undefined}
+      lines={{ ui: invoiceLineUi, rows: found.lines, show: ["description", "quantity", "unitPrice", "amount", "vatRate", "vatAmount"] }}
+      from={found.from ? { ui: businessProfileUi, row: found.from, show: [
+  "businessName",
+  "businessId",
+  "registeredOffice",
+  "address",
+  "vatNumber",
+  "iban",
+] } : undefined}
     />
   );
 }
@@ -55593,9 +56103,11 @@ import { clientData } from "#/generated/client.server";
 import { currentViewer } from "#/lib/viewer.server";
 import { type Search, count, listQuery, optional, text } from "#/kit/params";
 import { buttonVariants } from "#/components/ui/button";
-import { markSent, markSentAccess, markSentFits, markSentQuestion, markSentMany } from "#/generated/actions/mark-sent";
+import { sendInvoice, sendInvoiceAccess, sendInvoiceFits, sendInvoiceQuestion, sendInvoiceMany } from "#/generated/actions/send-invoice";
+import { markSent, markSentAccess, markSentFits, markSentMany } from "#/generated/actions/mark-sent";
 import { markPaid, markPaidAccess, markPaidFits, markPaidMany } from "#/generated/actions/mark-paid";
 import { ActionButton } from "#/kit/ActionButton";
+import { Overflow } from "#/kit/Overflow";
 import { csvName, csvOf, download } from "#/kit/csv";
 import { ImportDialog } from "#/kit/ImportDialog";
 import { importInvoices, undoImportInvoices } from "#/generated/invoice.import";
@@ -55656,7 +56168,7 @@ function InvoicesPage() {
   // The chosen rows, offered when the viewer may do something to at least one row.
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const chosen = rows.filter((row) => selected.has(row.id));
-  const selectable = rows.some((row) => allows(markSentAccess, viewer, row.ownerId) && markSentFits(row, viewer) || allows(markPaidAccess, viewer, row.ownerId) && markPaidFits(row, viewer) || allows(invoiceDeleteRule, viewer, row.ownerId));
+  const selectable = rows.some((row) => allows(sendInvoiceAccess, viewer, row.ownerId) && sendInvoiceFits(row, viewer) || allows(markSentAccess, viewer, row.ownerId) && markSentFits(row, viewer) || allows(markPaidAccess, viewer, row.ownerId) && markPaidFits(row, viewer) || allows(invoiceDeleteRule, viewer, row.ownerId));
   const newButton = canCreate && (
     <Link to="/invoices/new" className={buttonVariants()}>
       {w.newOne("invoice")}
@@ -55713,10 +56225,16 @@ function InvoicesPage() {
           titleOf={(id) => String(rows.find((row) => row.id === id)?.number ?? id)}
           actions={[
             {
+              label: "Send invoice",
+              concept: "action:sendInvoice",
+              applies: chosen.filter((row) => allows(sendInvoiceAccess, viewer, row.ownerId) && sendInvoiceFits(row, viewer)).length,
+              confirm: true,
+              run: () => sendInvoiceMany({ data: { ids: chosen.map((row) => row.id) } }),
+            },
+            {
               label: "Mark sent",
               concept: "action:markSent",
               applies: chosen.filter((row) => allows(markSentAccess, viewer, row.ownerId) && markSentFits(row, viewer)).length,
-              confirm: true,
               run: () => markSentMany({ data: { ids: chosen.map((row) => row.id) } }),
             },
             {
@@ -55745,12 +56263,22 @@ function InvoicesPage() {
         sorting={{ keys: { issuedOn: "issuedOn", dueOn: "dueOn", number: "number" }, value: sort, onChange: (next) => navigate({ to: "/invoices", search: (prev) => ({ ...prev, sort: next, page: undefined }), replace: true, resetScroll: false }) }}
         selection={selectable ? { ids: selected, onChange: setSelected } : undefined}
         rowActions={(row) => (
-          <>
+          <Overflow inRow>
+            {allows(sendInvoiceAccess, viewer, row.ownerId) && sendInvoiceFits(row, viewer) && (
+              <ActionButton
+                label="Send invoice"
+                concept="action:sendInvoice"
+                confirm={{ load: () => sendInvoiceQuestion({ data: row.id }) }}
+                onRun={async () => {
+                  await sendInvoice({ data: row.id });
+                  await router.invalidate();
+                }}
+              />
+            )}
             {allows(markSentAccess, viewer, row.ownerId) && markSentFits(row, viewer) && (
               <ActionButton
                 label="Mark sent"
                 concept="action:markSent"
-                confirm={{ load: () => markSentQuestion({ data: row.id }) }}
                 onRun={async () => {
                   await markSent({ data: row.id });
                   await router.invalidate();
@@ -55767,7 +56295,7 @@ function InvoicesPage() {
                 }}
               />
             )}
-          </>
+          </Overflow>
         )}
         emptyMessage={q || Object.values(values).some(Boolean) ? "No invoices match the search and filters." : undefined}
         emptyAction={newButton || undefined}
@@ -56220,8 +56748,8 @@ const getWelcome = createServerFn().handler(async () => {
 const steps = [
   {
     title: "Business",
-    fields: ["businessName", "vatNumber"],
-    schema: businessProfileSchema.pick({ businessName: true, vatNumber: true }),
+    fields: ["businessName", "businessId", "registeredOffice", "address", "vatNumber"],
+    schema: businessProfileSchema.pick({ businessName: true, businessId: true, registeredOffice: true, address: true, vatNumber: true }),
   },
   {
     title: "Payment",
@@ -56624,6 +57152,8 @@ exports[`../../../examples/invoicing/smithable.yml > file list and generated cod
   "generated: src/generated/actions/mark-paid.ts",
   "generated: src/generated/actions/mark-sent.server.ts",
   "generated: src/generated/actions/mark-sent.ts",
+  "generated: src/generated/actions/send-invoice.server.ts",
+  "generated: src/generated/actions/send-invoice.ts",
   "generated: src/generated/activity.server.ts",
   "generated: src/generated/app.ts",
   "generated: src/generated/ask.server.ts",
@@ -56818,22 +57348,24 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/custom/hooks.ts": "4247261f custom",
   "src/custom/styles.css": "87d7c518 custom",
   "src/db/index.ts": "ba378d34 kit",
-  "src/db/schema.ts": "df9d46fd generated",
-  "src/db/seed.ts": "9bacb9ab generated",
-  "src/generated/access.test.ts": "9f3754b9 generated",
-  "src/generated/actions/mark-overdue.server.ts": "a437fc92 generated",
+  "src/db/schema.ts": "f2084aa0 generated",
+  "src/db/seed.ts": "f2caa039 generated",
+  "src/generated/access.test.ts": "da3be3a9 generated",
+  "src/generated/actions/mark-overdue.server.ts": "48a53c59 generated",
   "src/generated/actions/mark-overdue.ts": "0a89cc21 generated",
-  "src/generated/actions/mark-paid.server.ts": "3fe1938a generated",
+  "src/generated/actions/mark-paid.server.ts": "3632f851 generated",
   "src/generated/actions/mark-paid.ts": "9047ea54 generated",
-  "src/generated/actions/mark-sent.server.ts": "c0c78d52 generated",
-  "src/generated/actions/mark-sent.ts": "89323f1d generated",
+  "src/generated/actions/mark-sent.server.ts": "28ca2a99 generated",
+  "src/generated/actions/mark-sent.ts": "ca912866 generated",
+  "src/generated/actions/send-invoice.server.ts": "6302d21a generated",
+  "src/generated/actions/send-invoice.ts": "2efd6b21 generated",
   "src/generated/activity.server.ts": "2b56b888 generated",
   "src/generated/app.ts": "74f19a10 generated",
-  "src/generated/ask.server.ts": "2b180de2 generated",
-  "src/generated/business-profile.schema.ts": "a24b04cb generated",
-  "src/generated/business-profile.server.ts": "3f801bc5 generated",
-  "src/generated/business-profile.ts": "bc86a8d8 generated",
-  "src/generated/card.server.ts": "5992cd52 generated",
+  "src/generated/ask.server.ts": "3ce34cf9 generated",
+  "src/generated/business-profile.schema.ts": "7037e2dd generated",
+  "src/generated/business-profile.server.ts": "cf159176 generated",
+  "src/generated/business-profile.ts": "734f08c4 generated",
+  "src/generated/card.server.ts": "2fd662a8 generated",
   "src/generated/card.ts": "5cab12e4 generated",
   "src/generated/client.import.server.ts": "254b9c3a generated",
   "src/generated/client.import.ts": "343dac71 generated",
@@ -56841,22 +57373,22 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/generated/client.server.ts": "d4609a8c generated",
   "src/generated/client.ts": "ef4091ce generated",
   "src/generated/custom.ts": "5801b2b0 generated",
-  "src/generated/dev-door.server.ts": "a5c670df generated",
+  "src/generated/dev-door.server.ts": "caaca992 generated",
   "src/generated/hooks.ts": "f860bab0 generated",
   "src/generated/invoice-line.formulas.test.ts": "f67cb44c generated",
-  "src/generated/invoice-line.formulas.ts": "4e91f82f generated",
-  "src/generated/invoice-line.schema.ts": "22398b2f generated",
-  "src/generated/invoice-line.server.ts": "a84c7377 generated",
-  "src/generated/invoice-line.ts": "a4613cbb generated",
-  "src/generated/invoice.document.server.ts": "fac8e9ad generated",
-  "src/generated/invoice.formulas.ts": "7a58deb7 generated",
+  "src/generated/invoice-line.formulas.ts": "9a593ba5 generated",
+  "src/generated/invoice-line.schema.ts": "a1a621b7 generated",
+  "src/generated/invoice-line.server.ts": "e4cb16a4 generated",
+  "src/generated/invoice-line.ts": "2f4b4010 generated",
+  "src/generated/invoice.document.server.ts": "1e7ddc89 generated",
+  "src/generated/invoice.formulas.ts": "ac175676 generated",
   "src/generated/invoice.import.server.ts": "5d63bdd7 generated",
   "src/generated/invoice.import.ts": "92bad053 generated",
-  "src/generated/invoice.schema.ts": "9528011d generated",
-  "src/generated/invoice.server.ts": "49258fb5 generated",
-  "src/generated/invoice.ts": "f4863bb7 generated",
+  "src/generated/invoice.schema.ts": "1f1e1640 generated",
+  "src/generated/invoice.server.ts": "d6f05e64 generated",
+  "src/generated/invoice.ts": "c5238064 generated",
   "src/generated/my-time.ts": "c315432b generated",
-  "src/generated/outgoing.server.ts": "d19f0751 generated",
+  "src/generated/outgoing.server.ts": "85ef1ab0 generated",
   "src/generated/pages.ts": "97850e87 generated",
   "src/generated/roles.ts": "d284ad2a generated",
   "src/generated/site.ts": "97fb8041 generated",
@@ -56971,9 +57503,9 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/routes/files/$model.$id.$field.ts": "93378bd7 kit",
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/index.tsx": "268208f5 generated",
-  "src/routes/invoices/$id.tsx": "5ccd9637 generated",
-  "src/routes/invoices/$id_.document.tsx": "5717f561 generated",
-  "src/routes/invoices/index.tsx": "40be869e generated",
+  "src/routes/invoices/$id.tsx": "8eb4e8fc generated",
+  "src/routes/invoices/$id_.document.tsx": "3a477458 generated",
+  "src/routes/invoices/index.tsx": "0e4af827 generated",
   "src/routes/invoices/new.tsx": "8fcd2b9f generated",
   "src/routes/overview/index.tsx": "254c2c93 generated",
   "src/routes/privacy/index.tsx": "6ef06b81 generated",
@@ -56981,7 +57513,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/routes/settings/index.tsx": "9fdd2b64 generated",
   "src/routes/sign-in.tsx": "f931fe7c generated",
   "src/routes/sitemap[.]xml.ts": "5c8fa673 generated",
-  "src/routes/welcome/index.tsx": "152dd8b1 generated",
+  "src/routes/welcome/index.tsx": "ad2a6a87 generated",
   "src/start.ts": "6b874d2d kit",
   "src/styles.css": "706d757b kit",
   "src/theme.css": "2c20fc19 generated",

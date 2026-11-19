@@ -33,7 +33,7 @@ const SHOTS = {
   ],
   invoicing: [
     ["home", "list", "visitor"],
-    ["invoices", 1, "admin"],
+    ["invoices", 6, "admin"], // a draft with Send invoice and Print
   ],
   marketplace: [
     ["catalog", "list", "visitor"],
