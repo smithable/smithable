@@ -19,6 +19,7 @@ import {
   readString,
 } from "../context.js";
 import type { YamlEditor, YamlValue } from "../edit.js";
+import type { Expr } from "../formula.js";
 import type {
   ActionIR,
   Channel,
@@ -348,14 +349,69 @@ export function workedOutRefused(told: boolean, when: When): string | undefined 
 }
 
 /**
+ * Why a worked-out field may not leave the app, or undefined: a field it is worked out from is
+ * one notSendable refuses, on the record itself, through the record's other worked-out fields,
+ * or on the records of a list it adds up (record-documents.md §3). The list itself may be read.
+ */
+export function workedOutFrom(
+  f: FieldIR,
+  model: ModelIR,
+  models: readonly ModelIR[],
+): string | undefined {
+  const seen = new Set<string>();
+  const field = (of: ModelIR, name: string): string | undefined => {
+    const read = of.fields.find((x) => x.name === name);
+    if (!read || seen.has(`${of.name}.${name}`)) return undefined;
+    seen.add(`${of.name}.${name}`);
+    if (read.formula) return walk(read.formula, of);
+    const why = isUpload(read) || sensitiveKind(read) ? notSendable(read) : undefined;
+    return why
+      ? `is worked out from ${of === model ? name : `${of.name}.${name}`}, which ${why}`
+      : undefined;
+  };
+  const walk = (expr: Expr, of: ModelIR): string | undefined => {
+    switch (expr.kind) {
+      case "field":
+        return field(of, expr.name);
+      case "unary":
+        return walk(expr.operand, of);
+      case "binary":
+        return walk(expr.left, of) ?? walk(expr.right, of);
+      case "call":
+        for (const arg of expr.args) {
+          const why = walk(arg, of);
+          if (why) return why;
+        }
+        return undefined;
+      case "aggregate": {
+        const type = of.fields.find((x) => x.name === expr.list)?.type;
+        const listed =
+          type?.kind === "relation" ? models.find((m) => m.name === type.model) : undefined;
+        if (!listed) return undefined;
+        return (
+          (expr.field ? field(listed, expr.field) : undefined) ??
+          (expr.value ? walk(expr.value, listed) : undefined)
+        );
+      }
+      default:
+        return undefined;
+    }
+  };
+  seen.add(`${model.name}.${f.name}`);
+  return f.formula ? walk(f.formula, model) : undefined;
+}
+
+/**
  * `show` (or a list mail's `columns`): the fields the mail lists and a call carries, each one
- * the record page shows; a worked-out one where `worked` says nothing against it.
+ * the record page shows; a worked-out one where `worked` says nothing against it and nothing
+ * it is worked out from may not leave the app.
  */
 function readShow(
   names: string[],
   model: ModelIR,
   key: string,
   worked: string | undefined,
+  models: readonly ModelIR[],
 ): { show: string[] } | { problem: string } {
   if (!names.length)
     return {
@@ -370,7 +426,8 @@ function readShow(
       );
       return { problem: `${model.name} has no field named "${name}".${hint ? ` ${hint}` : ""}` };
     }
-    const why = (f.formula ? worked : undefined) ?? notSendable(f);
+    const why =
+      (f.formula ? (worked ?? workedOutFrom(f, model, models)) : undefined) ?? notSendable(f);
     if (why) return { problem: `${model.name}.${name} ${why}, so it cannot be shown.` };
   }
   return { show: [...new Set(names)] };
@@ -385,6 +442,7 @@ function readBody(
   when: When,
   model: ModelIR,
   told = false,
+  models: readonly ModelIR[] = [model],
 ): { show?: string[] | "none"; previous?: boolean } | { problem: string } {
   const out: { show?: string[] | "none"; previous?: boolean } = {};
   if (body.show !== undefined) {
@@ -393,7 +451,13 @@ function readBody(
       (Array.isArray(body.show) && body.show.length === 1 && body.show[0] === "none");
     if (none) out.show = "none";
     else {
-      const r = readShow(body.show as string[], model, "show", workedOutRefused(told, when));
+      const r = readShow(
+        body.show as string[],
+        model,
+        "show",
+        workedOutRefused(told, when),
+        models,
+      );
       if ("problem" in r) return r;
       out.show = r.show;
     }
@@ -521,6 +585,7 @@ function readList(
     model,
     "columns",
     "is worked out when the record is read, which a list mail does not do",
+    [model],
   );
   if ("problem" in columns) return { key: "columns", problem: columns.problem };
   list.columns = columns.show;
@@ -958,7 +1023,9 @@ const addOutgoing: Operation<
       if ("problem" in f) throw new OperationError(f.problem);
     }
     const body =
-      "custom" in read.when ? {} : readBody({ show, previous }, read.when, model, "channels" in t);
+      "custom" in read.when
+        ? {}
+        : readBody({ show, previous }, read.when, model, "channels" in t, ir.models);
     if ("problem" in body) throw new OperationError(body.problem);
     if ("channels" in t) {
       if (!recipient) throw new OperationError(missingRecipient(t.channels));
@@ -1150,7 +1217,7 @@ const setOutgoingBody: Operation<{ outgoing: string; show?: string[]; previous?:
       if (show.length === 1 && show[0] === "default") {
         if (spec.has([...at, "show"])) spec.remove([...at, "show"]);
       } else {
-        const r = readBody({ show }, o.when, model, Boolean(channelsOf(o)));
+        const r = readBody({ show }, o.when, model, Boolean(channelsOf(o)), ir.models);
         if ("problem" in r) throw new OperationError(r.problem);
         if (spec.has([...at, "show"])) spec.set([...at, "show"], r.show ?? "none");
         else spec.add(at, "show", r.show ?? "none");
@@ -1392,7 +1459,7 @@ export const outgoingSection: SpecSection<"outgoing"> = {
           if (!isSeq(showEntry.value)) continue;
           show = names;
         }
-        const b = readBody({ show }, read.when, model, "channels" in t);
+        const b = readBody({ show }, read.when, model, "channels" in t, models);
         if ("problem" in b) {
           ctx.error(showEntry.value, "invalid-outgoing", `${capital(where)}: ${b.problem}`);
           continue;

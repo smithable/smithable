@@ -14,7 +14,7 @@ import { channelsOf, type ModelIR, type OutgoingIR, type SpecIR, USER_MODEL } fr
 import { capitalize, humanize, plural } from "./naming.js";
 import { patternInfo } from "./patterns.js";
 import { titleField } from "./samples.js";
-import { notSendable, workedOutRefused } from "./sections/outgoing.js";
+import { notSendable, workedOutFrom, workedOutRefused } from "./sections/outgoing.js";
 import { didYouMean } from "./suggest.js";
 import { placeholdersOf } from "./template.js";
 import { rejectUnsafeText } from "./text-safety.js";
@@ -1128,7 +1128,10 @@ export function placeholderProblem(
   const worked = workedOutRefused(Boolean(channelsOf(entry)), entry.when);
   const offered = () => [
     ...model.fields
-      .filter((f) => (f.formula ? !worked : true) && !notSendable(f))
+      .filter(
+        (f) =>
+          (f.formula ? !worked && !workedOutFrom(f, model, ir.models) : true) && !notSendable(f),
+      )
       .map((f) => f.name),
     "title",
     "link",
@@ -1148,8 +1151,10 @@ export function placeholderProblem(
     f: { name: string; formula?: unknown; type: OutgoingFieldType },
     formula = worked,
   ) => {
+    const field = f as Parameters<typeof notSendable>[0];
     const why =
-      (f.formula ? formula : undefined) ?? notSendable(f as Parameters<typeof notSendable>[0]);
+      (f.formula ? (formula ?? workedOutFrom(field, model, ir.models)) : undefined) ??
+      notSendable(field);
     return why ? bad(`${of}.${f.name} ${why}, so it cannot fill a placeholder.`) : undefined;
   };
   if (second === undefined) {
