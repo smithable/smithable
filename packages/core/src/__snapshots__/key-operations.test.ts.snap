@@ -95,6 +95,7 @@ exports[`the keys left to editSpec, as reviewed: every other key has its operati
   "smithable.yml:actions.*.add.*.*",
   "smithable.yml:actions.*.allow",
   "smithable.yml:actions.*.allow.*",
+  "smithable.yml:actions.*.confirm",
   "smithable.yml:actions.*.copy",
   "smithable.yml:actions.*.copy.*",
   "smithable.yml:actions.*.custom",

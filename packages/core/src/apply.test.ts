@@ -1797,3 +1797,33 @@ test("setHeroButtons sets the pages a hero's buttons open, a second one beside t
     "Only a hero section has a second button.",
   );
 });
+
+test("setDocument writes a list page's document, refuses a field it may not print, and removes it", () => {
+  const set = applyOperation(files, "setDocument", {
+    page: "orders",
+    show: ["number", "placedAt"],
+    to: { ref: "customer", show: ["name", "email"] },
+    totals: ["total"],
+  });
+  if (!set.ok) throw new Error(set.message);
+  expect(
+    validateSpec({ path: "smithable.yml", text: set.files.spec }).ir?.pages.find(
+      (p) => p.id === "orders",
+    )?.document,
+  ).toEqual({
+    show: ["number", "placedAt"],
+    to: { ref: "customer", show: ["name", "email"] },
+    totals: ["total"],
+  });
+  const gone = applyOperation({ ...files, spec: set.files.spec }, "setDocument", {
+    page: "orders",
+  });
+  if (!gone.ok) throw new Error(gone.message);
+  expect(gone.files.spec).toBe(files.spec);
+  expect(applyOperation(files, "setDocument", { page: "orders", show: ["nope"] })).toMatchObject({
+    ok: false,
+  });
+  expect(
+    applyOperation(files, "setDocument", { page: "overview", show: ["number"] }),
+  ).toMatchObject({ ok: false });
+});

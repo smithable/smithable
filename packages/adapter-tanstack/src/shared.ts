@@ -120,6 +120,8 @@ export function texts(content: ContentIR) {
       content.actions[action.name]?.label ?? humanize(action.name),
     /** What an action does, in the app's words: its button's tooltip and its dialog's line. */
     actionHelp: (action: { name: string }) => content.actions[action.name]?.help,
+    /** What an action that asks first asks (record-documents.md §6), with its placeholders. */
+    actionConfirm: (action: { name: string }) => content.actions[action.name]?.confirm,
     modelLabel: (model: ModelIR) => content.models[model.name]?.label ?? humanize(model.name),
     modelPluralLabel: (model: ModelIR) => {
       const own = content.models[model.name];
@@ -158,6 +160,8 @@ export function texts(content: ContentIR) {
     section: (page: string, name: string) => content.pages[page]?.sections?.[name] ?? {},
     /** A form section's heading, from smithable.content.yml (pages.<page>.form.sections.<name>). */
     formSection: (page: string, name: string) => content.pages[page]?.formSections?.[name] ?? {},
+    /** A crud page's document's words (record-documents.md §4.1): only those given. */
+    document: (page: string) => content.pages[page]?.document ?? {},
     /** A privacy page's facts only the maker knows (legal-page.md §6.2). */
     privacy: (page: string) => content.pages[page]?.privacy ?? {},
     /** A calculator field's label and help: the page's, or a landing section's. */

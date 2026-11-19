@@ -1,6 +1,6 @@
 import { conditionArgs, conditionText } from "../condition.js";
 import type { YamlEditor, YamlValue } from "../edit.js";
-import type { PageIR } from "../ir.js";
+import type { DocumentIR, PageIR } from "../ir.js";
 import { SECTION_KINDS } from "../ir.js";
 import { type AnyOperation, type Operation, OperationError, refTo } from "../operation.js";
 import { isOwnSection, pageModel, partSections } from "../patterns.js";
@@ -10,6 +10,7 @@ function sectionsPath(page: PageIR): string[] {
   return ["pages", page.id, page.pattern.kind === "landing" ? "landing" : "sections"];
 }
 
+import { DOCUMENT_BLOCKS, documentSchema } from "./document.js";
 import { filterThrough, filterValueProblem } from "./list-keys.js";
 import { checkFieldArg, FIELD_ARG, type FieldArg } from "./model-operations.js";
 import { COMPONENT_PATTERN, FIELD_NAME_PATTERN, NAME_PATTERN, nameRule } from "./names.js";
@@ -911,6 +912,48 @@ const setContact: Operation<{ page: string; to?: string; keep?: string }> = {
   },
 };
 
+type DocumentArgs = Omit<DocumentIR, "show"> & { page: string; show?: string[] };
+
+const setDocument: Operation<DocumentArgs> = {
+  name: "setDocument",
+  sets: ["smithable.yml:pages.*.document", "smithable.yml:pages.*.document.**"],
+  summary:
+    "Make a list page's record printable as a document (an invoice, a quote, a receipt): the blocks it prints and the fields each names; without show it removes the document.",
+  schema: {
+    type: "object",
+    required: ["page"],
+    additionalProperties: false,
+    properties: {
+      page: refTo({ ref: "page", label: "Page" }),
+      ...documentSchema.properties,
+      show: {
+        ...documentSchema.properties.show,
+        description: "The record's fields; none removes the document.",
+      },
+    },
+  },
+  positional: ["page"],
+  describe: ({ page, show }) =>
+    show?.length ? `Print ${page}'s records as a document` : `Remove the document from ${page}`,
+  destructive: () => false,
+  apply({ spec }, { page, ...doc }, ir) {
+    const p = ir.pages.find((x) => x.id === page);
+    if (!p) throw new OperationError(`There is no page named "${page}".`);
+    if (p.pattern.kind !== "crud") throw new OperationError(`${page} is not a list page.`);
+    const path = ["pages", page, "document"];
+    if (!doc.show?.length) {
+      if (spec.has(path)) spec.remove(path);
+      return [];
+    }
+    const value = Object.fromEntries(
+      DOCUMENT_BLOCKS.flatMap((block) => (doc[block] === undefined ? [] : [[block, doc[block]]])),
+    ) as YamlValue;
+    if (spec.has(path)) spec.set(path, value);
+    else spec.add(["pages", page], "document", value);
+    return [];
+  },
+};
+
 const removePage: Operation<{ page: string }> = {
   name: "removePage",
   sets: ["smithable.yml:pages.*"],
@@ -1255,6 +1298,7 @@ export const crudOperations: AnyOperation[] = [
   setFavorites,
   setExport,
   setContact,
+  setDocument,
   setMine,
 ];
 /**

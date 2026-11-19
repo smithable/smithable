@@ -160,6 +160,19 @@ export function summarize(
             ? "records can be saved as favorites"
             : "",
         p.contact ? contactWords(p.contact, model, fieldLabel) : "",
+        // A record printed or saved as PDF (record-documents.md §4).
+        p.document && model
+          ? `${article(one(model))} can be printed as a document with its ${list(
+              [
+                ...p.document.show,
+                ...(p.document.lines ? [p.document.lines.list] : []),
+                ...(p.document.totals ?? []),
+              ].flatMap((name) => {
+                const f = model.fields.find((x) => x.name === name);
+                return f ? [fieldLabel(model, f)] : [];
+              }),
+            )}`
+          : "",
         // A list on the record page as a conversation (conversation.md §2).
         ...Object.entries(ux?.pages?.[p.id]?.lists ?? {}).flatMap(([name, look]) => {
           const field = model?.fields.find((f) => f.name === name);

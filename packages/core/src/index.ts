@@ -289,6 +289,7 @@ export {
 export { buildJsonSchema } from "./schema.js";
 export type { JsonSchema, SectionKey, SpecSection } from "./section.js";
 export { MEDIA_LOOKS, READING_MEASURES, RHYTHMS } from "./section-looks.js";
+export { DOCUMENT_BLOCKS, DOCUMENT_TEXTS } from "./sections/document.js";
 export { parseFieldShorthand } from "./sections/field-type.js";
 export { incomingText } from "./sections/incoming.js";
 export {

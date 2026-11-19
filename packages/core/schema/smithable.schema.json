@@ -972,6 +972,10 @@
             },
             "description": "A new record from this one instead of a change: what differs, as in set (a value, a formula, ME() or nothing to ask); {} copies as is. For a split: the fields the new record takes, e.g. [customer, deliverTo]."
           },
+          "confirm": {
+            "type": "boolean",
+            "description": "Asks before it runs: its question is the content file's actions.<name>.confirm, else its label and the record's title. An action whose mail would reach nobody says so instead."
+          },
           "with": {
             "type": "array",
             "items": {
@@ -2674,6 +2678,85 @@
               }
             ],
             "description": "A contact block on the record page that mails the record's owner (or the user a field names): owner, a field, or { to, keep }."
+          },
+          "document": {
+            "type": "object",
+            "required": [
+              "show"
+            ],
+            "additionalProperties": false,
+            "description": "The record as a document, printed or saved as PDF from its page: each block names its fields, and nothing else is on it. One per model.",
+            "properties": {
+              "from": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Fields of the app's settings model: who the document is from."
+              },
+              "to": {
+                "type": "object",
+                "required": [
+                  "ref",
+                  "show"
+                ],
+                "additionalProperties": false,
+                "description": "Who it is for: a reference of the record and fields of its model.",
+                "properties": {
+                  "ref": {
+                    "type": "string",
+                    "description": "A reference of the record to one record, e.g. client."
+                  },
+                  "show": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Fields of the referenced record, e.g. [name, address]."
+                  }
+                }
+              },
+              "show": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Fields of the record, e.g. [number, issued, due]."
+              },
+              "lines": {
+                "type": "object",
+                "required": [
+                  "list",
+                  "show"
+                ],
+                "additionalProperties": false,
+                "description": "A list field of the record and the listed model's fields, as a table.",
+                "properties": {
+                  "list": {
+                    "type": "string",
+                    "description": "A list field of the record, e.g. lines."
+                  },
+                  "show": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Fields of each listed record: the table's columns."
+                  }
+                }
+              },
+              "totals": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Fields of the record under the lines, e.g. [total]."
+              },
+              "note": {
+                "type": "string",
+                "description": "A text field of the record printed at the end."
+              }
+            }
           },
           "description": {
             "type": "string",

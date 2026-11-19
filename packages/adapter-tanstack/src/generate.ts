@@ -1077,6 +1077,11 @@ const SECTION_GENERATORS: SectionGenerator[] = [
         used: ({ ir }) => ir.models.some((m) => m.trash),
       },
       {
+        // A record as a document (docs/design/record-documents.md §4.2): its printed page.
+        files: ["src/kit/Document.tsx"],
+        used: ({ ir }) => ir.pages.some((p) => p.document),
+      },
+      {
         // Keys for the API, on the users page (docs/design/integrations.md §2).
         files: ["src/kit/Keys.tsx", "src/kit/api.server.ts"],
         used: ({ ir, auth }) => hasKeys(ir, auth),

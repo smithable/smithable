@@ -10,6 +10,7 @@ import { calendarRoute } from "./calendar.js";
 import { customRoute } from "./custom.js";
 import { dashboardRoute } from "./dashboard.js";
 import { activityRoute, dataRoutes } from "./data.js";
+import { DOCUMENT_FILE, documentRoute } from "./document.js";
 import { landingRoute } from "./landing.js";
 import { legalRoute } from "./legal.js";
 import { listRoute } from "./list.js";
@@ -41,6 +42,9 @@ export const PAGE_GENERATORS: {
         "new.tsx": newRoute(page, model, t, ir, ux, auth),
         "$id.tsx": detailRoute(page, model, t, ir, ux, undefined, auth),
         ...(model.trash ? { "trash.tsx": trashRoute(page, model, t) } : {}),
+        ...(page.document
+          ? { [DOCUMENT_FILE]: documentRoute(page, model, ir, t, auth) as string }
+          : {}),
       };
     },
   },

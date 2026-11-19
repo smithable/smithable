@@ -19,6 +19,8 @@ export interface SelectionAction {
   applies: number;
   /** What it asks for, once, for all of them. */
   ask?: { ui: ModelUi; schema: z.ZodType; loadOptions?: () => Promise<Options> };
+  /** It asks before it runs (record-documents.md §6): for several records, by its label and count. */
+  confirm?: true;
   run: (values?: Record<string, unknown>) => Promise<{ changed: number; skipped: number }>;
 }
 
@@ -108,6 +110,7 @@ export function SelectionBar({
                   help={a.help}
                   concept={a.concept}
                   ask={a.ask && { ...a.ask, initial: {}, app }}
+                  {...(a.confirm ? { confirm: {} } : {})}
                   onRun={async (values) => {
                     setFailure(undefined);
                     try {

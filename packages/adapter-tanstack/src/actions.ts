@@ -9,6 +9,7 @@ import {
   type ModelIR,
   type PageIR,
   pascal,
+  placeholdersOf,
   type QueryIR,
   type SpecIR,
   type StandardActionIR,
@@ -120,6 +121,9 @@ export function actionNames(action: ActionIR) {
     askUi: `${action.name}AskUi`,
     askOptions: `${action.name}AskOptions`,
     run: `run${type}`,
+    /** A standard action that asks first (record-documents.md §6): its question, on the server and as the page calls it. */
+    question: `question${type}`,
+    questionFn: `${action.name}Question`,
     /** A custom action's fence (intents.md §6): the type of what its code may reach. */
     touches: `${type}Touches`,
     /** A merge (intents.md §3): which stays, and what merging two would do (the server's, the form's). */
@@ -547,7 +551,7 @@ import { w } from "#/kit/words";
 import { getRequestHeaders } from "@tanstack/react-start/server";
 ${asked.length ? 'import type { ModelUi } from "#/kit/model";\n' : ""}${choices ? [...choices.imports].map(([fn, module]) => `import { ${fn} } from "${module}";\n`).join("") : ""}import { writeAllowed } from "#/kit/limit";
 import { currentViewer } from "#/lib/viewer.server";
-import { ${a.run}${action.copy ? "" : `, ${a.runMany}`} } from "./${kebab(action.name)}.server";
+import { ${a.run}${action.copy ? "" : `, ${a.runMany}`}${action.confirm ? `, ${a.question}` : ""} } from "./${kebab(action.name)}.server";
 
 /** Who may run the "${action.name}" action: whoever may edit the ${inert(n.label.toLowerCase())}${action.add ? ", and may create what it adds" : ""}. */
 export const ${a.access}: Rule = ${literal(actionAccess(action, auth, ir.models))};
@@ -568,6 +572,15 @@ export const ${action.name} = createServerFn({ method: "POST" })
   .validator(${asked.length ? `z.object({ id: z.number().int(), values: ${a.asks} })` : "z.number().int()"})
   .handler(async ({ data }) => ${a.run}(await writer(), ${asked.length ? "data.id, data.values" : "data"}));
 ${
+  action.confirm
+    ? `
+/** What the "${action.name}" action asks before it runs, from the ${inert(n.label.toLowerCase())} as it is now. */
+export const ${a.questionFn} = createServerFn({ method: "POST" })
+  .validator(z.number().int())
+  .handler(async ({ data }) => ${a.question}(await currentViewer(), data));
+`
+    : ""
+}${
   action.copy
     ? ""
     : `
@@ -614,7 +627,8 @@ export function standardActionServer(
     // A date and time is stored as a Date; formulas and literals give its ISO text.
     return `${field.name}: ${scalar === "datetime" ? `new Date(${code})` : code},`;
   };
-  if (action.copy) return copyActionServer(action, ir, auth, t, valueCode, imports);
+  if (action.copy)
+    return withQuestion(copyActionServer(action, ir, auth, t, valueCode, imports), action, ir, t);
   const values = [
     ...action.set.map((v) => valueCode(model, v, v.field)),
     // What the change makes required, as the person gave it in the dialog (record-rules.md §3).
@@ -684,7 +698,8 @@ ${adds.map(({ target }, i) => `      audit(tx, viewer, { action: "created", mode
   const hooks = (w: string) =>
     `  await afterChange("afterUpdate", ${JSON.stringify(model.name)}, ${w}.changed, viewer);
 ${adds.map(({ target }, i) => `  await afterChange("afterCreate", ${JSON.stringify(target.name)}, ${w}.inserted[${i}], viewer);`).join("\n")}`;
-  return `${HEADER}import { eq${sequenced ? ", max" : ""} } from "drizzle-orm";
+  return withQuestion(
+    `${HEADER}import { eq${sequenced ? ", max" : ""} } from "drizzle-orm";
 import { db } from "#/db";
 ${SCHEMA_IMPORT}
 import { AccessDenied, addressOf, addressOwner, allows, check, personOf, type Viewer } from "#/kit/access";
@@ -759,7 +774,121 @@ ${hooks("w").replace(/^ {2}/gm, "    ")}
   }
   return { changed: plans.length, skipped: unique.length - plans.length };
 }
+`,
+    action,
+    ir,
+    t,
+  );
+}
+
+/**
+ * A standard action that asks before it runs (docs/design/record-documents.md §6): the server
+ * module gains its question, the values the content file's text names (the title without one),
+ * read as the viewer reads them and written out as the record's page writes them; or that a
+ * mail it sends to an address on the record would reach nobody.
+ */
+function withQuestion(module: string, action: StandardActionIR, ir: SpecIR, t: Texts): string {
+  if (!action.confirm) return module;
+  const a = actionNames(action);
+  const model = modelNamed(ir, action.on);
+  const n = names(model, t);
+  const text = t.actionConfirm(action);
+  const paths = [...new Set(text ? placeholdersOf(text) : ["title"])];
+  const refs = new Map<string, { field: FieldIR; other: ModelIR }>();
+  // A reference's record, read as the viewer reads it, in a local of the generator's own naming.
+  const local = (field: FieldIR) => `${field.name}Record`;
+  const entries = paths.flatMap((path) => {
+    if (path === "title")
+      return [`"title": shown(${n.ui}, ${n.ui}.titleField, row) || String(row.id),`];
+    const [first, second] = path.split(".");
+    const field = model.fields.find((f) => f.name === first);
+    if (!field) return [];
+    if (second === undefined)
+      return [`${JSON.stringify(path)}: shown(${n.ui}, ${JSON.stringify(dataKey(field))}, row),`];
+    if (field.type.kind !== "relation") return [];
+    const other = modelNamed(ir, field.type.model);
+    const target = other.fields.find((f) => f.name === second);
+    if (!target) return [];
+    refs.set(field.name, { field, other });
+    return [
+      `${JSON.stringify(path)}: shown(${names(other, t).ui}, ${JSON.stringify(dataKey(target))}, ${local(field)}),`,
+    ];
+  });
+  // "Would reach nobody" is said only when every mail this action fires is known to: each goes
+  // to an address on the record or one reference away, with no where, and each of those is empty
+  // as the viewer reads the record (no reference, or a referenced record they may read without
+  // the address; one they may not read says nothing either way). Anything else is not known, and
+  // the question is asked as usual.
+  const mails = ir.outgoing.filter(
+    (o) => "action" in o.when && o.when.action === action.name && o.when.model === model.name,
+  );
+  const empty = mails.map((o) => {
+    if (o.where || o.recipient?.kind !== "field") return undefined;
+    const [first, second, more] = o.recipient.path;
+    const field = model.fields.find((f) => f.name === first);
+    if (!field || more !== undefined) return undefined;
+    if (second === undefined) return `!row.${dataKey(field)}`;
+    if (field.type.kind !== "relation") return undefined;
+    const other = modelNamed(ir, field.type.model);
+    const target = other.fields.find((f) => f.name === second);
+    if (!target) return undefined;
+    return {
+      field,
+      other,
+      test: `(row.${dataKey(field)} == null || (${local(field)} !== null && !${local(field)}.${dataKey(target)}))`,
+    };
+  });
+  const sure = empty.filter((e) => e !== undefined);
+  const tests =
+    sure.length > 0 && sure.length === mails.length
+      ? sure.map((e) => {
+          if (typeof e === "string") return e;
+          refs.set(e.field.name, { field: e.field, other: e.other });
+          return e.test;
+        })
+      : [];
+  const uis = new Map([[n.module, n.ui]]);
+  for (const { other } of refs.values()) uis.set(names(other, t).module, names(other, t).ui);
+  const datas = [...refs.values()]
+    .map(({ other }) => names(other, t))
+    .filter((on) => on.data !== n.data);
+  const imports = `import { app } from "#/generated/app";
+import { formatValue } from "#/kit/format";
+import type { RecordFieldUi } from "#/kit/model";
+${[...uis].map(([module, ui]) => `import { ${ui} } from "${module}";\n`).join("")}${[...new Map(datas.map((on) => [on.data, on])).values()].map((on) => `import { ${on.data} } from "${on.module}.server";\n`).join("")}`;
+  const body = `
+/** A value as the record's page writes it; empty when there is none, or the record cannot be read. */
+function shown(ui: { fields: RecordFieldUi<never>[] }, name: string, row: unknown): string {
+  const field = ui.fields.find((f) => f.name === name);
+  if (!field || !row) return "";
+  const value = field.get(row as never);
+  return value === null || value === undefined || value === "" ? "" : formatValue(field, value, app);
+}
+
+/**
+ * What the "${action.name}" action asks before it runs (record-documents.md §6), on the
+ * ${inert(n.label.toLowerCase())} as the viewer may read it now${tests.length ? "; or that the mail it sends would reach nobody" : ""}.
+ */
+export async function ${a.question}(
+  viewer: Viewer | null,
+  id: number,
+): Promise<{ values: Record<string, string> } | { noRecipient: true }> {
+  const row = await ${n.data}.get(viewer, id);
+  if (!row) throw new AccessDenied(viewer !== null);
+  check(${a.access}, viewer, ${ownerOf(model, n)});
+  if (!${a.fits}(row, viewer)) throw new Error("This cannot be done now.");
+${[...refs.values()].map(({ field, other }) => `  const ${local(field)} = row.${dataKey(field)} == null ? null : await ${names(other, t).data}.get(viewer, row.${dataKey(field)});\n`).join("")}${
+  tests.length ? `  if (${tests.join(" && ")}) return { noRecipient: true };\n` : ""
+}  return {
+    values: {
+${entries.map((e) => `      ${e}`).join("\n")}
+    },
+  };
+}
 `;
+  const at =
+    module.indexOf("\ntype Row") >= 0 ? module.indexOf("\ntype Row") : module.indexOf("\n/**");
+  return `${module.slice(0, at)}${imports}${module.slice(at)}${body}`;
 }
 
 /** A reference's key in a record, e.g. incidentId. */
