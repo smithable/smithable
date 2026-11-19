@@ -23,6 +23,7 @@ import wordmark from "./brand/wordmark.svg";
 import wordmarkDark from "./brand/wordmark-dark.svg";
 import { Ask, type AudioActivity, usePresentation } from "./builder/Ask";
 import { NoCode, OPEN_PART, type OpenPart } from "./builder/NoCode";
+import { mailTemplates, OutgoingTemplate } from "./builder/OutgoingTemplate";
 import { SmithFace } from "./builder/SmithFace";
 import { SummaryTab } from "./builder/SummaryTab";
 import { Visualize } from "./builder/Visualize";
@@ -46,6 +47,8 @@ import { ReportDialog } from "./Report";
 import { plainRefusal } from "./refusal";
 import { needsLook, trustedRelease } from "./release-review";
 import { type Bounds, type LayerMode, SmithLayer, sideFor, useSmithPlace } from "./SmithLayer";
+import { StudioHelp } from "./StudioHelp";
+import { StudioOverlay } from "./StudioOverlay";
 import { keptPage, Preview, Trace } from "./shared";
 import { useStudioQuestion } from "./studio-questions";
 import { TroubleshootDialog } from "./Troubleshoot";
@@ -168,12 +171,9 @@ export function App() {
   const wakingNow = useSyncExternalStore(waking.subscribe, waking.get);
   const [outbox, setOutbox] = useState(false);
   const [help, setHelp] = useState(false);
+  const [changesOpen, setChangesOpen] = useState(false);
   const [workspaceControls, setWorkspaceControls] = useState<boolean>();
   const [addressHost, setAddressHost] = useState<HTMLDivElement | null>(null);
-  const helpDialog = useRef<HTMLDialogElement>(null);
-  useEffect(() => {
-    if (help) helpDialog.current?.showModal();
-  }, [help]);
   // The sample users' panel, their state as the daemon last said, and a page for the preview (Follow).
   const [peopleOpen, setPeopleOpen] = useState(false);
   const [people, setPeople] = useState<PeopleState>();
@@ -302,7 +302,9 @@ export function App() {
       : (arrangement.manual ?? "nocode");
   // Visualize: the app map's views over the windows, which stay as they are underneath (A 150).
   const [visualize, setVisualize] = useState(false);
+  const [phoneSmithSheet, setPhoneSmithSheet] = useState(false);
   const showWindow = (window: WindowId | PhoneWindow) => {
+    setPhoneSmithSheet(false);
     setVisualize(false);
     if (isManualView(window)) setArrangement({ ...arrangement, manual: window });
     setPlace((p) => ({
@@ -439,7 +441,7 @@ export function App() {
     if (narrow && !project?.making) stepRow(direction);
   };
   const rowPan = usePan({
-    enabled: narrow && !project?.making,
+    enabled: narrow && !project?.making && !phoneSmithSheet,
     follows: (start) => subContent(start) === undefined,
     onRelease: (direction, start) => {
       if (!subStep(subContent(start), direction)) stepRow(direction);
@@ -1008,7 +1010,12 @@ export function App() {
   });
   const questionWaiting =
     Boolean(studioQuestion) &&
-    (floating ? !panelOpen : narrow ? phoneWindow !== "smith" : slotOf("smith") === undefined);
+    (floating
+      ? !panelOpen
+      : narrow
+        ? !phoneSmithSheet &&
+          (phoneWindow !== "smith" || (phone.changesUnderSmith && phoneSub !== "smith"))
+        : slotOf("smith") === undefined);
   const show = usePresentation(parts, assumptions, layer === "overlay");
   const [presented, setPresented] = useState(false);
   const decided = useRef(false);
@@ -1080,11 +1087,8 @@ export function App() {
   const showChanges = (id?: string) => {
     const at = id ?? project?.trace[0]?.id;
     if (at) setChangesAt({ id: at, at: Date.now() });
-    if (!narrow) workIn("changes");
-    else {
-      if (phone.changesUnderSmith) setPhoneSub("changes");
-      showWindow("changes");
-    }
+    pauseGuide();
+    setChangesOpen(true);
   };
   if (!project) return <p className="p-6 text-sm text-quiet">Opening the project…</p>;
   // Smith's thread, wherever it is: on the overlay, in the floating panel, or in a window.
@@ -1143,7 +1147,8 @@ export function App() {
     (floating
       ? panelOpen && side !== "fold"
       : narrow
-        ? phoneWindow === "smith" && (!phone.changesUnderSmith || phoneSub === "smith")
+        ? phoneSmithSheet ||
+          (phoneWindow === "smith" && (!phone.changesUnderSmith || phoneSub === "smith"))
         : slotOf("smith") !== undefined);
   const onCall = Boolean(audio && audio.call !== "idle");
   const listening = Boolean(audio && (audio.listening || audio.auto));
@@ -1174,7 +1179,8 @@ export function App() {
       setPanelOpen(true);
     } else if (narrow) {
       setPhoneSub("smith");
-      showWindow("smith");
+      showWindow("preview");
+      setPhoneSmithSheet(true);
     } else {
       workIn("smith");
     }
@@ -1292,7 +1298,12 @@ export function App() {
       >
         {undoArrow}
       </ToolbarButton>
-      <ToolbarButton label="Changes" onClick={() => showChanges()} text={narrow}>
+      <ToolbarButton
+        label="Changes"
+        pressed={changesOpen}
+        onClick={() => (changesOpen ? setChangesOpen(false) : showChanges())}
+        text={narrow}
+      >
         <path d="M9 6h11M9 12h11M9 18h11M4 6h1M4 12h1M4 18h1" />
       </ToolbarButton>
       <ToolbarButton
@@ -1305,6 +1316,25 @@ export function App() {
       </ToolbarButton>
     </>
   );
+  const changeTrace = () => (
+    <div data-guide="changes" className="min-h-0 flex-1 overflow-auto">
+      <Trace
+        entries={project.trace}
+        words={words}
+        plugins={spec.plugins}
+        onUndo={(ids) => void undoChanges(ids)}
+        {...(project.oldVersions ? { onSee: (id: string) => void seeVersion(id) } : {})}
+        {...(changesAt ? { openAt: changesAt } : {})}
+        onMilestone={async (id, name) => {
+          const named = await api
+            .milestone(id, name)
+            .catch((e: Error) => ({ ok: false, output: e.message }));
+          if (!named.ok) setMessage({ ok: false, text: named.output });
+          await refresh();
+        }}
+      />
+    </div>
+  );
   const outboxAction = (
     <ToolbarButton label="Outbox" onClick={() => setOutbox(true)} text={narrow}>
       <rect x="3" y="5" width="18" height="14" rx="2" />
@@ -1312,7 +1342,7 @@ export function App() {
     </ToolbarButton>
   );
   const helpAction = (
-    <ToolbarButton label="Help" onClick={() => setHelp(true)} text={narrow}>
+    <ToolbarButton label="Help" pressed={help} onClick={() => setHelp(!help)} text={narrow}>
       <circle cx="12" cy="12" r="9" />
       <path d="M9 9a3 3 0 0 1 6 0c0 2-3 2-3 4m0 3h.01" />
     </ToolbarButton>
@@ -1631,47 +1661,30 @@ export function App() {
           )}
         </header>
         {help && (
-          <dialog
-            ref={helpDialog}
-            aria-label="Help"
+          <StudioHelp
+            narrow={narrow}
             onClose={() => setHelp(false)}
-            className="m-auto w-[min(28rem,94vw)] space-y-4 rounded-lg bg-panel p-5 text-fg shadow-xl backdrop:bg-black/40"
+            {...(!guideOff() && {
+              onGuide: () => {
+                setHelp(false);
+                startGuide();
+              },
+            })}
+            onFeedback={() => {
+              setHelp(false);
+              setFeedback("");
+            }}
+          />
+        )}
+        {changesOpen && (
+          <StudioOverlay
+            name="changes"
+            title="Changes"
+            narrow={narrow}
+            onClose={() => setChangesOpen(false)}
           >
-            <h2 className="text-base font-semibold">Help</h2>
-            <div className="flex flex-wrap items-center gap-2">
-              <a
-                href="https://docs.smithable.ai/start.html"
-                target="_blank"
-                rel="noreferrer"
-                className="px-2 text-sm font-medium text-accent underline"
-              >
-                Studio documentation
-              </a>
-              {!guideOff() && (
-                <Button
-                  variant="ghost"
-                  onClick={() => {
-                    helpDialog.current?.close();
-                    startGuide();
-                  }}
-                >
-                  Tour Studio
-                </Button>
-              )}
-              <Button
-                variant="ghost"
-                onClick={() => {
-                  helpDialog.current?.close();
-                  setFeedback("");
-                }}
-              >
-                Leave feedback
-              </Button>
-            </div>
-            <div className="flex justify-end">
-              <Button onClick={() => helpDialog.current?.close()}>Close</Button>
-            </div>
-          </dialog>
+            {changeTrace()}
+          </StudioOverlay>
         )}
         {fixLine && (
           <p
@@ -1786,7 +1799,27 @@ export function App() {
             onClose={() => setTroubleshooting(false)}
           />
         )}
-        {outbox && <OutboxDialog onClose={() => setOutbox(false)} />}
+        {outbox && (
+          <OutboxDialog
+            narrow={narrow}
+            templates={mailTemplates(spec.ir).map((entry) => entry.name)}
+            editTemplate={(entry, onBack) =>
+              spec.ir && (
+                <OutgoingTemplate
+                  entry={entry}
+                  ir={spec.ir}
+                  auth={spec.auth}
+                  contentText={project.files.content}
+                  samples={project.samples ?? {}}
+                  run={run}
+                  onClose={onBack}
+                  fromOutbox
+                />
+              )
+            }
+            onClose={() => setOutbox(false)}
+          />
+        )}
         {peopleOpen && (
           <PeoplePanel
             state={people}
@@ -1935,14 +1968,18 @@ export function App() {
                 const first = windows[0] as WindowId;
                 const slot = !narrow && first === "smith" ? dockedSmithSlot : placed(first);
                 if (content === "preview" || slot !== s) return null;
+                const smithSheet = narrow && phoneSmithSheet && first === "smith";
                 return (
                   <div
                     key={content}
                     data-window={content}
+                    data-phone-sheet={smithSheet ? "smith" : undefined}
                     className={cx(
                       "flex flex-col border-line",
                       s > 0 && "border-l",
                       layout === "three-below" && s === 2 && "border-t border-l-0",
+                      smithSheet &&
+                        "z-40 mx-1.5 mb-1.5 h-[min(68dvh,36rem)] self-end overflow-hidden rounded-2xl border bg-panel shadow-2xl",
                       // Docked Smith stays above the guide's dimming (smith-first.md §12.4).
                       guiding &&
                         !narrow &&
@@ -1950,11 +1987,17 @@ export function App() {
                         "relative z-50 bg-panel",
                     )}
                     style={{
-                      gridArea: area(s),
+                      gridArea: area(smithSheet ? placed("preview") : s),
                       display: !narrow && smithHidden && content === "smith" ? "none" : undefined,
                     }}
                   >
-                    {narrow && content === "smith+changes" && (
+                    {smithSheet && (
+                      <div
+                        aria-hidden="true"
+                        className="mx-auto mt-3 h-1 w-9 shrink-0 rounded-full bg-line-strong"
+                      />
+                    )}
+                    {narrow && !smithSheet && content === "smith+changes" && (
                       // A phone: Smith or Changes, by these tabs or a swipe in the window.
                       <div
                         data-subtabs
@@ -2090,27 +2133,10 @@ export function App() {
                             className={cx(
                               "min-h-0",
                               content === "smith+changes" ? "flex-[2] border-t" : "flex-1",
+                              changesOpen && "hidden",
                             )}
                           >
-                            <div data-guide="changes" className="min-h-0 flex-1 overflow-auto">
-                              <Trace
-                                entries={project.trace}
-                                words={words}
-                                plugins={spec.plugins}
-                                onUndo={(ids) => void undoChanges(ids)}
-                                {...(project.oldVersions
-                                  ? { onSee: (id: string) => void seeVersion(id) }
-                                  : {})}
-                                {...(changesAt ? { openAt: changesAt } : {})}
-                                onMilestone={async (id, name) => {
-                                  const named = await api
-                                    .milestone(id, name)
-                                    .catch((e: Error) => ({ ok: false, output: e.message }));
-                                  if (!named.ok) setMessage({ ok: false, text: named.output });
-                                  await refresh();
-                                }}
-                              />
-                            </div>
+                            {changeTrace()}
                           </Panel>
                         );
                       // On a phone Smith and Changes share a window: the one not shown stays,
@@ -2208,6 +2234,7 @@ export function App() {
           lighter={previewRuns}
           phone={narrow}
           motion={motion}
+          movable={floating && !guiding}
           open={panelOpen && side !== "fold"}
           {...(over ? { over } : {})}
           side={side === "left" ? "left" : "right"}

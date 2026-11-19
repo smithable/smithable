@@ -5,6 +5,7 @@
 // element; docked, it moves to the left window, where it is drawn anew with everything said and
 // the presentation as it was (Studio holds those), a proposal not yet applied being asked again.
 import { type ReactNode, useEffect, useRef, useState } from "react";
+import { OverlayPositionControl, useOverlayPosition } from "./StudioOverlay";
 import { cx } from "./ui";
 
 export type LayerMode = "overlay" | "closing" | "panel";
@@ -20,6 +21,7 @@ export function SmithLayer({
   lighter,
   phone,
   motion,
+  movable = false,
   side = "right",
   over,
   open = true,
@@ -42,6 +44,7 @@ export function SmithLayer({
   phone: boolean;
   /** Effects on (prefers-reduced-motion off): the closing moves, the panel's moves glide. */
   motion: boolean;
+  movable?: boolean;
   /** The panel's side: the left when a guide's stop is under it on the right. */
   side?: "left" | "right";
   /** What the panel hangs over: the preview. */
@@ -90,6 +93,7 @@ export function SmithLayer({
 
   // A dialog while it is the overlay: the focus in it, and back where it was when it closes.
   const layer = useRef<HTMLDivElement>(null);
+  const movement = useOverlayPosition("smith", layer, movable && mode === "panel" && open);
   const before = useRef<Element | null>(null);
   // The focus goes back once the closing is over, when Studio takes it again.
   const overlaid = mode !== "panel";
@@ -173,11 +177,12 @@ export function SmithLayer({
           "fixed z-50 flex flex-col overflow-hidden bg-panel shadow-2xl outline-none",
           phone && mode !== "panel" ? "" : "rounded-xl border border-line",
           motion &&
+            !movement.position &&
             (mode === "closing"
               ? "transition-[top,left,width,height] duration-500 ease-in-out"
               : "transition-[left] duration-300 ease-out"),
         )}
-        style={rect}
+        style={movement.position ? { ...rect, ...movement.position } : rect}
       >
         <header className="flex h-10 shrink-0 items-center gap-2 border-b border-line px-3">
           <h2 className="flex-1 text-xs font-semibold tracking-wide text-quiet uppercase">
@@ -185,6 +190,7 @@ export function SmithLayer({
           </h2>
           {mode === "panel" ? (
             <>
+              {movable && <OverlayPositionControl label="Smith" movement={movement} />}
               <button
                 type="button"
                 onClick={onDock}

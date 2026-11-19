@@ -45,6 +45,7 @@ import {
   checkStudioLookTimeout,
 } from "./studio-look-checks.mjs";
 import { checkStudioLookNavigation } from "./studio-look-navigation-checks.mjs";
+import { checkStudioOverlays } from "./studio-overlay-checks.mjs";
 import { checkStudioQuestions } from "./studio-question-checks.mjs";
 import { checkStudioSpeech } from "./studio-speech-checks.mjs";
 import { checkStudioTimers } from "./studio-timer-checks.mjs";
@@ -457,6 +458,7 @@ try {
   );
   // Start the guide only after dismissing the fixture's error. Its demonstration makes real
   // changes and undoes them, so the initial empty-history assertion must also come first.
+  await checkStudioOverlays(lookSeen, base);
   await checkStudioLayout(lookSeen, base);
   await checkCompactLook(lookSeen, base);
   await checkStudioLookNavigation(lookSeen, base);
@@ -3351,6 +3353,43 @@ try {
     if ((await subject.inputValue()) !== "Welcome, {title}")
       throw new Error("the saved subject was not loaded");
     await dialog.getByRole("button", { name: "Close", exact: true }).click();
+    await page.route("**/api/outbox", (route) =>
+      route.fulfill({
+        json: [
+          {
+            file: "first",
+            subject: "First mail",
+            to: "first@example.invalid",
+            at: "2026-11-19T18:00:00Z",
+            text: "First preview",
+          },
+          {
+            file: "second",
+            subject: "Second mail",
+            to: "second@example.invalid",
+            at: "2026-11-19T18:01:00Z",
+            text: "Second preview",
+          },
+        ],
+      }),
+    );
+    const outbox = page.getByRole("dialog", { name: "Outbox", exact: true });
+    await (await toolbarAction(page, "Outbox")).click();
+    await outbox.getByRole("button", { name: /^Second mail/ }).click();
+    await outbox.getByRole("button", { name: title, exact: true }).click();
+    await dialog
+      .getByRole("region", { name: "Mail preview", exact: true })
+      .getByText("Welcome, Nordic Timber Oy", { exact: true })
+      .waitFor();
+    await dialog.getByRole("button", { name: "Back to Mail", exact: true }).click();
+    if (
+      (await outbox.getByRole("button", { name: /^Second mail/ }).getAttribute("aria-current")) !==
+      "true"
+    )
+      throw new Error("the Outbox did not keep its selected message");
+    await outbox.getByText("Second preview", { exact: true }).waitFor();
+    await outbox.getByRole("button", { name: "Close", exact: true }).click();
+    await page.unroute("**/api/outbox");
     await op("setTexts", {
       texts: { "outgoing.customerWelcome.subject": "", "outgoing.customerWelcome.text": "" },
     });

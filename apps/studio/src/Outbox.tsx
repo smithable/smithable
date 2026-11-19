@@ -1,11 +1,23 @@
 // The preview's outbox: the mails the app kept instead of sending (a preview sends no mail), so
 // a creator can open an invitation's link or read a sign-in code. Served by Studio only.
-import { Fragment, useCallback, useEffect, useRef, useState } from "react";
+import { humanize } from "@smithable/core";
+import { Fragment, type ReactNode, useCallback, useEffect, useState } from "react";
 import { api, type KeptMail } from "./api";
+import { StudioOverlay } from "./StudioOverlay";
 import { Button } from "./ui";
 
-export function OutboxDialog({ onClose }: { onClose: () => void }) {
-  const dialog = useRef<HTMLDialogElement>(null);
+export function OutboxDialog({
+  narrow,
+  templates,
+  editTemplate,
+  onClose,
+}: {
+  narrow: boolean;
+  templates: string[];
+  editTemplate: (name: string, onBack: () => void) => ReactNode;
+  onClose: () => void;
+}) {
+  const [template, setTemplate] = useState<string>();
   const [mails, setMails] = useState<KeptMail[]>();
   const [open, setOpen] = useState<string>();
   const [failure, setFailure] = useState<string>();
@@ -21,70 +33,86 @@ export function OutboxDialog({ onClose }: { onClose: () => void }) {
     [],
   );
   useEffect(() => {
-    dialog.current?.showModal();
     void load();
   }, [load]);
   const shown = mails?.find((m) => m.file === open);
   return (
-    <dialog
-      ref={dialog}
-      aria-label="Outbox"
-      onClose={onClose}
-      className="m-auto w-[min(56rem,94vw)] rounded-lg bg-panel p-0 text-fg shadow-xl backdrop:bg-black/40"
-    >
-      <div className="space-y-3 p-4">
-        <h2 className="text-base font-semibold">Outbox</h2>
-        <p className="text-sm text-muted">
-          The preview sends no mail. What the app would have sent is kept here: invitations, sign-in
-          codes, messages and notifications. Mail goes out once the app is published.
-        </p>
-        {failure && (
-          <p role="alert" className="text-sm text-red-700">
-            {failure}
+    <>
+      <StudioOverlay
+        name="outbox"
+        title="Outbox"
+        narrow={narrow}
+        width="wide"
+        modal
+        onClose={onClose}
+      >
+        <div className="space-y-3 p-4">
+          <p className="text-sm text-muted">
+            The preview sends no mail. What the app would have sent is kept here: invitations,
+            sign-in codes, messages and notifications. Mail goes out once the app is published.
           </p>
-        )}
-        {mails?.length === 0 && <p className="text-sm">Nothing yet.</p>}
-        {mails && mails.length > 0 && (
-          <div className="grid gap-3 sm:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
-            <ul className="max-h-[55vh] space-y-1 overflow-auto">
-              {mails.map((m) => (
-                <li key={m.file}>
-                  <button
-                    type="button"
-                    aria-current={m.file === open || undefined}
-                    onClick={() => setOpen(m.file)}
-                    className="w-full rounded px-2 py-1.5 text-left text-sm hover:bg-subtle aria-[current]:bg-subtle"
-                  >
-                    <span className="block truncate font-medium">
-                      {m.subject || "(no subject)"}
-                    </span>
-                    <span className="block truncate text-xs text-muted">
-                      {m.to} · {when(m.at)}
-                    </span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-            {shown && (
-              <div className="min-w-0 space-y-2">
-                <p className="text-sm">
-                  <span className="text-muted">To</span> {shown.to}
-                </p>
-                <pre className="max-h-[50vh] overflow-auto rounded border border-line bg-surface p-2 text-xs whitespace-pre-wrap">
-                  {linked(shown.text)}
-                </pre>
-              </div>
-            )}
+          {failure && (
+            <p role="alert" className="text-sm text-red-700">
+              {failure}
+            </p>
+          )}
+          {mails?.length === 0 && <p className="text-sm">Nothing yet.</p>}
+          {mails && mails.length > 0 && (
+            <div className="grid gap-3 sm:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
+              <ul className="max-h-[55vh] space-y-1 overflow-auto">
+                {mails.map((m) => (
+                  <li key={m.file}>
+                    <button
+                      type="button"
+                      aria-current={m.file === open || undefined}
+                      onClick={() => setOpen(m.file)}
+                      className="w-full rounded px-2 py-1.5 text-left text-sm hover:bg-subtle aria-[current]:bg-subtle"
+                    >
+                      <span className="block truncate font-medium">
+                        {m.subject || "(no subject)"}
+                      </span>
+                      <span className="block truncate text-xs text-muted">
+                        {m.to} · {when(m.at)}
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+              {shown && (
+                <div className="min-w-0 space-y-2">
+                  <p className="text-sm">
+                    <span className="text-muted">To</span> {shown.to}
+                  </p>
+                  <pre className="max-h-[50vh] overflow-auto rounded border border-line bg-surface p-2 text-xs whitespace-pre-wrap">
+                    {linked(shown.text)}
+                  </pre>
+                </div>
+              )}
+            </div>
+          )}
+          {templates.length > 0 && (
+            <section aria-label="Mail templates" className="space-y-2 border-t border-line pt-3">
+              <h3 className="text-sm font-semibold">Mail templates</h3>
+              <ul className="space-y-1">
+                {templates.map((name) => (
+                  <li key={name}>
+                    <Button variant="ghost" onClick={() => setTemplate(name)}>
+                      Edit mail template for {humanize(name)}
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+          <div className="flex justify-end">
+            <Button variant="ghost" onClick={() => void load()}>
+              Refresh
+            </Button>
           </div>
-        )}
-        <div className="flex justify-end gap-2">
-          <Button variant="ghost" onClick={() => void load()}>
-            Refresh
-          </Button>
-          <Button onClick={() => dialog.current?.close()}>Close</Button>
         </div>
-      </div>
-    </dialog>
+      </StudioOverlay>
+      {template && editTemplate(template, () => setTemplate(undefined))}
+    </>
   );
 }
 

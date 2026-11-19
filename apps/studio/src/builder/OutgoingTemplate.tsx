@@ -4,6 +4,7 @@
 // running app.
 import {
   type AuthIR,
+  channelsOf,
   type FieldIR,
   fillText,
   humanize,
@@ -16,9 +17,10 @@ import {
   titleField,
   USER_MODEL,
 } from "@smithable/core";
-import { useEffect, useId, useRef, useState } from "react";
+import { useId, useState } from "react";
 import { parse } from "yaml";
-import { Button, Input } from "../ui";
+import { StudioOverlay } from "../StudioOverlay";
+import { Button, Input, useMedia } from "../ui";
 import type { Run } from "./ChangeForms";
 import { usePendingEdit } from "./pending-edit";
 
@@ -75,6 +77,10 @@ function hops(
 const shown = (value: unknown): string | undefined =>
   value == null ? undefined : typeof value === "object" ? JSON.stringify(value) : String(value);
 
+export function mailTemplates(ir?: SpecIR) {
+  return ir?.outgoing.filter((entry) => channelsOf(entry)?.includes("mail")) ?? [];
+}
+
 export function OutgoingTemplate({
   entry,
   ir,
@@ -83,6 +89,7 @@ export function OutgoingTemplate({
   samples,
   run,
   onClose,
+  fromOutbox = false,
 }: {
   entry: string;
   ir: SpecIR;
@@ -93,14 +100,12 @@ export function OutgoingTemplate({
   samples: Record<string, string>;
   run: Run;
   onClose?: () => void;
+  fromOutbox?: boolean;
 }) {
   const o = ir.outgoing.find((x) => x.name === entry);
   const [copied, setCopied] = useState<string>();
   const subjectId = useId();
-  const dialog = useRef<HTMLDialogElement>(null);
-  useEffect(() => {
-    dialog.current?.showModal();
-  }, []);
+  const narrow = useMedia("(max-width: 1023px)");
   const on = o && "model" in o.when ? o.when.model : undefined;
   const model = ir.models.find((m) => m.name === on);
   const changed = o && "event" in o.when && o.when.event === "changed";
@@ -308,17 +313,17 @@ export function OutgoingTemplate({
     );
   const title = `Edit mail template for ${humanize(entry)}`;
   return (
-    <dialog
-      ref={dialog}
-      aria-label={title}
-      onCancel={(event) => {
-        if (saving) event.preventDefault();
-      }}
+    <StudioOverlay
+      name="mail-template"
+      title={title}
+      narrow={narrow}
+      width="editor"
+      modal
+      closeLabel="Close template"
+      canClose={!saving}
       onClose={onClose}
-      className="m-auto max-h-[90dvh] w-[min(72rem,94vw)] overflow-auto rounded-lg bg-panel p-0 text-fg shadow-xl backdrop:bg-black/40"
     >
-      <div className="space-y-4 p-5">
-        <h2 className="text-base font-semibold">{title}</h2>
+      <div className="space-y-4 p-4 md:p-5">
         <div className="grid items-start gap-5 md:grid-cols-2">
           <div className="min-w-0 space-y-3">
             <label htmlFor={subjectId} className="block space-y-1 text-sm font-medium">
@@ -340,9 +345,12 @@ export function OutgoingTemplate({
                 className="w-full rounded-md border border-line bg-surface px-2 py-1 text-sm"
               />
             </label>
-            {settings}
           </div>
-          <section aria-label="Mail preview" className="min-w-0 space-y-2" data-preview>
+          <section
+            aria-label="Mail preview"
+            className="min-w-0 space-y-2 md:col-start-2 md:row-span-2 md:row-start-1"
+            data-preview
+          >
             <h3 className="text-sm font-semibold">Mail preview</h3>
             {model && (
               <p className="text-xs text-muted">
@@ -378,6 +386,7 @@ export function OutgoingTemplate({
               )}
             </div>
           </section>
+          <div className="min-w-0 md:col-start-1 md:row-start-2">{settings}</div>
         </div>
         {conflicted && (
           <p role="alert" className="text-sm text-red-700">
@@ -390,14 +399,20 @@ export function OutgoingTemplate({
           </p>
         )}
         <div className="flex justify-end gap-2">
-          <Button variant="ghost" disabled={saving} onClick={() => dialog.current?.close()}>
-            {dirty.length ? "Discard and close" : "Close"}
+          <Button variant="ghost" disabled={saving} onClick={onClose}>
+            {fromOutbox
+              ? dirty.length
+                ? "Discard and return to Mail"
+                : "Back to Mail"
+              : dirty.length
+                ? "Discard and close"
+                : "Close"}
           </Button>
           <Button disabled={saving || conflicted || !dirty.length} onClick={() => void save()}>
             {saving ? "Saving…" : "Save template"}
           </Button>
         </div>
       </div>
-    </dialog>
+    </StudioOverlay>
   );
 }
