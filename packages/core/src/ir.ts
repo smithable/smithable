@@ -905,6 +905,8 @@ export interface OutgoingIR {
   list?: OutgoingListIR;
   /** A list mail with nothing to show: no mail (skip, unsaid) or a mail that says so (send). */
   empty?: "skip" | "send";
+  /** How many days a `{view}` link opens, from the send (record-documents.md §5); 60 unsaid. */
+  viewDays?: number;
 }
 
 /**

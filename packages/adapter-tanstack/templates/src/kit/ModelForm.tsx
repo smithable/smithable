@@ -772,6 +772,9 @@ function failureMessage(ui: ModelUi, error: unknown, timeZone?: string): string 
   if (message === "full") return w.noPlacesLeft;
   const missing = /^no-value:(.+)$/.exec(message)?.[1];
   if (missing) return w.noValue(missing);
+  // A sent document's copy that could not be read (record-documents.md §5).
+  if (message === "document-read") return w.document.sendRefused;
+  if (message === "document-settings") return w.document.sendSettings;
   if (message === "closed") return w.bookingClosed;
   if (message === "cancel-closed") return w.cancellingClosed;
   const booked = /^booked:(\d+)$/.exec(message)?.[1];

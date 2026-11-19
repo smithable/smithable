@@ -57,6 +57,25 @@ export interface Happening {
   letter?: string;
   /** A mail of a record's thread (docs/design/mail-threads.md §4). */
   thread?: Thread;
+  /**
+   * The link to a copy of the record's document for one recipient (record-documents.md §5): its
+   * address stands where the texts say {view}, made when the mail to them is queued.
+   */
+  view?: (email: string) => string;
+}
+
+/** Where a mail's text says {view}, until each recipient's own address is put in its place. */
+export const VIEW_MARK = "\u0000view\u0000";
+
+/** What a push or a text says of a mail with {view}: nothing where the link would stand. */
+export function unviewed(happening: Happening): Happening {
+  const { view: _view, ...rest } = happening;
+  const without = (s: string) => s.split(VIEW_MARK).join("");
+  return {
+    ...rest,
+    subject: without(rest.subject),
+    ...(rest.text !== undefined ? { text: without(rest.text) } : {}),
+  };
 }
 
 /** Where a thread mail belongs: its tag, the ids it answers, where a reply goes, and its own id kept. */
@@ -236,6 +255,9 @@ export function queueMail(
     if (!viewer && !person.id) continue;
     if (!own && viewer && (person.id === viewer.id || key === viewer.email.toLowerCase())) continue;
     sent.add(key);
+    // Each recipient's own link to the sent copy, where the texts say {view}.
+    const address = happening.view?.(email);
+    const at = (s: string) => (address === undefined ? s : s.split(VIEW_MARK).join(address));
     const id = thread ? messageId() : undefined;
     const queued = tx
       .insert(outgoingMail)
@@ -244,8 +266,8 @@ export function queueMail(
         model: happening.model,
         recordId: happening.record,
         to: email,
-        subject,
-        text,
+        subject: at(subject),
+        text: at(text),
         ...(thread && id
           ? {
               messageId: id,

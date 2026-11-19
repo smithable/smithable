@@ -85,6 +85,11 @@ export function conflict(code: string): string {
   const missing = /^no-value:(.+)$/.exec(code)?.[1];
   if (missing)
     return `${missing} has no value to send, so nothing was changed and nothing was sent.`;
+  // A sent document's copy (record-documents.md §5).
+  if (code === "document-read")
+    return "You may not read all of the document the mail links to, so nothing was changed and nothing was sent.";
+  if (code === "document-settings")
+    return "The business details the document is from are not filled in, so nothing was changed and nothing was sent.";
   if (code === "closed") return "Booking has closed.";
   if (code === "cancel-closed") return "Cancelling has closed.";
   const booked = /^booked:(\d+)$/.exec(code)?.[1];

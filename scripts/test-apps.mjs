@@ -6057,7 +6057,7 @@ async function invoiceMailFlow(dir, base) {
     existsSync(outbox) ? readdirSync(outbox).filter((f) => !f.startsWith(".")) : [];
   const drafts = query(
     dir,
-    `select i.id, i.number, sum(l.quantity * l.unit_price) as cents, min(l.id) as line, min(l.quantity) as quantity
+    `select i.id, i.number, i.owner_id as owner, sum(l.quantity * l.unit_price) as cents, min(l.id) as line, min(l.quantity) as quantity
        from invoices i join invoice_lines l on l.invoice_id = i.id
        join clients c on c.id = i.client_id
       where i.status = 'draft' and c.email is not null and c.email != ''
@@ -6077,6 +6077,36 @@ async function invoiceMailFlow(dir, base) {
         .getByRole("button", { name: "Mark sent" })
         .click();
     let count = mails().length;
+    // The mail links to the invoice as a document, which says whom it is from: without the
+    // owner's business details Mark sent is refused, and nothing changes or goes (record-documents.md §4).
+    // A sample invoice has no owner: it is from whoever sends it, the admin signed in now.
+    const [{ id: sender }] = query(
+      dir,
+      "select user_id as id from session order by created_at desc limit 1",
+    );
+    const owner = sent.owner ?? sender;
+    const profile = `select id from business_profiles where owner_id = '${owner}'`;
+    if (!query(dir, profile).length) {
+      await open(page, `${base}/invoices/${sent.id}`);
+      await markSent.click();
+      await confirmed();
+      await page
+        .getByText("Fill in your business details before sending the document.")
+        .first()
+        .waitFor({ timeout: 10000 * P });
+      await page.waitForTimeout(1000);
+      const [{ status }] = query(dir, `select status from invoices where id = ${sent.id}`);
+      if (status !== "draft") throw new Error(`the refused invoice is ${status}, not draft`);
+      if (mails().length !== count) throw new Error("a mail went out without business details");
+      console.log(
+        "  ✓ browser: without business details Mark sent is refused: the invoice stays a draft and no mail goes",
+      );
+      write(
+        dir,
+        `insert into business_profiles (business_name, iban, payment_term_days, owner_id, created_at, updated_at)
+           values ('Sender Design Oy', 'FI00 SENDER', 30, '${owner}', 0, 0)`,
+      );
+    }
     await open(page, `${base}/invoices/${sent.id}`);
     await markSent.click();
     await confirmed();
@@ -6125,6 +6155,121 @@ async function invoiceMailFlow(dir, base) {
       write(
         dir,
         `UPDATE invoice_lines SET quantity = ${broken.quantity} WHERE id = ${broken.line}`,
+      );
+    await browser.close();
+  }
+}
+
+/**
+ * A sent invoice's link (record-documents.md §5, §8): Mark sent's mail carries a link of its own
+ * to a copy of the invoice as it was sent, served without caching or indexing; a later change to
+ * the invoice does not reach the copy; the invoice's document page lists the link, and Withdraw
+ * ends it for good, after which it answers like a link that never was.
+ */
+async function sentLinkFlow(dir, base) {
+  const browser = await chromium.launch();
+  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+  const outbox = join(dir, "data", "mail", "outbox");
+  const mails = () =>
+    existsSync(outbox) ? readdirSync(outbox).filter((f) => !f.startsWith(".")) : [];
+  const [invoice] = query(
+    dir,
+    `select i.id, i.number, sum(l.quantity * l.unit_price) as cents, min(l.id) as line
+       from invoices i join invoice_lines l on l.invoice_id = i.id
+       join clients c on c.id = i.client_id
+      where i.status = 'draft' and c.email is not null and c.email != ''
+      group by i.id order by i.id limit 1`,
+  );
+  let changed;
+  try {
+    if (!invoice) throw new Error("no draft invoice with lines and a client's address");
+    await signInAs(page, base, "admin");
+    const before = new Set(mails());
+    await open(page, `${base}/invoices/${invoice.id}`);
+    await page.getByRole("button", { name: "Mark sent" }).filter({ visible: true }).click();
+    await page
+      .getByRole("dialog", { name: "Mark sent" })
+      .getByRole("button", { name: "Mark sent" })
+      .click();
+    for (let i = 0; i < 100 * P && mails().every((m) => before.has(m)); i++)
+      await page.waitForTimeout(100);
+    const mail = mails()
+      .filter((m) => !before.has(m))
+      .map((m) => quotedPrintable(readFileSync(join(outbox, m), "latin1")))
+      .find((m) => m.includes(`invoice ${invoice.number} for`));
+    const token = mail?.match(/\/d\/([A-Za-z0-9_-]{43})\b/)?.[1];
+    if (!token) throw new Error(`no link in the mail: ${mail?.slice(0, 600)}`);
+    const total = new Intl.NumberFormat("en", { style: "currency", currency: "EUR" }).format(
+      Math.round(invoice.cents) / 100,
+    );
+    const served = await page.request.get(`${base}/d/${token}`);
+    const body = await served.text();
+    if (served.status() !== 200) throw new Error(`the link answers ${served.status()}`);
+    if (!/no-store/.test(served.headers()["cache-control"] ?? ""))
+      throw new Error(`the copy may be cached: ${served.headers()["cache-control"]}`);
+    if (!/noindex/.test(served.headers()["x-robots-tag"] ?? ""))
+      throw new Error("the copy may be indexed");
+    if (!body.includes(invoice.number) || !body.includes(total))
+      throw new Error(`the copy does not show ${invoice.number} for ${total}`);
+    console.log(
+      "  ✓ browser: Mark sent's mail links to the invoice as sent, not cached or indexed",
+    );
+
+    // A later change to the invoice does not reach the copy.
+    write(
+      dir,
+      `UPDATE invoice_lines SET unit_price = unit_price + 10000 WHERE id = ${invoice.line}`,
+    );
+    changed = invoice;
+    await open(page, `${base}/d/${token}`);
+    await page
+      .getByText(total)
+      .first()
+      .waitFor({ timeout: 10000 * P });
+    console.log("  ✓ browser: a change after sending leaves the sent copy as it was");
+
+    // A wrong link and a withdrawn one answer alike.
+    const wrong = await page.request.get(`${base}/d/${"A".repeat(43)}`);
+    if (wrong.status() !== 404) throw new Error(`a wrong link answers ${wrong.status()}`);
+    await open(page, `${base}/invoices/${invoice.id}/document`);
+    const sent = page.locator('[data-kit="sent-documents"]');
+    await sent
+      .locator('[data-open="true"]')
+      .first()
+      .waitFor({ timeout: 10000 * P });
+    // The button that opens the question (the dialog has one of the same name).
+    const withdraw = sent.getByRole("button", { name: "Withdraw links" }).first();
+    await withdraw.click();
+    await page
+      .getByRole("dialog", { name: "Withdraw links" })
+      .getByRole("button", { name: "Withdraw links" })
+      .click();
+    await withdraw.waitFor({
+      state: "detached",
+      timeout: 10000 * P,
+    });
+    if (await sent.locator('[data-open="true"]').count())
+      throw new Error("a link is still open after Withdraw");
+    const withdrawn = await page.request.get(`${base}/d/${token}`);
+    if (withdrawn.status() !== 404)
+      throw new Error(`a withdrawn link answers ${withdrawn.status()}`);
+    if ((await withdrawn.text()).includes(invoice.number))
+      throw new Error("a withdrawn link still shows the invoice");
+    console.log(
+      "  ✓ browser: the document page lists the link; Withdraw ends it, and it answers like a wrong one",
+    );
+  } catch (error) {
+    console.log(
+      `  ✗ browser (sent link): ${error.message.split("\n")[0]}\n    at ${page.url()}, see ${await screenshot(page)}`,
+    );
+    failures.push("sent link");
+  } finally {
+    // Later checks want the drafts as the samples have them.
+    if (invoice) write(dir, `UPDATE invoices SET status = 'draft' WHERE id = ${invoice.id}`);
+    if (changed)
+      write(
+        dir,
+        `UPDATE invoice_lines SET unit_price = unit_price - 10000 WHERE id = ${changed.line}`,
       );
     await browser.close();
   }
@@ -6188,6 +6333,7 @@ async function copyFlow(base) {
     await page
       .locator('[data-kit="activity-log"] [data-part="line"]', { hasText: "mark sent" })
       .getByText("(status)")
+      .first()
       .waitFor({ timeout: 10000 * P });
     console.log(
       "  ✓ browser: after an action on its page, the record's form shows the new values, and its history the action",
@@ -9680,6 +9826,7 @@ test("the session cookie's name and attributes", async () => {
       if (example === "api") await askPanelFlow(dir, base);
       if (example === "invoicing") {
         await invoiceMailFlow(dir, base);
+        await sentLinkFlow(dir, base);
         await copyFlow(base);
         await documentFlow(dir, base);
         await formulaFlow(base);

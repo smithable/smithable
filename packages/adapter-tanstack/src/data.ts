@@ -1,4 +1,5 @@
 // Part of the TanStack adapter's generator (generate.ts), split out by concern (C7).
+
 import {
   type AuthIR,
   apiOffers,
@@ -47,6 +48,7 @@ import {
   occupying,
 } from "./occupies.js";
 import { OUTGOING_IMPORT, toldAbout } from "./outgoing.js";
+import { documentReads } from "./pages/document.js";
 import { describeCode, payToCreate } from "./payments.js";
 import {
   addable,
@@ -601,6 +603,8 @@ export function dataModule(
   ir: SpecIR,
   auth: AuthIR,
   ux: UxIR = emptyUx(),
+  /** Its mails send links to a copy of its document (record-documents.md §5). */
+  sends = false,
 ): string {
   const n = names(model, t);
   // The order an order page makes (orders.md §3): its lines are written with it, priced here.
@@ -1799,7 +1803,7 @@ ${eraseMembers}`
     if (!app && rows.some((row) => !allows(${n.access}.delete, viewer, ${rowOwner}))) throw new AccessDenied(viewer !== null);
     for (const row of rows) {
       const gone = tx.delete(${n.table}).where(eq(${n.table}.id, row.id)).returning().get();
-      if (gone) audit(tx, viewer, { action: "removed", model: "${model.name}", record: row.id, title: ${longTitle(model) ? `titleOf(gone.${titleKey})` : `gone.${titleKey}`} });
+      if (gone) audit(tx, viewer, { action: "removed", model: "${model.name}", record: row.id, title: ${longTitle(model) ? `titleOf(gone.${titleKey})` : `gone.${titleKey}`} });${sends ? `\n      if (gone) removeCopies(tx, "${model.name}", row.id);` : ""}
     }${
       pictures.length
         ? `
@@ -1840,7 +1844,7 @@ ${dropPictures(
     if (rows.length === 0) return;
     tx.update(${n.table}).set({ deletedAt: when, deletedBy: personOf(viewer), deletedWith: tag }).where(and(fits, isNull(${n.table}.deletedAt))).run();
     for (const row of rows) {
-      audit(tx, viewer, { action: "trashed", model: "${model.name}", record: row.id, title: row.${titleKey}, details: { with: tag } });${tell('"deleted"', "row").replace("\n        ", "\n      ")}
+      audit(tx, viewer, { action: "trashed", model: "${model.name}", record: row.id, title: row.${titleKey}, details: { with: tag } });${tell('"deleted"', "row").replace("\n        ", "\n      ")}${sends ? `\n      endLinks(tx, viewer, "${model.name}", row.id, "trashed");` : ""}
     }
   },
 
@@ -1896,6 +1900,48 @@ ${dropPictures(
           ),
         ].join("")}    });\n`
       : "";
+  // A model a document reads is read at once on a connection given as well, so a sent copy is
+  // read in its action's transaction with the same rules (record-documents.md §5).
+  const read = documentReads(ir).has(model.name);
+  const getMember = (
+    sync: boolean,
+  ) => `${sync ? '\n  /** As get, at once on the connection given: a document read in an action\'s transaction (record-documents.md §5). */\n  getIn(q: Pick<typeof db, "query">, viewer: Viewer | null, id: number)' : "  async get(viewer: Viewer | null, id: number)"} {
+    const fetched = ${sync ? "q" : "await db"}.query.${n.tableKey}.findFirst({
+      where: and(eq(${n.table}.id, id), ${self}.readable(viewer)),${withClause(getWith, "      ")}
+    })${sync ? ".sync()" : ""};
+    const ${ownedAuto || ownedLists.length ? "found" : "row"} = fetched && ${shownOne("fetched")};${
+      !ownedLists.length
+        ? ownedAuto
+          ? "\n    const row = found && shownTo(viewer, found);"
+          : ""
+        : `\n    const row = found && { ...${ownedAuto ? "shownTo(viewer, found)" : "found"}${ownedLists
+            .map(
+              (f) =>
+                `, ${f.name}: found.${f.name}.map((r) => ${names(modelNamed(ir, f.type.model), t).data}.shownTo(viewer, r))`,
+            )
+            .join("")} };`
+    }
+${
+  hiddenTotals.length
+    ? `    if (!row) return null;
+    // Totals count every related record, as in lists; the related records shown are the viewer's.
+    const all = ${sync ? "q" : "await db"}.query.${n.tableKey}.findFirst({ where: eq(${n.table}.id, id), with: { ${hiddenTotals.map(liveList).join(", ")} } })${sync ? ".sync()" : ""};
+    return { ...${compute(`{ ...${veils.length ? "veiled(viewer, [row])[0]" : "row"}, ${hiddenTotals.map((l) => `${l}: all?.${l} ?? []`).join(", ")} }`)}, ${hiddenTotals.map((l) => `${l}: row.${l}`).join(", ")} };`
+    : `    return row ? ${compute(veils.length ? "veiled(viewer, [row])[0]" : "row")} : null;`
+}
+  },
+`;
+  const firstMember = (sync: boolean) => `
+  /** The viewer's ${inert(n.label.toLowerCase())} for a settings page: the first one they may read, or null. */
+  ${sync ? 'firstIn(q: Pick<typeof db, "query">, viewer: Viewer | null)' : "async first(viewer: Viewer | null)"} {
+    if (readScope(${n.access}.read, viewer) === "none") throw new AccessDenied(viewer !== null);
+    const ${ownedAuto ? "found" : "rows"} = ${self}.shownRefs(viewer, ${sync ? "q" : "await db"}.query.${n.tableKey}.findMany({
+      where: ${self}.readable(viewer),${withClause(listWith, "      ")}
+      orderBy: (t, { asc }) => [asc(t.id)],
+      limit: 1,
+    })${sync ? ".sync()" : ""});${ownedAuto ? "\n    const rows = found.map((row) => shownTo(viewer, row));" : ""}
+    ${asListed("rows", "return ", "[0] ?? null")}
+  },`;
   return `${HEADER}import { ${paged ? "type AnyColumn, " : ""}${[...new Set(drizzle)].sort().join(", ")}, type SQL } from "drizzle-orm";
 import { db } from "#/db";
 ${SCHEMA_IMPORT}
@@ -1921,7 +1967,7 @@ ${(composedName(model) || lined) && referenced ? 'import { sortRows } from "#/ki
   )
   .join(
     "",
-  )}${longTitle(model) ? 'import { titleOf } from "#/kit/format";\n' : ""}${mails ? `${OUTGOING_IMPORT}\n` : ""}${filteredBy || ((referenced || paged) && titleColumn !== "id") || (paged && (searched.length || nameSearch.some((c) => c.includes("contains(")))) ? `import { contains } from "#/kit/search";\n` : ""}${paged || ruled || orderPage || filteredBy ? 'import { BadInput } from "#/kit/refusal";\n' : ""}${ruled ? 'import { fits } from "#/kit/model";\n' : ""}${paged ? 'import { aggregate, type Filterable, nearest, sortOf, whereOf, wordsOf } from "#/kit/where";\n' : ""}${ruled ? 'import { w } from "#/kit/words";\n' : ""}${pictures.length ? `import { ${[...(singles.length || pictureLists.length ? ["deletePicture"] : []), ...(docSingles.length || docLists.length ? ["deleteFile"] : [])].join(", ")} } from "#/kit/uploads";\n` : ""}${model.fields.some(isUpload) ? 'import { acceptFiles, cleanUploads, keepsUpload } from "#/kit/receipts.server";\n' : ""}${model.review && signedIn ? 'import { tellReviewers } from "#/kit/review-mail.server";\n' : ""}${capacity?.closes || capacity?.cancelUntil ? 'import { now } from "#/kit/now";\n' : ""}${payEntry ? 'import { askPayment } from "#/kit/payments.server";\n' : ""}import { afterChange, afterDelete } from "./hooks";
+  )}${longTitle(model) ? 'import { titleOf } from "#/kit/format";\n' : ""}${mails ? `${OUTGOING_IMPORT}\n` : ""}${filteredBy || ((referenced || paged) && titleColumn !== "id") || (paged && (searched.length || nameSearch.some((c) => c.includes("contains(")))) ? `import { contains } from "#/kit/search";\n` : ""}${paged || ruled || orderPage || filteredBy ? 'import { BadInput } from "#/kit/refusal";\n' : ""}${ruled ? 'import { fits } from "#/kit/model";\n' : ""}${paged ? 'import { aggregate, type Filterable, nearest, sortOf, whereOf, wordsOf } from "#/kit/where";\n' : ""}${ruled ? 'import { w } from "#/kit/words";\n' : ""}${pictures.length ? `import { ${[...(singles.length || pictureLists.length ? ["deletePicture"] : []), ...(docSingles.length || docLists.length ? ["deleteFile"] : [])].join(", ")} } from "#/kit/uploads";\n` : ""}${model.fields.some(isUpload) ? 'import { acceptFiles, cleanUploads, keepsUpload } from "#/kit/receipts.server";\n' : ""}${model.review && signedIn ? 'import { tellReviewers } from "#/kit/review-mail.server";\n' : ""}${capacity?.closes || capacity?.cancelUntil ? 'import { now } from "#/kit/now";\n' : ""}${payEntry ? 'import { askPayment } from "#/kit/payments.server";\n' : ""}${sends ? `import { ${trashing ? "endLinks, " : ""}removeCopies } from "#/kit/view.server";\n` : ""}import { afterChange, afterDelete } from "./hooks";
 ${occ ? occupiesImports() : ""}${unmerge ? unmergeImports(ir, model, t) : ""}${[...others]
   .map((m) => `import { ${names(m, t).data} } from "./${kebab(m.name)}.server";`)
   .join("\n")}${others.size ? "\n" : ""}${[...labelledKinds]
@@ -2377,21 +2423,7 @@ ${
       orderBy: (t, { desc }) => [${ordered ? "...(order ? [order] : []), " : ""}desc(t.id)],${capped ? "\n      limit," : ""}
     }));${ownedAuto ? "\n    const rows = found.map((row) => shownTo(viewer, row));" : ""}
     ${asListed("rows", "return ")}
-  },${
-    single
-      ? `
-  /** The viewer's ${inert(n.label.toLowerCase())} for a settings page: the first one they may read, or null. */
-  async first(viewer: Viewer | null) {
-    if (readScope(${n.access}.read, viewer) === "none") throw new AccessDenied(viewer !== null);
-    const ${ownedAuto ? "found" : "rows"} = ${self}.shownRefs(viewer, await db.query.${n.tableKey}.findMany({
-      where: ${self}.readable(viewer),${withClause(listWith, "      ")}
-      orderBy: (t, { asc }) => [asc(t.id)],
-      limit: 1,
-    }));${ownedAuto ? "\n    const rows = found.map((row) => shownTo(viewer, row));" : ""}
-    ${asListed("rows", "return ", "[0] ?? null")}
-  },`
-      : ""
-  }${
+  },${single ? `${firstMember(false)}${read ? firstMember(true) : ""}` : ""}${
     articleDates.length
       ? `
   /** The ${inert(n.pluralLabel.toLowerCase())} the viewer may read for an articles page that fit \`where\`: newest first${byDate.length ? " by `by` (none last)" : ""}, then by creation, or the other way round. */
@@ -2762,32 +2794,7 @@ ${
 
 `
     : ""
-}${occ ? freeTimesMember(occ, names(occ.resource, t).data, occ.lengthTarget && names(occ.lengthTarget.model, t).data) : ""}${occ && signedIn ? cancelMembers(occ, model, n, owner) : ""}  async get(viewer: Viewer | null, id: number) {
-    const fetched = await db.query.${n.tableKey}.findFirst({
-      where: and(eq(${n.table}.id, id), ${self}.readable(viewer)),${withClause(getWith, "      ")}
-    });
-    const ${ownedAuto || ownedLists.length ? "found" : "row"} = fetched && ${shownOne("fetched")};${
-      !ownedLists.length
-        ? ownedAuto
-          ? "\n    const row = found && shownTo(viewer, found);"
-          : ""
-        : `\n    const row = found && { ...${ownedAuto ? "shownTo(viewer, found)" : "found"}${ownedLists
-            .map(
-              (f) =>
-                `, ${f.name}: found.${f.name}.map((r) => ${names(modelNamed(ir, f.type.model), t).data}.shownTo(viewer, r))`,
-            )
-            .join("")} };`
-    }
-${
-  hiddenTotals.length
-    ? `    if (!row) return null;
-    // Totals count every related record, as in lists; the related records shown are the viewer's.
-    const all = await db.query.${n.tableKey}.findFirst({ where: eq(${n.table}.id, id), with: { ${hiddenTotals.map(liveList).join(", ")} } });
-    return { ...${compute(`{ ...${veils.length ? "veiled(viewer, [row])[0]" : "row"}, ${hiddenTotals.map((l) => `${l}: all?.${l} ?? []`).join(", ")} }`)}, ${hiddenTotals.map((l) => `${l}: row.${l}`).join(", ")} };`
-    : `    return row ? ${compute(veils.length ? "veiled(viewer, [row])[0]" : "row")} : null;`
-}
-  },
-
+}${occ ? freeTimesMember(occ, names(occ.resource, t).data, occ.lengthTarget && names(occ.lengthTarget.model, t).data) : ""}${occ && signedIn ? cancelMembers(occ, model, n, owner) : ""}${getMember(false)}${read ? getMember(true) : ""}
 ${
   mailsOwner
     ? `  /** Who owns a ${inert(n.label.toLowerCase())} the viewer may read, for the server only (a message to its owner). */
@@ -2898,7 +2905,7 @@ ${dropPictures(
         if (!current) throw new AccessDenied(viewer !== null);${signedIn ? `\n        check(${n.access}.delete, viewer, ${ownerOf(model, n, "current")});` : ""}${cancelCheck("id", "        ")}
 ${groupCheck("id", "row", "        ")}${trashing ? "        const when = new Date();\n" : ""}        const gone = ${goneBy("id")};
         if (gone) {
-          audit(tx, viewer, { action: "${goneAction}", model: "${model.name}", record: id, title: ${longTitle(model) ? `titleOf(gone.${titleKey})` : `gone.${titleKey}`} });${tell('"deleted"', "gone").replace("\n        ", "\n          ")}${groupTrash("id", "          ")}
+          audit(tx, viewer, { action: "${goneAction}", model: "${model.name}", record: id, title: ${longTitle(model) ? `titleOf(gone.${titleKey})` : `gone.${titleKey}`} });${tell('"deleted"', "gone").replace("\n        ", "\n          ")}${sends ? `\n          ${trashing ? `endLinks(tx, viewer, "${model.name}", id, "trashed");` : `removeCopies(tx, "${model.name}", id);`}` : ""}${groupTrash("id", "          ")}
         }
       });
     } catch (error) {
@@ -2934,7 +2941,7 @@ ${
           if (!current) throw new AccessDenied(viewer !== null);${signedIn ? `\n          check(${n.access}.delete, viewer, ${ownerOf(model, n, "current")});` : ""}${cancelCheck("row.id", "          ")}
 ${groupCheck("row.id", "row", "          ")}          const gone = ${goneBy("row.id")};
           if (gone) {
-            audit(tx, viewer, { action: "${goneAction}", model: "${model.name}", record: row.id, title: ${longTitle(model) ? `titleOf(gone.${titleKey})` : `gone.${titleKey}`} });${tell('"deleted"', "gone").replace("\n        ", "\n            ")}${groupTrash("row.id", "            ")}
+            audit(tx, viewer, { action: "${goneAction}", model: "${model.name}", record: row.id, title: ${longTitle(model) ? `titleOf(gone.${titleKey})` : `gone.${titleKey}`} });${tell('"deleted"', "gone").replace("\n        ", "\n            ")}${sends ? `\n            ${trashing ? `endLinks(tx, viewer, "${model.name}", row.id, "trashed");` : `removeCopies(tx, "${model.name}", row.id);`}` : ""}${groupTrash("row.id", "            ")}
           }
         } catch (error) {
           const refused = refusal(error);

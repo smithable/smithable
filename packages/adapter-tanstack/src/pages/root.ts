@@ -110,6 +110,8 @@ export function rootRoute(
   assistant?: ContentIR["assistant"],
   /** A theme with one mode by design shows it whatever the device says (look-breadth.md §3). */
   modes: "both" | "light" | "dark" = "both",
+  /** Routes of the kit's own with no frame (a sent document's link, /d). */
+  bare: string[] = [],
 ): string {
   // Where the menu sits on a wide screen (ux navigation); the sidebar is the kit's default.
   const layout =
@@ -216,7 +218,7 @@ export function rootRoute(
   const framed = (frame: "site" | "app" | "none") =>
     ir.pages.filter((p) => !ownFrame(p) && ux.pages[p.id]?.frame === frame).map((p) => p.route);
   const sitePages = framed("site");
-  const barePages = framed("none");
+  const barePages = [...framed("none"), ...bare];
   // The workspace: the pages in the shell, in the navigation's order; the site frame links to the
   // first the viewer may open.
   const workspace = sitePages.length ? workspaceEntries(ir, ux, auth) : [];

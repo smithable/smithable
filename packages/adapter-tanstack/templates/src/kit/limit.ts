@@ -28,6 +28,10 @@ export const LIMITS = {
   codesFromAddress: { max: 20, seconds: 3600 },
   /** Questions to Ask that the host's model answers, by one person. */
   questions: { max: 30, seconds: 900 },
+  /** Looks at sent documents' links from one address. */
+  views: { max: 60, seconds: 60 },
+  /** Links from one address that open nothing (wrong, ended, withdrawn): a guesser stops soon. */
+  viewMisses: { max: 10, seconds: 3600 },
 };
 
 /** A count, its window's end, and its limit's own ceiling (limits differ: 5 codes, 60 calls). */
@@ -106,6 +110,26 @@ export function address(headers: Pick<Headers, "get">): string {
 export function writeAllowed(viewer: { id: string } | null, headers: Headers): void {
   if (viewer) count(`write:${viewer.id}`, LIMITS.writes, w.changes, Date.now(), true);
   else count(`write:${address(headers)}`, LIMITS.visitorWrites, w.submissions);
+}
+
+/**
+ * Counts a look at a sent document's link (record-documents.md §5) from the request's address;
+ * an address that has opened nothing ten times within the hour is refused even a right link.
+ */
+export function viewAllowed(headers: Pick<Headers, "get">, now = Date.now()): void {
+  const from = address(headers);
+  const missed = strangers.get(`view-miss:${from}`);
+  if (missed && missed.until > now && missed.n >= missed.max) throw new TooMany(w.document.views);
+  count(`view:${from}`, LIMITS.views, w.document.views, now);
+}
+
+/** Counts a link that opened nothing, from the request's address. */
+export function viewMissed(headers: Pick<Headers, "get">, now = Date.now()): void {
+  const key = `view-miss:${address(headers)}`;
+  const missed = strangers.get(key);
+  // At the limit already: the next look is refused by viewAllowed, so there is nothing to add.
+  if (missed && missed.until > now && missed.n >= missed.max) return;
+  count(key, LIMITS.viewMisses, w.document.views, now);
 }
 
 /** Counts an invitation sent by the viewer. */

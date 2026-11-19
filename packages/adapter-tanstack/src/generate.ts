@@ -47,10 +47,18 @@ import { incomingRoute, incomingStub } from "./incoming.js";
 import { hasKeys, keysModule, keysTestSource } from "./keys.js";
 import { mergeActionModule, mergeActionServer } from "./merge.js";
 import { named, nameModule } from "./names.js";
-import { liveModels, liveRoute, outgoingModule, pushEntries, smsEntries } from "./outgoing.js";
+import {
+  liveModels,
+  liveRoute,
+  outgoingModule,
+  pushEntries,
+  smsEntries,
+  viewEntries,
+} from "./outgoing.js";
 import { publicArticles } from "./pages/articles.js";
 import { CUSTOM_PROPS, customPageStub, customSectionStub } from "./pages/custom.js";
 import { activityModule, hasInspector } from "./pages/data.js";
+import { documentReader, viewRoute } from "./pages/document.js";
 import { PAGE_GENERATORS, pageRoutes } from "./pages/index.js";
 import { siteModule } from "./pages/landing.js";
 import { privacyFacts, privacyFingerprint } from "./pages/legal.js";
@@ -864,8 +872,19 @@ const SECTION_GENERATORS: SectionGenerator[] = [
           options.content?.consent,
           options.content?.assistant,
           themeOf(ux, options.themes).modes,
+          viewEntries(ir, options.content).length ? ["/d"] : [],
         ),
       ),
+      ...(viewEntries(ir, options.content).length
+        ? [
+            generated(
+              "src/routes/d.$token.tsx",
+              viewRoute(ir, t, auth, [
+                ...new Set(viewEntries(ir, options.content).map((o) => o.when.model)),
+              ]),
+            ),
+          ]
+        : []),
       generated("src/routes/robots[.]txt.ts", robotsRoute(ir, auth)),
       ...(auth.public.pages.length
         ? [generated("src/routes/sitemap[.]xml.ts", sitemapRoute(ir, auth, t))]
@@ -992,6 +1011,11 @@ const SECTION_GENERATORS: SectionGenerator[] = [
           "src/kit/tell.server.ts",
         ],
         used: ({ ir }) => ir.outgoing.length > 0,
+      },
+      {
+        // A sent document's link (record-documents.md §5): the copies, the links, the page.
+        files: ["src/kit/view.server.ts", "src/kit/SentDocuments.tsx"],
+        used: ({ ir, options }) => viewEntries(ir, options.content).length > 0,
       },
       {
         // Live in the app (notifications.md §3): the stream, the banner, the chime.
@@ -1143,7 +1167,7 @@ const SECTION_GENERATORS: SectionGenerator[] = [
       },
     ],
     files: ({ ir, t, auth, ux, options }) => [
-      generated("src/db/schema.ts", schemaModule(ir, auth, ux)),
+      generated("src/db/schema.ts", schemaModule(ir, auth, ux, options.content)),
       generated("src/db/seed.ts", seedModule(ir, options)),
       ...(hasUploads(ir) ? [generated("src/generated/uploads.ts", uploadsModule(ir, t))] : []),
       // Files reviewed before others see them (docs/design/file-review.md).
@@ -1159,7 +1183,14 @@ const SECTION_GENERATORS: SectionGenerator[] = [
         : []),
       ...(ir.models.length
         ? [
-            generated("src/generated/access.test.ts", accessTestSource(ir, auth)),
+            generated(
+              "src/generated/access.test.ts",
+              accessTestSource(
+                ir,
+                auth,
+                viewEntries(ir, options.content).map((o) => o.when.model),
+              ),
+            ),
             // The hook points: after a record changes, and daily (see hooks.ts).
             generated("src/generated/hooks.ts", hooksModule(ir, t, options.plugins)),
             custom("src/custom/hooks.ts", hooksStub()),
@@ -1179,7 +1210,29 @@ const SECTION_GENERATORS: SectionGenerator[] = [
           ...(named(ir, ux, model)
             ? [generated(`${base}.name.ts`, nameModule(ir, model, t, ux))]
             : []),
-          generated(`${base}.server.ts`, dataModule(model, t, ir, auth, ux)),
+          generated(
+            `${base}.server.ts`,
+            dataModule(
+              model,
+              t,
+              ir,
+              auth,
+              ux,
+              viewEntries(ir, options.content).some((o) => o.when.model === model.name),
+            ),
+          ),
+          // A record as its document, read by its page and by a mail that sends it (record-documents.md §5).
+          ...ir.pages
+            .filter(
+              (p) => p.pattern.kind === "crud" && p.pattern.model === model.name && p.document,
+            )
+            .slice(0, 1)
+            .map((p) =>
+              generated(
+                `${base}.document.server.ts`,
+                documentReader(p, model, ir, t, auth) as string,
+              ),
+            ),
           // Import from a file, and a JSON list in the API (A 238).
           ...(importing
             ? [

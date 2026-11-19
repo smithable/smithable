@@ -30,7 +30,7 @@ link to that document for one person outside.
   computed when a record is read, the mail is written in the change's own transaction; "a later
   step may add them with the record page's formatter").
 - `{link}` is the record page's address: it needs an account with the right to read the record.
-- One thing reaches a person without an account: `{pay}` (payments.md §4.1), a page showing the
+- One thing is planned to reach a person without an account: `{pay}` (payments.md §4.1, not built yet: core refuses it until it is), a page showing the
   description, the amount and a Pay button, "nothing else of the record", by a random token
   stored as a hash, bound to the entry and the record, ended after 60 days, behind the limiter.
 - `public:` in the auth file opens a whole model (with a `where`), never one record to one person.
@@ -96,8 +96,9 @@ pages:
   that calls the browser's own print. No new dependency in generated apps.
 - It is read as that person: the record by its read rule, and the client, the lines and the
   settings record by theirs. A block the person may not read is refused, not left out silently.
-- Whose `from`: where records are private, the settings record of the document record's owner;
-  where shared, the app's.
+- Whose `from`: where records are private, the settings record of the document record's owner
+  (a record with no owner, such as a seeded sample, takes the reading or sending person's own,
+  never another member's); where shared, the app's.
 - The record page gets a "Print" button, and a list "Sent" of the copies sent (section 5).
 
 ### 4.3 The five questions (ARCHITECTURE §2.4)
@@ -152,7 +153,9 @@ the invoice."
 - Making and withdrawing a link go to the app's audit log, with the record and the actor.
 - **It never pays.** The page shows no Pay button, and a view token is refused by the pay page
   as a pay token is refused here: two kinds, two tables' worth of checks. A mail that should let
-  the client pay holds `{pay}` beside `{view}`, as today.
+  the client pay will hold `{pay}` beside `{view}`, once the pay link is built (payments.md §4.1;
+  until then core refuses `{pay}`). The links share one token table with a `kind` column; this
+  page reads only kind `view`.
 - A sent copy is removed with its record. Until then it stays for the owner after its link has
   ended, as the record of what was sent.
 

@@ -1046,9 +1046,20 @@ function checkOutgoingTexts(
     if (!isScalar(value) || typeof value.value !== "string") continue;
     const where = `"${key}" of outgoing "${name}"`;
     for (const path of new Set(placeholdersOf(value.value))) {
-      // A link or a name reveals nothing of the record, nor do a list mail's count and day; the rest does.
+      // A link or a name reveals nothing of the record, nor do a list mail's count and day; the rest
+      // does, {view} too: its link opens the record's document.
       const quiet = entry.list ? ["link", "by", "count", "date"] : ["link", "by", "pay"];
       if (!quiet.includes(path)) any = true;
+      // The link is the recipient's alone: a subject is shown in lists and notices, the text is not.
+      if (path === "view" && key === "subject") {
+        ctx.error(
+          value,
+          "view-in-subject",
+          `${where}: "{view}" is a link for the mail's text, not its subject.`,
+          "Move {view} into the text.",
+        );
+        continue;
+      }
       const problem = placeholderProblem(path, entry, ir, auth);
       if (!problem) continue;
       if (problem.warning)
@@ -1177,7 +1188,7 @@ export function placeholderProblem(
     "title",
     "link",
     "by",
-    ...(ir.payments?.some((p) => p.on === model.name) ? ["pay"] : []),
+    ...(!entry.list && documentOf(model.name, ir) ? ["view"] : []),
     ...(changed ? ["before.<field>"] : []),
   ];
   const unknown = (of: { name: string; fields: { name: string }[] }, name: string) =>
@@ -1200,13 +1211,28 @@ export function placeholderProblem(
   };
   if (second === undefined) {
     if (first === "title" || first === "link") return undefined;
-    // The pay link (payments.md §4.1): a page with the amount and Pay, for a record paid for.
+    // The pay link (payments.md §4.1) is planned and not built: a mail would go out without it.
     if (first === "pay")
-      return ir.payments?.some((p) => p.on === model.name)
+      return bad(
+        `"{pay}" would be the address where a ${model.name} is paid without an account, and that page is not built yet: link to the record ({link}) instead.`,
+      );
+    // The link to a copy of what was sent (record-documents.md §5), for one record's mail.
+    if (first === "view") {
+      if (!documentOf(model.name, ir))
+        return bad(
+          `"{view}" links to a copy of the ${model.name}'s document as sent, and no crud page of ${model.name} has a "document".`,
+        );
+      if (entry.list)
+        return bad(`"{view}" links to one record's copy, and this mail lists several.`);
+      // The copy is read when the mail is queued: a deleted record has none to send.
+      if ("event" in entry.when && entry.when.event === "deleted")
+        return bad(
+          `"{view}" links to a copy of the ${model.name} as sent, and a deleted one has none to send.`,
+        );
+      return entry.to === "mail"
         ? undefined
-        : bad(
-            `"{pay}" is the address where a ${model.name} is paid, and no entry under "payments" is on ${model.name}.`,
-          );
+        : bad(`"{view}" is a link for a mail's recipients, and this entry sends no mail.`);
+    }
     if (first === "by") {
       const r = entry.recipient;
       if (r && (r.kind === "field" || (r.kind === "list" && r.each.kind === "field")))
@@ -1298,4 +1324,10 @@ function readTexts(
     if (text !== undefined) texts[key] = text;
   }
   return texts;
+}
+
+/** The document a crud page of the model has, if any (record-documents.md §4). */
+function documentOf(model: string, ir: SpecIR) {
+  return ir.pages?.find((p) => p.pattern.kind === "crud" && p.pattern.model === model && p.document)
+    ?.document;
 }

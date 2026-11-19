@@ -106,3 +106,10 @@ test("a request that throws still has its access line; an all-zero id is not con
   });
   expect(written[0]?.trace).not.toBe("0".repeat(32));
 });
+
+test("the access line never holds a sent document's link (record-documents.md §5)", () => {
+  const token = "a".repeat(43);
+  expect(trace.loggedPath(new URL(`http://app.test/d/${token}`))).toBe("/d/…");
+  expect(trace.loggedPath(new URL(`http://app.test/d/${token}?x=1`))).toBe("/d/…?x");
+  expect(trace.loggedPath(new URL("http://app.test/documents/7"))).toBe("/documents/7");
+});

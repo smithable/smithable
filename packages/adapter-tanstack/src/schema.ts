@@ -2,6 +2,7 @@
 
 import {
   type AuthIR,
+  type ContentIR,
   emptyUx,
   type FieldIR,
   humanize,
@@ -22,7 +23,7 @@ import { authTables, hasInvitations, hasSignIn } from "./auth.js";
 import { samplePeople } from "./dev-door.js";
 import { INCOMING_SEEN_TABLE, MAIL_THREADS_TABLE } from "./incoming.js";
 import { hasKeys, KEY_TABLE } from "./keys.js";
-import { pushEntries, smsEntries } from "./outgoing.js";
+import { pushEntries, smsEntries, viewEntries } from "./outgoing.js";
 import { calendarStart } from "./pages/calendar.js";
 import { sampleRows } from "./sample-data.js";
 import {
@@ -45,7 +46,12 @@ import { TIMER_RUNS_TABLE } from "./timers.js";
 
 // ── Database ─────────────────────────────────────────────────────────────────
 
-export function schemaModule(ir: SpecIR, auth: AuthIR, ux: UxIR = emptyUx()): string {
+export function schemaModule(
+  ir: SpecIR,
+  auth: AuthIR,
+  ux: UxIR = emptyUx(),
+  content?: ContentIR,
+): string {
   const imports = new Set(["integer", "sqliteTable"]);
   if (hasSignIn(auth)) for (const i of ["index", "text"]) imports.add(i);
   if (pushEntries(ir, auth).length || smsEntries(ir, auth).length) imports.add("uniqueIndex");
@@ -237,7 +243,13 @@ export const ${n.table}Reads = sqliteTable(
   });
   const authBlock = hasSignIn(auth) ? [authTables(auth, hasInvitations(ir, auth))] : [];
   for (const used of ["index", "integer", "text"]) imports.add(used);
-  if (ir.timers.length || ir.incoming.length || ir.payments.length) imports.add("uniqueIndex");
+  if (
+    ir.timers.length ||
+    ir.incoming.length ||
+    ir.payments.length ||
+    viewEntries(ir, content).length
+  )
+    imports.add("uniqueIndex");
   const pictures = ir.models.some((m) => m.fields.some(storesPictures));
   const documents = ir.models.some((m) => m.fields.some(storesFiles));
   const stored = [...(pictures ? ["Picture"] : []), ...(documents ? ["StoredFile"] : [])];
@@ -245,7 +257,7 @@ export const ${n.table}Reads = sqliteTable(
   const orm = [...(relationBlocks.length ? ["relations"] : []), ...(trashed ? ["sql"] : [])];
   return `${HEADER}${orm.length ? `import { ${orm.join(", ")} } from "drizzle-orm";\n` : ""}import { ${[...imports].sort().join(", ")} } from "drizzle-orm/sqlite-core";
 ${stored.length ? `import type { ${stored.join(", ")} } from "#/kit/uploads";\n` : ""}
-${[...authBlock, AUDIT_TABLE, ...(ir.models.some((m) => m.review) ? [FILE_REVIEW_TABLE] : []), ...(ir.models.some((m) => m.fields.some(isUpload)) ? [UPLOADS_TABLE] : []), ...(hasKeys(ir, auth) ? [KEY_TABLE] : []), ...(ir.outgoing.length ? [OUTGOING_TABLE, OUTGOING_CALL_TABLE] : []), ...(pushEntries(ir, auth).length || smsEntries(ir, auth).length ? [CHOICES_TABLE] : []), ...(pushEntries(ir, auth).length ? PUSH_TABLES : []), ...(pushEntries(ir, auth).length || ir.payments.length ? [APP_KEYS_TABLE] : []), ...(ir.payments.length ? PAYMENT_TABLES : []), ...(smsEntries(ir, auth).length ? SMS_TABLES : []), ...(ir.timers.length ? [TIMER_RUNS_TABLE] : []), ...(ir.incoming.length || ir.payments.length ? [INCOMING_SEEN_TABLE] : []), ...(ir.incoming.some((i) => i.reply) ? [MAIL_THREADS_TABLE] : []), ...(ir.models.some((m) => m.fields.some((f) => f.sequence)) ? [SEQUENCES_TABLE] : []), ...tables, ...relationBlocks].join("\n\n")}
+${[...authBlock, AUDIT_TABLE, ...(ir.models.some((m) => m.review) ? [FILE_REVIEW_TABLE] : []), ...(ir.models.some((m) => m.fields.some(isUpload)) ? [UPLOADS_TABLE] : []), ...(hasKeys(ir, auth) ? [KEY_TABLE] : []), ...(ir.outgoing.length ? [OUTGOING_TABLE, OUTGOING_CALL_TABLE] : []), ...(pushEntries(ir, auth).length || smsEntries(ir, auth).length ? [CHOICES_TABLE] : []), ...(pushEntries(ir, auth).length ? PUSH_TABLES : []), ...(pushEntries(ir, auth).length || ir.payments.length ? [APP_KEYS_TABLE] : []), ...(ir.payments.length ? PAYMENT_TABLES : []), ...(viewEntries(ir, content).length ? SENT_TABLES : []), ...(smsEntries(ir, auth).length ? SMS_TABLES : []), ...(ir.timers.length ? [TIMER_RUNS_TABLE] : []), ...(ir.incoming.length || ir.payments.length ? [INCOMING_SEEN_TABLE] : []), ...(ir.incoming.some((i) => i.reply) ? [MAIL_THREADS_TABLE] : []), ...(ir.models.some((m) => m.fields.some((f) => f.sequence)) ? [SEQUENCES_TABLE] : []), ...tables, ...relationBlocks].join("\n\n")}
 `;
 }
 
@@ -370,6 +382,50 @@ const OUTGOING_TABLE = `export const outgoingMail = sqliteTable(
   },
   (t) => [index("outgoing_mail_due").on(t.sentAt, t.failedAt, t.nextAt)],
 );`;
+
+/**
+ * A sent document (docs/design/record-documents.md §5): the copy of a record's document a mail
+ * linked to, as the sender could read it when it was written, and the links to it, one per
+ * recipient, each kept as its token's hash. `kind` is "view" (a pay link, payments.md §4.1, is
+ * planned and not built). A link's end is stored and never undone.
+ */
+const SENT_TABLES = [
+  `export const sentDocuments = sqliteTable(
+  "sent_documents",
+  {
+    id: integer().primaryKey({ autoIncrement: true }),
+    createdAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+    /** The outgoing entry that sent it, and its record. */
+    entry: text().notNull(),
+    model: text().notNull(),
+    recordId: integer().notNull(),
+    /** Who sent it (the person whose change it was); none for the app's own. */
+    sentBy: text(),
+    /** The document's named values as the reader gave them, as JSON. */
+    content: text().notNull(),
+  },
+  (t) => [index("sent_documents_record").on(t.model, t.recordId)],
+);`,
+  `export const recordLinks = sqliteTable(
+  "record_links",
+  {
+    id: integer().primaryKey({ autoIncrement: true }),
+    createdAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+    kind: text({ enum: ["view"] }).notNull(),
+    /** The token's SHA-256, hex: the token itself is only in the mail. */
+    tokenHash: text().notNull(),
+    documentId: integer()
+      .notNull()
+      .references(() => sentDocuments.id, { onDelete: "cascade" }),
+    to: text().notNull(),
+    until: integer({ mode: "timestamp_ms" }).notNull(),
+    /** When and why it ended early: withdrawn, trashed or removed. */
+    endedAt: integer({ mode: "timestamp_ms" }),
+    ended: text(),
+  },
+  (t) => [uniqueIndex("record_links_token").on(t.tokenHash), index("record_links_document").on(t.documentId)],
+);`,
+];
 
 /**
  * Calls to named targets (docs/design/integrations.md §4.1), signed with the target's secret:

@@ -26,6 +26,7 @@ import { hasSignIn } from "./auth.js";
 import { fieldUi } from "./data.js";
 import { aggregatedLists, formulasModule, formulasName } from "./formulas.js";
 import { nameColumns, nameFunction } from "./names.js";
+import { documentReaderName } from "./pages/document.js";
 import {
   composedName,
   HEADER,
@@ -48,6 +49,24 @@ import {
 export function pushEntries(ir: SpecIR, auth: AuthIR | undefined): OutgoingIR[] {
   if (!auth || !hasSignIn(auth)) return [];
   return ir.outgoing.filter((o) => channelsOf(o)?.includes("push"));
+}
+
+/** An entry on a record's happening, not a custom one. */
+type RecordOutgoing = OutgoingIR & { when: Exclude<OutgoingIR["when"], { custom: string }> };
+const onRecords = (o: OutgoingIR): o is RecordOutgoing => !("custom" in o.when);
+
+/**
+ * The mails that send a link to a copy of their record's document ({view}, record-documents.md
+ * §5); core allows it only in a record's mail on a model with a document.
+ */
+export function viewEntries(ir: SpecIR, content: ContentIR | undefined): RecordOutgoing[] {
+  return ir.outgoing.filter(onRecords).filter((o) => {
+    const words = content?.outgoing?.[o.name];
+    return (
+      o.to === "mail" &&
+      placeholdersOf(`${words?.subject ?? ""} ${words?.text ?? ""}`).includes("view")
+    );
+  });
 }
 
 /**
@@ -120,8 +139,6 @@ export function outgoingOf(ir: SpecIR): RecordOutgoing[] {
 }
 
 /** An entry about a record (a write, a standard action, a timer): it has a model. */
-type RecordOutgoing = OutgoingIR & { when: Exclude<OutgoingIR["when"], { custom: string }> };
-const onRecords = (o: OutgoingIR): o is RecordOutgoing => !("custom" in o.when);
 
 /** The entries a custom action fires once it has returned (integrations.md §4.3). */
 export function afterCustom(ir: SpecIR, action: string): OutgoingIR[] {
@@ -284,6 +301,9 @@ export function outgoingModule(
   const told = (o: OutgoingIR) =>
     o.to === "mail" || Boolean(channelsOf(o)?.some((c) => c === "push" || c === "sms"));
   const mails = entries.filter(told);
+  // The mails that send a link to a copy of their record's document (record-documents.md §5).
+  const views = entries.filter((o) => viewEntries(ir, content).includes(o));
+  const viewModels = [...new Set(views.map((o) => o.when.model))].map((m) => modelNamed(ir, m));
   const calls = entries.filter((o) => !told(o));
   const pushes = entries.filter((o) => channelsOf(o)?.includes("push"));
   const texts = entries.filter((o) => channelsOf(o)?.includes("sms"));
@@ -439,7 +459,7 @@ ${each.join("\n")}
     return `  {
     name: ${JSON.stringify(o.name)},
     model: ${JSON.stringify(o.when.model)},
-    when: ${JSON.stringify(when)},${fits ? `\n    fits: ${fits},` : ""}${o.fields?.length ? `\n    fields: ${JSON.stringify(o.fields.map((f) => keyOf(model, f)))},` : ""}${words?.subject ? `\n    subject: ${JSON.stringify(words.subject)},` : ""}${words?.text ? `\n    text: ${JSON.stringify(words.text)},` : ""}${o.show ? `\n    show: ${JSON.stringify(o.show)},` : ""}${o.previous ? "\n    previous: true," : ""}${paths.some((p) => p.startsWith("before.")) ? "\n    before: true," : ""}${worked.length ? `\n    worked: ${JSON.stringify(worked)},` : ""}${hops.length ? `\n    more: (tx, r) => ({ ${hops.map(([path, code]) => `${JSON.stringify(path)}: ${code}`).join(", ")} }),` : ""}
+    when: ${JSON.stringify(when)},${fits ? `\n    fits: ${fits},` : ""}${o.fields?.length ? `\n    fields: ${JSON.stringify(o.fields.map((f) => keyOf(model, f)))},` : ""}${words?.subject ? `\n    subject: ${JSON.stringify(words.subject)},` : ""}${words?.text ? `\n    text: ${JSON.stringify(words.text)},` : ""}${o.show ? `\n    show: ${JSON.stringify(o.show)},` : ""}${o.previous ? "\n    previous: true," : ""}${paths.some((p) => p.startsWith("before.")) ? "\n    before: true," : ""}${worked.length ? `\n    worked: ${JSON.stringify(worked)},` : ""}${views.includes(o) ? `\n    view: ${o.viewDays ?? 60},` : ""}${hops.length ? `\n    more: (tx, r) => ({ ${hops.map(([path, code]) => `${JSON.stringify(path)}: ${code}`).join(", ")} }),` : ""}
     ${told(o) ? toCode(recipients(model, o.recipient)) : `target: ${JSON.stringify(o.to)},`}${channelsOf(o)?.includes("push") ? "\n    push: true," : ""}${channelsOf(o)?.includes("sms") ? "\n    sms: true," : ""}${told(o) && !channelsOf(o)?.includes("mail") ? "\n    mail: false," : ""}
   },`;
   });
@@ -487,9 +507,9 @@ ${each.join("\n")}
   ];
   return `${HEADER}${imports}${drizzle.length ? `import { ${drizzle.join(", ")} } from "drizzle-orm";\n` : ""}${ones ? 'import type { SQLiteColumn, SQLiteTable } from "drizzle-orm/sqlite-core";\n' : ""}import type { db } from "#/db";
 ${tables.size || users || named || threaded ? `${SCHEMA_IMPORT}\n` : ""}${body.includes("formatValue(") || threaded ? 'import { app } from "#/generated/app";\n' : ""}import type { Viewer } from "#/kit/access";
-${body.includes("formatValue(") || body.includes("titleOf(") ? `import { ${[...(body.includes("formatValue(") ? ["formatValue"] : []), ...(body.includes("titleOf(") ? ["titleOf"] : [])].join(", ")} } from "#/kit/format";\n` : ""}${entries.length ? `import { ${[...(mails.length ? ["blank"] : []), ...(calls.length ? ["changedBefore"] : []), "counts", ...(mails.length ? ["fillText"] : []), ...(calls.length ? ["picked"] : [])].join(", ")} } from "#/kit/outgoing";\n` : ""}${[...composedUsed].map((m) => `import { ${nameFunction(m)} } from "./${kebab(m.name)}.name";\n`).join("")}${[...workedBy.keys()].map((m) => `import { ${formulasName(m)} } from "${formulasModule(m)}";\n`).join("")}import { ${[...(mails.length ? ["type Happening", "linkTo"] : []), ...(calls.length || callsAfter ? ["queueCall"] : []), ...(mails.length || mailsAfter ? ["queueMail", "type Recipient"] : []), ...(mails.length ? ["shownFields"] : []), ...(threaded ? ["type Thread"] : []), ...(workers.length ? ["type Worked", "workedOut"] : [])].join(", ")} } from "#/kit/outgoing.server";${listed.length ? '\nimport { dayWords, listText } from "#/kit/outgoing.server";' : ""}${pushes.length ? '\nimport { pushReaders, queuePush } from "#/kit/push.server";' : ""}${texts.length ? '\nimport { queueSms } from "#/kit/sms.server";' : ""}
+${body.includes("formatValue(") || body.includes("titleOf(") ? `import { ${[...(body.includes("formatValue(") ? ["formatValue"] : []), ...(body.includes("titleOf(") ? ["titleOf"] : [])].join(", ")} } from "#/kit/format";\n` : ""}${entries.length ? `import { ${[...(mails.length ? ["blank"] : []), ...(calls.length ? ["changedBefore"] : []), "counts", ...(mails.length ? ["fillText"] : []), ...(calls.length ? ["picked"] : [])].join(", ")} } from "#/kit/outgoing";\n` : ""}${[...composedUsed].map((m) => `import { ${nameFunction(m)} } from "./${kebab(m.name)}.name";\n`).join("")}${[...workedBy.keys()].map((m) => `import { ${formulasName(m)} } from "${formulasModule(m)}";\n`).join("")}import { ${[...(mails.length ? ["type Happening", "linkTo"] : []), ...(calls.length || callsAfter ? ["queueCall"] : []), ...(mails.length || mailsAfter ? ["queueMail", "type Recipient"] : []), ...(mails.length ? ["shownFields"] : []), ...(threaded ? ["type Thread"] : []), ...(workers.length ? ["type Worked", "workedOut"] : [])].join(", ")} } from "#/kit/outgoing.server";${listed.length ? '\nimport { dayWords, listText } from "#/kit/outgoing.server";' : ""}${pushes.length ? '\nimport { pushReaders, queuePush } from "#/kit/push.server";' : ""}${views.length ? `\nimport { ${pushes.length || texts.length ? "unviewed, " : ""}VIEW_MARK } from "#/kit/outgoing.server";\nimport { type DocumentRead, viewLinks } from "#/kit/view.server";${viewModels.map((m) => `\nimport { ${documentReaderName(m)} } from "./${kebab(m.name)}.document.server";`).join("")}` : ""}${texts.length ? '\nimport { queueSms } from "#/kit/sms.server";' : ""}
 
-type Tx = Pick<typeof db, "select" | "insert"${composedUsed.size || workers.length ? ' | "query"' : ""}>;
+type Tx = Pick<typeof db, "select" | "insert"${composedUsed.size || workers.length || views.length ? ' | "query"' : ""}>;
 type Row = Record<string, unknown>;
 
 /** The targets the outgoing section calls: the only ones src/kit/tell.server.ts may call too. */
@@ -608,7 +628,16 @@ ${senders.join("\n")}
 }
 ${
   entries.length
-    ? `
+    ? `${
+        views.length
+          ? `
+/** A record as its document, as the person sending may read it (record-documents.md §5). */
+const DOCUMENTS: Record<string, (tx: Tx, viewer: Viewer | null, id: number) => DocumentRead> = {
+${viewModels.map((m) => `  ${JSON.stringify(m.name)}: ${documentReaderName(m)},`).join("\n")}
+};
+`
+          : ""
+      }
 /** The entries of smithable.yml's outgoing section, with their texts. */
 const ENTRIES: {
   name: string;
@@ -628,7 +657,7 @@ const ENTRIES: {
   /** The texts use {before.<field>}: the record before the change is read too. */
   before?: true;
   /** The texts' placeholders one reference away, read with the record. */
-  more?: (tx: Tx, r: Row) => Record<string, string>;${workers.length ? "\n  /** The worked-out fields its show and texts name. */\n  worked?: string[];" : ""}
+  more?: (tx: Tx, r: Row) => Record<string, string>;${workers.length ? "\n  /** The worked-out fields its show and texts name. */\n  worked?: string[];" : ""}${views.length ? "\n  /** Mails each recipient a link to a copy of the record's document, open this many days. */\n  view?: number;" : ""}
   to?: (tx: Tx, r: Row) => Recipient[];${
     pushes.length || texts.length
       ? `
@@ -725,9 +754,9 @@ export function outgoing(tx: Tx, ${mails.length ? "viewer" : "_viewer"}: Viewer 
     const more = entry.more?.(tx, record);
     // The texts' placeholders (outgoing-templates.md §3): the record's values as its page shows them, its title and address, who made the change, and what a field was.
     const fill = (text: string, oneLine = false) =>
-      fillText(text, (path) => path === "title" ? title : path === "link" ? linkTo(rest.link) : path === "by" ? (viewer && !viewer.system ? viewer.name : "") : path.startsWith("before.") ? blank(prior?.values[path.slice(7)]) : blank(more?.[path] ?? values[path]), oneLine);
-    const happening: Happening = { ...rest, subject: entry.subject ? fill(entry.subject, true) : rest.subject, ...(entry.text ? { text: fill(entry.text) } : {}), fields: shownFields(labels, values, prior?.values, entry.show, entry.previous), entry: entry.name, model, record: record.id as number };
-    const to = entry.to(tx, record);${pushes.length ? "\n    if (entry.push) queuePush(tx, viewer, happening, to);" : ""}${texts.length ? "\n    if (entry.sms) queueSms(tx, viewer, happening, to);" : ""}
+      fillText(text, (path) => ${views.length ? 'path === "view" ? VIEW_MARK : ' : ""}path === "title" ? title : path === "link" ? linkTo(rest.link) : path === "by" ? (viewer && !viewer.system ? viewer.name : "") : path.startsWith("before.") ? blank(prior?.values[path.slice(7)]) : blank(more?.[path] ?? values[path]), oneLine);
+    const happening: Happening = { ...rest, subject: entry.subject ? fill(entry.subject, true) : rest.subject, ...(entry.text ? { text: fill(entry.text) } : {}), fields: shownFields(labels, values, prior?.values, entry.show, entry.previous), entry: entry.name, model, record: record.id as number${views.length ? ", ...(entry.view ? { view: viewLinks(tx, viewer, { entry: entry.name, model, record: record.id as number, days: entry.view, read: () => DOCUMENTS[model]?.(tx, viewer, record.id as number) ?? null }) } : {})" : ""} };
+    const to = entry.to(tx, record);${pushes.length ? `\n    if (entry.push) queuePush(tx, viewer, ${views.length ? "entry.view ? unviewed(happening) : happening" : "happening"}, to);` : ""}${texts.length ? `\n    if (entry.sms) queueSms(tx, viewer, ${views.length ? "entry.view ? unviewed(happening) : happening" : "happening"}, to);` : ""}
     ${pushes.length || texts.length ? "if (entry.mail !== false) " : ""}queueMail(tx, viewer, happening, to, entry.when === "created");`
         : ""
     }

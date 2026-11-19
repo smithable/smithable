@@ -270,7 +270,7 @@ test("the summary's words", () => {
   );
 });
 
-test("{pay} is a placeholder only for a model that is paid for", () => {
+test("{pay} is refused until the pay link is built, on a model paid for or not", () => {
   const text = `${spec}  overdue:\n    when: Invoice changed\n    where: { status: overdue }\n    to: mail\n    recipient: admin\n  lineAdded:\n    when: Line created\n    to: mail\n    recipient: admin\n`;
   const ir = validateSpec({ path: "smithable.yml", text }).ir;
   if (!ir) throw new Error("no IR");
@@ -279,12 +279,10 @@ test("{pay} is a placeholder only for a model that is paid for", () => {
       { path: "smithable.content.yml", text: `smithableContent: 0.1\n${content}` },
       ir,
     ).diagnostics.map((d) => d.message);
-  expect(
-    check(`outgoing:\n  overdue:\n    subject: Invoice {number}\n    text: "Pay here: {pay}"\n`),
-  ).toEqual([]);
-  expect(check(`outgoing:\n  lineAdded:\n    text: "Pay here: {pay}"\n`)).toContainEqual(
-    expect.stringContaining('no entry under "payments" is on Line'),
-  );
+  for (const entry of ["overdue", "lineAdded"])
+    expect(check(`outgoing:\n  ${entry}:\n    text: "Pay here: {pay}"\n`)).toContainEqual(
+      expect.stringContaining("that page is not built yet"),
+    );
 });
 
 test("the context file names the provider; validate notes a missing one", () => {

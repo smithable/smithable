@@ -919,6 +919,16 @@ export const w = {
     refused: "You may not read all of this document, so it cannot be printed.",
     missing: (label: string) => `${label} has no value yet, so the document cannot be printed.`,
     settings: "Fill in your business details first",
+    sendRefused: "You may not read all of this document, so it cannot be sent.",
+    sendSettings: "Fill in your business details before sending the document.",
+    views: "views of a sent document",
+    sent: "Sent",
+    sentAt: (when: string) => `Sent ${when}`,
+    linkOpen: "link open",
+    linkEnded: "link ended",
+    withdraw: "Withdraw links",
+    withdrawAsk:
+      "End every link to this document? Whoever has one will no longer be able to open it.",
   },
   card: {
     list: (items: string[], or = false) =>

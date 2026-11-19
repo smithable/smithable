@@ -26,9 +26,11 @@ function route(spec: string, signIn?: AuthIR["signIn"]): string | undefined {
     { path: "smithable.content.yml", text: at("smithable.content.yml") },
     ir,
   ).content as ContentIR;
-  return generateApp(ir, { smithableVersion: "0.0.0", auth, content }).find((f) =>
-    f.path.endsWith("/invoices/$id_.document.tsx"),
-  )?.content;
+  // The page's route and the reader it calls (the same reader a sent copy is made with).
+  const files = generateApp(ir, { smithableVersion: "0.0.0", auth, content });
+  const page = files.find((f) => f.path.endsWith("/invoices/$id_.document.tsx"))?.content;
+  const reader = files.find((f) => f.path.endsWith("/invoice.document.server.ts"))?.content;
+  return page && reader && `${page}\n${reader}`;
 }
 
 test("the document sends only its named fields, also after a column is added to a part's table", () => {
@@ -41,9 +43,11 @@ test("the document sends only its named fields, also after a column is added to 
   expect(before).toContain('to: to && pick(to, ["name", "address", "vatNumber"])');
   expect(before).toContain('from: pick(from, ["businessName", "vatNumber", "iban"])');
   // Each part is read by its own read rule, and private business details are the record owner's.
-  expect(before).toContain("await invoiceLineData.get(viewer, line.id)");
-  expect(before).toContain("await clientData.get(viewer, Number(toId))");
+  expect(before).toContain("invoiceLineData.getIn(q, viewer, line.id)");
+  expect(before).toContain("clientData.getIn(q, viewer, Number(toId))");
   expect(before).toContain("if (businessProfileAccess.read.owner)");
+  // A record with no owner (a seeded sample) takes the reader's own details, never another's.
+  expect(before).toContain("const owner = record.ownerId ?? viewer?.id;");
   // A worked-out value missing refuses the document instead of printing a blank.
   expect(before).toContain(
     'lines.map((line) => missing(line, [["amount", "Amount"]])).find(Boolean)',
@@ -86,4 +90,61 @@ test("without sign-in the business details are the app's, not an owner's", () =>
   if (!signedOut) throw new Error("no document route");
   expect(signedOut).not.toContain("ownerId");
   expect(signedOut).not.toContain(".read.owner");
+});
+
+// A sent invoice's link (record-documents.md §5, §8).
+function files(spec: string, words = at("smithable.content.yml")): Map<string, string> {
+  const ir = validateSpec({ path: "smithable.yml", text: spec }).ir as SpecIR;
+  const auth = validateAuth({ path: "smithable.auth.yml", text: at("smithable.auth.yml") }, ir)
+    .auth as AuthIR;
+  const content = validateContent({ path: "smithable.content.yml", text: words }, ir)
+    .content as ContentIR;
+  const made = generateApp(ir, { smithableVersion: "0.0.0", auth, content });
+  return new Map(made.map((f) => [f.path, f.content]));
+}
+
+test("a mail that says {view} makes the link's page, and the document page lists what was sent", () => {
+  const app = files(at("smithable.yml"));
+  const view = [...app].find(([path]) => path.endsWith("routes/d.$token.tsx"))?.[1];
+  if (!view) throw new Error("no link page");
+  // Wrong, ended and withdrawn links answer alike, and the copy is never cached or indexed.
+  expect(view).toContain("viewAllowed(headers);");
+  expect(view).toContain("if (!copy) viewMissed(headers);");
+  expect(view).toContain('"Cache-Control": "private, no-store"');
+  expect(view).toContain('"X-Robots-Tag": "noindex"');
+  // The page shows the stored copy, never the live record.
+  expect(view).not.toContain("readInvoiceDocument");
+  // A record gone or in the trash by any way, a cascade too, opens no copy.
+  expect(view).toContain("Object.hasOwn(LIVE, found.model) && LIVE[found.model]?.(found.record)");
+  expect(view).toContain(".where(and(eq(schema.invoices.id, id)))");
+  const page = [...app].find(([path]) => path.endsWith("/invoices/$id_.document.tsx"))?.[1];
+  expect(page).toContain("<SentDocuments");
+  // Only whoever may read the invoice sees what was sent, and withdrawing needs its write rule.
+  expect(page).toContain(
+    "if (!(await invoiceData.get(viewer, id))) return { sent: [], withdraw: false };",
+  );
+  expect(page).toContain("allows(invoiceAccess.write, viewer,");
+  expect(page).toContain("writeAllowed(viewer, getRequestHeaders());");
+  // Removing an invoice removes its copies, and their links with them (it has no trash).
+  const data = [...app].find(([path]) => path.endsWith("/invoice.server.ts"))?.[1];
+  expect(data).toContain('removeCopies(tx, "Invoice", id);');
+  // With a trash, trashing ends the links (restoring touches no link, so they stay ended).
+  const trashed = files(
+    at("smithable.yml").replace("  Invoice:\n", "  Invoice:\n    trash: true\n"),
+  );
+  const kept = [...trashed].find(([path]) => path.endsWith("/invoice.server.ts"))?.[1];
+  expect(kept).toContain('endLinks(tx, viewer, "Invoice", id, "trashed");');
+});
+
+test("without a {view} mail there is no link page and no Sent list", () => {
+  const words = at("smithable.content.yml");
+  expect(words).toContain(" You can open it at {view} and");
+  const app = files(
+    at("smithable.yml"),
+    words.split(" You can open it at {view} and").join(" And"),
+  );
+  expect([...app.keys()].some((p) => p.endsWith("routes/d.$token.tsx"))).toBe(false);
+  expect([...app.keys()].some((p) => p.endsWith("kit/view.server.ts"))).toBe(false);
+  const page = [...app].find(([path]) => path.endsWith("/invoices/$id_.document.tsx"))?.[1];
+  expect(page).not.toContain("SentDocuments");
 });

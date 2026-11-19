@@ -1262,6 +1262,13 @@ export const outgoingSection: SpecSection<"outgoing"> = {
         fields: fieldsSchema,
         show: showSchema,
         previous: previousSchema,
+        viewDays: {
+          type: "integer",
+          minimum: 1,
+          maximum: 365,
+          description:
+            "How many days the {view} link to the sent copy opens, counted from the send (1 to 365; 60 unsaid).",
+        },
         to: {
           anyOf: [
             { type: "string", pattern: FIELD_NAME_PATTERN.source },
@@ -1345,6 +1352,7 @@ export const outgoingSection: SpecSection<"outgoing"> = {
           "recipient",
           "list",
           "empty",
+          "viewDays",
         ],
       });
       const byKey = new Map(known.map((e) => [e.key, e]));
@@ -1476,6 +1484,20 @@ export const outgoingSection: SpecSection<"outgoing"> = {
           continue;
         }
         if (b.previous) entry.previous = true;
+      }
+      const viewDaysEntry = byKey.get("viewDays");
+      if (viewDaysEntry) {
+        const days = readNumber(ctx, viewDaysEntry.value, `"viewDays" of ${where}`);
+        if (days === undefined) continue;
+        if (!Number.isInteger(days) || days < 1 || days > 365) {
+          ctx.error(
+            viewDaysEntry.value,
+            "invalid-outgoing",
+            `${capital(where)}: "viewDays" is how many days the {view} link opens, a whole number from 1 to 365.`,
+          );
+          continue;
+        }
+        entry.viewDays = days;
       }
       const recipientEntry = byKey.get("recipient");
       const recipientText = recipientEntry
