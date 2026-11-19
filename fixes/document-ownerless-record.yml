@@ -1,0 +1,8 @@
+id: document-ownerless-record
+title: A record with no owner, such as a seeded sample, could not be shown as a document where each person keeps their own business details.
+severity: fix
+exposure: none
+introduced: unknown
+affects:
+  features: [page:settings]
+migration: none
