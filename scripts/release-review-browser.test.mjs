@@ -349,6 +349,7 @@ test("Review and Publish use current evidence and preserve the release destinati
     // Route to a same-origin fixture, never to production or a live release.
     const home = `${base}/projects/review-fixture`;
     const url = `${home}/release`;
+    let fixtureHosted = true;
     let revision;
     await page.route("**/api/project", async (route) => {
       const response = await route.fetch();
@@ -356,7 +357,7 @@ test("Review and Publish use current evidence and preserve the release destinati
       await route.fulfill({
         json: {
           ...project,
-          home,
+          home: fixtureHosted ? home : undefined,
           revision: revision ?? project.revision,
           beta: {
             ...project.beta,
@@ -392,11 +393,24 @@ test("Review and Publish use current evidence and preserve the release destinati
       route.fulfill({
         json: {
           ...evidence,
+          baselineState: "none",
           comparison: "available",
           accessUnchanged: true,
           warnings: [],
           access: [],
           migrations: [],
+          maintenance: {
+            ...evidence.maintenance,
+            currentEngine: "1.0.0",
+            generatedEngine: "1.0.0",
+            generatedProfile: evidence.maintenance.currentProfile,
+            generatedKit: evidence.maintenance.currentKit,
+          },
+          checks: {
+            level: "release",
+            current: true,
+            results: [{ what: "Fixture check", ok: true, checked: true }],
+          },
           privacy: [{ page: "privacy", facts: "fixture", state: "reviewed", on: "2026-11-19" }],
         },
       }),
@@ -424,6 +438,20 @@ test("Review and Publish use current evidence and preserve the release destinati
     assert.equal(await confirmation.count(), 0);
     assert.equal(page.url(), `${base}/?guide=off`);
     await close(dialog);
+    fixtureHosted = false;
+    await page.reload();
+    await publish.click();
+    await continueButton.click();
+    const selfHost = dialog.getByRole("link", {
+      name: "Publish on your own server",
+      exact: true,
+    });
+    await selfHost.waitFor();
+    assert.equal(await selfHost.getAttribute("target"), "_blank");
+    assert.equal(page.url(), `${base}/?guide=off`);
+    await close(dialog);
+    fixtureHosted = true;
+    await page.reload();
     await publish.click();
     await continueButton.waitFor();
     await page.route(url, (route) => route.fulfill({ body: "Existing release destination" }));
@@ -431,7 +459,7 @@ test("Review and Publish use current evidence and preserve the release destinati
     await page.waitForURL(url);
     await page.getByText("Existing release destination", { exact: true }).waitFor();
     console.log(
-      "PASS current review, stale and unreadable refusal, reused hosted release destination",
+      "PASS current review, stale and unreadable refusal, self-host guide and hosted destination",
     );
   } finally {
     await browser?.close();

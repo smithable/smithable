@@ -22,7 +22,9 @@ export function useReleaseReview(project: Project | undefined, enabled: boolean)
         setState({ error: error instanceof Error ? error.message : String(error) });
     }
   }, []);
-  const source = project?.revision ?? (project ? JSON.stringify(project.files) : undefined);
+  const source = project
+    ? JSON.stringify([project.lookProject, project.revision ?? project.files])
+    : undefined;
   useEffect(() => {
     if (enabled && source) void reload(true);
     else setState({});
@@ -405,7 +407,7 @@ export function ReleaseReview({
   );
 }
 
-export const selfHostPublishing = "https://docs.smithable.ai/self-host.html";
+const selfHostPublishing = "https://docs.smithable.ai/self-host.html";
 
 const reviewDialog =
   "fixed inset-x-0 top-auto bottom-0 m-0 max-h-[85dvh] w-full max-w-none overflow-auto rounded-t-xl border border-line bg-panel p-4 text-fg shadow-xl backdrop:bg-black/15 md:inset-x-auto md:top-16 md:right-4 md:bottom-auto md:w-[min(46rem,calc(100vw-2rem))] md:rounded-xl";

@@ -41,12 +41,7 @@ import { OutboxDialog } from "./Outbox";
 import { PeoplePanel } from "./People";
 import { usePan } from "./pan";
 import { isPreviewMessage, type Place, touched, touchesPage } from "./preview";
-import {
-  PublishConfirmation,
-  ReleaseReview,
-  selfHostPublishing,
-  useReleaseReview,
-} from "./ReleaseReview";
+import { PublishConfirmation, ReleaseReview, useReleaseReview } from "./ReleaseReview";
 import { ReportDialog } from "./Report";
 import { plainRefusal } from "./refusal";
 import { needsLook, releaseProgress, trustedRelease } from "./release-review";
@@ -165,7 +160,9 @@ export function App() {
         return;
       }
       const saved = trustedRelease(after.beta?.release, after.home);
-      window.location.assign(saved?.url ?? after.home ?? selfHostPublishing);
+      const destination = saved?.url ?? after.home;
+      if (destination) window.location.assign(destination);
+      else backToReview("Review complete. Open the self-hosting guide to continue.");
     } catch {
       if (mine === publishCheck.current)
         backToReview("The current version could not be checked. Retry before publishing.");
