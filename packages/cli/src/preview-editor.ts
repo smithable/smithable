@@ -20,10 +20,13 @@ if (typeof window !== "undefined" && window.parent !== window) {
   let design = new URLSearchParams(location.search).has("__sm_look");
   const designOnly = () => design ||= new URLSearchParams(location.search).has("__sm_look");
   let selecting = false;
+  let temporary = false;
   // In Studio's Code mode a text is not changed in place: Studio opens its line instead.
   let code = false;
   let hovered = null;
   let dragged = null;
+  let selected = null;
+  let watchSelection;
   const style = document.createElement("style");
   style.textContent =
     "[data-sm-hover]{outline:2px dashed #3b5bdb!important;outline-offset:2px;cursor:pointer!important}" +
@@ -62,6 +65,60 @@ if (typeof window !== "undefined" && window.parent !== window) {
   const markedAt = (element) => (element instanceof Element ? element.closest("[data-sm-concept]") : null);
   const clear = (attribute) => document.querySelectorAll("[" + attribute + "]").forEach((e) => e.removeAttribute(attribute));
   const fieldOf = (element) => element.dataset.smConcept.split(".")[1];
+  const editing = (element) => element instanceof Element && Boolean(element.closest(
+    'input, textarea, select, [contenteditable=true], [role=textbox]'
+  ));
+  const armed = (event) => selecting || temporary || (event?.shiftKey && !editing(event.target));
+  const textAt = (element) => element instanceof Element
+    ? element.closest("[data-sm-text]") ?? element.closest("a,button")?.querySelector("[data-sm-text]")
+    : null;
+  const heroButton = (text) =>
+    text && /^pages[.][^.]+[.][^.]+[.](button|secondButton)$/.test(text.dataset.smText ?? "")
+      ? text.closest("[data-hero] a, [data-hero] button")
+      : null;
+  const selectPart = (marked, concept, part = null) => {
+    clear("data-sm-selected");
+    selected = marked;
+    marked.setAttribute("data-sm-selected", "");
+    watchSelection ??= new MutationObserver(() => {
+      if (selected && !selected.isConnected) loseSelection();
+    });
+    watchSelection.observe(document.body, { childList: true, subtree: true });
+    const { left, right, top, bottom } = marked.getBoundingClientRect();
+    const columns = part === "column"
+      ? [...(marked.closest("tr")?.querySelectorAll("[data-sm-part=column]") ?? [])].map(fieldOf)
+      : null;
+    post({
+      type: "select", concept, part, page: marked.dataset.smPage ?? null, columns,
+      label: (marked.getAttribute("aria-label") || marked.textContent || "").trim().slice(0, 120),
+      anchor: { left, right, top, bottom },
+    });
+  };
+  const paintSelect = () => {
+    const active = Boolean(armed());
+    document.documentElement.toggleAttribute("data-sm-selecting", active);
+    clear("data-sm-hover");
+    hovered = null;
+    if (!active) dragged = null;
+    // Remove the attribute when disarming, even if the page has not hydrated yet.
+    document.querySelectorAll("[data-sm-part=column]").forEach((column) =>
+      active ? (column.draggable = true) : column.removeAttribute("draggable")
+    );
+  };
+  const clearSelection = () => {
+    selected = null;
+    watchSelection?.disconnect();
+    clear("data-sm-selected");
+    clear("data-sm-hover");
+  };
+  const loseSelection = () => {
+    clearSelection();
+    post({ type: "selection-cleared" });
+  };
+  window.addEventListener("message", (event) => {
+    if (designOnly() || event.source !== window.parent || event.data?.type !== "smithable:clear-selection") return;
+    if (trusted(event.origin)) clearSelection();
+  });
 
   // What a change touched: its field, table or form, or text, flashed once. What the page does
   // not show yet (a renamed field, until the update reaches the page) flashes when it appears.
@@ -228,33 +285,30 @@ if (typeof window !== "undefined" && window.parent !== window) {
     selecting = Boolean(event.data.on);
     code = Boolean(event.data.code);
     // Visible to people (a cursor) and to tests: the page is in select mode.
-    document.documentElement.toggleAttribute("data-sm-selecting", selecting);
-    clear("data-sm-hover");
-    if (!selecting) clear("data-sm-selected");
-    // Out of select mode the attribute goes, not false: the page may not have hydrated yet.
-    document
-      .querySelectorAll("[data-sm-part=column]")
-      .forEach((th) => (selecting ? (th.draggable = true) : th.removeAttribute("draggable")));
+    paintSelect();
   });
   document.addEventListener("mouseover", (event) => {
-    if (designOnly() || !selecting) return;
+    if (designOnly() || !armed(event)) return;
     hovered?.removeAttribute("data-sm-hover");
-    hovered = markedAt(event.target);
+    hovered = heroButton(textAt(event.target)) ?? markedAt(event.target);
     hovered?.setAttribute("data-sm-hover", "");
     if (hovered?.dataset.smPart === "column") hovered.draggable = true;
   }, true);
   // A text marked with its place in smithable.content.yml is changed in place: Enter or
   // leaving it saves, Escape cancels.
   document.addEventListener("click", (event) => {
-    if (designOnly() || !selecting) return;
-    const text = event.target instanceof Element ? event.target.closest("[data-sm-text]") : null;
+    if (designOnly() || !armed(event)) return;
+    const text = textAt(event.target);
     if (!text || text.isContentEditable) return;
     event.preventDefault();
     event.stopImmediatePropagation();
     if (code) {
-      clear("data-sm-selected");
-      text.setAttribute("data-sm-selected", "");
-      post({ type: "select", concept: "text:" + text.dataset.smText, part: null, page: null, columns: null });
+      selectPart(text, "text:" + text.dataset.smText);
+      return;
+    }
+    const button = heroButton(text);
+    if (button) {
+      selectPart(button, "text:" + text.dataset.smText);
       return;
     }
     const before = text.textContent;
@@ -278,29 +332,24 @@ if (typeof window !== "undefined" && window.parent !== window) {
     text.addEventListener("blur", blur);
   }, true);
   document.addEventListener("click", (event) => {
-    if (designOnly() || !selecting) return;
+    if (designOnly() || !armed(event)) return;
     const marked = markedAt(event.target);
     event.preventDefault();
     event.stopPropagation();
     if (!marked) return;
-    clear("data-sm-selected");
-    marked.setAttribute("data-sm-selected", "");
     // A selected column takes the keys, so Alt and the arrows move it.
     if (marked.dataset.smPart === "column") {
       marked.tabIndex = -1;
       marked.focus({ preventScroll: true });
     }
     // A column comes with its table's columns, so Studio can hide it or change their order.
-    const columns = marked.dataset.smPart === "column"
-      ? [...marked.closest("tr").querySelectorAll("[data-sm-part=column]")].map(fieldOf)
-      : null;
-    post({ type: "select", concept: marked.dataset.smConcept, part: marked.dataset.smPart ?? null, page: marked.dataset.smPage ?? null, columns });
+    selectPart(marked, marked.dataset.smConcept, marked.dataset.smPart ?? null);
   }, true);
   // Dropping a column header on another moves it there.
   document.addEventListener("dragstart", (event) => {
     if (designOnly()) return;
     const marked = markedAt(event.target);
-    if (selecting && marked?.dataset.smPart === "column") dragged = marked;
+    if (armed(event) && marked?.dataset.smPart === "column") dragged = marked;
   });
   document.addEventListener("dragover", (event) => {
     if (designOnly()) return;
@@ -321,13 +370,23 @@ if (typeof window !== "undefined" && window.parent !== window) {
   // the key goes down to the page, so a page that stops a key on its way back up never hides it.
   document.addEventListener("keydown", (event) => {
     const t = event.target;
-    const typing = t instanceof HTMLElement && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName));
+    const typing = editing(t);
+    if (!designOnly() && !typing && event.key === "Shift" && !temporary) {
+      temporary = true;
+      paintSelect();
+    }
+    if (!designOnly() && !typing && event.key === "Escape" && (armed() || selected)) {
+      event.preventDefault();
+      temporary = false;
+      loseSelection();
+      paintSelect();
+    }
     if (!designOnly() && (event.ctrlKey || event.metaKey) && !event.shiftKey && event.key.toLowerCase() === "z" && !typing) {
       event.preventDefault();
       post({ type: "undo" });
     }
     // A selected column moves with Alt+Left and Alt+Right: the drag's keyboard way (A 231).
-    const chosen = !designOnly() && selecting ? document.querySelector("[data-sm-selected][data-sm-part=column]") : null;
+    const chosen = !designOnly() && armed(event) && selected?.dataset.smPart === "column" ? selected : null;
     if (chosen && event.altKey && (event.key === "ArrowLeft" || event.key === "ArrowRight") && !typing) {
       const headers = [...(chosen.closest("tr")?.querySelectorAll("[data-sm-part=column]") ?? [])];
       const at = headers.indexOf(chosen);
@@ -338,6 +397,27 @@ if (typeof window !== "undefined" && window.parent !== window) {
         headers.splice(to, 0, chosen);
         post({ type: "columns", page: chosen.dataset.smPage, columns: headers.map(fieldOf) });
       }
+      return;
+    }
+    if (!designOnly() && armed(event) && !typing && !event.ctrlKey && !event.metaKey && !event.altKey) {
+      if (event.key === "Enter" && hovered instanceof HTMLElement) {
+        event.preventDefault();
+        hovered.click();
+        return;
+      }
+      const move = ({ ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 })[event.key];
+      if (move) {
+        const parts = [...document.querySelectorAll("[data-sm-concept], [data-sm-text]")]
+          .filter((element) => element.getClientRects().length && !editing(element));
+        if (parts.length) {
+          const at = parts.indexOf(hovered ?? selected ?? t);
+          clear("data-sm-hover");
+          hovered = parts[((at < 0 && move < 0 ? 0 : at) + move + parts.length) % parts.length];
+          hovered.setAttribute("data-sm-hover", "");
+          hovered.scrollIntoView({ block: "nearest", inline: "nearest" });
+          event.preventDefault();
+        }
+      }
     }
     // Ctrl+R (Cmd+R) in the preview reloads the preview alone, not Studio around it.
     if ((event.ctrlKey || event.metaKey) && !event.shiftKey && event.key.toLowerCase() === "r") {
@@ -345,6 +425,13 @@ if (typeof window !== "undefined" && window.parent !== window) {
       location.reload();
     }
   }, true);
+  const releaseShift = () => {
+    if (!temporary) return;
+    temporary = false;
+    paintSelect();
+  };
+  document.addEventListener("keyup", (event) => { if (event.key === "Shift") releaseShift(); }, true);
+  window.addEventListener("blur", releaseShift);
   // A sideways swipe over the page where nothing under the finger scrolls sideways itself: on a
   // phone, Studio's row goes on to the next window (A 174). Vertical panning stays the page's.
   let touch = null;
@@ -405,7 +492,10 @@ if (typeof window !== "undefined" && window.parent !== window) {
   const report = () => {
     designOnly();
     const path = location.pathname + location.search;
-    if (reportedPath !== path) navigationId++;
+    if (reportedPath !== path) {
+      navigationId++;
+      if (reportedPath !== null && selected) loseSelection();
+    }
     reportedPath = path;
     post({ type: "navigated", path, documentId, navigationId, followContext });
   };

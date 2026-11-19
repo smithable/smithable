@@ -1127,12 +1127,13 @@ function SectionAppearance({
   );
 }
 
-function SectionChoice({
+export function SectionChoice({
   page,
   section,
   name,
   values,
   current,
+  value,
   label,
   set,
 }: {
@@ -1141,6 +1142,7 @@ function SectionChoice({
   name: string;
   values: readonly (string | number)[];
   current: unknown;
+  value?: string;
   label: string;
   set: (value: string) => unknown;
 }) {
@@ -1159,7 +1161,7 @@ function SectionChoice({
         <Select
           id={controlId}
           aria-label={label}
-          value={selected}
+          value={value ?? selected}
           options={[
             ["inherit", authored.inherited],
             ...values.map((value): [string, string] => [String(value), humanize(String(value))]),
