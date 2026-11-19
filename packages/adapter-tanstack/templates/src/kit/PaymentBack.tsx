@@ -53,7 +53,7 @@ export function PaymentBack({
           </h1>
         ) : payment.status === "paid" || payment.status === "refunding" ? (
           <h1 className="flex items-center gap-2 text-xl font-semibold">
-            <CircleCheck aria-hidden className="size-6 text-primary" /> {w.paymentPaid(amount)}
+            <CircleCheck aria-hidden className="size-6 text-primary-text" /> {w.paymentPaid(amount)}
           </h1>
         ) : payment.status === "pending" ? (
           <>

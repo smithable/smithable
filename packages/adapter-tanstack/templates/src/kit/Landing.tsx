@@ -212,7 +212,7 @@ function LandingLayoutView({
                     <Link
                       to={m.to}
                       className="underline-offset-4 hover:underline"
-                      activeProps={{ "aria-current": "page", className: "text-primary" }}
+                      activeProps={{ "aria-current": "page", className: "text-primary-text" }}
                     >
                       {m.label}
                     </Link>
@@ -417,7 +417,7 @@ function Eyebrow({ texts, children }: { texts?: string; children: string }) {
   return (
     <p
       data-part="eyebrow"
-      className={cn("mb-2 text-sm font-semibold label-text text-primary", ALIGN)}
+      className={cn("mb-2 text-sm font-semibold label-text text-primary-text", ALIGN)}
       {...mark(texts, "eyebrow")}
     >
       {children}
@@ -625,7 +625,7 @@ function HeroView({
               to={s.to}
               className="group flex flex-col items-center gap-2 rounded-lg text-center text-sm font-medium outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
-              <span className="flex size-20 items-center justify-center rounded-full border bg-card text-primary shadow-md transition group-hover:-translate-y-0.5 group-hover:shadow-lg">
+              <span className="flex size-20 items-center justify-center rounded-full border bg-card text-primary-text shadow-md transition group-hover:-translate-y-0.5 group-hover:shadow-lg">
                 <s.icon aria-hidden className="size-8" />
               </span>
               <span className="max-w-32">{s.label}</span>
@@ -1481,7 +1481,7 @@ function PricingView({
                 <ul className="flex-1 space-y-2">
                   {plan.features.map((feature, j) => (
                     <li key={feature} className="flex gap-2">
-                      <Check aria-hidden className="mt-0.5 size-5 shrink-0 text-primary" />
+                      <Check aria-hidden className="mt-0.5 size-5 shrink-0 text-primary-text" />
                       <span {...mark(texts, `items.${i}.features.${j}`)}>{feature}</span>
                     </li>
                   ))}
@@ -1733,7 +1733,7 @@ function ContactView({
       {address && (
         <div className="flex gap-3">
           <dt>
-            <MapPin aria-hidden className="mt-0.5 size-5 text-primary" />
+            <MapPin aria-hidden className="mt-0.5 size-5 text-primary-text" />
             <span className="sr-only">{w.address}</span>
           </dt>
           <dd>
@@ -1746,7 +1746,7 @@ function ContactView({
                 `https://www.openstreetmap.org/search?query=${encodeURIComponent(address)}`,
                 address,
               )}
-              className="inline-flex min-h-11 min-w-11 items-center lg:min-h-0 lg:min-w-0 text-sm text-primary underline-offset-4 hover:underline"
+              className="inline-flex min-h-11 min-w-11 items-center lg:min-h-0 lg:min-w-0 text-sm text-primary-text underline-offset-4 hover:underline"
               rel="noopener noreferrer"
               target="_blank"
             >
@@ -1758,7 +1758,7 @@ function ContactView({
       {phone && (
         <div className="flex gap-3">
           <dt>
-            <Phone aria-hidden className="mt-0.5 size-5 text-primary" />
+            <Phone aria-hidden className="mt-0.5 size-5 text-primary-text" />
             <span className="sr-only">{w.phone}</span>
           </dt>
           <dd>
@@ -1775,7 +1775,7 @@ function ContactView({
       {email && (
         <div className="flex gap-3">
           <dt>
-            <Mail aria-hidden className="mt-0.5 size-5 text-primary" />
+            <Mail aria-hidden className="mt-0.5 size-5 text-primary-text" />
             <span className="sr-only">{w.email}</span>
           </dt>
           <dd>
@@ -1792,7 +1792,7 @@ function ContactView({
       {hours && (
         <div className="flex gap-3">
           <dt>
-            <Clock aria-hidden className="mt-0.5 size-5 text-primary" />
+            <Clock aria-hidden className="mt-0.5 size-5 text-primary-text" />
             <span className="sr-only">{w.openingHours}</span>
           </dt>
           <dd className="whitespace-pre-line" {...mark(texts, "hours")}>

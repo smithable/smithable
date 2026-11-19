@@ -113,17 +113,20 @@ export function DueList({
           {rows.map((row) => (
             <li
               key={row.id}
-              className="relative flex items-center justify-between gap-3 py-2 pointer-coarse:min-h-11"
+              // On a phone the title takes its own line and wraps; its badge and day go under it (T975).
+              className="relative flex items-center justify-between gap-x-3 gap-y-1 py-2 pointer-coarse:min-h-11 max-sm:flex-wrap"
             >
               {href ? (
                 <AppLink
                   href={href.replace("${id}", String(row.id))}
-                  className="min-w-0 truncate font-medium after:absolute after:inset-0 hover:underline"
+                  className="min-w-0 font-medium after:absolute after:inset-0 hover:underline max-sm:basis-full max-sm:[overflow-wrap:anywhere] sm:truncate"
                 >
                   {row.title}
                 </AppLink>
               ) : (
-                <span className="min-w-0 truncate font-medium">{row.title}</span>
+                <span className="min-w-0 font-medium max-sm:basis-full max-sm:[overflow-wrap:anywhere] sm:truncate">
+                  {row.title}
+                </span>
               )}
               <span className="flex shrink-0 items-center gap-2 text-sm text-muted-foreground tabular-nums">
                 {row.overdue && (
@@ -163,7 +166,7 @@ export function RecentChanges({
         <h2 className="text-sm font-semibold text-muted-foreground">{label}</h2>
         <AppLink
           href={all}
-          className="text-sm font-medium text-primary hover:underline pointer-coarse:inline-flex pointer-coarse:min-h-11 pointer-coarse:items-center"
+          className="text-sm font-medium text-primary-text hover:underline pointer-coarse:inline-flex pointer-coarse:min-h-11 pointer-coarse:items-center"
         >
           {w.activity}
         </AppLink>
@@ -198,7 +201,7 @@ export function QuietDashboard({ href, label }: { href: string; label: string })
   return (
     <div data-kit="dashboard" data-part="quiet" className="max-w-prose space-y-3 py-6">
       <p className="text-muted-foreground">{w.nothingHereYet}</p>
-      <AppLink href={href} className="font-medium text-primary hover:underline">
+      <AppLink href={href} className="font-medium text-primary-text hover:underline">
         {label}
       </AppLink>
     </div>

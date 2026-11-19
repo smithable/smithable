@@ -122,15 +122,15 @@ function ${component}() {
           <>
 ${
   activity
-    ? `            <Link to=${attr(`${page.route}/activity`.replace("//", "/"))} className="text-sm font-medium text-primary">{w.activity}</Link>
+    ? `            <Link to=${attr(`${page.route}/activity`.replace("//", "/"))} className="text-sm font-medium text-primary-text">{w.activity}</Link>
 `
     : ""
 }${
   inspector
-    ? `            {admin && <Link to=${attr(`${page.route}/ask`.replace("//", "/"))} className="text-sm font-medium text-primary">{w.ask}</Link>}
+    ? `            {admin && <Link to=${attr(`${page.route}/ask`.replace("//", "/"))} className="text-sm font-medium text-primary-text">{w.ask}</Link>}
 `
     : ""
-}            {restore && <a href={restore} className="text-sm font-medium text-primary">{w.restoreData}</a>}
+}            {restore && <a href={restore} className="text-sm font-medium text-primary-text">{w.restoreData}</a>}
           </>
         }
       />

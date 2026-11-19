@@ -146,7 +146,7 @@ export function SaveButton({
       onClick={onToggle}
       className="relative z-10 -m-2.5 flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-full text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
     >
-      <Heart aria-hidden className={cn("size-5", saved && "fill-current text-primary")} />
+      <Heart aria-hidden className={cn("size-5", saved && "fill-current text-primary-text")} />
     </button>
   );
 }

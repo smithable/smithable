@@ -11792,9 +11792,9 @@ function AdminPage() {
         title={pageUi["admin"].title}
         actions={
           <>
-            <Link to="/admin/activity" className="text-sm font-medium text-primary">{w.activity}</Link>
-            {admin && <Link to="/admin/ask" className="text-sm font-medium text-primary">{w.ask}</Link>}
-            {restore && <a href={restore} className="text-sm font-medium text-primary">{w.restoreData}</a>}
+            <Link to="/admin/activity" className="text-sm font-medium text-primary-text">{w.activity}</Link>
+            {admin && <Link to="/admin/ask" className="text-sm font-medium text-primary-text">{w.ask}</Link>}
+            {restore && <a href={restore} className="text-sm font-medium text-primary-text">{w.restoreData}</a>}
           </>
         }
       />
@@ -13596,6 +13596,7 @@ exports[`../../../examples/api/smithable.yml > file list and generated code > sr
   --chart-3: oklch(0.553781 0.120683 66.4416);
   --chart-4: oklch(0.557537 0.252488 302.3212);
   --chart-5: oklch(0.514256 0.197806 16.9350);
+  --primary-text: #4943d2;
   --picture-filter: none;
   --radius: 10px;
   --font-body: "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
@@ -13689,6 +13690,7 @@ exports[`../../../examples/api/smithable.yml > file list and generated code > sr
   --chart-3: oklch(0.836861 0.164422 84.4286);
   --chart-4: oklch(0.833033 0.132193 321.4337);
   --chart-5: oklch(0.809664 0.106109 11.6385);
+  --primary-text: oklch(0.785298 0.104135 274.7134);
   --picture-filter: none;
   --hover: color-mix(in oklab, var(--foreground) 10%, transparent);
   --primary-hover: color-mix(in oklch, var(--primary), white 30%);
@@ -14115,11 +14117,11 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/FieldInput.tsx": "39e40fcb kit",
   "src/kit/FileInput.tsx": "5d567f82 kit",
   "src/kit/ImportDialog.tsx": "d65da47a kit",
-  "src/kit/InlineRows.tsx": "dd000032 kit",
+  "src/kit/InlineRows.tsx": "b2c801d6 kit",
   "src/kit/Inspector.tsx": "2425cac5 kit",
   "src/kit/Keys.tsx": "aa99e677 kit",
   "src/kit/ModelForm.tsx": "abaf70be kit",
-  "src/kit/ModelTable.tsx": "84a8a2e2 kit",
+  "src/kit/ModelTable.tsx": "a8ae6290 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "fb5e87dc kit",
   "src/kit/PictureDialog.tsx": "1495b136 kit",
@@ -14190,7 +14192,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/routes/__root.tsx": "72e51f25 generated",
   "src/routes/admin/activity.tsx": "225b605d generated",
   "src/routes/admin/ask.tsx": "0430add2 generated",
-  "src/routes/admin/index.tsx": "247d3d7b generated",
+  "src/routes/admin/index.tsx": "e9f3b1b5 generated",
   "src/routes/admin/notes/$id.tsx": "087fdc58 generated",
   "src/routes/admin/notes/index.tsx": "54d57aec generated",
   "src/routes/admin/notes/new.tsx": "6d8a3ab3 generated",
@@ -14229,8 +14231,8 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/routes/team/activity.tsx": "f071bc95 generated",
   "src/routes/team/index.tsx": "c1b1e9fc generated",
   "src/start.ts": "6b874d2d kit",
-  "src/styles.css": "3120f1ba kit",
-  "src/theme.css": "ba057d91 generated",
+  "src/styles.css": "4fb2262f kit",
+  "src/theme.css": "2c20fc19 generated",
   "tests/smoke.spec.ts": "24a5a8cb generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "3ee61b99 kit",
@@ -21366,6 +21368,7 @@ exports[`../../../examples/barbers/smithable.yml > file list and generated code 
   --chart-3: oklch(0.553781 0.120683 66.4416);
   --chart-4: oklch(0.557537 0.252488 302.3212);
   --chart-5: oklch(0.514256 0.197806 16.9350);
+  --primary-text: #4943d2;
   --picture-filter: none;
   --radius: 10px;
   --font-body: "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
@@ -21459,6 +21462,7 @@ exports[`../../../examples/barbers/smithable.yml > file list and generated code 
   --chart-3: oklch(0.836861 0.164422 84.4286);
   --chart-4: oklch(0.833033 0.132193 321.4337);
   --chart-5: oklch(0.809664 0.106109 11.6385);
+  --primary-text: oklch(0.785298 0.104135 274.7134);
   --picture-filter: none;
   --hover: color-mix(in oklab, var(--foreground) 10%, transparent);
   --primary-hover: color-mix(in oklch, var(--primary), white 30%);
@@ -21897,19 +21901,19 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/AppLink.tsx": "841a9af0 kit",
   "src/kit/AppShell.tsx": "fda2cf43 kit",
   "src/kit/AppearancePicker.tsx": "0cd564d2 kit",
-  "src/kit/Calendar.tsx": "4a525738 kit",
+  "src/kit/Calendar.tsx": "5f787e2e kit",
   "src/kit/Combobox.tsx": "c3a18c75 kit",
   "src/kit/Consent.tsx": "c5ee7e50 kit",
   "src/kit/FieldInput.tsx": "39e40fcb kit",
   "src/kit/FileInput.tsx": "5d567f82 kit",
   "src/kit/Filters.tsx": "ceea52dc kit",
   "src/kit/ImportDialog.tsx": "d65da47a kit",
-  "src/kit/InlineRows.tsx": "dd000032 kit",
-  "src/kit/Landing.tsx": "fa54b046 kit",
+  "src/kit/InlineRows.tsx": "b2c801d6 kit",
+  "src/kit/Landing.tsx": "a528f50e kit",
   "src/kit/LegalPage.tsx": "f9a9df1e kit",
   "src/kit/Live.tsx": "fbaa47cd kit",
   "src/kit/ModelForm.tsx": "abaf70be kit",
-  "src/kit/ModelTable.tsx": "84a8a2e2 kit",
+  "src/kit/ModelTable.tsx": "a8ae6290 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "fb5e87dc kit",
   "src/kit/PictureDialog.tsx": "1495b136 kit",
@@ -22000,8 +22004,8 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/routes/time-off/index.tsx": "0126663b generated",
   "src/routes/time-off/new.tsx": "007c55c8 generated",
   "src/start.ts": "6b874d2d kit",
-  "src/styles.css": "3120f1ba kit",
-  "src/theme.css": "ba057d91 generated",
+  "src/styles.css": "4fb2262f kit",
+  "src/theme.css": "2c20fc19 generated",
   "tests/smoke.spec.ts": "dabb9af3 generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "3ee61b99 kit",
@@ -33031,8 +33035,8 @@ function AdminPage() {
         title={pageUi["admin"].title}
         actions={
           <>
-            <Link to="/admin/activity" className="text-sm font-medium text-primary">{w.activity}</Link>
-            {restore && <a href={restore} className="text-sm font-medium text-primary">{w.restoreData}</a>}
+            <Link to="/admin/activity" className="text-sm font-medium text-primary-text">{w.activity}</Link>
+            {restore && <a href={restore} className="text-sm font-medium text-primary-text">{w.restoreData}</a>}
           </>
         }
       />
@@ -36572,6 +36576,7 @@ exports[`../../../examples/booking/smithable.yml > file list and generated code 
   --chart-3: oklch(0.553781 0.120683 66.4416);
   --chart-4: oklch(0.557537 0.252488 302.3212);
   --chart-5: oklch(0.514256 0.197806 16.9350);
+  --primary-text: #4943d2;
   --picture-filter: none;
   --radius: 10px;
   --font-body: "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
@@ -36665,6 +36670,7 @@ exports[`../../../examples/booking/smithable.yml > file list and generated code 
   --chart-3: oklch(0.836861 0.164422 84.4286);
   --chart-4: oklch(0.833033 0.132193 321.4337);
   --chart-5: oklch(0.809664 0.106109 11.6385);
+  --primary-text: oklch(0.785298 0.104135 274.7134);
   --picture-filter: none;
   --hover: color-mix(in oklab, var(--foreground) 10%, transparent);
   --primary-hover: color-mix(in oklch, var(--primary), white 30%);
@@ -37218,25 +37224,25 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/AppLink.tsx": "841a9af0 kit",
   "src/kit/AppShell.tsx": "fda2cf43 kit",
   "src/kit/AppearancePicker.tsx": "0cd564d2 kit",
-  "src/kit/Articles.tsx": "63b22982 kit",
+  "src/kit/Articles.tsx": "72359ede kit",
   "src/kit/Ask.tsx": "e5277427 kit",
   "src/kit/Calculator.tsx": "590a4703 kit",
-  "src/kit/Calendar.tsx": "4a525738 kit",
+  "src/kit/Calendar.tsx": "5f787e2e kit",
   "src/kit/Combobox.tsx": "c3a18c75 kit",
   "src/kit/Consent.tsx": "c5ee7e50 kit",
   "src/kit/FieldInput.tsx": "39e40fcb kit",
   "src/kit/FileInput.tsx": "5d567f82 kit",
   "src/kit/Filters.tsx": "ceea52dc kit",
   "src/kit/ImportDialog.tsx": "d65da47a kit",
-  "src/kit/InlineRows.tsx": "dd000032 kit",
+  "src/kit/InlineRows.tsx": "b2c801d6 kit",
   "src/kit/Inspector.tsx": "2425cac5 kit",
-  "src/kit/Landing.tsx": "fa54b046 kit",
+  "src/kit/Landing.tsx": "a528f50e kit",
   "src/kit/LegalPage.tsx": "f9a9df1e kit",
   "src/kit/Live.tsx": "fbaa47cd kit",
   "src/kit/Markdown.tsx": "24e2fcd2 kit",
-  "src/kit/MarkdownFormatted.tsx": "e222328f kit",
+  "src/kit/MarkdownFormatted.tsx": "300ef9a1 kit",
   "src/kit/ModelForm.tsx": "abaf70be kit",
-  "src/kit/ModelTable.tsx": "84a8a2e2 kit",
+  "src/kit/ModelTable.tsx": "a8ae6290 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "fb5e87dc kit",
   "src/kit/PictureDialog.tsx": "1495b136 kit",
@@ -37319,7 +37325,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/admin/class-types/$id.tsx": "8603d18a generated",
   "src/routes/admin/class-types/index.tsx": "8db2bc16 generated",
   "src/routes/admin/class-types/new.tsx": "15a01d89 generated",
-  "src/routes/admin/index.tsx": "19b6cd26 generated",
+  "src/routes/admin/index.tsx": "f64b4832 generated",
   "src/routes/admin/instructors/$id.tsx": "52bb8fb7 generated",
   "src/routes/admin/instructors/index.tsx": "a34071e2 generated",
   "src/routes/admin/instructors/new.tsx": "f43b4446 generated",
@@ -37370,8 +37376,8 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/sign-in.tsx": "64dbc342 generated",
   "src/routes/sitemap[.]xml.ts": "018df36b generated",
   "src/start.ts": "6b874d2d kit",
-  "src/styles.css": "3120f1ba kit",
-  "src/theme.css": "ba057d91 generated",
+  "src/styles.css": "4fb2262f kit",
+  "src/theme.css": "2c20fc19 generated",
   "tests/smoke.spec.ts": "c6858e63 generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "3ee61b99 kit",
@@ -46642,6 +46648,7 @@ exports[`../../../examples/crm/smithable.yml > file list and generated code > sr
   --chart-3: oklch(0.553781 0.120683 66.4416);
   --chart-4: oklch(0.557537 0.252488 302.3212);
   --chart-5: oklch(0.514256 0.197806 16.9350);
+  --primary-text: #4943d2;
   --picture-filter: none;
   --radius: 10px;
   --font-body: "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
@@ -46735,6 +46742,7 @@ exports[`../../../examples/crm/smithable.yml > file list and generated code > sr
   --chart-3: oklch(0.836861 0.164422 84.4286);
   --chart-4: oklch(0.833033 0.132193 321.4337);
   --chart-5: oklch(0.809664 0.106109 11.6385);
+  --primary-text: oklch(0.785298 0.104135 274.7134);
   --picture-filter: none;
   --hover: color-mix(in oklab, var(--foreground) 10%, transparent);
   --primary-hover: color-mix(in oklch, var(--primary), white 30%);
@@ -47169,16 +47177,16 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/Ask.tsx": "e5277427 kit",
   "src/kit/Combobox.tsx": "c3a18c75 kit",
   "src/kit/Consent.tsx": "c5ee7e50 kit",
-  "src/kit/Dashboard.tsx": "05400fb6 kit",
+  "src/kit/Dashboard.tsx": "98bcd927 kit",
   "src/kit/FieldInput.tsx": "39e40fcb kit",
   "src/kit/Filters.tsx": "ceea52dc kit",
   "src/kit/ImportDialog.tsx": "d65da47a kit",
-  "src/kit/InlineRows.tsx": "dd000032 kit",
+  "src/kit/InlineRows.tsx": "b2c801d6 kit",
   "src/kit/Inspector.tsx": "2425cac5 kit",
-  "src/kit/Landing.tsx": "fa54b046 kit",
+  "src/kit/Landing.tsx": "a528f50e kit",
   "src/kit/MergeDialog.tsx": "54b364dd kit",
   "src/kit/ModelForm.tsx": "abaf70be kit",
-  "src/kit/ModelTable.tsx": "84a8a2e2 kit",
+  "src/kit/ModelTable.tsx": "a8ae6290 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "fb5e87dc kit",
   "src/kit/PictureDialog.tsx": "1495b136 kit",
@@ -47270,8 +47278,8 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/routes/team/index.tsx": "6349287f generated",
   "src/routes/team/trash.tsx": "bbce40d6 generated",
   "src/start.ts": "6b874d2d kit",
-  "src/styles.css": "3120f1ba kit",
-  "src/theme.css": "ba057d91 generated",
+  "src/styles.css": "4fb2262f kit",
+  "src/theme.css": "2c20fc19 generated",
   "tests/smoke.spec.ts": "cd6797d3 generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "3ee61b99 kit",
@@ -56071,6 +56079,7 @@ exports[`../../../examples/invoicing/smithable.yml > file list and generated cod
   --chart-3: oklch(0.553781 0.120683 66.4416);
   --chart-4: oklch(0.557537 0.252488 302.3212);
   --chart-5: oklch(0.514256 0.197806 16.9350);
+  --primary-text: #4943d2;
   --picture-filter: none;
   --radius: 10px;
   --font-body: "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
@@ -56164,6 +56173,7 @@ exports[`../../../examples/invoicing/smithable.yml > file list and generated cod
   --chart-3: oklch(0.836861 0.164422 84.4286);
   --chart-4: oklch(0.833033 0.132193 321.4337);
   --chart-5: oklch(0.809664 0.106109 11.6385);
+  --primary-text: oklch(0.785298 0.104135 274.7134);
   --picture-filter: none;
   --hover: color-mix(in oklab, var(--foreground) 10%, transparent);
   --primary-hover: color-mix(in oklch, var(--primary), white 30%);
@@ -56616,18 +56626,18 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/Ask.tsx": "e5277427 kit",
   "src/kit/Combobox.tsx": "c3a18c75 kit",
   "src/kit/Consent.tsx": "c5ee7e50 kit",
-  "src/kit/Dashboard.tsx": "05400fb6 kit",
+  "src/kit/Dashboard.tsx": "98bcd927 kit",
   "src/kit/FieldInput.tsx": "39e40fcb kit",
   "src/kit/FileInput.tsx": "5d567f82 kit",
   "src/kit/Filters.tsx": "ceea52dc kit",
   "src/kit/ImportDialog.tsx": "d65da47a kit",
-  "src/kit/InlineRows.tsx": "dd000032 kit",
+  "src/kit/InlineRows.tsx": "b2c801d6 kit",
   "src/kit/Inspector.tsx": "2425cac5 kit",
-  "src/kit/Landing.tsx": "fa54b046 kit",
+  "src/kit/Landing.tsx": "a528f50e kit",
   "src/kit/LegalPage.tsx": "f9a9df1e kit",
   "src/kit/Live.tsx": "fbaa47cd kit",
   "src/kit/ModelForm.tsx": "abaf70be kit",
-  "src/kit/ModelTable.tsx": "84a8a2e2 kit",
+  "src/kit/ModelTable.tsx": "a8ae6290 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Onboarding.tsx": "b68216f0 kit",
   "src/kit/Overflow.tsx": "fb5e87dc kit",
@@ -56725,8 +56735,8 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/routes/sitemap[.]xml.ts": "5c8fa673 generated",
   "src/routes/welcome/index.tsx": "152dd8b1 generated",
   "src/start.ts": "6b874d2d kit",
-  "src/styles.css": "3120f1ba kit",
-  "src/theme.css": "ba057d91 generated",
+  "src/styles.css": "4fb2262f kit",
+  "src/theme.css": "2c20fc19 generated",
   "tests/smoke.spec.ts": "dadec54d generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "3ee61b99 kit",
@@ -65426,6 +65436,7 @@ exports[`../../../examples/kiosk/smithable.yml > file list and generated code > 
   --chart-3: oklch(0.553781 0.120683 66.4416);
   --chart-4: oklch(0.557537 0.252488 302.3212);
   --chart-5: oklch(0.514256 0.197806 16.9350);
+  --primary-text: #4943d2;
   --picture-filter: none;
   --radius: 10px;
   --font-body: "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
@@ -65519,6 +65530,7 @@ exports[`../../../examples/kiosk/smithable.yml > file list and generated code > 
   --chart-3: oklch(0.836861 0.164422 84.4286);
   --chart-4: oklch(0.833033 0.132193 321.4337);
   --chart-5: oklch(0.809664 0.106109 11.6385);
+  --primary-text: oklch(0.785298 0.104135 274.7134);
   --picture-filter: none;
   --hover: color-mix(in oklab, var(--foreground) 10%, transparent);
   --primary-hover: color-mix(in oklch, var(--primary), white 30%);
@@ -65966,11 +65978,11 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/FileInput.tsx": "5d567f82 kit",
   "src/kit/Filters.tsx": "ceea52dc kit",
   "src/kit/ImportDialog.tsx": "d65da47a kit",
-  "src/kit/InlineRows.tsx": "dd000032 kit",
-  "src/kit/Landing.tsx": "fa54b046 kit",
+  "src/kit/InlineRows.tsx": "b2c801d6 kit",
+  "src/kit/Landing.tsx": "a528f50e kit",
   "src/kit/Live.tsx": "fbaa47cd kit",
   "src/kit/ModelForm.tsx": "abaf70be kit",
-  "src/kit/ModelTable.tsx": "84a8a2e2 kit",
+  "src/kit/ModelTable.tsx": "a8ae6290 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/OrderPage.tsx": "d4a74208 kit",
   "src/kit/Overflow.tsx": "fb5e87dc kit",
@@ -66064,8 +66076,8 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/routes/team/index.tsx": "d0aa5bca generated",
   "src/routes/where/index.tsx": "55545172 generated",
   "src/start.ts": "6b874d2d kit",
-  "src/styles.css": "3120f1ba kit",
-  "src/theme.css": "ba057d91 generated",
+  "src/styles.css": "4fb2262f kit",
+  "src/theme.css": "2c20fc19 generated",
   "tests/smoke.spec.ts": "7a8dce6a generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "3ee61b99 kit",
@@ -70907,6 +70919,7 @@ exports[`../../../examples/marketplace/smithable.yml > file list and generated c
   --chart-3: oklch(0.553781 0.120683 66.4416);
   --chart-4: oklch(0.557537 0.252488 302.3212);
   --chart-5: oklch(0.514256 0.197806 16.9350);
+  --primary-text: #4943d2;
   --picture-filter: none;
   --radius: 10px;
   --font-body: "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
@@ -71000,6 +71013,7 @@ exports[`../../../examples/marketplace/smithable.yml > file list and generated c
   --chart-3: oklch(0.836861 0.164422 84.4286);
   --chart-4: oklch(0.833033 0.132193 321.4337);
   --chart-5: oklch(0.809664 0.106109 11.6385);
+  --primary-text: oklch(0.785298 0.104135 274.7134);
   --picture-filter: none;
   --hover: color-mix(in oklab, var(--foreground) 10%, transparent);
   --primary-hover: color-mix(in oklch, var(--primary), white 30%);
@@ -71386,11 +71400,11 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/FileInput.tsx": "5d567f82 kit",
   "src/kit/Filters.tsx": "ceea52dc kit",
   "src/kit/ImportDialog.tsx": "d65da47a kit",
-  "src/kit/InlineRows.tsx": "dd000032 kit",
+  "src/kit/InlineRows.tsx": "b2c801d6 kit",
   "src/kit/Inspector.tsx": "2425cac5 kit",
-  "src/kit/Landing.tsx": "fa54b046 kit",
+  "src/kit/Landing.tsx": "a528f50e kit",
   "src/kit/ModelForm.tsx": "abaf70be kit",
-  "src/kit/ModelTable.tsx": "84a8a2e2 kit",
+  "src/kit/ModelTable.tsx": "a8ae6290 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "fb5e87dc kit",
   "src/kit/PictureDialog.tsx": "1495b136 kit",
@@ -71482,8 +71496,8 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/routes/sitemap[.]xml.ts": "abb491ed generated",
   "src/routes/welcome/index.tsx": "a572d932 generated",
   "src/start.ts": "6b874d2d kit",
-  "src/styles.css": "3120f1ba kit",
-  "src/theme.css": "ba057d91 generated",
+  "src/styles.css": "4fb2262f kit",
+  "src/theme.css": "2c20fc19 generated",
   "tests/smoke.spec.ts": "dcf4060e generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "3ee61b99 kit",
@@ -75045,6 +75059,7 @@ exports[`../../../examples/records/smithable.yml > file list and generated code 
   --chart-3: oklch(0.553781 0.120683 66.4416);
   --chart-4: oklch(0.557537 0.252488 302.3212);
   --chart-5: oklch(0.514256 0.197806 16.9350);
+  --primary-text: #4943d2;
   --picture-filter: none;
   --radius: 10px;
   --font-body: "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
@@ -75138,6 +75153,7 @@ exports[`../../../examples/records/smithable.yml > file list and generated code 
   --chart-3: oklch(0.836861 0.164422 84.4286);
   --chart-4: oklch(0.833033 0.132193 321.4337);
   --chart-5: oklch(0.809664 0.106109 11.6385);
+  --primary-text: oklch(0.785298 0.104135 274.7134);
   --picture-filter: none;
   --hover: color-mix(in oklab, var(--foreground) 10%, transparent);
   --primary-hover: color-mix(in oklch, var(--primary), white 30%);
@@ -75472,11 +75488,11 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/FieldInput.tsx": "39e40fcb kit",
   "src/kit/Filters.tsx": "ceea52dc kit",
   "src/kit/ImportDialog.tsx": "d65da47a kit",
-  "src/kit/InlineRows.tsx": "dd000032 kit",
+  "src/kit/InlineRows.tsx": "b2c801d6 kit",
   "src/kit/Inspector.tsx": "2425cac5 kit",
-  "src/kit/Landing.tsx": "fa54b046 kit",
+  "src/kit/Landing.tsx": "a528f50e kit",
   "src/kit/ModelForm.tsx": "abaf70be kit",
-  "src/kit/ModelTable.tsx": "84a8a2e2 kit",
+  "src/kit/ModelTable.tsx": "a8ae6290 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "fb5e87dc kit",
   "src/kit/PictureDialog.tsx": "1495b136 kit",
@@ -75552,8 +75568,8 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/routes/sign-in.tsx": "563d1820 generated",
   "src/routes/sitemap[.]xml.ts": "8c1882fb generated",
   "src/start.ts": "6b874d2d kit",
-  "src/styles.css": "3120f1ba kit",
-  "src/theme.css": "ba057d91 generated",
+  "src/styles.css": "4fb2262f kit",
+  "src/theme.css": "2c20fc19 generated",
   "tests/smoke.spec.ts": "b04668e0 generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "3ee61b99 kit",
@@ -89373,6 +89389,7 @@ exports[`../../../examples/status/smithable.yml > file list and generated code >
   --chart-3: oklch(0.553781 0.120683 66.4416);
   --chart-4: oklch(0.557537 0.252488 302.3212);
   --chart-5: oklch(0.514256 0.197806 16.9350);
+  --primary-text: #4943d2;
   --picture-filter: none;
   --radius: 10px;
   --font-body: "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
@@ -89466,6 +89483,7 @@ exports[`../../../examples/status/smithable.yml > file list and generated code >
   --chart-3: oklch(0.836861 0.164422 84.4286);
   --chart-4: oklch(0.833033 0.132193 321.4337);
   --chart-5: oklch(0.809664 0.106109 11.6385);
+  --primary-text: oklch(0.785298 0.104135 274.7134);
   --picture-filter: none;
   --hover: color-mix(in oklab, var(--foreground) 10%, transparent);
   --primary-hover: color-mix(in oklch, var(--primary), white 30%);
@@ -89938,22 +89956,22 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/AppLink.tsx": "841a9af0 kit",
   "src/kit/AppShell.tsx": "fda2cf43 kit",
   "src/kit/AppearancePicker.tsx": "0cd564d2 kit",
-  "src/kit/Articles.tsx": "63b22982 kit",
+  "src/kit/Articles.tsx": "72359ede kit",
   "src/kit/Ask.tsx": "e5277427 kit",
   "src/kit/Combobox.tsx": "c3a18c75 kit",
   "src/kit/Consent.tsx": "c5ee7e50 kit",
-  "src/kit/Dashboard.tsx": "05400fb6 kit",
+  "src/kit/Dashboard.tsx": "98bcd927 kit",
   "src/kit/FieldInput.tsx": "39e40fcb kit",
   "src/kit/Filters.tsx": "ceea52dc kit",
   "src/kit/ImportDialog.tsx": "d65da47a kit",
-  "src/kit/InlineRows.tsx": "dd000032 kit",
+  "src/kit/InlineRows.tsx": "b2c801d6 kit",
   "src/kit/Inspector.tsx": "2425cac5 kit",
   "src/kit/Keys.tsx": "aa99e677 kit",
-  "src/kit/Landing.tsx": "fa54b046 kit",
+  "src/kit/Landing.tsx": "a528f50e kit",
   "src/kit/Markdown.tsx": "24e2fcd2 kit",
-  "src/kit/MarkdownFormatted.tsx": "e222328f kit",
+  "src/kit/MarkdownFormatted.tsx": "300ef9a1 kit",
   "src/kit/ModelForm.tsx": "abaf70be kit",
-  "src/kit/ModelTable.tsx": "84a8a2e2 kit",
+  "src/kit/ModelTable.tsx": "a8ae6290 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "fb5e87dc kit",
   "src/kit/PictureDialog.tsx": "1495b136 kit",
@@ -90059,8 +90077,8 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/routes/updates/index.tsx": "11c7f442 generated",
   "src/routes/updates/new.tsx": "ac78941b generated",
   "src/start.ts": "6b874d2d kit",
-  "src/styles.css": "3120f1ba kit",
-  "src/theme.css": "ba057d91 generated",
+  "src/styles.css": "4fb2262f kit",
+  "src/theme.css": "2c20fc19 generated",
   "tests/smoke.spec.ts": "5de3170c generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "3ee61b99 kit",
@@ -97523,6 +97541,7 @@ exports[`../../../examples/support/smithable.yml > file list and generated code 
   --chart-3: oklch(0.553781 0.120683 66.4416);
   --chart-4: oklch(0.557537 0.252488 302.3212);
   --chart-5: oklch(0.514256 0.197806 16.9350);
+  --primary-text: #4943d2;
   --picture-filter: none;
   --radius: 10px;
   --font-body: "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
@@ -97616,6 +97635,7 @@ exports[`../../../examples/support/smithable.yml > file list and generated code 
   --chart-3: oklch(0.836861 0.164422 84.4286);
   --chart-4: oklch(0.833033 0.132193 321.4337);
   --chart-5: oklch(0.809664 0.106109 11.6385);
+  --primary-text: oklch(0.785298 0.104135 274.7134);
   --picture-filter: none;
   --hover: color-mix(in oklab, var(--foreground) 10%, transparent);
   --primary-hover: color-mix(in oklch, var(--primary), white 30%);
@@ -98012,11 +98032,11 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/FileInput.tsx": "5d567f82 kit",
   "src/kit/Filters.tsx": "ceea52dc kit",
   "src/kit/ImportDialog.tsx": "d65da47a kit",
-  "src/kit/InlineRows.tsx": "dd000032 kit",
+  "src/kit/InlineRows.tsx": "b2c801d6 kit",
   "src/kit/Inspector.tsx": "2425cac5 kit",
   "src/kit/Live.tsx": "fbaa47cd kit",
   "src/kit/ModelForm.tsx": "abaf70be kit",
-  "src/kit/ModelTable.tsx": "84a8a2e2 kit",
+  "src/kit/ModelTable.tsx": "a8ae6290 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "fb5e87dc kit",
   "src/kit/PictureDialog.tsx": "1495b136 kit",
@@ -98107,8 +98127,8 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/routes/team/activity.tsx": "468cb15a generated",
   "src/routes/team/index.tsx": "b9305ec9 generated",
   "src/start.ts": "6b874d2d kit",
-  "src/styles.css": "3120f1ba kit",
-  "src/theme.css": "ba057d91 generated",
+  "src/styles.css": "4fb2262f kit",
+  "src/theme.css": "2c20fc19 generated",
   "tests/smoke.spec.ts": "ed46d289 generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "3ee61b99 kit",

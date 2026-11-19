@@ -1,0 +1,9 @@
+id: readable-primary-text
+title: Text in a theme's primary colour (links, eyebrows, the active menu item) could read too faintly, an invoice's lines were squeezed unreadably on a phone, and a dashboard tile's title was cut short there.
+severity: fix
+exposure: none
+introduced: unknown
+affects:
+  kit: [src/kit/Articles.tsx, src/kit/Calendar.tsx, src/kit/Dashboard.tsx, src/kit/InlineRows.tsx, src/kit/Landing.tsx, src/kit/MarkdownFormatted.tsx, src/kit/ModelTable.tsx, src/kit/PaymentBack.tsx]
+  features: [any]
+migration: none

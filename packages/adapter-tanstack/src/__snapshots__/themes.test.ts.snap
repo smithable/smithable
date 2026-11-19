@@ -35,6 +35,7 @@ exports[`the style layer's new fields render, in the combinations where misses w
   --chart-3: #f59984;
   --chart-4: #c1b85c;
   --chart-5: #4acdbd;
+  --primary-text: #8fb4ff;
   --picture-filter: none;
   --radius: 12px;
   --font-body: "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
@@ -128,6 +129,7 @@ exports[`the style layer's new fields render, in the combinations where misses w
   --chart-3: #f59984;
   --chart-4: #c1b85c;
   --chart-5: #4acdbd;
+  --primary-text: #8fb4ff;
   --picture-filter: none;
   --hover: color-mix(in oklab, var(--foreground) 10%, transparent);
   --primary-hover: color-mix(in oklch, var(--primary), white 30%);
@@ -176,6 +178,7 @@ exports[`the style layer's new fields render, in the combinations where misses w
   --chart-3: #993405;
   --chart-4: #5e5e05;
   --chart-5: #016864;
+  --primary-text: #3043b6;
   --picture-filter: none;
   --radius: 12px;
   --font-body: "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
@@ -269,6 +272,7 @@ exports[`the style layer's new fields render, in the combinations where misses w
   --chart-3: #18d1e9;
   --chart-4: #adb4fd;
   --chart-5: #fe96b8;
+  --primary-text: #e8b04a;
   --picture-filter: none;
   --hover: color-mix(in oklab, var(--foreground) 10%, transparent);
   --primary-hover: color-mix(in oklch, var(--primary), white 30%);
@@ -315,6 +319,7 @@ exports[`the style layer's new fields render, in the combinations where misses w
   --chart-3: #993405;
   --chart-4: #5e5e05;
   --chart-5: #016864;
+  --primary-text: #3043b6;
   --picture-filter: none;
   --radius: 12px;
   --font-body: "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
@@ -408,6 +413,7 @@ exports[`the style layer's new fields render, in the combinations where misses w
   --chart-3: #18d1e9;
   --chart-4: #adb4fd;
   --chart-5: #fe96b8;
+  --primary-text: #e8b04a;
   --picture-filter: none;
   --hover: color-mix(in oklab, var(--foreground) 10%, transparent);
   --primary-hover: color-mix(in oklch, var(--primary), white 30%);
@@ -451,6 +457,7 @@ exports[`the style layer's new fields render, in the combinations where misses w
   --chart-3: #993405;
   --chart-4: #5e5e05;
   --chart-5: #016864;
+  --primary-text: #3043b6;
   --picture-filter: grayscale(1) sepia(1) hue-rotate(194deg) saturate(1.6) contrast(1.05);
   --radius: 12px;
   --font-body: "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
@@ -544,6 +551,7 @@ exports[`the style layer's new fields render, in the combinations where misses w
   --chart-3: #18d1e9;
   --chart-4: #adb4fd;
   --chart-5: #fe96b8;
+  --primary-text: #e8b04a;
   --picture-filter: grayscale(1) sepia(1) hue-rotate(1deg) saturate(1.6) contrast(1.05);
   --hover: color-mix(in oklab, var(--foreground) 10%, transparent);
   --primary-hover: color-mix(in oklch, var(--primary), white 30%);
