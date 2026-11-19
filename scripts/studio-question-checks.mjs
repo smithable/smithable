@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
 
+import { openSmith } from "./studio-form-checks.mjs";
+
 export async function checkStudioQuestions(browser, base) {
   const page = await browser.newPage({ viewport: { width: 1600, height: 1000 } });
   const project = await (await page.request.get(`${base}/api/project`)).json();
@@ -158,6 +160,7 @@ export async function checkStudioQuestions(browser, base) {
       await route.fulfill({ json: { ok: true, output: "Administrator updated." } });
     });
     await page.goto(base);
+    await openSmith(page);
     const card = page.locator("[data-studio-question]");
     const zone = page.locator('[data-part="time-zone-check"]');
     await zone.waitFor();

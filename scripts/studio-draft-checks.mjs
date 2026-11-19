@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
 
+import { openSmith } from "./studio-form-checks.mjs";
+
 export async function checkStudioDraft(browser, base) {
   for (const kind of [
     "answer",
@@ -62,6 +64,7 @@ export async function checkStudioDraft(browser, base) {
         await route.fulfill({ json: { running: false, stopped: "Sample users paused." } });
       });
       await page.goto(`${base}?guide=off`);
+      await openSmith(page);
       const input = page.getByRole("textbox", { name: "Describe a change, or ask a question" });
       const send = page.getByRole("button", { name: "Send", exact: true });
       await input.waitFor();

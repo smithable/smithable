@@ -246,7 +246,7 @@ export function App() {
   );
   // A phone shows one window at a time (studio-v3.md §8), chosen in the header or by a swipe
   // across it: Smith, the preview, No code and Code, Changes as its settings say
-  // (smith-first.md §6). It opens on Smith (smith-first.md §2).
+  // (smith-first.md §6). It opens on the preview.
   const narrow = useMedia("(max-width: 1023px)");
   // The effects of the overlay and the guide (smith-first.md §12.2), off when the system asks.
   const motion = !useMedia("(prefers-reduced-motion: reduce)");
@@ -255,8 +255,15 @@ export function App() {
   const [smithAt, setSmithAt] = useSmithPlace();
   const compact = useMedia("(max-width: 1439px), (max-height: 799px)");
   const floating = !narrow && !compact && smithAt === "floating";
-  const [panelOpen, setPanelOpen] = useState(true);
+  const [panelOpen, setPanelOpen] = useState(false);
   const [smithHidden, setSmithHidden] = useState(false);
+  const [smithHideHint, setSmithHideHint] = useState(false);
+  const hideHintShown = useRef(false);
+  useEffect(() => {
+    if (!smithHideHint) return;
+    const timer = setTimeout(() => setSmithHideHint(false), 4500);
+    return () => clearTimeout(timer);
+  }, [smithHideHint]);
   // The preview's edges on the screen, which the floating panel hangs between.
   const [previewBox, setPreviewBox] = useState<HTMLDivElement | null>(null);
   const [over, setOver] = useState<Bounds>();
@@ -1135,15 +1142,31 @@ export function App() {
       : narrow
         ? phoneWindow === "smith" && (!phone.changesUnderSmith || phoneSub === "smith")
         : slotOf("smith") !== undefined);
+  const hideSmith = () => {
+    if (floating) setPanelOpen(false);
+    else if (narrow) showWindow("preview");
+    else setSmithHidden(true);
+    if (hideHintShown.current) return;
+    hideHintShown.current = true;
+    try {
+      const key = "smithable:seen-smith-hide";
+      if (localStorage.getItem(key) === "1") return;
+      localStorage.setItem(key, "1");
+    } catch {}
+    setSmithHideHint(true);
+  };
   const toggleSmith = () => {
+    if (smithVisible) {
+      hideSmith();
+      return;
+    }
+    setSmithHideHint(false);
     if (floating) {
       setVisualize(false);
-      setPanelOpen(!smithVisible);
+      setPanelOpen(true);
     } else if (narrow) {
-      if (!smithVisible) setPhoneSub("smith");
-      showWindow(smithVisible ? "preview" : "smith");
-    } else if (smithVisible) {
-      setSmithHidden(true);
+      setPhoneSub("smith");
+      showWindow("smith");
     } else {
       workIn("smith");
     }
@@ -1411,8 +1434,7 @@ export function App() {
                     Leave feedback
                   </Button>
                 </ToolbarMore>
-                {!project.making && (
-                  // Smith's face toggles his thread in its current presentation.
+                <div className="relative shrink-0">
                   <button
                     type="button"
                     aria-label={questionWaiting ? "Smith, a question is waiting" : "Smith"}
@@ -1439,7 +1461,15 @@ export function App() {
                       </span>
                     )}
                   </button>
-                )}
+                  {smithHideHint && (
+                    <span
+                      role="status"
+                      className="absolute top-full right-0 z-[65] mt-2 w-max max-w-[80vw] rounded-md border border-line bg-panel px-3 py-2 text-sm shadow-lg"
+                    >
+                      Click Smith’s face to show him again.
+                    </span>
+                  )}
+                </div>
               </div>
             )}
           </div>
@@ -1985,17 +2015,26 @@ export function App() {
                             className={cx("min-h-0 flex-[3]", !narrow && smithHidden && "hidden")}
                             scroll={false}
                             actions={
-                              !compact &&
-                              !narrow && (
+                              <div className="flex items-center gap-2">
+                                {!compact && !narrow && (
+                                  <button
+                                    type="button"
+                                    onClick={undock}
+                                    title="Move Smith over the preview"
+                                    className="text-xs font-medium text-muted hover:underline"
+                                  >
+                                    Undock
+                                  </button>
+                                )}
                                 <button
                                   type="button"
-                                  onClick={undock}
-                                  title="Smith over the preview, opened from his face in the top bar"
-                                  className="text-xs font-medium text-muted hover:underline"
+                                  onClick={hideSmith}
+                                  aria-label="Close Smith"
+                                  className="size-6 rounded text-muted hover:bg-subtle hover:text-fg"
                                 >
-                                  Undock
+                                  ×
                                 </button>
-                              )
+                              </div>
                             }
                           >
                             {/* While the overlay is on, the thread is there; this is where it comes. */}
@@ -2140,6 +2179,7 @@ export function App() {
             if (narrow) showWindow("smith");
           }}
           onFold={() => setPanelOpen(false)}
+          onHide={hideSmith}
           onDock={dock}
         >
           {smith(layer === "overlay" ? "overlay" : "panel")}

@@ -7,6 +7,6 @@ export const CHIP_MAIN =
 
 /** A message's bubble: the person's on the right, Smith's on the left; Smith's rise as they come. */
 export const MINE =
-  "ml-auto w-fit max-w-[85%] whitespace-pre-wrap rounded-2xl rounded-br-sm bg-accent-soft px-3 py-1.5 text-sm";
+  "ml-auto w-fit max-w-[85%] whitespace-pre-wrap rounded-2xl rounded-tr-sm bg-emerald-50 px-3 py-2 text-sm text-emerald-950 dark:bg-emerald-950/60 dark:text-emerald-100";
 export const SMITHS =
-  "smith-line mr-auto w-fit max-w-[85%] whitespace-pre-wrap rounded-2xl rounded-bl-sm bg-subtle px-3 py-1.5 text-sm";
+  "smith-line mr-auto w-fit max-w-[85%] whitespace-pre-wrap rounded-2xl rounded-tl-sm bg-accent-soft px-3 py-2 text-sm";

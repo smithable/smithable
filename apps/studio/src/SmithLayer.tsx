@@ -30,6 +30,7 @@ export function SmithLayer({
   onSkip,
   onClosed,
   onFold,
+  onHide,
   onDock,
   children,
 }: {
@@ -58,6 +59,7 @@ export function SmithLayer({
   /** The closing has moved the thread to its place. */
   onClosed: () => void;
   onFold: () => void;
+  onHide: () => void;
   /** Smith goes into the left window. */
   onDock: () => void;
   children: ReactNode;
@@ -193,7 +195,7 @@ export function SmithLayer({
               </button>
               <button
                 type="button"
-                onClick={onFold}
+                onClick={onHide}
                 aria-label="Close Smith"
                 title="Close; his face in the top bar opens him again"
                 className="flex size-6 items-center justify-center rounded text-muted hover:bg-subtle hover:text-fg"
