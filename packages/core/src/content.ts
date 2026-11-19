@@ -1046,9 +1046,20 @@ function checkOutgoingTexts(
     if (!isScalar(value) || typeof value.value !== "string") continue;
     const where = `"${key}" of outgoing "${name}"`;
     for (const path of new Set(placeholdersOf(value.value))) {
-      // A link or a name reveals nothing of the record, nor do a list mail's count and day; the rest does.
-      const quiet = entry.list ? ["link", "by", "count", "date"] : ["link", "by", "pay", "view"];
+      // A link or a name reveals nothing of the record, nor do a list mail's count and day; the rest
+      // does, {view} too: its link opens the record's document.
+      const quiet = entry.list ? ["link", "by", "count", "date"] : ["link", "by", "pay"];
       if (!quiet.includes(path)) any = true;
+      // The link is the recipient's alone: a subject is shown in lists and notices, the text is not.
+      if (path === "view" && key === "subject") {
+        ctx.error(
+          value,
+          "view-in-subject",
+          `${where}: "{view}" is a link for the mail's text, not its subject.`,
+          "Move {view} into the text.",
+        );
+        continue;
+      }
       const problem = placeholderProblem(path, entry, ir, auth);
       if (!problem) continue;
       if (problem.warning)

@@ -56,3 +56,16 @@ test("{view} is refused on a deleted record's mail", () => {
     expect.stringContaining("a deleted one has none to send"),
   );
 });
+
+test("{view} belongs in a mail's text, never its subject", () => {
+  const ir = validateSpec({ path: "smithable.yml", text: starter }).ir;
+  if (!ir) throw new Error("no IR");
+  const said = validateContent(
+    {
+      path: "smithable.content.yml",
+      text: 'smithableContent: 0.1\noutgoing:\n  invoiceSent:\n    subject: "Invoice {view}"\n    text: "Hello"\n',
+    },
+    ir,
+  ).diagnostics.map((d) => d.message);
+  expect(said).toContainEqual(expect.stringContaining("not its subject"));
+});

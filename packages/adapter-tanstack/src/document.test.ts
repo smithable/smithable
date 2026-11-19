@@ -114,6 +114,9 @@ test("a mail that says {view} makes the link's page, and the document page lists
   expect(view).toContain('"X-Robots-Tag": "noindex"');
   // The page shows the stored copy, never the live record.
   expect(view).not.toContain("readInvoiceDocument");
+  // A record gone or in the trash by any way, a cascade too, opens no copy.
+  expect(view).toContain("const copy = found && LIVE[found.model]?.(found.record) ? found : null;");
+  expect(view).toContain(".where(and(eq(schema.invoices.id, id)))");
   const page = [...app].find(([path]) => path.endsWith("/invoices/$id_.document.tsx"))?.[1];
   expect(page).toContain("<SentDocuments");
   // Only whoever may read the invoice sees what was sent, and withdrawing needs its write rule.

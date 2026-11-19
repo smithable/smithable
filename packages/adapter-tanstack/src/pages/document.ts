@@ -423,12 +423,15 @@ export function viewRoute(ir: SpecIR, t: Texts, auth: AuthIR, models: string[]):
     const title = given ?? parts.n.label;
     const props = [...parts.props];
     if (Object.keys(blockWords).length) props.push(`words={${literal(blockWords)}}`);
-    return [{ name, title, props }];
+    return [{ name, title, props, table: parts.n.table, trash: Boolean(model.trash) }];
   });
   return `${HEADER}import { createFileRoute, notFound } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { getRequestHeaders } from "@tanstack/react-start/server";
+import { and, eq${copies.some((c) => c.trash) ? ", isNull" : ""} } from "drizzle-orm";
 import { z } from "zod";
+import { db } from "#/db";
+${SCHEMA_IMPORT}
 import { app } from "#/generated/app";
 ${importLines(uiImports)}
 import { RecordDocument } from "#/kit/Document";
@@ -437,15 +440,21 @@ import { openCopy } from "#/kit/view.server";
 
 /** The copy a link opens, or null: the same for a wrong, an ended and a withdrawn link. */
 const getCopy = createServerFn()
-  .validator(z.string().max(100))
+  .validator(z.string())
   .handler(({ data: token }) => {
     const headers = getRequestHeaders();
     viewAllowed(headers);
-    const copy = openCopy(token);
+    const found = openCopy(token);
+    // A record gone or in the trash by any way (a parent's with it, too) opens no copy.
+    const copy = found && LIVE[found.model]?.(found.record) ? found : null;
     if (!copy) viewMissed(headers);
     // The stored copy as it was sent: its parts, picked when it was sent.
     return copy && { model: copy.model, found: copy.content as Found };
   });
+
+/** Whether a sent copy's record is still there and not in the trash, by its model. */
+const LIVE: Record<string, (id: number) => boolean> = {
+${copies.map((c) => `  ${c.name}: (id) =>\n    db\n      .select({ id: ${c.table}.id })\n      .from(${c.table})\n      .where(and(eq(${c.table}.id, id)${c.trash ? `, isNull(${c.table}.deletedAt)` : ""}))\n      .get() !== undefined,\n`).join("")}};
 
 /** A value as the copy holds it: dates are text in the stored copy. */
 type Value = string | number | boolean | null | Value[] | { [key: string]: Value };

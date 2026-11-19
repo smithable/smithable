@@ -81,11 +81,14 @@ export function viewLinks(
  * The copy a token opens, or null: a wrong token, an ended or withdrawn link, and a link of
  * another kind are alike. Reading changes nothing.
  */
-export function openCopy(token: string): { model: string; sentAt: Date; content: unknown } | null {
+export function openCopy(
+  token: string,
+): { model: string; record: number; sentAt: Date; content: unknown } | null {
   if (!/^[A-Za-z0-9_-]{43}$/.test(token)) return null;
   const found = db
     .select({
       model: sentDocuments.model,
+      record: sentDocuments.recordId,
       sentAt: sentDocuments.createdAt,
       content: sentDocuments.content,
     })
