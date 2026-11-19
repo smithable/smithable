@@ -167,6 +167,13 @@ export function App() {
   const [troubleshooting, setTroubleshooting] = useState(false);
   const wakingNow = useSyncExternalStore(waking.subscribe, waking.get);
   const [outbox, setOutbox] = useState(false);
+  const [help, setHelp] = useState(false);
+  const [workspaceControls, setWorkspaceControls] = useState<boolean>();
+  const [addressHost, setAddressHost] = useState<HTMLDivElement | null>(null);
+  const helpDialog = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    if (help) helpDialog.current?.showModal();
+  }, [help]);
   // The sample users' panel, their state as the daemon last said, and a page for the preview (Follow).
   const [peopleOpen, setPeopleOpen] = useState(false);
   const [people, setPeople] = useState<PeopleState>();
@@ -278,7 +285,7 @@ export function App() {
       ? "smith"
       : isManualView(place.window)
         ? "manual"
-        : "smith";
+        : "preview";
   // Which of No code, Code and Summary the view shows; a phone without Code shows No code for it.
   const manual: ManualView =
     narrow && !phone.code && arrangement.manual === "code"
@@ -624,12 +631,10 @@ export function App() {
   // The pages the preview's address offers: each page's address and title, and sign-in.
   const pages = useMemo(
     (): [string, string][] => [
-      ...(spec.ir?.pages ?? [])
-        .filter((p) => !p.route.includes("$"))
-        .map((p): [string, string] => [
-          p.route,
-          spec.content?.pages[p.id]?.title ?? humanize(p.id),
-        ]),
+      ...(spec.ir?.pages ?? []).map((p): [string, string] => [
+        p.route,
+        spec.content?.pages[p.id]?.title ?? humanize(p.id),
+      ]),
       ...(spec.auth ? [["/sign-in", "Sign in"] as [string, string]] : []),
     ],
     [spec],
@@ -1067,8 +1072,10 @@ export function App() {
     const at = id ?? project?.trace[0]?.id;
     if (at) setChangesAt({ id: at, at: Date.now() });
     if (!narrow) workIn("changes");
-    else if (phone.changesUnderSmith) setPhoneSub("changes");
-    else showWindow("changes");
+    else {
+      if (phone.changesUnderSmith) setPhoneSub("changes");
+      showWindow("changes");
+    }
   };
   if (!project) return <p className="p-6 text-sm text-quiet">Opening the project…</p>;
   // Smith's thread, wherever it is: on the overlay, in the floating panel, or in a window.
@@ -1211,6 +1218,79 @@ export function App() {
     if (narrow) showWindow("smith");
     else workIn("smith");
   };
+  const workspaceVisible =
+    workspaceControls ??
+    (narrow ? phoneWindow !== "preview" : !floating || slotOf(manual) !== undefined);
+  const lookAction = project.lookProject && (
+    <Button
+      variant="ghost"
+      className="justify-start px-2"
+      data-guide="look"
+      disabled={busy || Boolean(pickingLook) || !spec.plugins}
+      onClick={() => {
+        pauseGuide();
+        showWindow("preview");
+        if (spec.ux) setPickingLook({ project, preset: spec.ux.theme.preset, automatic: false });
+        else setEditingLook({ project, path: keptPage() });
+      }}
+    >
+      Look
+    </Button>
+  );
+  const releaseLabel = release.error
+    ? "Review and publish (unavailable)"
+    : release.review
+      ? `Review and publish (${needsLook(release.review, { hosted: Boolean(project.home) })})`
+      : "Review and publish (reading…)";
+  const openPreviewWindow = () => (narrow ? showWindow("preview") : workIn("preview"));
+  const openSettings = () => {
+    if (narrow) showWindow("nocode");
+    else workIn("nocode");
+    setWorkspaceControls(true);
+  };
+  const undoArrow = <path d="M4 10a8 8 0 1 1 1 8M4 4v6h6" />;
+  const undoHistory = (
+    <>
+      <ToolbarButton
+        label="Undo"
+        onClick={() => void undo()}
+        disabled={
+          busy || Boolean(project.making) || !project.trace.some((t) => !t.undone && !t.isUndo)
+        }
+        text={narrow}
+      >
+        {undoArrow}
+      </ToolbarButton>
+      <ToolbarButton label="Changes" onClick={() => showChanges()} text={narrow}>
+        <path d="M9 6h11M9 12h11M9 18h11M4 6h1M4 12h1M4 18h1" />
+      </ToolbarButton>
+      <ToolbarButton
+        label="Redo"
+        onClick={() => void redo()}
+        disabled={busy || Boolean(project.making) || !project.canRedo}
+        text={narrow}
+      >
+        <path d="M20 10a8 8 0 1 0-1 8M20 4v6h-6" />
+      </ToolbarButton>
+    </>
+  );
+  const outboxAction = (
+    <ToolbarButton label="Outbox" onClick={() => setOutbox(true)} text={narrow}>
+      <rect x="3" y="5" width="18" height="14" rx="2" />
+      <path d="m3 7 9 6 9-6" />
+    </ToolbarButton>
+  );
+  const helpAction = (
+    <ToolbarButton label="Help" onClick={() => setHelp(true)} text={narrow}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M9 9a3 3 0 0 1 6 0c0 2-3 2-3 4m0 3h.01" />
+    </ToolbarButton>
+  );
+  const settingsAction = (
+    <ToolbarButton label="All settings" onClick={openSettings} text={narrow}>
+      <path d="M4 6h16M4 12h16M4 18h16M8 4v4M16 10v4M10 16v4" />
+    </ToolbarButton>
+  );
   return (
     <div className={cx("h-full", motion && "motion")}>
       {/* Behind the overlay Studio loads as ever, taking no click or key (smith-first.md §12.1). */}
@@ -1218,275 +1298,308 @@ export function App() {
         inert={overlaid || undefined}
         className={cx("flex h-full flex-col", pickingLook && "first-look-workspace")}
       >
-        {/* On a phone the items wrap onto a second line instead of running off the screen. */}
         <header
           data-studio-header
-          className="flex min-h-12 shrink-0 flex-wrap items-center gap-x-4 gap-y-1 border-b border-line bg-panel px-4 py-1.5 [&>fieldset]:shrink-0"
-          // On a phone a swipe on the header moves the row of windows too (A 174).
+          className="relative shrink-0 border-b border-line bg-panel"
+          // A swipe across the toolbar still moves between the phone's windows.
           style={narrow ? { touchAction: "pan-y" } : undefined}
           {...rowPan.handlers}
         >
-          {project.home ? (
-            // Hosted: back to the apps overview.
-            <a href={project.home} className="shrink-0">
-              <Wordmark />
-            </a>
-          ) : (
-            <Wordmark />
-          )}
-          {/* While an app is being made, the project is a placeholder: its name says nothing. */}
-          <span className="min-w-0 truncate text-sm text-quiet">
-            {project.making ? "" : project.name}
-          </span>
-          {project.making ? null : narrow ? (
-            // A phone: one window at a time.
-            <fieldset className="flex rounded-md bg-subtle p-0.5">
-              <legend className="sr-only">Window</legend>
-              {phoneList.map((w) => (
-                <label
-                  key={w}
-                  className={cx(
-                    "flex h-7 cursor-pointer items-center rounded px-2 text-xs font-medium has-focus-visible:ring-2 has-focus-visible:ring-accent/30",
-                    phoneWindow === w && !visualize ? "bg-panel shadow-xs" : "text-muted",
-                  )}
+          {!project.making && <span className="sr-only">Studio for {project.name}</span>}
+          <div className="flex min-h-12 min-w-0 items-center gap-1 px-2 py-1.5 md:gap-2 md:px-4">
+            <div
+              className={cx(
+                "shrink-0 border-r border-line pr-4",
+                narrow && !project.making && "hidden",
+              )}
+            >
+              {project.home ? (
+                <a href={project.home}>
+                  <Wordmark />
+                </a>
+              ) : (
+                <Wordmark />
+              )}
+            </div>
+            <div ref={setAddressHost} className="min-w-0" />
+            {project.making ? (
+              <>
+                <span className="text-sm text-quiet">Preparing the app…</span>
+                <div className="ml-auto">
+                  <ToolbarButton label="Undo" onClick={() => void undo()} disabled>
+                    {undoArrow}
+                  </ToolbarButton>
+                </div>
+              </>
+            ) : (
+              <div className="ml-auto flex shrink-0 items-center gap-0.5 sm:gap-1">
+                <ToolbarButton
+                  label="Select"
+                  pressed={selecting}
+                  onClick={() => {
+                    openPreviewWindow();
+                    setSelecting(!selecting);
+                  }}
                 >
-                  <input
-                    type="radio"
-                    name="window"
-                    className="sr-only"
-                    checked={phoneWindow === w && !visualize}
-                    onChange={() => showWindow(w)}
-                  />
-                  {WINDOW_NAMES[w === "manual" ? manual : w]}
-                </label>
-              ))}
-              {/* Visualize on a narrow screen too, over the window shown (A 150). */}
-              <label
-                className={cx(
-                  "flex h-7 cursor-pointer items-center rounded px-2 text-xs font-medium has-focus-visible:ring-2 has-focus-visible:ring-accent/30",
-                  visualize ? "bg-panel shadow-xs" : "text-muted",
+                  <path d="M11 20H4V4h16v7M12 11l8 4-4 1-1 4-3-9Z" />
+                </ToolbarButton>
+                {!narrow && (
+                  <>
+                    {undoHistory}
+                    {outboxAction}
+                  </>
                 )}
-              >
-                <input
-                  type="checkbox"
-                  className="sr-only"
-                  checked={visualize}
-                  onChange={() => setVisualize(!visualize)}
-                />
-                Map
-              </label>
-            </fieldset>
-          ) : (
-            <>
-              <LayoutBar arrangement={arrangement} onChange={setArrangement} />
-              {/* The windows of the arrangement, each brought into view by its tab; the view with
-                No code and Code named by the one it shows (smith-first.md §6). */}
-              <fieldset className="flex rounded-md bg-subtle p-0.5">
-                <legend className="sr-only">Windows</legend>
-                {tabs.map((mode) => (
+                <Button
+                  variant="ghost"
+                  data-guide="publish"
+                  data-review-launch
+                  aria-label={releaseLabel}
+                  title={releaseLabel}
+                  className="relative px-2"
+                  onClick={() => {
+                    void release.reload(true);
+                    setReviewingRelease(true);
+                  }}
+                >
+                  <ToolbarGlyph>
+                    <path d="m3 7 2 2 3-4m-5 11 2 2 3-4m3-7h9m-9 9h9" />
+                  </ToolbarGlyph>
+                  {release.review &&
+                    needsLook(release.review, { hosted: Boolean(project.home) }) > 0 && (
+                      <span
+                        aria-hidden="true"
+                        className="absolute -top-0.5 -right-0.5 rounded-full bg-accent px-1 text-[10px] text-panel"
+                      >
+                        {needsLook(release.review, { hosted: Boolean(project.home) })}
+                      </span>
+                    )}
+                </Button>
+                {!narrow && (
+                  <>
+                    {helpAction}
+                    {settingsAction}
+                    {lookAction}
+                  </>
+                )}
+                <ToolbarMore lookInMenu={narrow && Boolean(project.lookProject)}>
+                  {narrow && (
+                    <>
+                      {undoHistory}
+                      {outboxAction}
+                      {helpAction}
+                      {settingsAction}
+                    </>
+                  )}
+                  <Button
+                    variant="ghost"
+                    className="justify-start"
+                    aria-expanded={workspaceVisible}
+                    onClick={() => setWorkspaceControls(!workspaceVisible)}
+                  >
+                    Workspace layout
+                  </Button>
+                  {narrow && lookAction}
+
+                  <Button
+                    variant="ghost"
+                    className="justify-start"
+                    onClick={() => setPeopleOpen(true)}
+                  >
+                    Sample users{people?.running ? " (running)" : ""}
+                  </Button>
+                  <Button variant="ghost" className="justify-start" onClick={() => setFeedback("")}>
+                    Leave feedback
+                  </Button>
+                </ToolbarMore>
+                {!project.making && (
+                  // Smith's face toggles his thread in its current presentation.
+                  <button
+                    type="button"
+                    aria-label={questionWaiting ? "Smith, a question is waiting" : "Smith"}
+                    aria-pressed={smithVisible}
+                    title={smithVisible ? "Hide Smith" : "Show Smith"}
+                    onClick={toggleSmith}
+                    className={cx(
+                      "smith-chip relative -my-1 flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-full border",
+                      smithVisible
+                        ? "border-accent bg-accent-soft"
+                        : "border-line hover:border-accent",
+                    )}
+                  >
+                    <span className="scale-[0.8]">
+                      <SmithFace mood={guiding ? "pointing" : "waiting"} />
+                    </span>
+                    {questionWaiting && (
+                      <span
+                        data-question-waiting
+                        aria-hidden="true"
+                        className="absolute right-0 top-0 grid size-4 place-items-center rounded-full bg-accent text-xs text-panel"
+                      >
+                        ?
+                      </span>
+                    )}
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+          {!project.making && workspaceVisible && (
+            <div
+              data-workspace-controls
+              className="flex flex-wrap items-center gap-2 border-t border-line px-2 py-1 md:px-4"
+            >
+              {narrow ? (
+                // A phone: one window at a time.
+                <fieldset className="flex rounded-md bg-subtle p-0.5">
+                  <legend className="sr-only">Window</legend>
+                  {phoneList.map((w) => (
+                    <label
+                      key={w}
+                      className={cx(
+                        "flex h-7 cursor-pointer items-center rounded px-2 text-xs font-medium has-focus-visible:ring-2 has-focus-visible:ring-accent/30",
+                        phoneWindow === w && !visualize ? "bg-panel shadow-xs" : "text-muted",
+                      )}
+                    >
+                      <input
+                        type="radio"
+                        name="window"
+                        className="sr-only"
+                        checked={phoneWindow === w && !visualize}
+                        onChange={() => showWindow(w)}
+                      />
+                      {WINDOW_NAMES[w === "manual" ? manual : w]}
+                    </label>
+                  ))}
+                  {/* Visualize on a narrow screen too, over the window shown (A 150). */}
                   <label
-                    key={mode}
                     className={cx(
                       "flex h-7 cursor-pointer items-center rounded px-2 text-xs font-medium has-focus-visible:ring-2 has-focus-visible:ring-accent/30",
-                      slotOf(mode) !== undefined ? "bg-panel shadow-xs" : "text-muted",
+                      visualize ? "bg-panel shadow-xs" : "text-muted",
                     )}
                   >
                     <input
                       type="checkbox"
                       className="sr-only"
-                      checked={slotOf(mode) !== undefined}
-                      onChange={() => workIn(mode)}
+                      checked={visualize}
+                      onChange={() => setVisualize(!visualize)}
                     />
-                    {WINDOW_NAMES[mode]}
+                    Map
                   </label>
-                ))}
-                <label
-                  className={cx(
-                    "flex h-7 cursor-pointer items-center rounded px-2 text-xs font-medium has-focus-visible:ring-2 has-focus-visible:ring-accent/30",
-                    visualize ? "bg-panel shadow-xs" : "text-muted",
-                  )}
+                </fieldset>
+              ) : (
+                <>
+                  <LayoutBar arrangement={arrangement} onChange={setArrangement} />
+                  {/* The windows of the arrangement, each brought into view by its tab; the view with
+                No code and Code named by the one it shows (smith-first.md §6). */}
+                  <fieldset className="flex rounded-md bg-subtle p-0.5">
+                    <legend className="sr-only">Windows</legend>
+                    {tabs.map((mode) => (
+                      <label
+                        key={mode}
+                        className={cx(
+                          "flex h-7 cursor-pointer items-center rounded px-2 text-xs font-medium has-focus-visible:ring-2 has-focus-visible:ring-accent/30",
+                          slotOf(mode) !== undefined ? "bg-panel shadow-xs" : "text-muted",
+                        )}
+                      >
+                        <input
+                          type="checkbox"
+                          className="sr-only"
+                          checked={slotOf(mode) !== undefined}
+                          onChange={() => workIn(mode)}
+                        />
+                        {WINDOW_NAMES[mode]}
+                      </label>
+                    ))}
+                    <label
+                      className={cx(
+                        "flex h-7 cursor-pointer items-center rounded px-2 text-xs font-medium has-focus-visible:ring-2 has-focus-visible:ring-accent/30",
+                        visualize ? "bg-panel shadow-xs" : "text-muted",
+                      )}
+                    >
+                      <input
+                        type="checkbox"
+                        className="sr-only"
+                        checked={visualize}
+                        onChange={() => setVisualize(!visualize)}
+                      />
+                      Map
+                    </label>
+                  </fieldset>
+                </>
+              )}
+              {narrow && <PhoneSettingsButton settings={phone} onChange={setPhone} />}
+            </div>
+          )}
+          {((!project.making && !guideOff()) ||
+            busy ||
+            (!project.making && project.home && project.beta?.data === "test")) && (
+            <div className="flex items-center justify-end gap-2 px-2">
+              {!project.making && !guideOff() && (
+                <GuideMenu
+                  onTour={startGuide}
+                  onPresent={parts.length ? presentAgain : undefined}
+                />
+              )}
+              {busy && (
+                <span role="status" className="text-xs text-quiet">
+                  Working…
+                </span>
+              )}
+              {!project.making && project.home && project.beta?.data === "test" && (
+                <span
+                  data-part="test-only"
+                  title="Test hosting only. Use fictional data. Do not collect real bookings, customer records or mailbox messages."
+                  className="rounded bg-amber-50 px-1.5 py-0.5 text-xs font-medium text-amber-950"
                 >
-                  <input
-                    type="checkbox"
-                    className="sr-only"
-                    checked={visualize}
-                    onChange={() => setVisualize(!visualize)}
-                  />
-                  Map
-                </label>
-              </fieldset>
-            </>
+                  Test hosting only
+                </span>
+              )}
+            </div>
           )}
-          {narrow && !project.making && (
-            <PhoneSettingsButton settings={phone} onChange={setPhone} />
-          )}
-          <div className="ml-auto flex max-w-full flex-wrap items-center justify-end gap-x-3 gap-y-1 [&>button]:shrink-0 [&>a]:shrink-0">
-            {!project.making && project.lookProject && (
+        </header>
+        {help && (
+          <dialog
+            ref={helpDialog}
+            aria-label="Help"
+            onClose={() => setHelp(false)}
+            className="m-auto w-[min(28rem,94vw)] space-y-4 rounded-lg bg-panel p-5 text-fg shadow-xl backdrop:bg-black/40"
+          >
+            <h2 className="text-base font-semibold">Help</h2>
+            <div className="flex flex-wrap items-center gap-2">
+              <a
+                href="https://docs.smithable.ai/start.html"
+                target="_blank"
+                rel="noreferrer"
+                className="px-2 text-sm font-medium text-accent underline"
+              >
+                Studio documentation
+              </a>
+              {!guideOff() && (
+                <Button
+                  variant="ghost"
+                  onClick={() => {
+                    helpDialog.current?.close();
+                    startGuide();
+                  }}
+                >
+                  Tour Studio
+                </Button>
+              )}
               <Button
                 variant="ghost"
-                className="shrink-0 border border-line"
-                data-guide="look"
-                // Until the spec is read (its plugins load first) there is no ux to tell the
-                // picker from the editor, and a click then opened the editor instead.
-                disabled={busy || Boolean(pickingLook) || !spec.plugins}
                 onClick={() => {
-                  pauseGuide();
-                  showWindow("preview");
-                  if (spec.ux)
-                    setPickingLook({ project, preset: spec.ux.theme.preset, automatic: false });
-                  else setEditingLook({ project, path: keptPage() });
+                  helpDialog.current?.close();
+                  setFeedback("");
                 }}
               >
-                Look
+                Leave feedback
               </Button>
-            )}
-            {busy && <span className="text-xs text-quiet">Working…</span>}
-            {!project.making && (
-              <button
-                type="button"
-                data-guide="publish"
-                data-review-launch
-                className="text-xs font-medium text-accent hover:underline"
-                onClick={() => {
-                  void release.reload(true);
-                  setReviewingRelease(true);
-                }}
-              >
-                Review and publish
-                {release.error
-                  ? " (unavailable)"
-                  : release.review
-                    ? ` (${needsLook(release.review, { hosted: Boolean(project.home) })})`
-                    : " (reading…)"}
-              </button>
-            )}
-            {!project.making && project.home && project.beta?.data === "test" && (
-              // The service's state beside its publishing, as it is (legal-1.0 U4).
-              <span
-                data-part="test-only"
-                title="Test hosting only. Use fictional data. Do not collect real bookings, customer records or mailbox messages."
-                className="rounded bg-amber-50 px-1.5 py-0.5 text-xs font-medium text-amber-950"
-              >
-                Test hosting only
-              </span>
-            )}
-            {!project.making && !guideOff() && (
-              <GuideMenu onTour={startGuide} onPresent={parts.length ? presentAgain : undefined} />
-            )}
-            <button
-              type="button"
-              title="People of the sample data who use the app by themselves in the preview"
-              onClick={() => setPeopleOpen(true)}
-              className="text-xs font-medium text-muted hover:underline"
-            >
-              Sample users{people?.running ? " (running)" : ""}
-            </button>
-            <Button
-              variant="ghost"
-              aria-label="Outbox"
-              title="Outbox"
-              onClick={() => setOutbox(true)}
-            >
-              <svg
-                aria-hidden="true"
-                viewBox="0 0 24 24"
-                className="size-4"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-              >
-                <rect x="3" y="5" width="18" height="14" rx="2" />
-                <path d="m3 7 9 6 9-6" />
-              </svg>
-            </Button>
-            <a
-              href="https://docs.smithable.ai/start.html"
-              target="_blank"
-              rel="noreferrer"
-              className="text-xs font-medium text-muted hover:underline"
-            >
-              Help
-            </a>
-            <button
-              type="button"
-              onClick={() => setFeedback("")}
-              className="text-xs font-medium text-muted hover:underline"
-            >
-              Leave feedback
-            </button>
-            <Button
-              variant="ghost"
-              aria-label="Undo"
-              title="Undo"
-              onClick={undo}
-              disabled={
-                busy ||
-                Boolean(project.making) ||
-                !project.trace.some((t) => !t.undone && !t.isUndo)
-              }
-            >
-              <svg
-                aria-hidden="true"
-                viewBox="0 0 24 24"
-                className="size-4"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M4 10a8 8 0 1 1 1 8M4 4v6h6" />
-              </svg>
-            </Button>
-            <Button
-              variant="ghost"
-              aria-label="Redo"
-              title="Redo"
-              onClick={redo}
-              disabled={busy || Boolean(project.making) || !project.canRedo}
-            >
-              <svg
-                aria-hidden="true"
-                viewBox="0 0 24 24"
-                className="size-4"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M20 10a8 8 0 1 0-1 8M20 4v6h-6" />
-              </svg>
-            </Button>
-            {!project.making && (
-              // Smith's face toggles his thread in its current presentation.
-              <button
-                type="button"
-                aria-label={questionWaiting ? "Smith, a question is waiting" : "Smith"}
-                aria-pressed={smithVisible}
-                title={smithVisible ? "Hide Smith" : "Show Smith"}
-                onClick={toggleSmith}
-                className={cx(
-                  "smith-chip relative -my-1 flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-full border",
-                  smithVisible ? "border-accent bg-accent-soft" : "border-line hover:border-accent",
-                )}
-              >
-                <span className="scale-[0.8]">
-                  <SmithFace mood={guiding ? "pointing" : "waiting"} />
-                </span>
-                {questionWaiting && (
-                  <span
-                    data-question-waiting
-                    aria-hidden="true"
-                    className="absolute right-0 top-0 grid size-4 place-items-center rounded-full bg-accent text-xs text-panel"
-                  >
-                    ?
-                  </span>
-                )}
-              </button>
-            )}
-          </div>
-        </header>
+            </div>
+            <div className="flex justify-end">
+              <Button onClick={() => helpDialog.current?.close()}>Close</Button>
+            </div>
+          </dialog>
+        )}
         {fixLine && (
           <p
             role="status"
@@ -1697,7 +1810,8 @@ export function App() {
                     updating={updating || busy}
                     selecting={selecting}
                     inCode={slotOf("code") !== undefined && slotOf("nocode") === undefined}
-                    onSelecting={setSelecting}
+                    addressHost={addressHost}
+                    onShowPage={openPreviewWindow}
                     highlight={highlight}
                     pages={pages}
                     go={go}
@@ -2042,6 +2156,112 @@ export function App() {
           onClose={() => setReviewingRelease(false)}
         />
       )}
+    </div>
+  );
+}
+
+function ToolbarGlyph({ children }: { children: React.ReactNode }) {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      className="size-4 shrink-0"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.7"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      {children}
+    </svg>
+  );
+}
+
+function ToolbarButton({
+  label,
+  onClick,
+  children,
+  text,
+  disabled,
+  pressed,
+}: {
+  label: string;
+  onClick: () => void;
+  children: React.ReactNode;
+  text?: boolean;
+  disabled?: boolean;
+  pressed?: boolean;
+}) {
+  return (
+    <Button
+      variant={pressed ? "primary" : "ghost"}
+      aria-label={label}
+      aria-pressed={pressed}
+      title={label}
+      className={text ? "justify-start" : "px-2"}
+      disabled={disabled}
+      onClick={onClick}
+    >
+      <ToolbarGlyph>{children}</ToolbarGlyph>
+      {text && label}
+    </Button>
+  );
+}
+
+function ToolbarMore({ children, lookInMenu }: { children: React.ReactNode; lookInMenu: boolean }) {
+  const [open, setOpen] = useState(false);
+  const root = useRef<HTMLDivElement>(null);
+  const trigger = useRef<HTMLButtonElement>(null);
+  const panel = useRef<HTMLFieldSetElement>(null);
+  const panelId = "studio-toolbar-more";
+  useEffect(() => {
+    if (!open) return;
+    const outside = (event: PointerEvent) => {
+      if (!root.current?.contains(event.target as Node)) setOpen(false);
+    };
+    const closeWithEscape = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      setOpen(false);
+      trigger.current?.focus();
+    };
+    const picked = (event: MouseEvent) => {
+      if (!(event.target as Element).closest("button, a")) return;
+      trigger.current?.focus();
+      setOpen(false);
+    };
+    const group = panel.current;
+    group?.addEventListener("click", picked);
+    document.addEventListener("pointerdown", outside);
+    document.addEventListener("keydown", closeWithEscape);
+    return () => {
+      group?.removeEventListener("click", picked);
+      document.removeEventListener("pointerdown", outside);
+      document.removeEventListener("keydown", closeWithEscape);
+    };
+  }, [open]);
+  return (
+    <div ref={root} className="relative">
+      <button
+        ref={trigger}
+        type="button"
+        data-guide={lookInMenu ? "look" : undefined}
+        aria-expanded={open}
+        aria-controls={panelId}
+        onClick={() => setOpen(!open)}
+        className="h-8 rounded-md px-2 text-xs font-medium hover:bg-subtle"
+      >
+        More
+      </button>
+      <fieldset
+        ref={panel}
+        id={panelId}
+        aria-label="More Studio controls"
+        hidden={!open}
+        className="absolute top-full right-0 z-[65] mt-2 w-max max-w-[85vw] rounded-md border border-line bg-panel p-1 shadow-lg [&>button]:flex [&>button]:w-full"
+      >
+        {children}
+      </fieldset>
     </div>
   );
 }

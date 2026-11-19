@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import test from "node:test";
 import { chromium } from "playwright";
+import { openPreviewAddress, showWorkspaceControls } from "./studio-form-checks.mjs";
 
 // A real app and preview runtime: navigation reports are observed, never substituted.
 test("No code follows real preview navigation without losing edits or opening hidden windows", {
@@ -135,6 +136,7 @@ test("No code follows real preview navigation without losing edits or opening hi
     };
     const go = async (path) => {
       const count = await page.evaluate(() => window.followReports.length);
+      await openPreviewAddress(page);
       await page.getByLabel("Preview address", { exact: true }).fill(path);
       await page.getByLabel("Preview address", { exact: true }).press("Enter");
       await page.waitForFunction(
@@ -189,6 +191,7 @@ test("No code follows real preview navigation without losing edits or opening hi
     await name.focus();
     await navigateInApp("/orders");
     assert.equal(await context(), "customers", "focus alone did not defer following");
+    await openPreviewAddress(page);
     await page.getByLabel("Preview address", { exact: true }).focus();
     await settled();
     assert.equal(await context(), "customers", "an open address list did not defer following");
@@ -340,6 +343,7 @@ test("No code follows real preview navigation without losing edits or opening hi
     console.log("PASS active guide defers following until dismissal");
 
     await page.setViewportSize({ width: 720, height: 900 });
+    await showWorkspaceControls(page);
     await page.getByRole("radio", { name: "Preview", exact: true }).check({ force: true });
     await navigateInApp("/customers");
     assert.equal(await context(), "orders", "a hidden column followed on screen");

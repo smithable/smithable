@@ -5,6 +5,7 @@
 // in --copy for review. The sentences are read by the wording rules, so no model runs and the
 // pictures are the same on every run; a sentence they do not read stops the script.
 // Run after `pnpm build`: `node scripts/hero-shots.mjs [starter…] [--copy <dir>]`. Not part of `check`.
+
 import { spawn } from "node:child_process";
 import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -12,6 +13,7 @@ import { join } from "node:path";
 import { parseArgs } from "node:util";
 import { chromium } from "playwright";
 import { cli, newApp, repo } from "./dev-app.mjs";
+import { openPreviewAddress, showWorkspaceControls } from "./studio-form-checks.mjs";
 
 const { values: opts, positionals } = parseArgs({
   allowPositionals: true,
@@ -136,6 +138,7 @@ async function shoot(browser, starter, change) {
           has: page.getByRole("heading", { name: "Preview" }),
         })
         .waitFor({ state: "detached", timeout: 90000 });
+      await openPreviewAddress(page);
       await page.getByLabel("Preview address").fill(change.route);
       await page.getByLabel("Preview address", { exact: true }).press("Enter");
       await page.waitForTimeout(6000);
@@ -200,6 +203,7 @@ async function shoot(browser, starter, change) {
     await save("nocode", await clip([fields], undefined, 8, 8), CARD);
 
     // Edit by code: the line in smithable.yml, saved by itself (this applies the change, once).
+    await showWorkspaceControls(page);
     await page.getByRole("radio", { name: "Code", exact: true }).check({ force: true });
     const editor = page.getByLabel("smithable.yml");
     await editor.waitFor({ timeout: 30000 });
@@ -257,6 +261,7 @@ async function shoot(browser, starter, change) {
     );
 
     // The result after: the same page.
+    await showWorkspaceControls(page);
     await page.getByRole("radio", { name: "No code", exact: true }).check({ force: true });
     await page.waitForTimeout(4000);
     await save("after", await result());

@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { toolbarAction } from "./studio-form-checks.mjs";
 
 export function stubPictureCatalogue(context) {
   // This check exercises the theme-only/offline path; picture sets have their own real-library fixture.
@@ -88,7 +89,7 @@ export async function checkFirstLook(browser, base) {
     assert.equal(await picker.count(), 0, "seen picker returned after reload");
     await page.goto(`${base}/?guide=off`);
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.getByRole("button", { name: "Look", exact: true }).click();
+    await (await toolbarAction(page, "Look")).click();
     const box = await picker.boundingBox();
     assert.ok(box && box.y > 250 && box.height < 550, "phone picker is not a lower sheet");
     await picker.getByRole("button", { name: "More look settings", exact: true }).click();

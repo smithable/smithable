@@ -30,7 +30,12 @@ import { checkPreviewPages } from "./preview-pages-checks.mjs";
 import { checkProjectLookApply } from "./project-look-checks.mjs";
 import { checkStaticStates } from "./static-state-checks.mjs";
 import { checkStudioDraft } from "./studio-draft-checks.mjs";
-import { openFormEntry } from "./studio-form-checks.mjs";
+import {
+  openFormEntry,
+  openPreviewAddress,
+  showWorkspaceControls,
+  toolbarAction,
+} from "./studio-form-checks.mjs";
 import { checkStudioGuideSpeech } from "./studio-guide-speech-checks.mjs";
 import { checkCompactLook, checkStudioLayout } from "./studio-layout-checks.mjs";
 import {
@@ -288,8 +293,9 @@ try {
     await page
       .locator('section[aria-busy="true"]', { has: page.getByRole("heading", { name: "Preview" }) })
       .waitFor({ state: "detached", timeout: 60000 * P });
-    await page.getByLabel("Preview address").fill(path);
-    await page.getByLabel("Preview address").press("Enter");
+    const address = await openPreviewAddress(page);
+    await address.fill(path);
+    await address.press("Enter");
     // Enter makes a new frame; until it has loaded the page, select mode sent would reach the old
     // one (marking it, so a test sees the mark) and a click would land on the new one, unmarked.
     // The old frame, on the same page, may be found in the moment before it is removed: then the
@@ -390,6 +396,43 @@ try {
     await checkStudioLookTimeout(page, dir);
     await checkStudioLookGallery(page, dir);
   });
+  await step(
+    "Preview-first toolbar keeps the page and its draft while opening Help and Smith",
+    async () => {
+      await openPreview("/customers/new");
+      const pageName = page.locator("[data-preview-page]");
+      const address = page.getByRole("combobox", { name: "Preview address", exact: true });
+      if (await address.isVisible()) throw new Error("the path should be hidden");
+      await pageName.press("Enter");
+      await address.fill("https://example.invalid/");
+      await address.press("Enter");
+      await page.getByText("Enter a local page or record address.", { exact: true }).waitFor();
+      if ((await pageName.getAttribute("data-preview-current")) !== "/customers/new")
+        throw new Error("the invalid address replaced the draft's page");
+      await address.press("Escape");
+      if (!(await pageName.evaluate((button) => document.activeElement === button)))
+        throw new Error("Escape did not return focus to the page name");
+      const draft = preview.locator('[data-sm-concept="field:Customer.name"]').getByRole("textbox");
+      await draft.fill("Unsubmitted customer");
+      const help = page.getByRole("button", { name: "Help", exact: true });
+      await help.press("Enter");
+      const dialog = page.getByRole("dialog", { name: "Help", exact: true });
+      await dialog.getByRole("button", { name: "Close", exact: true }).press("Enter");
+      if (!(await help.evaluate((button) => document.activeElement === button)))
+        throw new Error("Help did not return focus");
+      const smith = page.getByRole("button", { name: "Smith", exact: true });
+      await smith.press("Enter");
+      await smith.press("Enter");
+      if ((await draft.inputValue()) !== "Unsubmitted customer")
+        throw new Error("the preview lost the unsubmitted form");
+      const encodedPath = "/customers?label=two%20words&kind=member#results";
+      const encodedAddress = await openPreviewAddress(page);
+      await encodedAddress.fill(encodedPath);
+      await encodedAddress.press("Enter");
+      await page.locator(`iframe[title="App preview"][src$="${encodedPath}"]`).waitFor();
+      await openPreview("/customers");
+    },
+  );
   await step("a notice left for Studio is shown once, then gone", async () => {
     const alert = page.getByRole("alert").filter({ hasText: "The description could not be used" });
     await alert.waitFor();
@@ -427,8 +470,14 @@ try {
     async () => {
       const frame = page.locator('iframe[title="App preview"]');
       const width = async () => (await frame.boundingBox())?.width ?? 0;
-      const pick = (name) =>
-        page.getByRole("group", { name: "Preview width" }).getByRole("button", { name }).click();
+      const pick = async (name) => {
+        await openPreviewAddress(page);
+        await page
+          .getByRole("group", { name: "Preview width" })
+          .getByRole("button", { name })
+          .click();
+        await page.getByRole("combobox", { name: "Preview address", exact: true }).press("Escape");
+      };
       const full = await width();
       await pick("Phone");
       if ((await width()) > 392) throw new Error(`the phone width is ${await width()} px`);
@@ -440,23 +489,28 @@ try {
         throw new Error("Desktop did not give the pane back");
     },
   );
-  await step("the header opens Review and publish and links to Help", async () => {
-    const header = page.locator("header").first();
-    if (
-      (await header.getByRole("link", { name: "Help", exact: true }).getAttribute("href")) !==
-      "https://docs.smithable.ai/start.html"
-    )
-      throw new Error("Help does not lead to the start page");
-    await header.getByRole("button", { name: /^Review and publish/ }).click();
-    const review = page.getByRole("dialog", { name: "Review and publish", exact: true });
-    await review.getByRole("heading", { name: /^Review and publish/ }).waitFor();
-    await review.getByRole("button", { name: "Close", exact: true }).click();
-    await review.waitFor({ state: "detached" });
-  });
+  await step(
+    "the toolbar opens Review and publish and Help links to the documentation",
+    async () => {
+      const header = page.locator("[data-studio-header]");
+      await header.getByRole("button", { name: "Help", exact: true }).click();
+      const help = page.getByRole("dialog", { name: "Help", exact: true });
+      const docs = help.getByRole("link", { name: "Studio documentation", exact: true });
+      if ((await docs.getAttribute("href")) !== "https://docs.smithable.ai/start.html")
+        throw new Error("Help does not lead to the start page");
+      await help.getByRole("button", { name: "Close", exact: true }).click();
+      await help.waitFor({ state: "detached" });
+      await header.getByRole("button", { name: /^Review and publish/ }).click();
+      const review = page.getByRole("dialog", { name: "Review and publish", exact: true });
+      await review.getByRole("heading", { name: /^Review and publish/ }).waitFor();
+      await review.getByRole("button", { name: "Close", exact: true }).click();
+      await review.waitFor({ state: "detached" });
+    },
+  );
   await step(
     "Leave feedback opens from the header and from Smith, each part shown before it is ticked (A 242)",
     async () => {
-      await page.locator("header").first().getByRole("button", { name: "Leave feedback" }).click();
+      await (await toolbarAction(page, "Leave feedback")).click();
       let dialog = page.getByRole("dialog", { name: "Leave feedback" });
       await dialog.getByRole("checkbox", { name: "My app's spec files" }).waitFor();
       if (await dialog.getByRole("checkbox", { name: "My app's spec files" }).isChecked())
@@ -585,7 +639,7 @@ try {
   await step(
     "the preview's address is no form a password manager fills, opens on Enter with no Go button, and its link button is kept",
     async () => {
-      const address = page.getByRole("combobox", { name: "Preview address" });
+      const address = await openPreviewAddress(page);
       const field = await address.evaluate((el) => ({
         form: Boolean(el.closest("form")),
         complete: el.getAttribute("autocomplete"),
@@ -606,6 +660,7 @@ try {
       await link.click();
       await page.reload();
       await page.getByRole("heading", { name: "Ask Smith", exact: true }).waitFor();
+      await openPreviewAddress(page);
       if ((await link.getAttribute("aria-pressed")) !== "false")
         throw new Error("unlinking was not kept");
       await link.click();
@@ -614,13 +669,14 @@ try {
       await page.getByRole("tab", { name: "Who can", exact: true }).click();
       await link.waitFor({ state: "detached", timeout: 5000 * P });
       await page.getByRole("tab", { name: "Behavior", exact: true }).click();
+      await openPreviewAddress(page);
       await link.waitFor({ timeout: 5000 * P });
     },
   );
   await step(
     "the sample users' panel opens beside the preview, sensible or trying everything, and says when there are none",
     async () => {
-      await page.locator("header").getByRole("button", { name: "Sample users" }).click();
+      await (await toolbarAction(page, "Sample users")).click();
       const panel = page.getByRole("dialog", { name: "Sample users" });
       await panel.getByText("No sample users yet").waitFor();
       // Sensible unless said; trying everything is the other way they act (sample-users.md §3a).
@@ -630,7 +686,7 @@ try {
       await panel.getByRole("button", { name: "Let them run" }).click();
       await panel.getByRole("status").filter({ hasText: "No sample users" }).waitFor();
       // Not modal: the preview's address bar takes a click with the panel open.
-      await page.getByRole("combobox", { name: "Preview address" }).click({ timeout: 5000 });
+      await (await openPreviewAddress(page)).click({ timeout: 5000 });
       await panel.getByRole("button", { name: "Close" }).click();
       await panel.waitFor({ state: "detached" });
     },
@@ -757,6 +813,7 @@ try {
         // Floating, the tour gives back the screen it found: the preview alone (§12.3).
         await fresh.getByRole("tab", { name: "Code", exact: true }).waitFor({ state: "detached" });
         // With Code open, Guide is Code's own tour.
+        await showWorkspaceControls(fresh);
         await fresh.getByRole("checkbox", { name: "No code", exact: true }).check({ force: true });
         await fresh.getByRole("tab", { name: "Code", exact: true }).click();
         await fresh.getByRole("region", { name: "Code" }).waitFor();
@@ -1933,6 +1990,7 @@ try {
     "a narrow window shows one window at a time, chosen in the header: the preview the window's width, Code too",
     async () => {
       await page.setViewportSize({ width: 800, height: 900 });
+      await showWorkspaceControls(page);
       const pick = (name) => page.getByRole("radio", { name, exact: true }).check({ force: true });
       await pick("Preview");
       await page.waitForFunction(
@@ -2000,7 +2058,7 @@ try {
       await page
         .getByRole("radio", { name: "Preview", exact: true, checked: true })
         .waitFor({ state: "attached" });
-      await swipe('[aria-label="Preview address"]', 400);
+      await swipe("[data-preview-page]", 400);
       await page
         .getByRole("radio", { name: "Smith", exact: true, checked: true })
         .waitFor({ state: "attached" });
@@ -2012,6 +2070,25 @@ try {
       await pick("Code");
       await page.getByRole("tab", { name: "No code", exact: true }).click();
       await page.getByRole("tab", { name: "Behavior" }).waitFor();
+      await page.setViewportSize({ width: 1920, height: 1000 });
+    },
+  );
+  await step(
+    "Phone toolbar keeps primary controls within the screen and More is keyboard accessible",
+    async () => {
+      await page.setViewportSize({ width: 390, height: 844 });
+      const header = page.locator("[data-studio-header]");
+      const more = header.getByRole("button", { name: "More", exact: true });
+      await more.press("Enter");
+      const extras = header.getByRole("group", { name: "More Studio controls", exact: true });
+      await extras.getByRole("button", { name: "Outbox", exact: true }).waitFor();
+      const fits = await header.evaluate((element) => element.scrollWidth <= window.innerWidth);
+      if (!fits) throw new Error("toolbar overflows a phone");
+      await extras.getByRole("button", { name: "Help", exact: true }).press("Enter");
+      const help = page.getByRole("dialog", { name: "Help", exact: true });
+      await help.getByRole("button", { name: "Close", exact: true }).press("Enter");
+      if (!(await more.evaluate((button) => document.activeElement === button)))
+        throw new Error("Help did not return focus to More");
       await page.setViewportSize({ width: 1920, height: 1000 });
     },
   );
@@ -3769,9 +3846,8 @@ try {
             throw new Error("the making page shows more than one line of what the app does");
           await screen.waitFor({ state: "detached", timeout: 60000 * P });
           await watcher
-            .locator("header")
-            .first()
-            .getByText("Lotus Pilates")
+            .locator("[data-studio-header]")
+            .getByText("Studio for Lotus Pilates", { exact: true })
             .waitFor({ timeout: 30000 * P });
         })();
         // Awaited after the making: a failure meanwhile is held for then, not thrown unhandled.
@@ -3948,11 +4024,8 @@ try {
             .getByRole("region", { name: "Proposal" })
             .getByRole("button", { name: "Apply" })
             .click({ timeout: 90000 * P });
-          // In place: the request that waited is made, and nothing waits any more. Smith floats
-          // (a new page), so Changes is opened by its tab (smith-first.md §12.3).
-          await watcher
-            .getByRole("checkbox", { name: "Changes", exact: true })
-            .check({ force: true });
+          // The queued request has run. Open Changes from the toolbar to read its result.
+          await (await toolbarAction(watcher, "Changes")).click();
           const made = watcher.getByLabel("Change trace").getByText("Sessions: added a phone");
           await made.first().waitFor({ timeout: 90000 * P });
           const after = await (await fetch(`${other}/api/project`)).json();

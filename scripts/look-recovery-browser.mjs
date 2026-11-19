@@ -4,6 +4,7 @@ import { mkdtempSync } from "node:fs";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { openPreviewAddress } from "./studio-form-checks.mjs";
 
 const repo = resolve(import.meta.dirname, "..");
 const { chromium } = createRequire(resolve(repo, "package.json"))("playwright");
@@ -193,6 +194,7 @@ try {
   await dialog.waitFor({ state: "detached" });
   await page.unroute("**/api/look?*");
   await page.reload();
+  await openPreviewAddress(page);
   await page.getByLabel("Preview address", { exact: true }).fill("/welcome");
   await page.getByLabel("Preview address", { exact: true }).press("Enter");
   await page.route("**/api/look?*", (route) =>

@@ -6,6 +6,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import test from "node:test";
 import { chromium } from "playwright";
+import { openPreviewAddress } from "./studio-form-checks.mjs";
 
 const { parse } = createRequire(new URL("../apps/studio/package.json", import.meta.url))("yaml");
 
@@ -200,6 +201,7 @@ test("condition rows preserve valid drafts, contextual fields and atomic operati
       );
     const go = async (path) => {
       const count = await page.evaluate(() => window.followReports.length);
+      await openPreviewAddress(page);
       await page.getByLabel("Preview address", { exact: true }).fill(path);
       await page.getByLabel("Preview address", { exact: true }).press("Enter");
       await page.waitForFunction(

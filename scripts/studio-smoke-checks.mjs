@@ -1,22 +1,24 @@
 import assert from "node:assert/strict";
 import { join } from "node:path";
 import { stubPictureCatalogue } from "./first-look-checks.mjs";
-import { openFormEntry } from "./studio-form-checks.mjs";
+import { openFormEntry, showWorkspaceControls, toolbarAction } from "./studio-form-checks.mjs";
 
 async function checkBuilder(page, phone) {
   const tab = (name) => page.getByRole("tab", { name, exact: true });
-  const header = page.locator("header").first();
   const look = page.getByRole("dialog", { name: "Choose a look", exact: true });
-  await header.getByRole("button", { name: "Look", exact: true }).click();
+  await (await toolbarAction(page, "Look")).click();
   await look.getByRole("button", { name: "Keep this look", exact: true }).click();
   await look.waitFor({ state: "detached" });
 
   const showPreview = async () => {
-    if (phone)
+    if (phone) {
+      await showWorkspaceControls(page);
       await page.getByRole("radio", { name: "Preview", exact: true }).check({ force: true });
+    }
   };
   const showEditor = async () => {
     if (phone) {
+      await showWorkspaceControls(page);
       await page.getByRole("radio", { name: /^(No code|Code|Summary)$/ }).check({ force: true });
     } else {
       const open = page.getByRole("button", { name: "Show the window on the right" });
@@ -30,7 +32,7 @@ async function checkBuilder(page, phone) {
       .getByRole("heading", { name, level: 1, exact: true })
       .waitFor({ timeout: 30000 });
   };
-  const undo = () => header.getByRole("button", { name: "Undo", exact: true }).click();
+  const undo = async () => (await toolbarAction(page, "Undo")).click();
 
   await preview("Overview");
   await showEditor();

@@ -1,5 +1,13 @@
 // Small building blocks for the Studio's own interface.
-import { cloneElement, type ReactElement, type ReactNode, useEffect, useId, useState } from "react";
+import {
+  type ComponentProps,
+  cloneElement,
+  type ReactElement,
+  type ReactNode,
+  useEffect,
+  useId,
+  useState,
+} from "react";
 
 export function cx(...classes: (string | false | undefined)[]): string {
   return classes.filter(Boolean).join(" ");
@@ -93,7 +101,7 @@ export function Check({
 const control =
   "block h-8 w-full rounded-md border border-line-strong bg-panel px-2 text-sm outline-none focus:border-accent focus:ring-2 focus:ring-accent/20";
 
-export function Input(props: React.InputHTMLAttributes<HTMLInputElement>) {
+export function Input(props: ComponentProps<"input">) {
   return <input {...props} className={cx(control, props.className)} />;
 }
 
@@ -117,6 +125,7 @@ export function Select({
 
 export function Panel({
   title,
+  label,
   actions,
   children,
   className,
@@ -125,6 +134,7 @@ export function Panel({
   scroll = true,
 }: {
   title?: ReactNode;
+  label?: string;
   actions?: ReactNode;
   children: ReactNode;
   className?: string;
@@ -138,6 +148,7 @@ export function Panel({
   return (
     <section
       data-panel={panel}
+      aria-label={label}
       aria-busy={busy || undefined}
       className={cx("flex min-h-0 min-w-0 flex-col border-line bg-panel", className)}
     >
