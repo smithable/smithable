@@ -4024,11 +4024,8 @@ try {
             .getByRole("region", { name: "Proposal" })
             .getByRole("button", { name: "Apply" })
             .click({ timeout: 90000 * P });
-          // In place: the request that waited is made, and nothing waits any more. Smith floats
-          // (a new page), so Changes is opened by its tab (smith-first.md §12.3).
-          await watcher
-            .getByRole("checkbox", { name: "Changes", exact: true })
-            .check({ force: true });
+          // The queued request has run. Open Changes from the toolbar to read its result.
+          await (await toolbarAction(watcher, "Changes")).click();
           const made = watcher.getByLabel("Change trace").getByText("Sessions: added a phone");
           await made.first().waitFor({ timeout: 90000 * P });
           const after = await (await fetch(`${other}/api/project`)).json();
