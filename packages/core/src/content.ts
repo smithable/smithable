@@ -911,19 +911,24 @@ function readPicture(
   );
   const width = own && readWidths(ctx, own.value, where, false)?.[0];
   const widths = copies && readWidths(ctx, copies.value, where, true);
-  if (width && widths?.includes(width))
-    ctx.error(
-      copies?.value ?? null,
-      "invalid-value",
-      `"widths" of ${where} lists its copies' widths: the file's own (${width}) is not one of them.`,
-    );
+  // The file itself is the widest offered, or a phone would load the smallest enlargement.
+  const misfit =
+    widths &&
+    (!width
+      ? `"widths" of ${where} needs "width", the file's own width, beside it.`
+      : widths.includes(width)
+        ? `"widths" of ${where} lists its copies' widths: the file's own (${width}) is not one of them.`
+        : texts.src && imageAt(texts.src, width) === texts.src
+          ? `"widths" of ${where} needs a file whose name ends in a lower-case extension (images/hero.webp): its copies are named after it.`
+          : undefined);
+  if (misfit) ctx.error(copies?.value ?? null, "invalid-value", misfit);
   return {
     ...texts,
     ...(flag && readBoolean(ctx, flag.value, `"generated" of ${where}`) === true
       ? { generated: true as const }
       : {}),
     ...(width ? { width } : {}),
-    ...(widths && !(width && widths.includes(width)) ? { widths } : {}),
+    ...(widths && !misfit ? { widths } : {}),
   };
 }
 

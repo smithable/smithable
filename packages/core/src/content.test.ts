@@ -197,10 +197,17 @@ pages:
     "width: 1536, widths: [1536, 2400]",
     "width: wide",
     "width: 1536.5",
+    // The file itself is offered too, and its copies are named after it.
+    "widths: [800, 2400]",
   ])
     expect(hero(`{ src: images/hero.webp, alt: x, ${bad} }`).diagnostics[0]?.code, bad).toBe(
       "invalid-value",
     );
+  for (const src of ["images/HERO.WEBP", "images/hero"])
+    expect(
+      hero(`{ src: ${src}, alt: x, width: 1536, widths: [800] }`).diagnostics[0]?.code,
+      src,
+    ).toBe("invalid-value");
   expect(
     check("smithableContent: 0.1\nlogo: { src: images/logo.webp, alt: A, widths: [800] }\n")
       .diagnostics[0]?.code,

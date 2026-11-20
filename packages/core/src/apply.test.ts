@@ -693,6 +693,21 @@ test("setText changes a landing section's list texts in place, by their position
   const hero = set("pages.home.hero.image.src", "images/mine.webp");
   expect(hero.ok && hero.files.content).toContain("src: images/mine.webp");
   expect(hero.ok && hero.files.content).not.toMatch(/mine\.webp\n.*\n\s*generated/);
+  // Another file has none of the old one's copies: its widths go with the mark.
+  const sized = {
+    ...invoicing,
+    content: (invoicing.content ?? "").replace(
+      /src: images\/hero\.webp\n/,
+      "src: images/hero.webp\n        width: 1536\n        widths: [800, 2400]\n",
+    ),
+  };
+  expect(sized.content).toContain("widths: [800, 2400]");
+  const swapped = applyOperation(sized, "setText", {
+    path: ["pages", "home", "hero", "image", "src"],
+    text: "images/mine.webp",
+  });
+  expect(swapped.ok && swapped.files.content).toContain("src: images/mine.webp");
+  expect(swapped.ok && swapped.files.content).not.toMatch(/\bwidths?:/);
 });
 
 test("removePage takes a page out of the spec, the menus and its texts", () => {
