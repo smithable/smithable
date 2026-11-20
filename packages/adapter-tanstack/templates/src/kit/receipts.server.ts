@@ -4,13 +4,24 @@
 import { randomBytes } from "node:crypto";
 import { readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
-import { and, eq, gt, lte } from "drizzle-orm";
+import { and, asc, eq, gt, lte } from "drizzle-orm";
 import { db } from "#/db";
 import { uploads } from "#/db/schema";
 import type { Viewer } from "./access";
 import { log } from "./log.server";
 import { BadInput } from "./refusal";
-import { deleteFile, hasUpload, uploadsDir } from "./uploads";
+import {
+  BadPicture,
+  deleteFile,
+  hasUpload,
+  PICTURE_WIDTHS,
+  readPicture,
+  type SmallerPicture,
+  saveSmaller,
+  type UploadReservation,
+  uploadsDir,
+  webpSize,
+} from "./uploads";
 import { w } from "./words";
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -64,6 +75,60 @@ export function storeUpload<T extends { file: string }>(
   );
 }
 
+/**
+ * Stores a smaller copy of a picture this uploader sent for the field within a day, the one its
+ * receipt names, under the same receipt: the record takes the copy only with that picture
+ * (acceptFiles). Refused when the receipt is not theirs or the picture has its copies already.
+ */
+export function storeSmaller(
+  uploader: string | null,
+  model: string,
+  field: string,
+  receipt: string,
+  uses: (file: string) => boolean,
+  bytes: Uint8Array,
+  held?: UploadReservation,
+): SmallerPicture {
+  return db.transaction(
+    () => {
+      const claims = db
+        .select({ file: uploads.file, uploader: uploads.uploader })
+        .from(uploads)
+        .where(
+          and(
+            eq(uploads.receipt, receipt),
+            eq(uploads.model, model),
+            eq(uploads.field, field),
+            gt(uploads.at, new Date(Date.now() - DAY)),
+          ),
+        )
+        .orderBy(asc(uploads.id))
+        .all();
+      // The first claim is the picture's own; the rest are its copies.
+      const main = claims[0];
+      const picture =
+        main && main.uploader === uploader
+          ? readPicture({ file: main.file, alt: "", width: 0, height: 0 })
+          : undefined;
+      const size = picture && webpSize(picture);
+      if (!main || !picture || !size || claims.length > PICTURE_WIDTHS.length)
+        throw new BadPicture(w.fileNotUploaded);
+      const copy = saveSmaller(model, bytes, { ...size, bytes: picture.length }, held);
+      try {
+        db.insert(uploads).values({ file: copy.file, model, field, uploader, receipt }).run();
+      } catch (error) {
+        deleteFile(
+          { file: copy.file, name: "", type: "", size: 0 },
+          uses(copy.file) || keepsUpload(copy.file),
+        );
+        throw error;
+      }
+      return copy;
+    },
+    { behavior: "immediate" },
+  );
+}
+
 /** An upload a person may still attach must survive another record's cleanup. */
 export function keepsUpload(file: string): boolean {
   return !!db
@@ -92,7 +157,7 @@ export function cleanUploads(clean: () => void, attempt = 0): void {
   }
 }
 
-type Sent = { file: string; receipt?: string };
+type Sent = { file: string; receipt?: string; smaller?: SmallerPicture[] };
 
 /** Release only this failed request's receipts. Other pending uploads and committed records
  * retain deduplicated bytes; the writer slot fences both checks and deletion. */
@@ -125,8 +190,11 @@ export function acceptFiles<V>(
   before?: unknown,
 ): V {
   if (value === null || value === undefined) return value;
-  const had = new Set(
-    (Array.isArray(before) ? before : before ? [before] : []).map((f) => (f as Sent | null)?.file),
+  const earlier = (Array.isArray(before) ? before : before ? [before] : []) as (Sent | null)[];
+  const had = new Set(earlier.map((f) => f?.file));
+  // A picture the record had keeps the copies it had.
+  const hadSmaller = new Map(
+    earlier.map((f) => [f?.file, new Set(f?.smaller?.map((s) => s.file))]),
   );
   const attached = new Set<string>();
   const accepted = (sent: Sent) => {
@@ -151,7 +219,29 @@ export function acceptFiles<V>(
     if (!had.has(kept.file) && (!own || !hasUpload(kept.file)))
       throw new BadInput(w.fileNotUploaded);
     if (own && typeof receipt === "string") attached.add(receipt);
-    return kept;
+    if (!kept.smaller) return kept;
+    // Each smaller copy: one the picture had, or one sent under this picture's receipt. Any other
+    // is left out, and the picture is shown at its own size.
+    const smaller = kept.smaller.filter(
+      (s) =>
+        hadSmaller.get(kept.file)?.has(s.file) ||
+        (own &&
+          hasUpload(s.file) &&
+          !!db
+            .select({ id: uploads.id })
+            .from(uploads)
+            .where(
+              and(
+                eq(uploads.receipt, receipt as string),
+                eq(uploads.file, s.file),
+                eq(uploads.model, model),
+                eq(uploads.field, field),
+              ),
+            )
+            .get()),
+    );
+    const { smaller: _, ...rest } = kept;
+    return smaller.length ? { ...rest, smaller } : rest;
   };
   const result = (
     Array.isArray(value)

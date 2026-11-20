@@ -89,7 +89,8 @@ export function reviewServerModule(ir: SpecIR, t: Texts, auth: AuthIR): string {
 ${fields.map((f: FieldIR) => `      ${JSON.stringify(f.name)}: { label: ${JSON.stringify(t.field(m, f).label ?? humanize(f.name))}, kind: "${storesFiles(f) ? "file" : "picture"}" },`).join("\n")}
     },
     // A rejected file leaves the record: out of a list, or the field emptied; a required single
-    // file stays (it cannot be empty), held from others until a new one is sent.
+    // file stays (it cannot be empty), held from others until a new one is sent. Returns what left,
+    // for a picture's smaller copies.
     takeOut: ${fields.some((f) => isMany(f) || !f.required) ? "(id, field, file) =>" : "() =>"} {
 ${fields
   .filter((f) => isMany(f) || !f.required)
@@ -97,10 +98,18 @@ ${fields
     const k = dataKey(f);
     return `      if (field === ${JSON.stringify(f.name)}) {
         const row = db.select({ value: ${n.table}.${k} }).from(${n.table}).where(eq(${n.table}.id, id)).get();
-        ${isMany(f) ? `db.update(${n.table}).set({ ${k}: (row?.value ?? []).filter((v) => v.file !== file) }).where(eq(${n.table}.id, id)).run();` : `if (row?.value?.file === file) db.update(${n.table}).set({ ${k}: null }).where(eq(${n.table}.id, id)).run();`}
+        ${
+          isMany(f)
+            ? `db.update(${n.table}).set({ ${k}: (row?.value ?? []).filter((v) => v.file !== file) }).where(eq(${n.table}.id, id)).run();
+        return (row?.value ?? []).find((v) => v.file === file);`
+            : `if (row?.value?.file !== file) return undefined;
+        db.update(${n.table}).set({ ${k}: null }).where(eq(${n.table}.id, id)).run();
+        return row.value;`
+        }
       }`;
   })
   .join("\n")}
+      return undefined;
     },
     // Another record still shows the same file (files are named by their content).
     usedElsewhere: (file, id) =>
@@ -129,7 +138,7 @@ interface Reviewed {
   href(id: number): string | undefined;
   fields: Record<string, { label: string; kind: "picture" | "file" }>;
   usedElsewhere(file: string, id: number): boolean;
-  takeOut(id: number, field: string, file: string): void;
+  takeOut(id: number, field: string, file: string): { smaller?: { file: string }[] } | undefined;
 }
 
 const MODELS: Record<string, Reviewed> = {
@@ -249,10 +258,15 @@ export function decide(viewer: Viewer | null, id: number, approve: boolean, reas
   });
   const model = MODELS[row.model];
   if (approve || !model) return;
-  model.takeOut(row.recordId, row.field, row.file);
+  const out = model.takeOut(row.recordId, row.field, row.file);
   const stored = { file: row.file, alt: "", width: 0, height: 0, name: "", type: "", size: 0 };
   const used = model.usedElsewhere(row.file, row.recordId);
-  if (model.fields[row.field]?.kind === "picture") deletePicture(stored, used);
+  if (model.fields[row.field]?.kind === "picture")
+    deletePicture(
+      { ...stored, smaller: out?.smaller?.map((s) => ({ file: s.file, width: 0, height: 0 })) },
+      used,
+      (file) => model.usedElsewhere(file, row.recordId),
+    );
   else deleteFile(stored, used);
 }
 

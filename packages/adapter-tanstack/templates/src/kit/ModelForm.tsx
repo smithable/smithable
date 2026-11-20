@@ -10,7 +10,7 @@ import { Label } from "#/components/ui/input";
 import { cn } from "#/lib/utils";
 import { AiMarked } from "./AiMark";
 import { FieldInput } from "./FieldInput";
-import { versioned } from "./file-address";
+import { pictureSet, versioned } from "./file-address";
 import { fileSize, formatValue, fromInput, toInput } from "./format";
 import {
   type AppUi,
@@ -851,15 +851,19 @@ function picturesOf(ui: ModelUi, field: FieldUi, record: Record<string, unknown>
   const base = `/files/${ui.model?.replace(/[A-Z]/g, (c, i) => `${i ? "-" : ""}${c.toLowerCase()}`)}/${String(record.id)}/${field.name}`;
   const list = (
     field.kind === "picture" ? (value ? [value] : []) : Array.isArray(value) ? value : []
-  ) as {
+  ) as ({
     alt?: string;
     generated?: boolean;
-  }[];
-  return list.map((p, i) => ({
-    src: versioned(field.kind === "picture" ? base : `${base}/${i}`, p as { file?: string }),
-    alt: p.alt ?? "",
-    generated: p.generated,
-  }));
+  } & Parameters<typeof pictureSet>[1] & {})[];
+  return list.map((p, i) => {
+    const address = field.kind === "picture" ? base : `${base}/${i}`;
+    return {
+      src: versioned(address, p),
+      srcSet: pictureSet(address, p),
+      alt: p.alt ?? "",
+      generated: p.generated,
+    };
+  });
 }
 
 /**
@@ -882,6 +886,8 @@ function Gallery({ pictures }: { pictures: Picture[] }) {
         <AiMarked generated={shownPicture.generated} full>
           <img
             src={shownPicture.src}
+            srcSet={shownPicture.srcSet}
+            sizes="(min-width: 1024px) 50vw, 100vw"
             alt={shownPicture.alt}
             className="aspect-[4/3] w-full rounded-[var(--picture-radius,var(--radius-lg))] object-cover"
           />
@@ -902,7 +908,14 @@ function Gallery({ pictures }: { pictures: Picture[] }) {
                 )}
               >
                 <AiMarked generated={p.generated} tiny>
-                  <img src={p.src} alt="" loading="lazy" className="h-16 w-20 object-cover" />
+                  <img
+                    src={p.src}
+                    srcSet={p.srcSet}
+                    sizes="5rem"
+                    alt=""
+                    loading="lazy"
+                    className="h-16 w-20 object-cover"
+                  />
                 </AiMarked>
               </button>
             </li>
@@ -919,7 +932,12 @@ function Gallery({ pictures }: { pictures: Picture[] }) {
   );
 }
 
-type Picture = { src: string; alt: string; generated?: boolean | undefined };
+type Picture = {
+  src: string;
+  srcSet?: string | undefined;
+  alt: string;
+  generated?: boolean | undefined;
+};
 
 /**
  * A record's pictures in their place among the fields. On a phone each is as wide as the card
@@ -956,6 +974,10 @@ function PictureRow({ pictures, single }: { pictures: Picture[]; single: boolean
               <AiMarked generated={p.generated} className="w-full sm:w-fit">
                 <img
                   src={p.src}
+                  srcSet={p.srcSet}
+                  sizes={
+                    single ? "(min-width: 640px) 40rem, 100vw" : "(min-width: 640px) 24rem, 85vw"
+                  }
                   alt={p.alt}
                   loading={i ? "lazy" : undefined}
                   className={cn(

@@ -14120,12 +14120,12 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/InlineRows.tsx": "5a097006 kit",
   "src/kit/Inspector.tsx": "2425cac5 kit",
   "src/kit/Keys.tsx": "f32c246d kit",
-  "src/kit/ModelForm.tsx": "2a3bef87 kit",
-  "src/kit/ModelTable.tsx": "a8ae6290 kit",
+  "src/kit/ModelForm.tsx": "b857b574 kit",
+  "src/kit/ModelTable.tsx": "aeabcaa1 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "fb5e87dc kit",
   "src/kit/PictureDialog.tsx": "1495b136 kit",
-  "src/kit/PictureInput.tsx": "47a52232 kit",
+  "src/kit/PictureInput.tsx": "993db3fb kit",
   "src/kit/RecordSummary.tsx": "f0415723 kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
   "src/kit/SignIn.tsx": "21a3d26d kit",
@@ -14146,7 +14146,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/csv-read.ts": "324bc527 kit",
   "src/kit/csv.ts": "7d2a0f31 kit",
   "src/kit/dev-door.server.ts": "f8d865f5 kit",
-  "src/kit/file-address.ts": "2a579e98 kit",
+  "src/kit/file-address.ts": "951d9935 kit",
   "src/kit/format.ts": "b9e92275 kit",
   "src/kit/formats.ts": "2257fcc1 kit",
   "src/kit/formula.ts": "d73c0380 kit",
@@ -14164,7 +14164,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/params.ts": "65a69da0 kit",
   "src/kit/people-match.ts": "09a0f7dc kit",
   "src/kit/person-time.server.ts": "5d9e216d kit",
-  "src/kit/receipts.server.ts": "23b63f60 kit",
+  "src/kit/receipts.server.ts": "eba0f85e kit",
   "src/kit/refusal.ts": "de3353a0 kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "b6f52acc kit",
@@ -14174,7 +14174,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "8c886a7b kit",
   "src/kit/unused-samples.ts": "860c6650 kit",
-  "src/kit/uploads.ts": "1218e9e3 kit",
+  "src/kit/uploads.ts": "59161084 kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
@@ -14220,7 +14220,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/routes/api/v1/tasks[.]csv.ts": "b9d31159 generated",
   "src/routes/api/v1/users.ts": "0798ee24 generated",
   "src/routes/app-card.tsx": "48827720 generated",
-  "src/routes/files/$model.$field.ts": "5059a1b3 kit",
+  "src/routes/files/$model.$field.ts": "37c1c781 kit",
   "src/routes/files/$model.$id.$field.$n.ts": "5288014d kit",
   "src/routes/files/$model.$id.$field.ts": "93378bd7 kit",
   "src/routes/health.ts": "362c9904 kit",
@@ -16528,7 +16528,7 @@ import { w } from "#/kit/words";
 export const barberSettable = createInsertSchema(schema.barbers, {
   name: (s) => s.trim().min(1, w.required).max(200, w.atMostCharacters(200)),
   bio: (s) => s.max(10000, w.atMostCharacters(10000)),
-  portrait: z.object({ file: z.string().regex(/^barber\\/[a-f0-9]{24}\\.webp$/), alt: z.string().trim().max(200), width: z.int().positive(), height: z.int().positive(), generated: z.literal(true).optional(), receipt: z.string().max(64).optional() }).nullish(),
+  portrait: z.object({ file: z.string().regex(/^barber\\/[a-f0-9]{24}\\.webp$/), alt: z.string().trim().max(200), width: z.int().positive(), height: z.int().positive(), generated: z.literal(true).optional(), smaller: z.array(z.object({ file: z.string().regex(/^barber\\/[a-f0-9]{24}\\.webp$/), width: z.union([z.literal(480), z.literal(960)]), height: z.int().positive() })).max(2).optional(), receipt: z.string().max(64).optional() }).nullish(),
 }).omit({ id: true, ownerId: true, createdAt: true, updatedAt: true });
 /** What a barber's form sends, checked. */
 export const barberSchema = barberSettable;
@@ -16770,7 +16770,7 @@ export const barberData = {
       throw refusal(error);
     }
     cleanUploads(() => {
-    if (row.portrait && row.portrait.file !== changed.portrait?.file) deletePicture(row.portrait, keepsUpload(row.portrait.file) || !!db.select({ id: schema.barbers.id }).from(schema.barbers).where(sql\`\${schema.barbers.portrait} like \${\`%"file":"\${row.portrait.file}"%\`}\`).get());
+    if (row.portrait && row.portrait.file !== changed.portrait?.file) deletePicture(row.portrait, keepsUpload(row.portrait.file) || !!db.select({ id: schema.barbers.id }).from(schema.barbers).where(sql\`\${schema.barbers.portrait} like \${\`%"file":"\${row.portrait.file}"%\`}\`).get(), (file) => keepsUpload(file) || !!db.select({ id: schema.barbers.id }).from(schema.barbers).where(sql\`\${schema.barbers.portrait} like \${\`%"file":"\${file}"%\`}\`).get());
     });
     await afterChange("afterUpdate", "Barber", changed, viewer);
     return changed;
@@ -16802,7 +16802,7 @@ export const barberData = {
       throw refusal(error);
     }
     cleanUploads(() => {
-    if (row.portrait && row.portrait.file !== undefined) deletePicture(row.portrait, keepsUpload(row.portrait.file) || !!db.select({ id: schema.barbers.id }).from(schema.barbers).where(sql\`\${schema.barbers.portrait} like \${\`%"file":"\${row.portrait.file}"%\`}\`).get());
+    if (row.portrait && row.portrait.file !== undefined) deletePicture(row.portrait, keepsUpload(row.portrait.file) || !!db.select({ id: schema.barbers.id }).from(schema.barbers).where(sql\`\${schema.barbers.portrait} like \${\`%"file":"\${row.portrait.file}"%\`}\`).get(), (file) => keepsUpload(file) || !!db.select({ id: schema.barbers.id }).from(schema.barbers).where(sql\`\${schema.barbers.portrait} like \${\`%"file":"\${file}"%\`}\`).get());
     });
     await afterDelete("Barber", id, viewer);
   },
@@ -16839,7 +16839,7 @@ export const barberData = {
     });
     for (const row of rows) {
       cleanUploads(() => {
-      if (row.portrait && row.portrait.file !== undefined) deletePicture(row.portrait, keepsUpload(row.portrait.file) || !!db.select({ id: schema.barbers.id }).from(schema.barbers).where(sql\`\${schema.barbers.portrait} like \${\`%"file":"\${row.portrait.file}"%\`}\`).get());
+      if (row.portrait && row.portrait.file !== undefined) deletePicture(row.portrait, keepsUpload(row.portrait.file) || !!db.select({ id: schema.barbers.id }).from(schema.barbers).where(sql\`\${schema.barbers.portrait} like \${\`%"file":"\${row.portrait.file}"%\`}\`).get(), (file) => keepsUpload(file) || !!db.select({ id: schema.barbers.id }).from(schema.barbers).where(sql\`\${schema.barbers.portrait} like \${\`%"file":"\${file}"%\`}\`).get());
       });
       await afterDelete("Barber", row.id, viewer);
     }
@@ -21872,8 +21872,8 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/generated/appointment.ts": "1e72ecc9 generated",
   "src/generated/barber.import.server.ts": "ba93731a generated",
   "src/generated/barber.import.ts": "76b4b2ca generated",
-  "src/generated/barber.schema.ts": "cb113b73 generated",
-  "src/generated/barber.server.ts": "2fcd1fde generated",
+  "src/generated/barber.schema.ts": "4e204ae0 generated",
+  "src/generated/barber.server.ts": "40acd2a9 generated",
   "src/generated/barber.ts": "dcdf162d generated",
   "src/generated/card.server.ts": "86f8f526 generated",
   "src/generated/card.ts": "5cab12e4 generated",
@@ -21914,12 +21914,12 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/Landing.tsx": "a528f50e kit",
   "src/kit/LegalPage.tsx": "f9a9df1e kit",
   "src/kit/Live.tsx": "fbaa47cd kit",
-  "src/kit/ModelForm.tsx": "2a3bef87 kit",
-  "src/kit/ModelTable.tsx": "a8ae6290 kit",
+  "src/kit/ModelForm.tsx": "b857b574 kit",
+  "src/kit/ModelTable.tsx": "aeabcaa1 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "fb5e87dc kit",
   "src/kit/PictureDialog.tsx": "1495b136 kit",
-  "src/kit/PictureInput.tsx": "47a52232 kit",
+  "src/kit/PictureInput.tsx": "993db3fb kit",
   "src/kit/RecordSummary.tsx": "f0415723 kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
   "src/kit/SelectionBar.tsx": "97aa9165 kit",
@@ -21937,7 +21937,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/csv-read.ts": "324bc527 kit",
   "src/kit/csv.ts": "7d2a0f31 kit",
   "src/kit/dev-door.server.ts": "f8d865f5 kit",
-  "src/kit/file-address.ts": "2a579e98 kit",
+  "src/kit/file-address.ts": "951d9935 kit",
   "src/kit/filter.ts": "ac5ee469 kit",
   "src/kit/format.ts": "b9e92275 kit",
   "src/kit/formats.ts": "2257fcc1 kit",
@@ -21957,7 +21957,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/params.ts": "65a69da0 kit",
   "src/kit/people-match.ts": "09a0f7dc kit",
   "src/kit/person-time.server.ts": "5d9e216d kit",
-  "src/kit/receipts.server.ts": "23b63f60 kit",
+  "src/kit/receipts.server.ts": "eba0f85e kit",
   "src/kit/refusal.ts": "de3353a0 kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "b6f52acc kit",
@@ -21966,7 +21966,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/time-text.ts": "eb8db028 kit",
   "src/kit/trace.server.ts": "8c886a7b kit",
   "src/kit/unused-samples.ts": "860c6650 kit",
-  "src/kit/uploads.ts": "1218e9e3 kit",
+  "src/kit/uploads.ts": "59161084 kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/words.ts": "dd75b285 kit",
   "src/kit/words/en.ts": "a509a677 kit",
@@ -21990,7 +21990,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/routes/barbers/new.tsx": "49d2cb83 generated",
   "src/routes/day/index.tsx": "84bc75d1 generated",
   "src/routes/events.ts": "cdf9dd08 generated",
-  "src/routes/files/$model.$field.ts": "5059a1b3 kit",
+  "src/routes/files/$model.$field.ts": "37c1c781 kit",
   "src/routes/files/$model.$id.$field.$n.ts": "5288014d kit",
   "src/routes/files/$model.$id.$field.ts": "93378bd7 kit",
   "src/routes/health.ts": "362c9904 kit",
@@ -27976,7 +27976,7 @@ import { w } from "#/kit/words";
 export const instructorSettable = createInsertSchema(schema.instructors, {
   name: (s) => s.trim().min(1, w.required).max(200, w.atMostCharacters(200)),
   bio: (s) => s.max(50000, w.atMostCharacters(50000)),
-  portrait: z.object({ file: z.string().regex(/^instructor\\/[a-f0-9]{24}\\.webp$/), alt: z.string().trim().max(200), width: z.int().positive(), height: z.int().positive(), generated: z.literal(true).optional(), receipt: z.string().max(64).optional() }).nullish(),
+  portrait: z.object({ file: z.string().regex(/^instructor\\/[a-f0-9]{24}\\.webp$/), alt: z.string().trim().max(200), width: z.int().positive(), height: z.int().positive(), generated: z.literal(true).optional(), smaller: z.array(z.object({ file: z.string().regex(/^instructor\\/[a-f0-9]{24}\\.webp$/), width: z.union([z.literal(480), z.literal(960)]), height: z.int().positive() })).max(2).optional(), receipt: z.string().max(64).optional() }).nullish(),
 }).omit({ id: true, ownerId: true, createdAt: true, updatedAt: true });
 /** What a instructor's form sends, checked. */
 export const instructorSchema = instructorSettable;
@@ -28476,7 +28476,7 @@ export const instructorData = {
       throw refusal(error);
     }
     cleanUploads(() => {
-    if (row.portrait && row.portrait.file !== changed.portrait?.file) deletePicture(row.portrait, keepsUpload(row.portrait.file) || !!db.select({ id: schema.instructors.id }).from(schema.instructors).where(sql\`\${schema.instructors.portrait} like \${\`%"file":"\${row.portrait.file}"%\`}\`).get());
+    if (row.portrait && row.portrait.file !== changed.portrait?.file) deletePicture(row.portrait, keepsUpload(row.portrait.file) || !!db.select({ id: schema.instructors.id }).from(schema.instructors).where(sql\`\${schema.instructors.portrait} like \${\`%"file":"\${row.portrait.file}"%\`}\`).get(), (file) => keepsUpload(file) || !!db.select({ id: schema.instructors.id }).from(schema.instructors).where(sql\`\${schema.instructors.portrait} like \${\`%"file":"\${file}"%\`}\`).get());
     });
     await afterChange("afterUpdate", "Instructor", changed, viewer);
     return changed;
@@ -28508,7 +28508,7 @@ export const instructorData = {
       throw refusal(error);
     }
     cleanUploads(() => {
-    if (row.portrait && row.portrait.file !== undefined) deletePicture(row.portrait, keepsUpload(row.portrait.file) || !!db.select({ id: schema.instructors.id }).from(schema.instructors).where(sql\`\${schema.instructors.portrait} like \${\`%"file":"\${row.portrait.file}"%\`}\`).get());
+    if (row.portrait && row.portrait.file !== undefined) deletePicture(row.portrait, keepsUpload(row.portrait.file) || !!db.select({ id: schema.instructors.id }).from(schema.instructors).where(sql\`\${schema.instructors.portrait} like \${\`%"file":"\${row.portrait.file}"%\`}\`).get(), (file) => keepsUpload(file) || !!db.select({ id: schema.instructors.id }).from(schema.instructors).where(sql\`\${schema.instructors.portrait} like \${\`%"file":"\${file}"%\`}\`).get());
     });
     await afterDelete("Instructor", id, viewer);
   },
@@ -28545,7 +28545,7 @@ export const instructorData = {
     });
     for (const row of rows) {
       cleanUploads(() => {
-      if (row.portrait && row.portrait.file !== undefined) deletePicture(row.portrait, keepsUpload(row.portrait.file) || !!db.select({ id: schema.instructors.id }).from(schema.instructors).where(sql\`\${schema.instructors.portrait} like \${\`%"file":"\${row.portrait.file}"%\`}\`).get());
+      if (row.portrait && row.portrait.file !== undefined) deletePicture(row.portrait, keepsUpload(row.portrait.file) || !!db.select({ id: schema.instructors.id }).from(schema.instructors).where(sql\`\${schema.instructors.portrait} like \${\`%"file":"\${row.portrait.file}"%\`}\`).get(), (file) => keepsUpload(file) || !!db.select({ id: schema.instructors.id }).from(schema.instructors).where(sql\`\${schema.instructors.portrait} like \${\`%"file":"\${file}"%\`}\`).get());
       });
       await afterDelete("Instructor", row.id, viewer);
     }
@@ -29826,7 +29826,7 @@ export const postSettable = createInsertSchema(schema.posts, {
   title: (s) => s.trim().min(1, w.required).max(200, w.atMostCharacters(200)),
   address: (s) => s.max(200, w.atMostCharacters(200)),
   summary: (s) => s.max(10000, w.atMostCharacters(10000)),
-  cover: z.object({ file: z.string().regex(/^post\\/[a-f0-9]{24}\\.webp$/), alt: z.string().trim().max(200), width: z.int().positive(), height: z.int().positive(), generated: z.literal(true).optional(), receipt: z.string().max(64).optional() }).nullish(),
+  cover: z.object({ file: z.string().regex(/^post\\/[a-f0-9]{24}\\.webp$/), alt: z.string().trim().max(200), width: z.int().positive(), height: z.int().positive(), generated: z.literal(true).optional(), smaller: z.array(z.object({ file: z.string().regex(/^post\\/[a-f0-9]{24}\\.webp$/), width: z.union([z.literal(480), z.literal(960)]), height: z.int().positive() })).max(2).optional(), receipt: z.string().max(64).optional() }).nullish(),
   body: (s) => s.trim().min(1, w.required).max(50000, w.atMostCharacters(50000)),
   publishedOn: (s) => s.regex(/^\\d{4}-\\d{2}-\\d{2}$/, w.enterValidDate),
 }).omit({ id: true, ownerId: true, createdAt: true, updatedAt: true });
@@ -30319,7 +30319,7 @@ export const postData = {
       throw refusal(error);
     }
     cleanUploads(() => {
-    if (row.cover && row.cover.file !== changed.cover?.file) deletePicture(row.cover, keepsUpload(row.cover.file) || !!db.select({ id: schema.posts.id }).from(schema.posts).where(sql\`\${schema.posts.cover} like \${\`%"file":"\${row.cover.file}"%\`}\`).get());
+    if (row.cover && row.cover.file !== changed.cover?.file) deletePicture(row.cover, keepsUpload(row.cover.file) || !!db.select({ id: schema.posts.id }).from(schema.posts).where(sql\`\${schema.posts.cover} like \${\`%"file":"\${row.cover.file}"%\`}\`).get(), (file) => keepsUpload(file) || !!db.select({ id: schema.posts.id }).from(schema.posts).where(sql\`\${schema.posts.cover} like \${\`%"file":"\${file}"%\`}\`).get());
     });
     await afterChange("afterUpdate", "Post", changed, viewer);
     return changed;
@@ -30349,7 +30349,7 @@ export const postData = {
       throw refusal(error);
     }
     cleanUploads(() => {
-    if (row.cover && row.cover.file !== undefined) deletePicture(row.cover, keepsUpload(row.cover.file) || !!db.select({ id: schema.posts.id }).from(schema.posts).where(sql\`\${schema.posts.cover} like \${\`%"file":"\${row.cover.file}"%\`}\`).get());
+    if (row.cover && row.cover.file !== undefined) deletePicture(row.cover, keepsUpload(row.cover.file) || !!db.select({ id: schema.posts.id }).from(schema.posts).where(sql\`\${schema.posts.cover} like \${\`%"file":"\${row.cover.file}"%\`}\`).get(), (file) => keepsUpload(file) || !!db.select({ id: schema.posts.id }).from(schema.posts).where(sql\`\${schema.posts.cover} like \${\`%"file":"\${file}"%\`}\`).get());
     });
     await afterDelete("Post", id, viewer);
   },
@@ -30384,7 +30384,7 @@ export const postData = {
     });
     for (const row of rows) {
       cleanUploads(() => {
-      if (row.cover && row.cover.file !== undefined) deletePicture(row.cover, keepsUpload(row.cover.file) || !!db.select({ id: schema.posts.id }).from(schema.posts).where(sql\`\${schema.posts.cover} like \${\`%"file":"\${row.cover.file}"%\`}\`).get());
+      if (row.cover && row.cover.file !== undefined) deletePicture(row.cover, keepsUpload(row.cover.file) || !!db.select({ id: schema.posts.id }).from(schema.posts).where(sql\`\${schema.posts.cover} like \${\`%"file":"\${row.cover.file}"%\`}\`).get(), (file) => keepsUpload(file) || !!db.select({ id: schema.posts.id }).from(schema.posts).where(sql\`\${schema.posts.cover} like \${\`%"file":"\${file}"%\`}\`).get());
       });
       await afterDelete("Post", row.id, viewer);
     }
@@ -37192,8 +37192,8 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/hooks.ts": "dad75c4a generated",
   "src/generated/instructor.import.server.ts": "fccf980a generated",
   "src/generated/instructor.import.ts": "73c07c95 generated",
-  "src/generated/instructor.schema.ts": "96eaebce generated",
-  "src/generated/instructor.server.ts": "cd793440 generated",
+  "src/generated/instructor.schema.ts": "6e0adbca generated",
+  "src/generated/instructor.server.ts": "a84e6338 generated",
   "src/generated/instructor.ts": "f02243c8 generated",
   "src/generated/message.import.server.ts": "529f366e generated",
   "src/generated/message.import.ts": "63ded8df generated",
@@ -37205,8 +37205,8 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/pages.ts": "c08f710d generated",
   "src/generated/post.import.server.ts": "779addc6 generated",
   "src/generated/post.import.ts": "d5299966 generated",
-  "src/generated/post.schema.ts": "bc3914c3 generated",
-  "src/generated/post.server.ts": "99f7cd73 generated",
+  "src/generated/post.schema.ts": "67ddc9a8 generated",
+  "src/generated/post.server.ts": "e3c48c68 generated",
   "src/generated/post.ts": "3b8935b4 generated",
   "src/generated/roles.ts": "12ea3da4 generated",
   "src/generated/session.formulas.ts": "26cfcc26 generated",
@@ -37245,12 +37245,12 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/Live.tsx": "fbaa47cd kit",
   "src/kit/Markdown.tsx": "24e2fcd2 kit",
   "src/kit/MarkdownFormatted.tsx": "300ef9a1 kit",
-  "src/kit/ModelForm.tsx": "2a3bef87 kit",
-  "src/kit/ModelTable.tsx": "a8ae6290 kit",
+  "src/kit/ModelForm.tsx": "b857b574 kit",
+  "src/kit/ModelTable.tsx": "aeabcaa1 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "fb5e87dc kit",
   "src/kit/PictureDialog.tsx": "1495b136 kit",
-  "src/kit/PictureInput.tsx": "47a52232 kit",
+  "src/kit/PictureInput.tsx": "993db3fb kit",
   "src/kit/RecordSummary.tsx": "f0415723 kit",
   "src/kit/Reserve.tsx": "0fdf155f kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
@@ -37273,7 +37273,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/csv-read.ts": "324bc527 kit",
   "src/kit/csv.ts": "7d2a0f31 kit",
   "src/kit/dev-door.server.ts": "f8d865f5 kit",
-  "src/kit/file-address.ts": "2a579e98 kit",
+  "src/kit/file-address.ts": "951d9935 kit",
   "src/kit/filter.ts": "ac5ee469 kit",
   "src/kit/format.ts": "b9e92275 kit",
   "src/kit/formats.ts": "2257fcc1 kit",
@@ -37294,7 +37294,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/params.ts": "65a69da0 kit",
   "src/kit/people-match.ts": "09a0f7dc kit",
   "src/kit/person-time.server.ts": "5d9e216d kit",
-  "src/kit/receipts.server.ts": "23b63f60 kit",
+  "src/kit/receipts.server.ts": "eba0f85e kit",
   "src/kit/refusal.ts": "de3353a0 kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "b6f52acc kit",
@@ -37305,7 +37305,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "8c886a7b kit",
   "src/kit/unused-samples.ts": "860c6650 kit",
-  "src/kit/uploads.ts": "1218e9e3 kit",
+  "src/kit/uploads.ts": "59161084 kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
@@ -37353,7 +37353,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/class-types/index.tsx": "4d83873e generated",
   "src/routes/class-types/new.tsx": "d4e202b3 generated",
   "src/routes/events.ts": "98860b46 generated",
-  "src/routes/files/$model.$field.ts": "5059a1b3 kit",
+  "src/routes/files/$model.$field.ts": "37c1c781 kit",
   "src/routes/files/$model.$id.$field.$n.ts": "5288014d kit",
   "src/routes/files/$model.$id.$field.ts": "93378bd7 kit",
   "src/routes/health.ts": "362c9904 kit",
@@ -47189,8 +47189,8 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/Inspector.tsx": "2425cac5 kit",
   "src/kit/Landing.tsx": "a528f50e kit",
   "src/kit/MergeDialog.tsx": "9794e745 kit",
-  "src/kit/ModelForm.tsx": "2a3bef87 kit",
-  "src/kit/ModelTable.tsx": "a8ae6290 kit",
+  "src/kit/ModelForm.tsx": "b857b574 kit",
+  "src/kit/ModelTable.tsx": "aeabcaa1 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "fb5e87dc kit",
   "src/kit/PictureDialog.tsx": "1495b136 kit",
@@ -47216,7 +47216,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/csv-read.ts": "324bc527 kit",
   "src/kit/csv.ts": "7d2a0f31 kit",
   "src/kit/dev-door.server.ts": "f8d865f5 kit",
-  "src/kit/file-address.ts": "2a579e98 kit",
+  "src/kit/file-address.ts": "951d9935 kit",
   "src/kit/filter.ts": "ac5ee469 kit",
   "src/kit/format.ts": "b9e92275 kit",
   "src/kit/formats.ts": "2257fcc1 kit",
@@ -57404,13 +57404,13 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/Landing.tsx": "a528f50e kit",
   "src/kit/LegalPage.tsx": "f9a9df1e kit",
   "src/kit/Live.tsx": "fbaa47cd kit",
-  "src/kit/ModelForm.tsx": "2a3bef87 kit",
-  "src/kit/ModelTable.tsx": "a8ae6290 kit",
+  "src/kit/ModelForm.tsx": "b857b574 kit",
+  "src/kit/ModelTable.tsx": "aeabcaa1 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Onboarding.tsx": "b68216f0 kit",
   "src/kit/Overflow.tsx": "fb5e87dc kit",
   "src/kit/PictureDialog.tsx": "1495b136 kit",
-  "src/kit/PictureInput.tsx": "47a52232 kit",
+  "src/kit/PictureInput.tsx": "993db3fb kit",
   "src/kit/RecordSummary.tsx": "f0415723 kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
   "src/kit/SelectionBar.tsx": "97aa9165 kit",
@@ -57433,7 +57433,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/csv-read.ts": "324bc527 kit",
   "src/kit/csv.ts": "7d2a0f31 kit",
   "src/kit/dev-door.server.ts": "f8d865f5 kit",
-  "src/kit/file-address.ts": "2a579e98 kit",
+  "src/kit/file-address.ts": "951d9935 kit",
   "src/kit/filter.ts": "ac5ee469 kit",
   "src/kit/format.ts": "b9e92275 kit",
   "src/kit/formats.ts": "2257fcc1 kit",
@@ -57454,7 +57454,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/params.ts": "65a69da0 kit",
   "src/kit/people-match.ts": "09a0f7dc kit",
   "src/kit/person-time.server.ts": "5d9e216d kit",
-  "src/kit/receipts.server.ts": "23b63f60 kit",
+  "src/kit/receipts.server.ts": "eba0f85e kit",
   "src/kit/refusal.ts": "de3353a0 kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "b6f52acc kit",
@@ -57465,7 +57465,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "8c886a7b kit",
   "src/kit/unused-samples.ts": "860c6650 kit",
-  "src/kit/uploads.ts": "1218e9e3 kit",
+  "src/kit/uploads.ts": "59161084 kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
@@ -57487,7 +57487,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/routes/clients/index.tsx": "12269975 generated",
   "src/routes/clients/new.tsx": "1194d3e4 generated",
   "src/routes/events.ts": "2a5e5b78 generated",
-  "src/routes/files/$model.$field.ts": "5059a1b3 kit",
+  "src/routes/files/$model.$field.ts": "37c1c781 kit",
   "src/routes/files/$model.$id.$field.$n.ts": "5288014d kit",
   "src/routes/files/$model.$id.$field.ts": "93378bd7 kit",
   "src/routes/health.ts": "362c9904 kit",
@@ -61002,7 +61002,7 @@ import { w } from "#/kit/words";
 export const dishSettable = createInsertSchema(schema.dishes, {
   name: (s) => s.trim().min(1, w.required).max(200, w.atMostCharacters(200)),
   description: (s) => s.max(10000, w.atMostCharacters(10000)),
-  picture: z.object({ file: z.string().regex(/^dish\\/[a-f0-9]{24}\\.webp$/), alt: z.string().trim().max(200), width: z.int().positive(), height: z.int().positive(), generated: z.literal(true).optional(), receipt: z.string().max(64).optional() }).nullish(),
+  picture: z.object({ file: z.string().regex(/^dish\\/[a-f0-9]{24}\\.webp$/), alt: z.string().trim().max(200), width: z.int().positive(), height: z.int().positive(), generated: z.literal(true).optional(), smaller: z.array(z.object({ file: z.string().regex(/^dish\\/[a-f0-9]{24}\\.webp$/), width: z.union([z.literal(480), z.literal(960)]), height: z.int().positive() })).max(2).optional(), receipt: z.string().max(64).optional() }).nullish(),
   allergens: (s) => s.max(200, w.atMostCharacters(200)),
 }).omit({ id: true, ownerId: true, createdAt: true, updatedAt: true });
 /** What a dish's form sends, checked. */
@@ -61241,7 +61241,7 @@ export const dishData = {
       throw refusal(error);
     }
     cleanUploads(() => {
-    if (row.picture && row.picture.file !== changed.picture?.file) deletePicture(row.picture, keepsUpload(row.picture.file) || !!db.select({ id: schema.dishes.id }).from(schema.dishes).where(sql\`\${schema.dishes.picture} like \${\`%"file":"\${row.picture.file}"%\`}\`).get());
+    if (row.picture && row.picture.file !== changed.picture?.file) deletePicture(row.picture, keepsUpload(row.picture.file) || !!db.select({ id: schema.dishes.id }).from(schema.dishes).where(sql\`\${schema.dishes.picture} like \${\`%"file":"\${row.picture.file}"%\`}\`).get(), (file) => keepsUpload(file) || !!db.select({ id: schema.dishes.id }).from(schema.dishes).where(sql\`\${schema.dishes.picture} like \${\`%"file":"\${file}"%\`}\`).get());
     });
     await afterChange("afterUpdate", "Dish", changed, viewer);
     return changed;
@@ -61273,7 +61273,7 @@ export const dishData = {
       throw refusal(error);
     }
     cleanUploads(() => {
-    if (row.picture && row.picture.file !== undefined) deletePicture(row.picture, keepsUpload(row.picture.file) || !!db.select({ id: schema.dishes.id }).from(schema.dishes).where(sql\`\${schema.dishes.picture} like \${\`%"file":"\${row.picture.file}"%\`}\`).get());
+    if (row.picture && row.picture.file !== undefined) deletePicture(row.picture, keepsUpload(row.picture.file) || !!db.select({ id: schema.dishes.id }).from(schema.dishes).where(sql\`\${schema.dishes.picture} like \${\`%"file":"\${row.picture.file}"%\`}\`).get(), (file) => keepsUpload(file) || !!db.select({ id: schema.dishes.id }).from(schema.dishes).where(sql\`\${schema.dishes.picture} like \${\`%"file":"\${file}"%\`}\`).get());
     });
     await afterDelete("Dish", id, viewer);
   },
@@ -61310,7 +61310,7 @@ export const dishData = {
     });
     for (const row of rows) {
       cleanUploads(() => {
-      if (row.picture && row.picture.file !== undefined) deletePicture(row.picture, keepsUpload(row.picture.file) || !!db.select({ id: schema.dishes.id }).from(schema.dishes).where(sql\`\${schema.dishes.picture} like \${\`%"file":"\${row.picture.file}"%\`}\`).get());
+      if (row.picture && row.picture.file !== undefined) deletePicture(row.picture, keepsUpload(row.picture.file) || !!db.select({ id: schema.dishes.id }).from(schema.dishes).where(sql\`\${schema.dishes.picture} like \${\`%"file":"\${row.picture.file}"%\`}\`).get(), (file) => keepsUpload(file) || !!db.select({ id: schema.dishes.id }).from(schema.dishes).where(sql\`\${schema.dishes.picture} like \${\`%"file":"\${file}"%\`}\`).get());
       });
       await afterDelete("Dish", row.id, viewer);
     }
@@ -66708,8 +66708,8 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/generated/dev-door.server.ts": "45e8136d generated",
   "src/generated/dish.import.server.ts": "aee46d8b generated",
   "src/generated/dish.import.ts": "44be2252 generated",
-  "src/generated/dish.schema.ts": "30168a95 generated",
-  "src/generated/dish.server.ts": "ed8a702b generated",
+  "src/generated/dish.schema.ts": "134b49aa generated",
+  "src/generated/dish.server.ts": "30718e7c generated",
   "src/generated/dish.ts": "3b947d71 generated",
   "src/generated/hooks.ts": "5c440337 generated",
   "src/generated/my-time.ts": "c315432b generated",
@@ -66752,13 +66752,13 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/InlineRows.tsx": "5a097006 kit",
   "src/kit/Landing.tsx": "a528f50e kit",
   "src/kit/Live.tsx": "fbaa47cd kit",
-  "src/kit/ModelForm.tsx": "2a3bef87 kit",
-  "src/kit/ModelTable.tsx": "a8ae6290 kit",
+  "src/kit/ModelForm.tsx": "b857b574 kit",
+  "src/kit/ModelTable.tsx": "aeabcaa1 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/OrderPage.tsx": "d4a74208 kit",
   "src/kit/Overflow.tsx": "fb5e87dc kit",
   "src/kit/PictureDialog.tsx": "1495b136 kit",
-  "src/kit/PictureInput.tsx": "47a52232 kit",
+  "src/kit/PictureInput.tsx": "993db3fb kit",
   "src/kit/PushChoices.tsx": "ec2ec02f kit",
   "src/kit/RecordSummary.tsx": "f0415723 kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
@@ -66777,7 +66777,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/csv-read.ts": "324bc527 kit",
   "src/kit/csv.ts": "7d2a0f31 kit",
   "src/kit/dev-door.server.ts": "f8d865f5 kit",
-  "src/kit/file-address.ts": "2a579e98 kit",
+  "src/kit/file-address.ts": "951d9935 kit",
   "src/kit/filter.ts": "ac5ee469 kit",
   "src/kit/format.ts": "b9e92275 kit",
   "src/kit/formats.ts": "2257fcc1 kit",
@@ -66800,7 +66800,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/person-time.server.ts": "5d9e216d kit",
   "src/kit/push-crypto.server.ts": "5d88f4a0 kit",
   "src/kit/push.server.ts": "38f4b235 kit",
-  "src/kit/receipts.server.ts": "23b63f60 kit",
+  "src/kit/receipts.server.ts": "eba0f85e kit",
   "src/kit/refusal.ts": "de3353a0 kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "b6f52acc kit",
@@ -66809,7 +66809,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/time-text.ts": "eb8db028 kit",
   "src/kit/trace.server.ts": "8c886a7b kit",
   "src/kit/unused-samples.ts": "860c6650 kit",
-  "src/kit/uploads.ts": "1218e9e3 kit",
+  "src/kit/uploads.ts": "59161084 kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/words.ts": "dd75b285 kit",
   "src/kit/words/en.ts": "a509a677 kit",
@@ -66829,7 +66829,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/routes/dishes/index.tsx": "bbffbf09 generated",
   "src/routes/dishes/new.tsx": "7aa588df generated",
   "src/routes/events.ts": "e5bcb4f0 generated",
-  "src/routes/files/$model.$field.ts": "5059a1b3 kit",
+  "src/routes/files/$model.$field.ts": "37c1c781 kit",
   "src/routes/files/$model.$id.$field.$n.ts": "5288014d kit",
   "src/routes/files/$model.$id.$field.ts": "93378bd7 kit",
   "src/routes/health.ts": "362c9904 kit",
@@ -68722,7 +68722,7 @@ import { w } from "#/kit/words";
 /** What a item may be given: a form's values and what the app fills (an action's set). */
 export const itemSettable = createInsertSchema(schema.items, {
   title: (s) => s.trim().min(1, w.required).max(200, w.atMostCharacters(200)),
-  photos: z.array(z.object({ file: z.string().regex(/^item\\/[a-f0-9]{24}\\.webp$/), alt: z.string().trim().max(200), width: z.int().positive(), height: z.int().positive(), generated: z.literal(true).optional(), receipt: z.string().max(64).optional() })).max(10),
+  photos: z.array(z.object({ file: z.string().regex(/^item\\/[a-f0-9]{24}\\.webp$/), alt: z.string().trim().max(200), width: z.int().positive(), height: z.int().positive(), generated: z.literal(true).optional(), smaller: z.array(z.object({ file: z.string().regex(/^item\\/[a-f0-9]{24}\\.webp$/), width: z.union([z.literal(480), z.literal(960)]), height: z.int().positive() })).max(2).optional(), receipt: z.string().max(64).optional() })).max(10),
   description: (s) => s.trim().min(1, w.required).max(10000, w.atMostCharacters(10000)),
   place: (s) => s.max(200, w.atMostCharacters(200)),
 }).omit({ id: true, ownerId: true, createdAt: true, updatedAt: true });
@@ -69291,7 +69291,7 @@ export const itemData = {
       throw refusal(error);
     }
     cleanUploads(() => {
-    for (const p of row.photos ?? []) if (!(changed.photos ?? []).map((p) => p.file).includes(p.file)) deletePicture(p, keepsUpload(p.file) || !!db.select({ id: schema.items.id }).from(schema.items).where(sql\`\${schema.items.photos} like \${\`%"file":"\${p.file}"%\`}\`).get());
+    for (const p of row.photos ?? []) if (!(changed.photos ?? []).map((p) => p.file).includes(p.file)) deletePicture(p, keepsUpload(p.file) || !!db.select({ id: schema.items.id }).from(schema.items).where(sql\`\${schema.items.photos} like \${\`%"file":"\${p.file}"%\`}\`).get(), (file) => keepsUpload(file) || !!db.select({ id: schema.items.id }).from(schema.items).where(sql\`\${schema.items.photos} like \${\`%"file":"\${file}"%\`}\`).get());
     });
     await afterChange("afterUpdate", "Item", changed, viewer);
     return changed;
@@ -69321,7 +69321,7 @@ export const itemData = {
       throw refusal(error);
     }
     cleanUploads(() => {
-    for (const p of row.photos ?? []) if (!([] as string[]).includes(p.file)) deletePicture(p, keepsUpload(p.file) || !!db.select({ id: schema.items.id }).from(schema.items).where(sql\`\${schema.items.photos} like \${\`%"file":"\${p.file}"%\`}\`).get());
+    for (const p of row.photos ?? []) if (!([] as string[]).includes(p.file)) deletePicture(p, keepsUpload(p.file) || !!db.select({ id: schema.items.id }).from(schema.items).where(sql\`\${schema.items.photos} like \${\`%"file":"\${p.file}"%\`}\`).get(), (file) => keepsUpload(file) || !!db.select({ id: schema.items.id }).from(schema.items).where(sql\`\${schema.items.photos} like \${\`%"file":"\${file}"%\`}\`).get());
     });
     await afterDelete("Item", id, viewer);
   },
@@ -69356,7 +69356,7 @@ export const itemData = {
     });
     for (const row of rows) {
       cleanUploads(() => {
-      for (const p of row.photos ?? []) if (!([] as string[]).includes(p.file)) deletePicture(p, keepsUpload(p.file) || !!db.select({ id: schema.items.id }).from(schema.items).where(sql\`\${schema.items.photos} like \${\`%"file":"\${p.file}"%\`}\`).get());
+      for (const p of row.photos ?? []) if (!([] as string[]).includes(p.file)) deletePicture(p, keepsUpload(p.file) || !!db.select({ id: schema.items.id }).from(schema.items).where(sql\`\${schema.items.photos} like \${\`%"file":"\${p.file}"%\`}\`).get(), (file) => keepsUpload(file) || !!db.select({ id: schema.items.id }).from(schema.items).where(sql\`\${schema.items.photos} like \${\`%"file":"\${file}"%\`}\`).get());
       });
       await afterDelete("Item", row.id, viewer);
     }
@@ -69628,7 +69628,7 @@ interface Reviewed {
   href(id: number): string | undefined;
   fields: Record<string, { label: string; kind: "picture" | "file" }>;
   usedElsewhere(file: string, id: number): boolean;
-  takeOut(id: number, field: string, file: string): void;
+  takeOut(id: number, field: string, file: string): { smaller?: { file: string }[] } | undefined;
 }
 
 const MODELS: Record<string, Reviewed> = {
@@ -69649,12 +69649,15 @@ const MODELS: Record<string, Reviewed> = {
       "photos": { label: "Photos", kind: "picture" },
     },
     // A rejected file leaves the record: out of a list, or the field emptied; a required single
-    // file stays (it cannot be empty), held from others until a new one is sent.
+    // file stays (it cannot be empty), held from others until a new one is sent. Returns what left,
+    // for a picture's smaller copies.
     takeOut: (id, field, file) => {
       if (field === "photos") {
         const row = db.select({ value: schema.items.photos }).from(schema.items).where(eq(schema.items.id, id)).get();
         db.update(schema.items).set({ photos: (row?.value ?? []).filter((v) => v.file !== file) }).where(eq(schema.items.id, id)).run();
+        return (row?.value ?? []).find((v) => v.file === file);
       }
+      return undefined;
     },
     // Another record still shows the same file (files are named by their content).
     usedElsewhere: (file, id) =>
@@ -69775,10 +69778,15 @@ export function decide(viewer: Viewer | null, id: number, approve: boolean, reas
   });
   const model = MODELS[row.model];
   if (approve || !model) return;
-  model.takeOut(row.recordId, row.field, row.file);
+  const out = model.takeOut(row.recordId, row.field, row.file);
   const stored = { file: row.file, alt: "", width: 0, height: 0, name: "", type: "", size: 0 };
   const used = model.usedElsewhere(row.file, row.recordId);
-  if (model.fields[row.field]?.kind === "picture") deletePicture(stored, used);
+  if (model.fields[row.field]?.kind === "picture")
+    deletePicture(
+      { ...stored, smaller: out?.smaller?.map((s) => ({ file: s.file, width: 0, height: 0 })) },
+      used,
+      (file) => model.usedElsewhere(file, row.recordId),
+    );
   else deleteFile(stored, used);
 }
 
@@ -72146,12 +72154,12 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/generated/hooks.ts": "e268b462 generated",
   "src/generated/item.import.server.ts": "0fe6563a generated",
   "src/generated/item.import.ts": "0cb7ece1 generated",
-  "src/generated/item.schema.ts": "1585b602 generated",
-  "src/generated/item.server.ts": "5c087807 generated",
+  "src/generated/item.schema.ts": "dffca266 generated",
+  "src/generated/item.server.ts": "355a28c9 generated",
   "src/generated/item.ts": "9051834d generated",
   "src/generated/my-time.ts": "c315432b generated",
   "src/generated/pages.ts": "85e88911 generated",
-  "src/generated/review.server.ts": "05473a16 generated",
+  "src/generated/review.server.ts": "41afd3db generated",
   "src/generated/review.ts": "c0f62730 generated",
   "src/generated/roles.ts": "d284ad2a generated",
   "src/generated/site.ts": "4c4ce201 generated",
@@ -72174,12 +72182,12 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/InlineRows.tsx": "5a097006 kit",
   "src/kit/Inspector.tsx": "2425cac5 kit",
   "src/kit/Landing.tsx": "a528f50e kit",
-  "src/kit/ModelForm.tsx": "2a3bef87 kit",
-  "src/kit/ModelTable.tsx": "a8ae6290 kit",
+  "src/kit/ModelForm.tsx": "b857b574 kit",
+  "src/kit/ModelTable.tsx": "aeabcaa1 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "fb5e87dc kit",
   "src/kit/PictureDialog.tsx": "1495b136 kit",
-  "src/kit/PictureInput.tsx": "47a52232 kit",
+  "src/kit/PictureInput.tsx": "993db3fb kit",
   "src/kit/RecordSummary.tsx": "f0415723 kit",
   "src/kit/Review.tsx": "3dc198b3 kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
@@ -72200,7 +72208,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/csv-read.ts": "324bc527 kit",
   "src/kit/csv.ts": "7d2a0f31 kit",
   "src/kit/dev-door.server.ts": "f8d865f5 kit",
-  "src/kit/file-address.ts": "2a579e98 kit",
+  "src/kit/file-address.ts": "951d9935 kit",
   "src/kit/filter.ts": "ac5ee469 kit",
   "src/kit/format.ts": "b9e92275 kit",
   "src/kit/formats.ts": "2257fcc1 kit",
@@ -72218,7 +72226,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/params.ts": "65a69da0 kit",
   "src/kit/people-match.ts": "09a0f7dc kit",
   "src/kit/person-time.server.ts": "5d9e216d kit",
-  "src/kit/receipts.server.ts": "23b63f60 kit",
+  "src/kit/receipts.server.ts": "eba0f85e kit",
   "src/kit/refusal.ts": "de3353a0 kit",
   "src/kit/review-mail.server.ts": "653c32e5 kit",
   "src/kit/search.ts": "080eb55b kit",
@@ -72229,7 +72237,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "8c886a7b kit",
   "src/kit/unused-samples.ts": "860c6650 kit",
-  "src/kit/uploads.ts": "1218e9e3 kit",
+  "src/kit/uploads.ts": "59161084 kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
@@ -72248,7 +72256,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/routes/__root.tsx": "0929eb69 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/app-card.tsx": "48827720 generated",
-  "src/routes/files/$model.$field.ts": "5059a1b3 kit",
+  "src/routes/files/$model.$field.ts": "37c1c781 kit",
   "src/routes/files/$model.$id.$field.$n.ts": "5288014d kit",
   "src/routes/files/$model.$id.$field.ts": "93378bd7 kit",
   "src/routes/health.ts": "362c9904 kit",
@@ -76262,8 +76270,8 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/InlineRows.tsx": "5a097006 kit",
   "src/kit/Inspector.tsx": "2425cac5 kit",
   "src/kit/Landing.tsx": "a528f50e kit",
-  "src/kit/ModelForm.tsx": "2a3bef87 kit",
-  "src/kit/ModelTable.tsx": "a8ae6290 kit",
+  "src/kit/ModelForm.tsx": "b857b574 kit",
+  "src/kit/ModelTable.tsx": "aeabcaa1 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "fb5e87dc kit",
   "src/kit/PictureDialog.tsx": "1495b136 kit",
@@ -76286,7 +76294,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/csv-read.ts": "324bc527 kit",
   "src/kit/csv.ts": "7d2a0f31 kit",
   "src/kit/dev-door.server.ts": "f8d865f5 kit",
-  "src/kit/file-address.ts": "2a579e98 kit",
+  "src/kit/file-address.ts": "951d9935 kit",
   "src/kit/filter.ts": "ac5ee469 kit",
   "src/kit/format.ts": "b9e92275 kit",
   "src/kit/formats.ts": "2257fcc1 kit",
@@ -90741,8 +90749,8 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/Landing.tsx": "a528f50e kit",
   "src/kit/Markdown.tsx": "24e2fcd2 kit",
   "src/kit/MarkdownFormatted.tsx": "300ef9a1 kit",
-  "src/kit/ModelForm.tsx": "2a3bef87 kit",
-  "src/kit/ModelTable.tsx": "a8ae6290 kit",
+  "src/kit/ModelForm.tsx": "b857b574 kit",
+  "src/kit/ModelTable.tsx": "aeabcaa1 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "fb5e87dc kit",
   "src/kit/PictureDialog.tsx": "1495b136 kit",
@@ -90768,7 +90776,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/csv-read.ts": "324bc527 kit",
   "src/kit/csv.ts": "7d2a0f31 kit",
   "src/kit/dev-door.server.ts": "f8d865f5 kit",
-  "src/kit/file-address.ts": "2a579e98 kit",
+  "src/kit/file-address.ts": "951d9935 kit",
   "src/kit/filter.ts": "ac5ee469 kit",
   "src/kit/format.ts": "b9e92275 kit",
   "src/kit/formats.ts": "2257fcc1 kit",
@@ -98808,12 +98816,12 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/InlineRows.tsx": "5a097006 kit",
   "src/kit/Inspector.tsx": "2425cac5 kit",
   "src/kit/Live.tsx": "fbaa47cd kit",
-  "src/kit/ModelForm.tsx": "2a3bef87 kit",
-  "src/kit/ModelTable.tsx": "a8ae6290 kit",
+  "src/kit/ModelForm.tsx": "b857b574 kit",
+  "src/kit/ModelTable.tsx": "aeabcaa1 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "fb5e87dc kit",
   "src/kit/PictureDialog.tsx": "1495b136 kit",
-  "src/kit/PictureInput.tsx": "47a52232 kit",
+  "src/kit/PictureInput.tsx": "993db3fb kit",
   "src/kit/RecordSummary.tsx": "f0415723 kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
   "src/kit/SelectionBar.tsx": "97aa9165 kit",
@@ -98835,7 +98843,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/csv-read.ts": "324bc527 kit",
   "src/kit/csv.ts": "7d2a0f31 kit",
   "src/kit/dev-door.server.ts": "f8d865f5 kit",
-  "src/kit/file-address.ts": "2a579e98 kit",
+  "src/kit/file-address.ts": "951d9935 kit",
   "src/kit/filter.ts": "ac5ee469 kit",
   "src/kit/format.ts": "b9e92275 kit",
   "src/kit/formats.ts": "2257fcc1 kit",
@@ -98856,7 +98864,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/params.ts": "65a69da0 kit",
   "src/kit/people-match.ts": "09a0f7dc kit",
   "src/kit/person-time.server.ts": "5d9e216d kit",
-  "src/kit/receipts.server.ts": "23b63f60 kit",
+  "src/kit/receipts.server.ts": "eba0f85e kit",
   "src/kit/refusal.ts": "de3353a0 kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "b6f52acc kit",
@@ -98867,7 +98875,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "8c886a7b kit",
   "src/kit/unused-samples.ts": "860c6650 kit",
-  "src/kit/uploads.ts": "1218e9e3 kit",
+  "src/kit/uploads.ts": "59161084 kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
@@ -98889,7 +98897,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/routes/cases/index.tsx": "f45f99ca generated",
   "src/routes/cases/new.tsx": "0befc28f generated",
   "src/routes/events.ts": "f683a575 generated",
-  "src/routes/files/$model.$field.ts": "5059a1b3 kit",
+  "src/routes/files/$model.$field.ts": "37c1c781 kit",
   "src/routes/files/$model.$id.$field.$n.ts": "5288014d kit",
   "src/routes/files/$model.$id.$field.ts": "93378bd7 kit",
   "src/routes/health.ts": "362c9904 kit",

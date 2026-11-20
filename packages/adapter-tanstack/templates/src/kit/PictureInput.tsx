@@ -1,7 +1,8 @@
 // Smithable app kit: choosing a picture for a record. The browser scales it to at most 1600 px
 // on the long side and encodes WebP, so a phone's 12 MB photo never travels; the server checks
-// the file again (src/kit/uploads.ts). The form keeps the picture as JSON text, as its other
-// values are text, and stores { file, alt, width, height } on the record.
+// the file again (src/kit/uploads.ts). A wider picture is also sent 480 and 960 wide, for small
+// screens and cards. The form keeps the picture as JSON text, as its other values are text, and
+// stores { file, alt, width, height, smaller } on the record.
 import { ChevronLeft, ChevronRight, ImagePlus, X } from "lucide-react";
 import { useId, useRef, useState } from "react";
 import { Button } from "#/components/ui/button";
@@ -18,19 +19,20 @@ export interface PictureValue {
   height: number;
   /** Made by an AI (a sample record's picture from the image library): marked where shown. */
   generated?: true;
+  /** The same picture narrower, each its own file (src/kit/uploads.ts, SmallerPicture). */
+  smaller?: { file: string; width: number; height: number }[];
 }
 
 const MAX_SIDE = 1600;
+/** The widths a wider picture is also sent at (src/kit/uploads.ts, PICTURE_WIDTHS). */
+const WIDTHS = [480, 960];
 
-/** A picture as WebP, scaled down to at most MAX_SIDE on the long side. */
-async function toWebp(file: File): Promise<Blob> {
-  const bitmap = await createImageBitmap(file);
-  const scale = Math.min(1, MAX_SIDE / Math.max(bitmap.width, bitmap.height));
+/** A picture drawn at a size and encoded as WebP. */
+function toWebp(bitmap: ImageBitmap, width: number, height: number): Promise<Blob> {
   const canvas = document.createElement("canvas");
-  canvas.width = Math.round(bitmap.width * scale);
-  canvas.height = Math.round(bitmap.height * scale);
-  canvas.getContext("2d")?.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-  bitmap.close();
+  canvas.width = width;
+  canvas.height = height;
+  canvas.getContext("2d")?.drawImage(bitmap, 0, 0, width, height);
   return new Promise((resolve, reject) =>
     canvas.toBlob(
       (blob) => (blob ? resolve(blob) : reject(new Error(w.pictureNotRead))),
@@ -38,6 +40,54 @@ async function toWebp(file: File): Promise<Blob> {
       0.82,
     ),
   );
+}
+
+/**
+ * Sends a chosen picture for a field: scaled down to at most MAX_SIDE on the long side, then a copy
+ * at each of WIDTHS narrower than that, under the receipt the picture was given. A copy that fails
+ * is left out; the picture is then shown at its own size.
+ */
+async function sendPicture(
+  model: string,
+  field: string,
+  file: File,
+): Promise<{ stored: Omit<PictureValue, "alt">; webp: Blob }> {
+  const bitmap = await createImageBitmap(file);
+  try {
+    const scale = Math.min(1, MAX_SIDE / Math.max(bitmap.width, bitmap.height));
+    const webp = await toWebp(
+      bitmap,
+      Math.round(bitmap.width * scale),
+      Math.round(bitmap.height * scale),
+    );
+    const send = (body: Blob, query = "") =>
+      fetch(`/files/${model}/${field}${query}`, {
+        method: "POST",
+        headers: { "Content-Type": "image/webp" },
+        body,
+      });
+    const response = await send(webp);
+    if (!response.ok) throw new Error((await response.text()) || w.pictureRefused);
+    const stored = (await response.json()) as Omit<PictureValue, "alt"> & { receipt?: string };
+    const smaller: NonNullable<PictureValue["smaller"]> = [];
+    for (const width of WIDTHS) {
+      if (width >= stored.width || !stored.receipt) continue;
+      try {
+        const copy = await toWebp(
+          bitmap,
+          width,
+          Math.round((stored.height * width) / stored.width),
+        );
+        const sent = await send(copy, `?smallerOf=${encodeURIComponent(stored.receipt)}`);
+        if (sent.ok) smaller.push(await sent.json());
+      } catch {
+        // Left out: the picture is shown at its own size.
+      }
+    }
+    return { stored: smaller.length ? { ...stored, smaller } : stored, webp };
+  } finally {
+    bitmap.close();
+  }
 }
 
 /** The picture input for one field of `model`, bound for the form's `input` hook. */
@@ -74,14 +124,7 @@ export function PictureInput({
     setBusy(true);
     setFailure(undefined);
     try {
-      const webp = await toWebp(file);
-      const response = await fetch(`/files/${model}/${field}`, {
-        method: "POST",
-        headers: { "Content-Type": "image/webp" },
-        body: webp,
-      });
-      if (!response.ok) throw new Error((await response.text()) || w.pictureRefused);
-      const stored = (await response.json()) as Omit<PictureValue, "alt">;
+      const { stored, webp } = await sendPicture(model, field, file);
       if (preview) URL.revokeObjectURL(preview);
       setPreview(URL.createObjectURL(webp));
       onChange(JSON.stringify({ ...stored, alt: parse(latest.current)?.alt ?? "" }));
@@ -229,14 +272,7 @@ export function PicturesInput({
     setFailure(undefined);
     try {
       for (const file of [...files].slice(0, max - latest.current.length)) {
-        const webp = await toWebp(file);
-        const response = await fetch(`/files/${model}/${field}`, {
-          method: "POST",
-          headers: { "Content-Type": "image/webp" },
-          body: webp,
-        });
-        if (!response.ok) throw new Error((await response.text()) || w.pictureRefused);
-        const saved = (await response.json()) as Omit<PictureValue, "alt">;
+        const { stored: saved, webp } = await sendPicture(model, field, file);
         previews.set(saved.file, URL.createObjectURL(webp));
         latest.current = [...latest.current, { ...saved, alt: "" }];
         set(latest.current);
