@@ -11,6 +11,7 @@ import {
   useSyncExternalStore,
 } from "react";
 import {
+  type ApplyVersionResult,
   type Assumption,
   api,
   EXPECT_RELOAD,
@@ -39,7 +40,7 @@ import { doneKey, guideOff, presentedKey, TOURS } from "./guide";
 import { entryText, grouped, line } from "./history";
 import { logStore } from "./logs";
 import { Making } from "./Making";
-import { OldVersion, type OpenOld, openOldTab } from "./OldVersion";
+import { ApplyVersionDialog, OldVersion, type OpenOld, openOldTab } from "./OldVersion";
 import { OutboxDialog } from "./Outbox";
 import { PeoplePanel } from "./People";
 import { usePan } from "./pan";
@@ -430,6 +431,12 @@ export function App() {
   const [opening, setOpening] = useState<string>();
   const [closingOld, setClosingOld] = useState(false);
   const [oldCloseError, setOldCloseError] = useState<string>();
+  const [versionApply, setVersionApply] = useState<{
+    commit: string;
+    revision: string;
+    result?: ApplyVersionResult;
+  }>();
+  const [applyingVersion, setApplyingVersion] = useState(false);
   const oldRequest = useRef<{
     result: ReturnType<typeof api.openOldVersion>;
     cancelled: boolean;
@@ -465,6 +472,9 @@ export function App() {
     }
     if (!tab.closed) tab.location.href = result.url;
     setOld({
+      commit: result.commit,
+      revision: project?.revision,
+      closeKey: result.closeKey,
       url: result.url,
       description,
       at: entry.at,
@@ -472,17 +482,23 @@ export function App() {
       pictures: result.pictures,
     });
   };
-  const backToCurrent = async () => {
+  const backToCurrent = async (closeTab = false) => {
     if (closingOld) return;
     const request = oldRequest.current;
     if (request) request.cancelled = true;
     setClosingOld(true);
     setOldCloseError(undefined);
     try {
+      if (closeTab && old?.closeKey) {
+        oldTab.current?.postMessage(
+          { type: "smithable:close-old-version", key: old.closeKey },
+          new URL(old.url).origin,
+        );
+      }
       await api.closeOldVersion();
       // The DELETE may have reached Studio before the opening request did.
       if (request && (await request.result).ok) await api.closeOldVersion();
-      if (request) oldTab.current?.close(); // This tab is still on the preparing page.
+      if (request || (closeTab && !old?.closeKey)) oldTab.current?.close();
       oldTab.current = null;
       oldRequest.current = undefined;
       setOpening(undefined);
@@ -845,6 +861,39 @@ export function App() {
       queue.current = turn.catch(() => undefined);
       return turn;
     };
+
+  const checkVersion = async (commit: string, revision: string) => {
+    const target = { commit, revision };
+    setVersionApply(target);
+    const result = await api.checkVersion(commit, revision).catch((error: Error) => ({
+      ok: false as const,
+      output: error.message,
+    }));
+    setVersionApply((open) => (open === target ? { ...open, result } : open));
+    if (!result.ok && !("plan" in result)) await catchUp();
+  };
+
+  const applyVersion = inTurn(async (commit: string, revision: string, plan: string) => {
+    setBusy(true);
+    try {
+      const result = await api.applyVersion(commit, revision, plan).catch((error: Error) => ({
+        ok: false as const,
+        output: error.message,
+      }));
+      if (!result.ok) {
+        setVersionApply({ commit, revision, result });
+        if (!("plan" in result)) await catchUp();
+        return;
+      }
+      setVersionApply(undefined);
+      if (old?.commit === commit) await backToCurrent(true);
+      await catchUp();
+      setMessage({ ok: true, text: "Applied the version.", change: true });
+    } finally {
+      setApplyingVersion(false);
+      setBusy(false);
+    }
+  });
 
   /** Applies an operation; a change that loses data first asks for confirmation. */
   const run = inTurn(
@@ -1882,6 +1931,13 @@ export function App() {
                 entries={project.trace}
                 words={words}
                 onSee={project.oldVersions ? (entry) => void seeVersion(entry) : undefined}
+                onApply={
+                  project.oldVersions && project.revision
+                    ? (entry) => {
+                        if (project.revision) void checkVersion(entry.id, project.revision);
+                      }
+                    : undefined
+                }
               />
             ) : (
               changeTrace()
@@ -2369,6 +2425,24 @@ export function App() {
           error={oldCloseError}
           onBack={() => void backToCurrent()}
           onOpenAgain={showOldTab}
+          onApply={
+            old?.revision && !closingOld
+              ? () => {
+                  if (old.revision) void checkVersion(old.commit, old.revision);
+                }
+              : undefined
+          }
+        />
+      )}
+      {versionApply && (
+        <ApplyVersionDialog
+          result={versionApply.result}
+          applying={applyingVersion}
+          onClose={() => setVersionApply(undefined)}
+          onApply={(plan) => {
+            setApplyingVersion(true);
+            void applyVersion(versionApply.commit, versionApply.revision, plan);
+          }}
         />
       )}
       {pickingLook && (

@@ -10,8 +10,9 @@ import { databasePath } from "./database.js";
 import { ensureRepository, git } from "./git.js";
 import { managedOnDisk } from "./managed.js";
 import { runOperation } from "./op.js";
+import { projectRevision } from "./project-revision.js";
 import { redo } from "./redo.js";
-import { keepAccessKeys, restore, restorePlan, versions } from "./restore.js";
+import { keepAccessKeys, planDigest, restore, restorePlan, versions } from "./restore.js";
 import { captureIo } from "./test-io.js";
 import { undoChange, undoLatest } from "./undo.js";
 
@@ -319,6 +320,77 @@ test("§4.5 a yes is bound to the plan seen: a plan that changed since is refuse
   expect(read(dir, "smithable.yml")).toContain("phone");
 });
 
+test("Studio binds Apply to the revision and plan it showed and never agrees to a loss", async () => {
+  const dir = project();
+  const older = commitEdit(dir, "smithable.auth.yml", auth("  support:\n    pages: [customers]\n"));
+  commitEdit(dir, "smithable.auth.yml", auth());
+  await op(dir, "addField", { model: "Customer", field: "level", type: "int" });
+  database(
+    dir,
+    `CREATE TABLE customers (id integer primary key, name text, email text, notes text, level integer);
+    INSERT INTO customers (name) VALUES ('Ann');
+    CREATE TABLE "user" (id text primary key, role text);`,
+  );
+  const revision = projectRevision(dir);
+  const io = captureIo();
+  const reviews: { output: string; plan?: string }[] = [];
+  const studio = (review: (typeof reviews)[number]) => reviews.push(review);
+  const was = state(dir);
+  expect(
+    await restore(dir, io, older, { check: true, expectedRevision: "0".repeat(64), studio }),
+  ).toBe(1);
+  expect(io.stderr).toContain("The app changed while you were looking");
+  expect(reviews).toHaveLength(0);
+  expect(await restore(dir, io, older, { check: true, expectedRevision: revision, studio })).toBe(
+    0,
+  );
+  const first = reviews.at(-1);
+  expect(first?.output).toContain("The role support comes back; nobody has it now.");
+  expect(first?.plan).toMatch(/^[0-9a-f]{12}$/);
+
+  database(dir, `INSERT INTO "user" VALUES ('u1', 'support');`);
+  expect(
+    await restore(dir, io, older, {
+      yes: true,
+      expectedRevision: revision,
+      plan: first?.plan,
+      studio,
+    }),
+  ).toBe(1);
+  expect(state(dir)).toEqual(was);
+  const changed = reviews.at(-1);
+  expect(changed?.output).toContain("The role support comes back; 1 person has it.");
+  expect(changed?.plan).toMatch(/^[0-9a-f]{12}$/);
+  expect(changed?.plan).not.toBe(first?.plan);
+
+  database(dir, "UPDATE customers SET level = 3;");
+  const lossy = restorePlan(dir, older);
+  if (typeof lossy === "string") throw new Error(lossy);
+  expect(
+    await restore(dir, io, older, {
+      yes: true,
+      expectedRevision: revision,
+      plan: planDigest(lossy),
+      studio,
+    }),
+  ).toBe(1);
+  expect(reviews.at(-1)).toEqual({
+    output: expect.stringContaining("This version has no place for: Customer · level (1 value)."),
+  });
+  expect(state(dir)).toEqual(was);
+
+  database(dir, "UPDATE customers SET level = NULL;");
+  expect(
+    await restore(dir, io, older, {
+      yes: true,
+      expectedRevision: revision,
+      plan: changed?.plan,
+      studio,
+    }),
+  ).toBe(0);
+  expect(head(dir)).not.toBe(was.head);
+}, 20_000);
+
 test("§6 undo of an apply whose database copy is gone goes forward, and says the values stay lost", async () => {
   const dir = project();
   database(
@@ -396,6 +468,14 @@ test("§8.6 each refusal leaves the folder, the database and the history as they
   expect(io.stderr).toContain("This version has no place for: Customer · level (1 value).");
   expect(io.stderr).toContain("The role support is not in this version; 2 people have it.");
   await refused("no place", b);
+  const lossy = restorePlan(dir, b);
+  if (typeof lossy === "string") throw new Error(lossy);
+  await refused("The role support is not in this version; 2 people have it.", b, {
+    yes: true,
+    expectedRevision: projectRevision(dir),
+    plan: planDigest(lossy),
+    studio: (review) => expect(review.plan).toBeUndefined(),
+  });
   // No such version.
   await refused("No version #999", "#999");
   // Uncommitted work.

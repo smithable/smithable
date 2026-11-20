@@ -97,6 +97,7 @@ import {
   specFilesOf,
   traceIdOf,
 } from "./report.js";
+import { restore } from "./restore.js";
 import { projectIndex } from "./rules.js";
 import { doorAt, projectPeople } from "./sample-people.js";
 import { sampleRunner } from "./sample-run.js";
@@ -1141,7 +1142,11 @@ export async function studio(
           let open: Awaited<ReturnType<typeof openOldVersion>>;
           try {
             // A newer request, or closing, stops this one's commands and removes its folders.
-            open = await openOldVersion(dir, commit, { lookKey, log });
+            open = await openOldVersion(dir, commit, {
+              lookKey,
+              log,
+              studioOrigin: new URL(req.headers.origin ?? `http://${req.headers.host}`).origin,
+            });
           } catch (error) {
             const message = (error as Error).message;
             return json({ ok: false, message }, message === SUPERSEDED ? 409 : 500);
@@ -1159,11 +1164,42 @@ export async function studio(
               url: address,
               data: open.data,
               pictures: open.pictures,
+              closeKey: open.closeKey,
             });
           } catch (error) {
             return json({ ok: false, message: (error as Error).message }, 500);
           }
         }
+      }
+      if (req.method === "POST" && url.pathname === "/api/apply-version") {
+        if (!oldVersions)
+          return json({ ok: false, output: "Studio cannot apply an old version here." }, 409);
+        const { commit, revision, confirm, plan } = await body();
+        if (
+          typeof commit !== "string" ||
+          !/^[0-9a-f]{40}$/.test(commit) ||
+          typeof revision !== "string" ||
+          !/^[0-9a-f]{64}$/.test(revision) ||
+          typeof confirm !== "boolean" ||
+          (confirm && (typeof plan !== "string" || !/^[0-9a-f]{12}$/.test(plan)))
+        )
+          return json({ ok: false, output: "Review the version's plan before applying it." }, 400);
+        let review: { output: string; plan?: string } | undefined;
+        const packages = installed();
+        const result = await capture((io) =>
+          restore(dir, io, commit, {
+            check: !confirm,
+            yes: confirm,
+            expectedRevision: revision,
+            ...(confirm && typeof plan === "string" ? { plan } : {}),
+            studio: (value) => {
+              review = value;
+            },
+          }),
+        );
+        if (review) return json({ ok: false, ...review, changed: confirm });
+        if (result.ok && confirm) restored(packages);
+        return json(result);
       }
       if (url.pathname === "/api/release-review" && req.method === "GET")
         return json(releaseReview(dir, { hosted: Boolean(options.home || hostedLevel()) }));

@@ -32,20 +32,26 @@ export async function checkStudioHistory(page, phone, evidence) {
   }
 
   // Hosted Studio can list its history but its existing old-version server is local only.
-  await page.route("**/api/project", async (route) => {
-    const response = await route.fetch();
-    const state = await response.json();
-    delete state.oldVersions;
-    await route.fulfill({ response, json: state });
-  });
+  const hosted = await page.evaluate(async () => (await fetch("/api/project")).json());
+  delete hosted.oldVersions;
+  await page.route("**/api/project", (route) => route.fulfill({ json: hosted }));
   await page.reload();
   await (await toolbarAction(page, "Changes")).click();
   await rows.nth(1).getByText("Preview unavailable here", { exact: true }).waitFor();
   assert.equal(await history.getByRole("button").count(), 0);
 
-  await page.unroute("**/api/project");
+  await page.unrouteAll({ behavior: "wait" });
   await page.reload();
   await (await toolbarAction(page, "Changes")).click();
+  const applyDialog = page.getByRole("dialog", { name: "Apply this version", exact: true });
+  await rows
+    .nth(1)
+    .getByRole("button", { name: /^Apply this version: / })
+    .click();
+  await applyDialog.getByRole("button", { name: "Apply this version", exact: true }).waitFor();
+  assert.match(await applyDialog.innerText(), /Your records stay as they are\./);
+  await applyDialog.getByRole("button", { name: "Cancel", exact: true }).click();
+  await applyDialog.waitFor({ state: "detached" });
   const previewRow = rows.nth(1).getByRole("button", { name: /^Preview / });
   const old = page.getByRole("dialog", { name: "An old version", exact: true });
   const oldVersionRoute = "**/api/old-version";
@@ -76,7 +82,6 @@ export async function checkStudioHistory(page, phone, evidence) {
     await back.waitFor({ timeout: 90000 });
     await old.getByRole("heading", { name: "Viewing an old version", exact: true }).waitFor();
     assert.equal(await old.evaluate((dialog) => dialog.matches(":modal")), true);
-    assert.equal(await old.getByRole("button", { name: /apply/i }).count(), 0);
     await page.keyboard.press("Control+z");
     await page.keyboard.press("Control+Shift+z");
 
@@ -112,11 +117,51 @@ export async function checkStudioHistory(page, phone, evidence) {
       .getByText("Studio could not close the old version. Try again.", { exact: true })
       .waitFor();
     await page.unroute(oldVersionRoute);
-    await back.click();
-    await old.waitFor({ state: "detached" });
-    await changes.getByRole("button", { name: "Close", exact: true }).click();
-    await liveHeading.waitFor();
     assert.deepEqual(await project(), before);
+
+    // The first review has a stale digest. The real host must return the plan again, and the
+    // next click must send the replacement digest, not the one displayed by the prior review.
+    const applyRoute = "**/api/apply-version";
+    const sent = [];
+    await page.route(applyRoute, async (route) => {
+      const request = route.request().postDataJSON();
+      const response = await route.fetch();
+      if (request.confirm) {
+        sent.push(request);
+        await route.fulfill({ response });
+        return;
+      }
+      const review = await response.json();
+      assert.match(review.plan, /^[0-9a-f]{12}$/);
+      await route.fulfill({ response, json: { ...review, plan: "000000000000" } });
+    });
+    await page.bringToFront();
+    await old.getByRole("button", { name: "Apply this version", exact: true }).click();
+    const apply = applyDialog.getByRole("button", { name: "Apply this version", exact: true });
+    try {
+      await apply.click();
+      await applyDialog.getByRole("alert").waitFor();
+      assert.equal(sent[0].revision, before.revision);
+      assert.equal(sent[0].plan, "000000000000");
+      assert.deepEqual(await project(), before);
+      const closed = oldTab.waitForEvent("close");
+      await apply.click();
+      await applyDialog.waitFor({ state: "detached" });
+      await closed;
+      assert.equal(sent[1].revision, before.revision);
+      assert.match(sent[1].plan, /^[0-9a-f]{12}$/);
+      assert.notEqual(sent[1].plan, sent[0].plan);
+    } finally {
+      await page.unroute(applyRoute);
+    }
+    await old.waitFor({ state: "detached" });
+    assert.ok(oldTab.isClosed());
+    await rows.first().getByText("Current version", { exact: true }).waitFor();
+    assert.match((await project()).trace[0].description, /Applied the version from/);
+    await changes.getByRole("button", { name: "Close", exact: true }).click();
+    await preview.getByRole("heading", { name: "Edited in Code", exact: true }).waitFor();
+    await page.getByRole("button", { name: "Undo this change", exact: true }).click();
+    await liveHeading.waitFor();
     assert.deepEqual(
       await page.evaluate(async () => await (await fetch("/api/old-version")).json()),
       {},
