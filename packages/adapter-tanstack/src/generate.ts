@@ -427,8 +427,12 @@ if (typeof document !== "undefined") languageFrom(() => shown);`,
     if (!shown) return;
 `,
     ],
-    // The recipients are the group's (above); the mail and the push are sent inside its language.
-    ["    const to = entry.to(tx, record);\n", ""],
+    // The recipients are the group's (above), never none; the mail and the push are sent inside
+    // its language. A `continue` would now be inside the callback.
+    [
+      "    // Whom it goes to, first: with nobody to send to, a value that cannot be worked out refuses nothing.\n    const to = entry.to(tx, record);\n    if (!to.length) continue;\n",
+      "",
+    ],
     [
       /(\n {4}(?:if \(entry\.mail !== false\) )?queueMail\(tx, viewer, happening, to, entry\.when === "created"\);)/,
       "$1\n      });",

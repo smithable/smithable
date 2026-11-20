@@ -501,6 +501,10 @@ test("in an app of several languages each person's own is kept, and their mails 
   const outgoing = file("src/generated/outgoing.server.ts");
   expect(outgoing).toContain("language: schema.user.language");
   expect(outgoing).toContain("speaking(spoken, () => {");
+  // Inside the language's callback a `continue` does not parse (the app's every page failed).
+  const inside = outgoing.split("speaking(spoken, () => {")[1]?.split("\n      });")[0] ?? "";
+  expect(inside).toContain("queueMail(");
+  expect(inside).not.toMatch(/\bcontinue\b/);
   // An app in one language is as it was: no column, no switch to keep.
   const one = generateApp(ir(path, examples[path] as string), { ...options, auth });
   expect(one.find((f) => f.path === "src/db/schema.ts")?.content).not.toContain("language: text()");
