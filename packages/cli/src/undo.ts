@@ -2,19 +2,11 @@ import { spawnSync } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import {
-  type Diagnostic,
-  formatDiagnostic,
-  type SpecIR,
-  validateAuth,
-  validateContent,
-  validateContext,
-  validateSpec,
-  validateUx,
-} from "@smithable/core";
-import { restoreDatabase } from "./database.js";
+import { validateSpec } from "@smithable/core";
+import { databasePath, hasSnapshot, restoreDatabase } from "./database.js";
 import { git, nextChangeNumber, ownRepository, trailer, uncommittedRefusal } from "./git.js";
 import { exec, type Io } from "./io.js";
+import { isManaged, showAt, validateManaged } from "./managed.js";
 import { type FilesPlan, lostFields, runFilesChange } from "./op.js";
 import { loadPlugins } from "./plugins.js";
 import { ProjectBusyError, ProjectLockError, withProjectMutationSync } from "./project-mutation.js";
@@ -29,6 +21,10 @@ interface Change {
   /** Without "smithable: ". */
   subject: string;
   snapshot?: string;
+  /** The operation it recorded (Smithable-Op). */
+  op?: string;
+  /** It applied a version that deleted values (its recorded `lost`). */
+  lost?: true;
 }
 
 /** The changes that are a person's own and not undone, newest first. */
@@ -46,10 +42,16 @@ export function undoableChanges(dir: string): Change[] {
     // A change that set the project up for its owner (op --setup) is not the owner's to undo.
     if (reverted.has(sha) || trailer(body, "Smithable-Setup")) continue;
     const snapshot = trailer(body, "Smithable-Snapshot");
+    let recorded: { op?: string; args?: { lost?: unknown } } = {};
+    try {
+      recorded = JSON.parse(trailer(body, "Smithable-Op") ?? "{}");
+    } catch {}
     changes.push({
       sha,
       subject: subject.slice(11),
       ...(snapshot && snapshot !== "none" ? { snapshot } : {}),
+      ...(recorded.op ? { op: recorded.op } : {}),
+      ...(Array.isArray(recorded.args?.lost) && recorded.args.lost.length ? { lost: true } : {}),
     });
   }
   return changes;
@@ -127,18 +129,10 @@ export async function undoNumbers(
   return 0;
 }
 
-const EDITABLE: { key: keyof FilesPlan["files"]; path: string }[] = [
-  { key: "spec", path: "smithable.yml" },
-  { key: "auth", path: "smithable.auth.yml" },
-  { key: "content", path: "smithable.content.yml" },
-  { key: "ux", path: "smithable.ux.yml" },
-  { key: "context", path: "smithable.context.yml" },
-];
-
 /**
  * Undoes one change by its id, not only the newest (docs/design/studio-v3.md §3). The newest is
  * undone as `undo` does, its commit reverted and the database snapshot put back. An earlier one
- * is reversed as a new change: its spec files are merged back three ways (revertedFiles), only
+ * is reversed as a new change: its managed files (managed.ts) are merged back three ways (revertedFiles), only
  * they, and go through the ordinary pipeline (validated, regenerated, migrated forward,
  * committed) once two checks pass: the merge applies (a later change did not edit the same
  * part), and the spec after it is valid, which is
@@ -169,7 +163,8 @@ export async function undoChange(
     io.err(`No change ${change} to undo: it is not in the history, or it is undone already.\n`);
     return 1;
   }
-  if (target.sha === changes[0]?.sha) {
+  const forward = forwardOnly(dir, target);
+  if (target.sha === changes[0]?.sha && !forward) {
     if (flags.check) {
       io.out(`Safe to undo "${target.subject}": it is the newest change.\n`);
       return 0;
@@ -188,19 +183,24 @@ export async function undoChange(
     return 1;
   }
   const files = reverted.files;
-  if (files.spec === null) {
+  if (forward && target.lost)
+    io.out(
+      "The values deleted when this version was applied do not come back: the copy of the database from before it is gone.\n",
+    );
+  if (files["smithable.yml"] === null) {
     io.err(`Cannot undo "${target.subject}": it made the app itself.\n`);
     return 1;
   }
   // The dependency check: the spec without the change, valid or not.
-  const problems = check(dir, files);
+  const problems = validateManaged(dir, files);
   if (problems.length) {
     io.err(
       `Cannot undo "${target.subject}": later changes depend on it.\n${problems.map((p) => `  ${p}`).join("\n")}\n`,
     );
     return 1;
   }
-  const lost = files.spec === undefined ? [] : lostFieldsOf(dir, files.spec);
+  const spec = files["smithable.yml"];
+  const lost = spec === undefined || spec === null ? [] : lostFieldsOf(dir, spec);
   if (flags.check) {
     io.out(
       `Safe to undo "${target.subject}".${lost.length ? ` It deletes the ${lost.join(", ")} ${lost.length === 1 ? "column" : "columns"} and the values in ${lost.length === 1 ? "it" : "them"}, so it asks first.` : ""}\n`,
@@ -222,7 +222,7 @@ export async function undoChange(
 }
 
 /**
- * The spec files with one change taken out, or the file a later change edited in the same place.
+ * The managed files with one change taken out, or the file a later change edited in the same place.
  * For each file: as the change left it (the base), as it was before the change (the other side)
  * and as it is now (ours), merged three ways by git; a file the change added goes only when
  * nothing edited it since, one the change removed comes back only when nothing re-added it.
@@ -232,23 +232,17 @@ export function revertedFiles(
   sha: string,
 ): { files: FilesPlan["files"] } | { conflict: string } {
   const files: FilesPlan["files"] = {};
-  const show = (rev: string, path: string) => {
-    const r = spawnSync("git", ["show", `${rev}:${path}`], {
-      env: childEnv(),
-      cwd: dir,
-      encoding: "utf8",
-      stdio: ["ignore", "pipe", "ignore"],
-    });
-    return r.status === 0 ? r.stdout : null;
-  };
-  for (const { key, path } of EDITABLE) {
-    const base = show(sha, path);
-    const other = show(`${sha}^`, path);
+  const touched = git(dir, ["diff-tree", "--no-commit-id", "-r", "--name-only", "--root", sha])
+    .out.split("\n")
+    .filter(isManaged);
+  for (const path of touched) {
+    const base = showAt(dir, sha, path);
+    const other = showAt(dir, `${sha}^`, path);
     if (base === other) continue;
     const at = join(dir, path);
     const ours = existsSync(at) ? readFileSync(at, "utf8") : null;
     if (ours === base) {
-      files[key] = other;
+      files[path] = other;
       continue;
     }
     if (base === null || other === null || ours === null) return { conflict: path };
@@ -265,56 +259,12 @@ export function revertedFiles(
         encoding: "utf8",
       });
       if (merged.status !== 0) return { conflict: path };
-      files[key] = merged.stdout;
+      files[path] = merged.stdout;
     } finally {
       if (scratch) rmSync(scratch, { recursive: true, force: true });
     }
   }
   return { files };
-}
-
-/**
- * The errors the spec files would have with the change taken out, each as a line. Every file is
- * checked, the reverted text where the change touched it and the file as it is otherwise: a
- * later change to another file may still need what goes (a grant on a kind of record).
- */
-function check(dir: string, files: FilesPlan["files"]): string[] {
-  const plugins = loadPlugins(dir);
-  const errors = (ds: Diagnostic[]) =>
-    ds.filter((d) => d.severity === "error").map((d) => formatDiagnostic(d));
-  const text = (key: keyof FilesPlan["files"], path: string): string | undefined => {
-    if (key in files) return files[key] ?? undefined;
-    const at = join(dir, path);
-    return existsSync(at) ? readFileSync(at, "utf8") : undefined;
-  };
-  const spec = validateSpec(
-    { path: "smithable.yml", text: text("spec", "smithable.yml") ?? "" },
-    { plugins },
-  );
-  const problems = errors(spec.diagnostics);
-  const ir = spec.ir as SpecIR | undefined;
-  if (!ir) return problems;
-  const auth = text("auth", "smithable.auth.yml");
-  if (auth !== undefined)
-    problems.push(
-      ...errors(validateAuth({ path: "smithable.auth.yml", text: auth }, ir).diagnostics),
-    );
-  const content = text("content", "smithable.content.yml");
-  if (content !== undefined)
-    problems.push(
-      ...errors(validateContent({ path: "smithable.content.yml", text: content }, ir).diagnostics),
-    );
-  const ux = text("ux", "smithable.ux.yml");
-  if (ux !== undefined)
-    problems.push(
-      ...errors(
-        validateUx({ path: "smithable.ux.yml", text: ux }, ir, projectThemes(dir)).diagnostics,
-      ),
-    );
-  const context = text("context", "smithable.context.yml");
-  if (context !== undefined)
-    problems.push(...errors(validateContext({ path: "smithable.context.yml", text: context })));
-  return problems;
 }
 
 /** The stored fields the project has now that the text has not. */
@@ -326,6 +276,33 @@ function lostFieldsOf(dir: string, text: string): string[] {
   ).ir;
   const then = validateSpec({ path: "smithable.yml", text }, { plugins }).ir;
   return now && then ? lostFields(now, then) : [];
+}
+
+/**
+ * Whether the change is taken out as a new change even when it is the newest: a version applied
+ * whose copy of the database is gone, or that had none to copy and has a database now
+ * (apply-old-version.md §6). Reverting its commit would put
+ * back the code and migrations from before it over a database migrated past them.
+ */
+function forwardOnly(dir: string, change: Change): boolean {
+  if (change.op !== "restoreVersion") return false;
+  // No database when it was applied, and one since: it was made on the applied schema.
+  if (change.snapshot === undefined) return existsSync(databasePath(dir));
+  return !hasSnapshot(dir, change.snapshot);
+}
+
+/**
+ * `smithable undo` with nothing named: the newest change, as `undo` takes it back, or forward
+ * when it applied a version whose database copy is gone (forwardOnly).
+ */
+export async function undoLatest(
+  dir: string,
+  io: Io,
+  flags: { yes?: boolean } = {},
+): Promise<number> {
+  const newest = ownRepository(dir) ? undoableChanges(dir)[0] : undefined;
+  if (newest && forwardOnly(dir, newest)) return undoChange(dir, io, newest.sha, flags);
+  return undo(dir, io);
 }
 
 /**

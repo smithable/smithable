@@ -16,6 +16,11 @@ export { kitSummary } from "./kit-summary.js";
 export {
   choiceValueSql,
   columnOf,
+  dropTakenColumn,
+  dropTakenTables,
+  goneFirst,
+  inSnapshot,
+  inTurn,
   quoteReferences,
   renameColumnSql,
   renameInSnapshot,

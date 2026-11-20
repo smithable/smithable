@@ -3,6 +3,7 @@ import { git, ownRepository, trailer, uncommittedRefusal } from "./git.js";
 import type { Io } from "./io.js";
 import { runOperation } from "./op.js";
 import { projectRevision } from "./project-revision.js";
+import { restore } from "./restore.js";
 
 /**
  * `smithable redo`: makes again the most recent change that was undone, as long as no other
@@ -11,7 +12,11 @@ import { projectRevision } from "./project-revision.js";
  * time; the new commit names the undo it takes back (Smithable-Redo), so several undos are
  * redone in turn.
  */
-export async function redo(dir: string, io: Io): Promise<number> {
+export async function redo(
+  dir: string,
+  io: Io,
+  flags: { yes?: boolean; mcp?: boolean } = {},
+): Promise<number> {
   if (!ownRepository(dir)) {
     io.err("There is nothing to redo: this project has no history yet.\n");
     return 1;
@@ -41,6 +46,14 @@ export async function redo(dir: string, io: Io): Promise<number> {
     io.err("This change cannot be redone: make it again.\n");
     return 1;
   }
+  // An applied version is planned again against the project as it is now (apply-old-version.md
+  // §6): what it would cost may have changed since, so a loss or a role people hold asks again.
+  if (recorded.op === "restoreVersion" && typeof recorded.args?.version === "string")
+    return restore(dir, io, recorded.args.version, {
+      ...flags,
+      expectedRevision: projectRevision(dir),
+      trailer: `Smithable-Redo: ${target.undo}`,
+    });
   // A theme Apply's precondition and request id are the host's, not the record's: this redo is
   // a request of its own, against the source as it is now. A record from before 2026-11-03 still
   // has them among its arguments; they are left out.
