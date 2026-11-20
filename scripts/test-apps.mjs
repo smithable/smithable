@@ -7738,6 +7738,31 @@ function operationsFlow(dir) {
     if (remarks !== notes || !notes) throw new Error(JSON.stringify({ notes, remarks }));
   });
   step(
+    "apply-version: a version from before a rename gets its values back under the old name, a newer field on that name goes, and undo takes it back",
+    () => {
+      const [{ remarks }] = query(dir, "select remarks from customers where id = 1");
+      // The version just before the rename: notes, and no new notes field.
+      const version = run("git", ["rev-parse", "HEAD~1"], dir).trim();
+      expectOk(smithable(dir, "op", "addField", "Customer", "notes", "string"));
+      const check = smithable(dir, "apply-version", version.slice(0, 10), "--check");
+      if (check.code !== 0 || !check.out.includes("Customer · notes"))
+        throw new Error(`--check:\n${check.out}`);
+      expectOk(smithable(dir, "apply-version", version.slice(0, 10)));
+      const [{ notes }] = query(dir, "select notes from customers where id = 1");
+      if (notes !== remarks) throw new Error(JSON.stringify({ remarks, notes }));
+      const columns = query(dir, "select name from pragma_table_info('customers')").map(
+        (c) => c.name,
+      );
+      if (columns.includes("remarks")) throw new Error(`remarks is still a column: ${columns}`);
+      run("pnpm", ["typecheck"], dir);
+      expectOk(smithable(dir, "undo"));
+      const back = query(dir, "select remarks, notes from customers where id = 1")[0];
+      if (back.remarks !== remarks) throw new Error(JSON.stringify(back));
+      expectOk(smithable(dir, "undo"));
+      if (run("git", ["status", "--porcelain"], dir).trim()) throw new Error("undo left changes");
+    },
+  );
+  step(
     "op renameField on a reference keeps every link, and flags custom code using the old name",
     () => {
       const before = query(dir, "select id, customer_id from follow_ups order by id");

@@ -845,7 +845,7 @@ async function applyAndCheckpoint(
       name === "applyTheme" && flags.requestId
         ? `Smithable-Apply: ${JSON.stringify({ requestId: flags.requestId, revision: applyBaseRevision })}\n`
         : "";
-    const message = `${plan ? plan.subject : `smithable: ${result.description}`}\n\n${plan ? `${plan.body}\n` : ""}Smithable-Op: ${JSON.stringify({ op: recordedName, args: recorded })}\n${applied}Smithable-Snapshot: ${snapshot ? id : "none"}\nSmithable-Duration: ${Date.now() - started} ms\n${flags.setup ? "Smithable-Setup: yes\n" : ""}${flags.trailer ? `${flags.trailer}\n` : ""}`;
+    const message = `${plan ? plan.subject : `smithable: ${result.description}`}\n\n${plan ? `${plan.body}\n\n` : ""}Smithable-Op: ${JSON.stringify({ op: recordedName, args: recorded })}\n${applied}Smithable-Snapshot: ${snapshot ? id : "none"}\nSmithable-Duration: ${Date.now() - started} ms\n${flags.setup ? "Smithable-Setup: yes\n" : ""}${flags.trailer ? `${flags.trailer}\n` : ""}`;
     const commit = git(dir, ["commit", "-q", "-m", message]);
     if (!commit.ok) return fail(`Could not commit the change: ${commit.out}`);
     committed = true;

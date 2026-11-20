@@ -149,7 +149,7 @@ test("a document follows renamed fields, loses removed ones, and keeps the recor
   ]);
   // A block whose reference or list goes, goes with it; so does a list left empty.
   const issuer = project.spec
-    .replace(/^(      client: .*)$/m, "$1\n      issuer: BusinessProfile")
+    .replace(/^( {6}client: .*)$/m, "$1\n      issuer: BusinessProfile")
     .replace(
       "to: { ref: client, show: [name, address, vatNumber] }",
       "to: { ref: issuer, show: [businessName] }",

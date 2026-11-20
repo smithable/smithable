@@ -1,6 +1,7 @@
 import { expect, test } from "vitest";
 import {
   columnOf,
+  dropTakenColumn,
   quoteReferences,
   renameColumnSql,
   renameInSnapshot,
@@ -35,6 +36,28 @@ test("a rename moves the column and its indexes in the snapshot, keeping order",
   expect(Object.keys(after.tables.customers.columns)).toEqual(["id", "work_email", "phone"]);
   expect(after.tables.customers.columns.work_email).toEqual({ name: "work_email", type: "text" });
   expect(after.tables.customers.indexes.customers_email_unique.columns).toEqual(["work_email"]);
+});
+
+test("a rename onto a name a newer field took drops that column and its indexes first", () => {
+  const before = JSON.stringify({
+    tables: {
+      customers: {
+        columns: { id: { name: "id" }, phone: { name: "phone" }, mobile: { name: "mobile" } },
+        indexes: { customers_phone_unique: { columns: ["phone"] } },
+      },
+    },
+  });
+  const dropped = dropTakenColumn(before, "Customer", "phone");
+  expect(dropped?.sql).toEqual([
+    "DROP INDEX IF EXISTS `customers_phone_unique`;\n",
+    "ALTER TABLE `customers` DROP COLUMN `phone`;\n",
+  ]);
+  const after = JSON.parse(dropped?.snapshot ?? "{}");
+  expect(Object.keys(after.tables.customers.columns)).toEqual(["id", "mobile"]);
+  expect(after.tables.customers.indexes).toEqual({});
+  // A name nobody holds needs nothing dropped.
+  expect(dropTakenColumn(before, "Customer", "fax")).toBeUndefined();
+  expect(dropTakenColumn(before, "Supplier", "phone")).toBeUndefined();
 });
 
 test("a reference added to an existing table names its table quoted", () => {
