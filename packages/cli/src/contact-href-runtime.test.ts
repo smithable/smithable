@@ -201,14 +201,20 @@ test("reachable seven-digit allocator fallback remains inert after its plus is r
     (_, offset) => `+999 000 ${String(1 + offset * 2000).padStart(6, "0")}`,
   ).join("\n");
   const url = "https://business.example/";
-  const projected = projectSitePersonal({
-    facts: extractSiteFacts('<meta property="og:site_name" content="Harbour Workshop">', url),
-    images: [],
-    sourceCorpus: {
-      version: 1,
-      pages: [{ id: "p1", text, sha256: createHash("sha256").update(text).digest("hex") }],
+  // A fixed key: which number gets ordinal 0 follows the key (each is found with and without
+  // its plus). When it is "+999 000 000001" itself, about one random key in a thousand, its
+  // sample becomes "+999 001 000001" and the seven-digit fallback is never reached.
+  const projected = projectSitePersonal(
+    {
+      facts: extractSiteFacts('<meta property="og:site_name" content="Harbour Workshop">', url),
+      images: [],
+      sourceCorpus: {
+        version: 1,
+        pages: [{ id: "p1", text, sha256: createHash("sha256").update(text).digest("hex") }],
+      },
     },
-  });
+    { personalKey: "5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a" },
+  );
   const fallback = projected.personalMap.entries.find(
     (entry) => entry.kind === "phone" && entry.replacement.replace(/\D/g, "").length === 13,
   );
