@@ -238,7 +238,7 @@ export async function run(argv: string[], io: Io = processIo): Promise<number> {
   if (command === "redo")
     return redo(values.dir ?? ".", io, {
       yes: values.yes === true,
-      ...(values.plan ? { plan: values.plan } : {}),
+      ...(values.plan !== undefined ? { plan: values.plan } : {}),
     });
   if (command === "apply-version") {
     if (!args[0]) {
@@ -250,7 +250,7 @@ export async function run(argv: string[], io: Io = processIo): Promise<number> {
     return applyVersion(values.dir ?? ".", io, args[0], {
       check: values.check === true,
       yes: values.yes === true,
-      ...(values.plan ? { plan: values.plan } : {}),
+      ...(values.plan !== undefined ? { plan: values.plan } : {}),
     });
   }
   if (command === "report")

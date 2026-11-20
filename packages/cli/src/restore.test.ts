@@ -295,14 +295,17 @@ test("§4.5 a yes is bound to the plan seen: a plan that changed since is refuse
   await op(dir, "addField", { model: "Customer", field: "level", type: "int" });
   const checked = captureIo();
   expect(await restore(dir, checked, b, { check: true })).toBe(0);
-  const seen = /Plan ([0-9a-f]{12}): to apply exactly this, run again with --yes --plan \1\./.exec(
+  const seen = /Plan ([0-9a-f]{12}): to apply this plan, run again with --yes --plan \1\./.exec(
     checked.stdout,
   )?.[1];
   expect(seen).toBeDefined();
-  // Through MCP, confirm without the plan asks again and names it.
+  // Through MCP, confirm without the plan asks again and names it, with all the plan binds.
   const agent = captureIo();
   expect(await restore(dir, agent, b, { yes: true, mcp: true })).toBe(1);
   expect(agent.stderr).toContain(`confirm: true and plan: "${seen}"`);
+  expect(agent.stderr).toContain("Comes back:");
+  // An empty plan is a plan that does not match, never no plan.
+  expect(await restore(dir, captureIo(), b, { yes: true, plan: "" })).toBe(1);
   // The app changes after the plan was seen: applying the version now also brings notes back.
   await op(dir, "removeField", { model: "Customer", field: "notes" });
   const late = captureIo();

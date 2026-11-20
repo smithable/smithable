@@ -275,7 +275,7 @@ export async function restore(
     io.out(planText(plan));
     const needs = lossRefusal(plan) || plan.access.length;
     io.out(
-      `Plan ${planDigest(plan)}${needs ? `: to apply exactly this, run again with ${answer(plan, flags.mcp)}` : ""}.\n`,
+      `Plan ${planDigest(plan)}${needs ? `: to apply this plan, run again with ${answer(plan, flags.mcp)}` : ""}.\n`,
     );
     return 0;
   }
@@ -300,6 +300,11 @@ export async function restore(
             ...(plan.access.length
               ? [`This version lets more in:\n${plan.access.map((a) => `  ${a}`).join("\n")}`]
               : []),
+            // All the digest binds is said before it is asked for, not only what asks first.
+            ...(plan.comesBack.length
+              ? [`Comes back:\n${plan.comesBack.map((a) => `  ${a}`).join("\n")}`]
+              : []),
+            ...(plan.goes.length ? [`Goes:\n${plan.goes.map((a) => `  ${a}`).join("\n")}`] : []),
             ...(refusal ? [refusal] : []),
             `${plan.rolesGone.length ? "With the answer yes, those people are left without that role. " : ""}Run again with ${answer(plan, flags.mcp)} to apply it${plan.lost.length ? "; those values are deleted" : ""}.`,
           ].join("\n");
