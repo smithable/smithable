@@ -33,8 +33,9 @@ them, so they follow the theme.
   - Pictures the owner placed or changed (no record, or a hash that no longer matches; first-look §4.2).
   - Pastel, until a trial on its pictures (§8).
 - **Inside an Ink wash picture, nothing is left exactly as drawn.** Every pixel moves toward the theme,
-  and then 25% back. What keeps its character is the hues outside the wash: a face, a loaf of bread or
-  a wooden table keeps its hue, and only its lightness follows the new paper-to-ink scale. The trial
+  and then 25% back. What keeps its character is the colour outside the wash: a face, a loaf of bread
+  or a wooden table keeps its offset from the paper-to-ink scale, so it stays recognisably the same
+  colour while its base follows the new scale (not an exact hue match, §3). The trial
   included people (a yoga class, someone stretching) and food (a salad, a food truck). The faces and the
   food kept their hues in variant B, which is why B was chosen over the stronger variant A.
 
@@ -43,26 +44,37 @@ them, so they follow the theme.
 All the arithmetic is per pixel in OKLab, so lightness and hue are handled the way they are seen.
 
 1. **The picture's anchors**, read from the picture itself:
-   - The **ground** (paper) is the 90th percentile of lightness, with the median colour of the pixels
-     at or above it.
-   - The **ink** is the 2nd percentile, with the median colour of the pixels at or below it.
-   - The **wash** is the median colour of the pixels within 30° of the style's wash hue and with chroma
-     above 0.03.
+   - The **ground** (paper): its lightness is the 90th percentile of the picture's lightness; its a
+     and b are the separate medians of a and b over the pixels at or above it.
+   - The **ink**: the same at the 2nd percentile, over the pixels at or below it.
+   - The **wash**: the separate medians of L, a and b over the pixels with chroma above 0.03 whose hue
+     is within 30° of the centre of the style's 10° hue bin (for a wash hue of 300°, the bin 300–310°,
+     centre 305°).
    - The style's wash hue is a fixed property of the style, recorded in the library: 300° (violet) for
      Ink wash. It is not detected per picture. In the trial, detection picked the wrong colour for some
-     pictures: in the yoga class, 86% of the coloured area is warm (75°) and only 13% is the violet wash.
+     pictures: in the yoga class, 86% of the chroma-weighted colour is warm (about 75°) and only 13% is
+     near the violet wash.
 2. **Each pixel's place:**
-   - Its position on the ink-to-ground scale is its lightness between the two, clamped to 0–1.
-   - Its colour beyond that scale is split into the part along the wash's direction and the rest.
-   - Its wash weight is the part along the wash divided by the wash's own chroma, clamped to 0–1.
+   - Its position t on the ink-to-ground scale is its lightness between the two, clamped to 0–1.
+   - Its colour offset from the source scale at t (its a and b minus the scale's) is projected on the
+     wash's direction (the wash's a, b as a unit vector): the projection is "along".
+   - Its wash weight w is along divided by the wash's chroma, clamped to 0–1.
+   - The "rest" is the offset minus the whole projection when along is positive (even where w is
+     clamped at 1), and the whole offset when along is zero or negative.
 3. **The theme's version of the pixel** is built in four steps:
-   1. Start from the same position on the theme's foreground-to-background scale.
-   2. Mix toward the theme's primary hue, by the wash weight, at the primary's chroma.
-   3. Set the wash's lightness halfway between the scale's lightness at that point and the primary's own
-      lightness, so the wash keeps its weight on the page and does not turn into a dark button colour.
-   4. Add back the rest (the colour outside the wash), unchanged. This is "keep hues".
+   1. Start from the same position t on the theme's foreground-to-background scale (all three of L, a,
+      b mixed).
+   2. The wash's target: lightness = that scale's L at t, plus half of (the primary's L minus the theme
+      scale's L at the wash anchor's own position, which is not clamped); a and b = the primary's hue
+      at the primary's chroma. So the wash keeps its weight on the page and does not turn into a dark
+      button colour.
+   3. Mix the pixel toward that target by w, in all three of L, a and b.
+   4. Add the rest to a and b, unchanged. This is "keep hues".
 4. **25% back:** the result is mixed in OKLab with the original pixel, by 0.25 toward the original.
-5. The file is written as WebP at quality 82, the same size as the original.
+5. Back to sRGB with each channel clipped to 0–1 and rounded, then written as WebP at quality 82, the
+   same size as the original.
+
+Any change to this list, or to the wash hue, is a new rule version (§5).
 
 The **light** mode's three colours are used, whatever mode the app is shown in. The pictures are light
 drawings (the library's index marks them `tone: light`), framed on the page as they are today in dark
@@ -85,45 +97,61 @@ library version per theme. The work sits where pictures are already fetched, che
 hash and written. Core still fetches nothing, and generation still never fetches or recolours: the
 recoloured files are in the repository, and generating again gives the same app.
 
-The recolouring is deterministic. The same original bytes, the same three colours and the same rule
-version give the same file, byte for byte, with a pinned codec. So two machines placing the same
-pictures write the same files, and undo restores the old ones from the commit.
+The recolouring must be deterministic: the same original bytes, the same three colours, the same wash
+hue and the same rule version give the same file, byte for byte. That needs the whole path pinned: the
+decoder, the colour arithmetic with its clipping and rounding, and the encoder with its settings. A
+test checks it with a fixed source picture and the expected output hash, run on the CLI's and the
+daemon's path on each supported platform (§7). Undo does not depend on it: the old files are in the
+commit either way.
 
 ## 5 How a theme change picks the pictures
 
-1. `setTheme` (and `setTheme --page`, which changes only a landing page, and does not recolour) changes
-   the theme as today. When the app's `pictures.style` is a recoloured style, it reports the same
+1. `setTheme` changes the theme as today. When the app's `pictures.style` is a recoloured style, it reports the same
    `place-pictures` effect `setPictureStyle` does.
 2. The host recolours each placed library picture from its original, never from the picture already
    recoloured, so colours never drift over many changes. It takes the original from its cache of library
-   files (by SHA-256), or fetches it by the hash in `pictures.json`, or from the service's mirror in a
-   hosted workspace.
-3. **No network and no cached original:**
-   - The theme change still applies, and the pictures keep their old colours.
-   - The result says so in a line, and `smithable check` says it too, naming the command that brings
-     them in line (`setPictureStyle` with the same style).
-   - A theme change is never refused for want of the pictures.
-4. `pictures.json` gets two fields per recoloured file:
-   - `colours`: the three colours used;
-   - `rule`: `ink-wash-b25`, the rule and its version.
-
-   `check` compares them with the current theme to tell whether the pictures match it.
-5. Files the owner changed and files with no record are left alone, as in first-look §4.2. The card's
+   files, or fetches it, or from the service's mirror in a hosted workspace, always checked against the
+   original's hash.
+3. **Two hashes per file.** `pictures.json` keeps:
+   - `sha256`: the hash of the file as placed (recoloured). As in first-look §4.2–4.4 it tells an
+     owner's change, goes in the preview's address and finds the seeded sample copies to rewrite;
+   - `source`: the library original's hash, used only to find and check the original. It can also be
+     resolved from the record's library version and entry id, which never change.
+   - `colours`: the three colours used, and `rule`: `ink-wash-b25`, the rule's version, or `none`
+     with the reason for a fallback (§6).
+4. **All or nothing, as first-look §4.3.** The host recolours every picture to be changed before it
+   writes any. On success it writes the files and `pictures.json` together with the theme in the one
+   commit, and rewrites the development sample copies inside the operation's data snapshot, so undo
+   brings back the theme, the files and the records together.
+5. **An original missing (no network, not cached):**
+   - For `setTheme`: the theme alone is changed and committed; every picture, `pictures.json` and the
+     sample copies stay as they were, none half done. A theme change is never refused for want of the
+     pictures. The result says so in a line, and `smithable check` says it too: the recorded `colours`
+     differ from the theme's. It names `setPictureStyle` with the app's present style, which runs even
+     when the style key already says that style, and places and recolours.
+   - For `setPictureStyle`: refused and nothing changed, as today.
+6. `setTheme --page` changes no pictures and reports no effect.
+7. Files the owner changed and files with no record are left alone, as in first-look §4.2. The card's
    "2 of your own pictures stay" covers a theme change too.
 
 ## 6 A project's own theme, and the fallback to the original
 
 - A theme in `themes/<name>.yml`, or a theme pasted in the Look tab, gets its pictures in its own
   colours by the same rule, since only its light background, foreground and primary are read.
-- **The original is placed instead**, and the record says `rule: none`, when the recolouring would make
-  an unreadable picture or cannot run:
-  - the theme's light foreground and background differ by less than 0.40 in OKLab lightness (the
-    built-in themes differ by 0.55 or more, and the originals' own ink and paper by about 0.55);
-  - the picture's anchors cannot be read (fewer than 1% of its pixels are near the style's wash hue;
-    in that case the wash weight is zero everywhere, and only ink and paper would move);
-  - the codec fails.
+- **The original is placed instead**, and the record says `rule: none` with its reason, when the
+  recolouring would make an unreadable picture or cannot run. The cut-offs are proposals, to be
+  checked on the sheets (§7):
+  - `theme`: the theme's light foreground and background differ by less than 0.40 in OKLab lightness
+    (the built-in themes differ by 0.55 or more, and the originals' own ink and paper by about 0.55);
+  - `picture`: the picture's ink and paper differ by less than 0.20 in lightness (the rule divides by
+    that span), or fewer than 0.5% of its pixels qualify as wash. With no qualifying pixel at all the
+    wash has no colour to read; with a few, it is read from those few, which the sheets must show to be
+    good enough;
+  - `codec`: the decoder or encoder failed.
 
-  Studio's card shows "as drawn" for such a picture.
+  Studio's card shows "as drawn" for such a picture. `check` treats `theme` and `picture` for the
+  current colours as settled, and treats `codec`, or colours that differ from the theme's, as worth
+  another try.
 
 ## 7 How the look is checked
 
@@ -132,10 +160,15 @@ pictures write the same files, and undo restores the old ones from the commit.
   trial's script, made permanent, in the way `scripts/theme-sheet.mjs` works for themes. Johan looks at
   the sheets before the rule ships and after any change to the rule. A new theme in the library gets
   its sheet in the same pull request.
-- **A test for each built-in theme**, with three checks:
+- **A test for each built-in theme**, on the decoded output WebP, with ink and paper read as the
+  anchors in §3 read them:
   1. the recoloured hero's ink-to-paper lightness difference is at least 0.40;
-  2. its paper is within 0.03 lightness of the theme's background, so it does not stand out as a box;
-  3. the output's hash is stable across two runs.
+  2. its paper is within a quarter of (original paper minus theme background) plus 0.01 of the theme's
+     background in lightness: the 25% blend keeps a quarter of the original's paper, and the rest is
+     encoding;
+  3. a fixed source picture with fixed colours gives the expected output hash, on each platform (§4).
+
+  These test the rendered pictures; whether a theme gets recoloured pictures at all is §6's rule.
 - No text sits on these pictures except on a hero, where the text has its own dark scrim or the
   primary's wash, so a picture's colours do not change text contrast.
 
@@ -158,8 +191,8 @@ pictures write the same files, and undo restores the old ones from the commit.
 1. **The library:** the style's wash hue as a field of the style in the library's manifest and index
    (`washHue: 300` for Ink wash).
 2. **The host:** the rule as a small module beside `picture-style.ts`, with the codec and the tests in
-   §7. `place-pictures` recolours when the style is a recoloured one, and `pictures.json` gets `colours`
-   and `rule`.
+   §7. `place-pictures` recolours when the style is a recoloured one, and `pictures.json` gets `source`,
+   `colours` and `rule` (§5).
 3. **Core:** `setTheme` reports `place-pictures` when the app's style is recoloured. The spec reference
    and the operations page say so.
 4. **The theme sheet script** for the pictures. Johan reads the sheets before the change merges.
