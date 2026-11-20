@@ -44,11 +44,21 @@ export async function checkStudioHistory(page, phone, evidence) {
   assert.equal(await history.getByRole("button").count(), 0);
 
   await page.unroute("**/api/project");
+  await page.addInitScript(() => {
+    if (window !== window.top) return;
+    window.addEventListener("message", (event) => {
+      const frame = document.querySelector('iframe[title="App preview"]');
+      if (
+        frame &&
+        frame.contentWindow === event.source &&
+        event.data?.source === "smithable-preview" &&
+        event.data.type === "ready"
+      )
+        frame.dataset.historyReady = "true";
+    });
+  });
   await page.reload();
   await (await toolbarAction(page, "Changes")).click();
-  await liveHeading.evaluate((node) => {
-    node.dataset.historyCheck = "live";
-  });
   const previewRow = rows.nth(1).getByRole("button", { name: /^Preview / });
   const old = page.getByRole("dialog", { name: "An old version", exact: true });
   const oldVersionRoute = "**/api/old-version";
@@ -67,6 +77,11 @@ export async function checkStudioHistory(page, phone, evidence) {
   await temporaryTab.close();
   await page.unroute(oldVersionRoute);
 
+  await page.locator('iframe[title="App preview"][data-history-ready="true"]').waitFor();
+  // A document marker survives React hydration, but disappears if the live iframe reloads.
+  await liveHeading.evaluate((node) => {
+    node.ownerDocument.defaultView.historyPreviewCheck = "live";
+  });
   const openTab = page.context().waitForEvent("page");
   await previewRow.click();
   const oldTab = await openTab;
@@ -114,7 +129,10 @@ export async function checkStudioHistory(page, phone, evidence) {
     await back.click();
     await old.waitFor({ state: "detached" });
     await changes.getByRole("button", { name: "Close", exact: true }).click();
-    assert.equal(await liveHeading.getAttribute("data-history-check"), "live");
+    assert.equal(
+      await liveHeading.evaluate((node) => node.ownerDocument.defaultView.historyPreviewCheck),
+      "live",
+    );
     assert.deepEqual(await project(), before);
     assert.deepEqual(
       await page.evaluate(async () => await (await fetch("/api/old-version")).json()),
