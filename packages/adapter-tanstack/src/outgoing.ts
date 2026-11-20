@@ -740,6 +740,9 @@ export function outgoing(tx: Tx, ${mails.length ? "viewer" : "_viewer"}: Viewer 
         ? `
     const shown = SHOWN[model]?.(tx, record);
     if (!shown || !entry.to) continue;
+    // Whom it goes to, first: with nobody to send to, a value that cannot be worked out refuses nothing.
+    const to = entry.to(tx, record);
+    if (!to.length) continue;
     ${
       workers.length
         ? `const { title, labels: pageLabels, values: pageValues, ...rest } = shown;
@@ -755,8 +758,7 @@ export function outgoing(tx: Tx, ${mails.length ? "viewer" : "_viewer"}: Viewer 
     // The texts' placeholders (outgoing-templates.md §3): the record's values as its page shows them, its title and address, who made the change, and what a field was.
     const fill = (text: string, oneLine = false) =>
       fillText(text, (path) => ${views.length ? 'path === "view" ? VIEW_MARK : ' : ""}path === "title" ? title : path === "link" ? linkTo(rest.link) : path === "by" ? (viewer && !viewer.system ? viewer.name : "") : path.startsWith("before.") ? blank(prior?.values[path.slice(7)]) : blank(more?.[path] ?? values[path]), oneLine);
-    const happening: Happening = { ...rest, subject: entry.subject ? fill(entry.subject, true) : rest.subject, ...(entry.text ? { text: fill(entry.text) } : {}), fields: shownFields(labels, values, prior?.values, entry.show, entry.previous), entry: entry.name, model, record: record.id as number${views.length ? ", ...(entry.view ? { view: viewLinks(tx, viewer, { entry: entry.name, model, record: record.id as number, days: entry.view, read: () => DOCUMENTS[model]?.(tx, viewer, record.id as number) ?? null }) } : {})" : ""} };
-    const to = entry.to(tx, record);${pushes.length ? `\n    if (entry.push) queuePush(tx, viewer, ${views.length ? "entry.view ? unviewed(happening) : happening" : "happening"}, to);` : ""}${texts.length ? `\n    if (entry.sms) queueSms(tx, viewer, ${views.length ? "entry.view ? unviewed(happening) : happening" : "happening"}, to);` : ""}
+    const happening: Happening = { ...rest, subject: entry.subject ? fill(entry.subject, true) : rest.subject, ...(entry.text ? { text: fill(entry.text) } : {}), fields: shownFields(labels, values, prior?.values, entry.show, entry.previous), entry: entry.name, model, record: record.id as number${views.length ? ", ...(entry.view ? { view: viewLinks(tx, viewer, { entry: entry.name, model, record: record.id as number, days: entry.view, read: () => DOCUMENTS[model]?.(tx, viewer, record.id as number) ?? null }) } : {})" : ""} };${pushes.length ? `\n    if (entry.push) queuePush(tx, viewer, ${views.length ? "entry.view ? unviewed(happening) : happening" : "happening"}, to);` : ""}${texts.length ? `\n    if (entry.sms) queueSms(tx, viewer, ${views.length ? "entry.view ? unviewed(happening) : happening" : "happening"}, to);` : ""}
     ${pushes.length || texts.length ? "if (entry.mail !== false) " : ""}queueMail(tx, viewer, happening, to, entry.when === "created");`
         : ""
     }

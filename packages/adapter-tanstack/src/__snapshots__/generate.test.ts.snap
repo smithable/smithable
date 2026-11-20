@@ -18135,6 +18135,9 @@ export function outgoing(tx: Tx, viewer: Viewer | null, model: string, what: str
     if (entry.model !== model || !counts(entry.when, what, entry.fits, record, before, entry.fields)) continue;
     const shown = SHOWN[model]?.(tx, record);
     if (!shown || !entry.to) continue;
+    // Whom it goes to, first: with nobody to send to, a value that cannot be worked out refuses nothing.
+    const to = entry.to(tx, record);
+    if (!to.length) continue;
     const { title, labels, values, ...rest } = shown;
     const prior = before && (entry.previous || entry.before) ? SHOWN[model]?.(tx, before) : undefined;
     const more = entry.more?.(tx, record);
@@ -18142,7 +18145,6 @@ export function outgoing(tx: Tx, viewer: Viewer | null, model: string, what: str
     const fill = (text: string, oneLine = false) =>
       fillText(text, (path) => path === "title" ? title : path === "link" ? linkTo(rest.link) : path === "by" ? (viewer && !viewer.system ? viewer.name : "") : path.startsWith("before.") ? blank(prior?.values[path.slice(7)]) : blank(more?.[path] ?? values[path]), oneLine);
     const happening: Happening = { ...rest, subject: entry.subject ? fill(entry.subject, true) : rest.subject, ...(entry.text ? { text: fill(entry.text) } : {}), fields: shownFields(labels, values, prior?.values, entry.show, entry.previous), entry: entry.name, model, record: record.id as number };
-    const to = entry.to(tx, record);
     queueMail(tx, viewer, happening, to, entry.when === "created");
   }
 }
@@ -21879,7 +21881,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/generated/dev-door.server.ts": "3818e56e generated",
   "src/generated/hooks.ts": "199beb1e generated",
   "src/generated/my-time.ts": "c315432b generated",
-  "src/generated/outgoing.server.ts": "822284a5 generated",
+  "src/generated/outgoing.server.ts": "ecc3987a generated",
   "src/generated/pages.ts": "efdc3236 generated",
   "src/generated/roles.ts": "12ea3da4 generated",
   "src/generated/service.import.server.ts": "b222252e generated",
@@ -29641,6 +29643,9 @@ export function outgoing(tx: Tx, viewer: Viewer | null, model: string, what: str
     if (entry.model !== model || !counts(entry.when, what, entry.fits, record, before, entry.fields)) continue;
     const shown = SHOWN[model]?.(tx, record);
     if (!shown || !entry.to) continue;
+    // Whom it goes to, first: with nobody to send to, a value that cannot be worked out refuses nothing.
+    const to = entry.to(tx, record);
+    if (!to.length) continue;
     const { title, labels, values, ...rest } = shown;
     const prior = before && (entry.previous || entry.before) ? SHOWN[model]?.(tx, before) : undefined;
     const more = entry.more?.(tx, record);
@@ -29648,7 +29653,6 @@ export function outgoing(tx: Tx, viewer: Viewer | null, model: string, what: str
     const fill = (text: string, oneLine = false) =>
       fillText(text, (path) => path === "title" ? title : path === "link" ? linkTo(rest.link) : path === "by" ? (viewer && !viewer.system ? viewer.name : "") : path.startsWith("before.") ? blank(prior?.values[path.slice(7)]) : blank(more?.[path] ?? values[path]), oneLine);
     const happening: Happening = { ...rest, subject: entry.subject ? fill(entry.subject, true) : rest.subject, ...(entry.text ? { text: fill(entry.text) } : {}), fields: shownFields(labels, values, prior?.values, entry.show, entry.previous), entry: entry.name, model, record: record.id as number };
-    const to = entry.to(tx, record);
     queueMail(tx, viewer, happening, to, entry.when === "created");
   }
 }
@@ -37197,7 +37201,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/message.server.ts": "9269a145 generated",
   "src/generated/message.ts": "f222d475 generated",
   "src/generated/my-time.ts": "c315432b generated",
-  "src/generated/outgoing.server.ts": "b3b41ca7 generated",
+  "src/generated/outgoing.server.ts": "b61401f0 generated",
   "src/generated/pages.ts": "c08f710d generated",
   "src/generated/post.import.server.ts": "779addc6 generated",
   "src/generated/post.import.ts": "d5299966 generated",
@@ -54594,6 +54598,9 @@ export function outgoing(tx: Tx, viewer: Viewer | null, model: string, what: str
     if (entry.model !== model || !counts(entry.when, what, entry.fits, record, before, entry.fields)) continue;
     const shown = SHOWN[model]?.(tx, record);
     if (!shown || !entry.to) continue;
+    // Whom it goes to, first: with nobody to send to, a value that cannot be worked out refuses nothing.
+    const to = entry.to(tx, record);
+    if (!to.length) continue;
     const { title, labels, values, ...rest } = shown;
     const prior = before && (entry.previous || entry.before) ? SHOWN[model]?.(tx, before) : undefined;
     const more = entry.more?.(tx, record);
@@ -54601,7 +54608,6 @@ export function outgoing(tx: Tx, viewer: Viewer | null, model: string, what: str
     const fill = (text: string, oneLine = false) =>
       fillText(text, (path) => path === "title" ? title : path === "link" ? linkTo(rest.link) : path === "by" ? (viewer && !viewer.system ? viewer.name : "") : path.startsWith("before.") ? blank(prior?.values[path.slice(7)]) : blank(more?.[path] ?? values[path]), oneLine);
     const happening: Happening = { ...rest, subject: entry.subject ? fill(entry.subject, true) : rest.subject, ...(entry.text ? { text: fill(entry.text) } : {}), fields: shownFields(labels, values, prior?.values, entry.show, entry.previous), entry: entry.name, model, record: record.id as number };
-    const to = entry.to(tx, record);
     queueMail(tx, viewer, happening, to, entry.when === "created");
   }
 }
@@ -57371,7 +57377,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/generated/invoice.server.ts": "d6f05e64 generated",
   "src/generated/invoice.ts": "99ac7b80 generated",
   "src/generated/my-time.ts": "c315432b generated",
-  "src/generated/outgoing.server.ts": "85ef1ab0 generated",
+  "src/generated/outgoing.server.ts": "8a4f3007 generated",
   "src/generated/pages.ts": "97850e87 generated",
   "src/generated/roles.ts": "d284ad2a generated",
   "src/generated/site.ts": "97fb8041 generated",
@@ -62869,6 +62875,9 @@ export function outgoing(tx: Tx, viewer: Viewer | null, model: string, what: str
     }
     const shown = SHOWN[model]?.(tx, record);
     if (!shown || !entry.to) continue;
+    // Whom it goes to, first: with nobody to send to, a value that cannot be worked out refuses nothing.
+    const to = entry.to(tx, record);
+    if (!to.length) continue;
     const { title, labels, values, ...rest } = shown;
     const prior = before && (entry.previous || entry.before) ? SHOWN[model]?.(tx, before) : undefined;
     const more = entry.more?.(tx, record);
@@ -62876,7 +62885,6 @@ export function outgoing(tx: Tx, viewer: Viewer | null, model: string, what: str
     const fill = (text: string, oneLine = false) =>
       fillText(text, (path) => path === "title" ? title : path === "link" ? linkTo(rest.link) : path === "by" ? (viewer && !viewer.system ? viewer.name : "") : path.startsWith("before.") ? blank(prior?.values[path.slice(7)]) : blank(more?.[path] ?? values[path]), oneLine);
     const happening: Happening = { ...rest, subject: entry.subject ? fill(entry.subject, true) : rest.subject, ...(entry.text ? { text: fill(entry.text) } : {}), fields: shownFields(labels, values, prior?.values, entry.show, entry.previous), entry: entry.name, model, record: record.id as number };
-    const to = entry.to(tx, record);
     if (entry.push) queuePush(tx, viewer, happening, to);
     if (entry.mail !== false) queueMail(tx, viewer, happening, to, entry.when === "created");
   }
@@ -66715,7 +66723,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/generated/order.schema.ts": "cf6bfc1f generated",
   "src/generated/order.server.ts": "39ad8be0 generated",
   "src/generated/order.ts": "db4c9478 generated",
-  "src/generated/outgoing.server.ts": "4615ff1f generated",
+  "src/generated/outgoing.server.ts": "f1653b4c generated",
   "src/generated/pages.ts": "7d21451f generated",
   "src/generated/push.ts": "22b841d2 generated",
   "src/generated/roles.ts": "6b44c69a generated",
@@ -95069,6 +95077,9 @@ export function outgoing(tx: Tx, viewer: Viewer | null, model: string, what: str
     if (entry.model !== model || !counts(entry.when, what, entry.fits, record, before, entry.fields)) continue;
     const shown = SHOWN[model]?.(tx, record);
     if (!shown || !entry.to) continue;
+    // Whom it goes to, first: with nobody to send to, a value that cannot be worked out refuses nothing.
+    const to = entry.to(tx, record);
+    if (!to.length) continue;
     const { title, labels, values, ...rest } = shown;
     const prior = before && (entry.previous || entry.before) ? SHOWN[model]?.(tx, before) : undefined;
     const more = entry.more?.(tx, record);
@@ -95076,7 +95087,6 @@ export function outgoing(tx: Tx, viewer: Viewer | null, model: string, what: str
     const fill = (text: string, oneLine = false) =>
       fillText(text, (path) => path === "title" ? title : path === "link" ? linkTo(rest.link) : path === "by" ? (viewer && !viewer.system ? viewer.name : "") : path.startsWith("before.") ? blank(prior?.values[path.slice(7)]) : blank(more?.[path] ?? values[path]), oneLine);
     const happening: Happening = { ...rest, subject: entry.subject ? fill(entry.subject, true) : rest.subject, ...(entry.text ? { text: fill(entry.text) } : {}), fields: shownFields(labels, values, prior?.values, entry.show, entry.previous), entry: entry.name, model, record: record.id as number };
-    const to = entry.to(tx, record);
     queueMail(tx, viewer, happening, to, entry.when === "created");
   }
 }
@@ -98768,7 +98778,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/generated/message.server.ts": "dcd218ac generated",
   "src/generated/message.ts": "bbf512fd generated",
   "src/generated/my-time.ts": "c315432b generated",
-  "src/generated/outgoing.server.ts": "8956b93c generated",
+  "src/generated/outgoing.server.ts": "c2c3f44b generated",
   "src/generated/pages.ts": "f7a896bd generated",
   "src/generated/roles.ts": "19b94e12 generated",
   "src/generated/support-case.import.server.ts": "1d171fe5 generated",
