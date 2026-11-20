@@ -86,16 +86,27 @@ async function checkPreviewRange(page) {
   const address = await openPreviewAddress(page);
   await address.fill("/customers");
   await address.press("Enter");
-  const preview = page.frameLocator('iframe[title="App preview"]');
+  const iframe = page.locator('iframe[title="App preview"]');
+  const preview = iframe.contentFrame();
   const rows = preview.locator('tbody input[data-part="select"]').filter({ visible: true });
+  await preview.locator("body[data-hydrated=true]").waitFor({ timeout: 60000 });
   await rows.nth(2).waitFor({ timeout: 60000 });
+  const frame = await (await iframe.elementHandle()).contentFrame();
+  // The table uses display: contents here. Give the labels the padded targets of the cards.
+  await frame.addStyleTag({
+    content:
+      'tbody label:has(>input[data-part="select"]) { display: inline-flex !important; padding: 8px !important; }',
+  });
   await rows.nth(0).click();
   const label = rows.nth(2).locator("xpath=..");
-  await label.evaluate((element) => {
-    // The table uses display: contents here. Give its label a padded target like the cards.
-    element.style.display = "inline-flex";
-    element.style.padding = "8px";
-  });
+  await label.scrollIntoViewIfNeeded();
+  assert.ok(
+    await label.evaluate((element) => {
+      const rect = element.getBoundingClientRect();
+      return document.elementFromPoint(rect.left + 2, rect.top + 2) === element;
+    }),
+    "the pointer lands on the label's padding",
+  );
   await label.click({ position: { x: 2, y: 2 }, modifiers: ["Shift"] });
   assert.ok(await rows.nth(1).isChecked(), "Shift+click on label padding selected the middle row");
   assert.ok(await rows.nth(2).isChecked(), "Shift+click on label padding selected the last row");
