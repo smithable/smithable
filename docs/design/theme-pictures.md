@@ -131,7 +131,16 @@ commit either way.
      when the style key already says that style, and places and recolours.
    - For `setPictureStyle`: refused and nothing changed, as today.
 6. `setTheme --page` changes no pictures and reports no effect.
-7. Files the owner changed and files with no record are left alone, as in first-look §4.2. The card's
+7. **The time it takes.** The trial's script took about a second per picture on the development
+   machine (66 files in 66 seconds on one core, decode and encode included, in plain per-pixel
+   JavaScript), so a theme change waits some 10 seconds for a hero and ten samples. Recolouring the
+   pictures four at a time, or in tighter code, should bring that to a few seconds. Studio shows the
+   step as it does for `setPictureStyle`.
+8. **A theme tried, not yet applied:** Studio's Look tab and the theme lab show a theme before
+   `setTheme`. There the pictures stay in the present colours, and the preview says so in a line,
+   until the theme is applied. Recolouring for every theme tried would cost that time again for each
+   theme.
+9. Files the owner changed and files with no record are left alone, as in first-look §4.2. The card's
    "2 of your own pictures stay" covers a theme change too.
 
 ## 6 A project's own theme, and the fallback to the original
