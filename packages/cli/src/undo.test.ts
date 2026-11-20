@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, expect, test } from "vitest";
@@ -17,6 +17,12 @@ function history(specs: (string | Record<string, string>)[]): { dir: string; sha
     for (const [name, text] of Object.entries(files)) writeFileSync(join(dir, name), text);
   };
   write(specs[0] ?? "");
+  // A project always has its auth file (validate.ts): the plan is checked with it.
+  if (!existsSync(join(dir, "smithable.auth.yml")))
+    writeFileSync(
+      join(dir, "smithable.auth.yml"),
+      "smithableAuth: 0.1\nsignIn:\n  providers: [email]\ndefaultAccess: shared\ndefaultRole: sales\nroles:\n  admin: all\n  sales:\n    pages: [customers]\n",
+    );
   git(dir, ["add", "-A"]);
   git(dir, ["commit", "-q", "-m", "smithable: start of history"]);
   const shas: string[] = [];

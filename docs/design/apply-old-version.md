@@ -68,7 +68,7 @@ If a later step fails (writing, generating, migrating, the commit), the pipeline
 
 The commit is recorded as `restoreVersion` with the version's commit as its argument, and a subject that says what a person did: `Applied the version from 12 November, 14:02 (after "Instructors: added a phone")`.
 
-`restoreVersion` is a host operation, like `undo`: it needs the history, which only a host package reads. It is not in core's registry (an entry there needs an apply step, and this one has none that core could run). The host lists it beside `undo` and `redo` for the command line (`smithable restore <change> [--check] [--yes]`), the MCP tools and the operations page.
+`restoreVersion` is a host operation, like `undo`: it needs the history, which only a host package reads. It is not in core's registry (an entry there needs an apply step, and this one has none that core could run). The host lists it beside `undo` and `redo` for the command line (`smithable apply-version <change> [--check] [--yes]`; `restore` is taken by backups), the MCP tools (`smithable_apply_version`) and the operations page.
 
 What the build changes in the host:
 

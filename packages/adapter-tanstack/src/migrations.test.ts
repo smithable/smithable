@@ -1,6 +1,11 @@
 import { expect, test } from "vitest";
 import {
   columnOf,
+  dropTakenColumn,
+  dropTakenTables,
+  goneFirst,
+  inSnapshot,
+  inTurn,
   quoteReferences,
   renameColumnSql,
   renameInSnapshot,
@@ -35,6 +40,149 @@ test("a rename moves the column and its indexes in the snapshot, keeping order",
   expect(Object.keys(after.tables.customers.columns)).toEqual(["id", "work_email", "phone"]);
   expect(after.tables.customers.columns.work_email).toEqual({ name: "work_email", type: "text" });
   expect(after.tables.customers.indexes.customers_email_unique.columns).toEqual(["work_email"]);
+});
+
+test("a rename onto a name a newer field took drops that column and its indexes first", () => {
+  const before = JSON.stringify({
+    tables: {
+      customers: {
+        columns: { id: { name: "id" }, phone: { name: "phone" }, mobile: { name: "mobile" } },
+        indexes: { customers_phone_unique: { columns: ["phone"] } },
+      },
+    },
+  });
+  const dropped = dropTakenColumn(before, "Customer", "phone");
+  expect(dropped?.sql).toEqual([
+    "DROP INDEX IF EXISTS `customers_phone_unique`;\n",
+    "ALTER TABLE `customers` DROP COLUMN `phone`;\n",
+  ]);
+  const after = JSON.parse(dropped?.snapshot ?? "{}");
+  expect(Object.keys(after.tables.customers.columns)).toEqual(["id", "mobile"]);
+  expect(after.tables.customers.indexes).toEqual({});
+  // A name nobody holds needs nothing dropped.
+  expect(dropTakenColumn(before, "Customer", "fax")).toBeUndefined();
+  expect(dropTakenColumn(before, "Supplier", "phone")).toBeUndefined();
+});
+
+test("renames go in turn: none lands on a name another has still to leave, a swap passes through a free name", () => {
+  const chain = inTurn(
+    [
+      { model: "Customer", from: "c", to: "b" },
+      { model: "Customer", from: "b", to: "a" },
+      { model: "Order", from: "a", to: "z" },
+    ],
+    (r) => r.model,
+  );
+  expect(chain.map((r) => `${r.from}>${r.to}`)).toEqual(["b>a", "c>b", "a>z"]);
+  const swap = inTurn(
+    [
+      { model: "Customer", from: "a", to: "b" },
+      { model: "Customer", from: "b", to: "a" },
+    ],
+    (r) => r.model,
+  );
+  expect(swap.map((r) => `${r.from}>${r.to}`)).toEqual(["a>aPassing0", "b>a", "aPassing0>b"]);
+  // A passing name the schema already has is never used.
+  const around = inTurn(
+    [
+      { model: "Customer", from: "a", to: "b" },
+      { model: "Customer", from: "b", to: "a" },
+    ],
+    (r) => r.model,
+    (name) => name === "aPassing0",
+  );
+  expect(around.map((r) => `${r.from}>${r.to}`)).toEqual(["a>aPassing1", "b>a", "aPassing1>b"]);
+});
+
+test("what goes is dropped first only when drizzle-kit would ask whether it was renamed", () => {
+  const table = (columns: string[], more = {}) => ({
+    columns: Object.fromEntries(columns.map((c) => [c, { name: c }])),
+    ...more,
+  });
+  const previous = JSON.stringify({
+    tables: {
+      customers: table(["id", "tier", "owner_id"], {
+        indexes: { customers_tier_idx: { columns: ["tier"] } },
+        foreignKeys: { fk: { tableTo: "users", columnsFrom: ["owner_id"] } },
+      }),
+      notes: table(["id"]),
+    },
+  });
+  // Only a column added, or only one gone: nothing to ask.
+  expect(
+    goneFirst(previous, {
+      tables: { customers: table(["id", "tier", "owner_id", "website"]), notes: table(["id"]) },
+    }),
+  ).toBeUndefined();
+  expect(
+    goneFirst(previous, { tables: { customers: table(["id", "owner_id"]), notes: table(["id"]) } }),
+  ).toBeUndefined();
+  // One gone and one new in the same table: the first step drops what goes, with its index and key.
+  const settled = JSON.parse(
+    goneFirst(previous, {
+      tables: { customers: table(["id", "website"]), notes: table(["id"]) },
+    }) ?? "{}",
+  );
+  expect(Object.keys(settled.tables.customers.columns)).toEqual(["id"]);
+  expect(settled.tables.customers.indexes).toEqual({});
+  expect(settled.tables.customers.foreignKeys).toEqual({});
+  // A reference into a column that goes goes with it.
+  const into = JSON.parse(
+    goneFirst(
+      JSON.stringify({
+        tables: {
+          customers: table(["id", "code"]),
+          orders: table(["id", "customer_code"], {
+            foreignKeys: {
+              fk: { tableTo: "customers", columnsFrom: ["customer_code"], columnsTo: ["code"] },
+            },
+          }),
+        },
+      }),
+      { tables: { customers: table(["id", "label"]), orders: table(["id", "customer_code"]) } },
+    ) ?? "{}",
+  );
+  expect(into.tables.orders.foreignKeys).toEqual({});
+  // A table gone and another new.
+  const tables = JSON.parse(
+    goneFirst(previous, {
+      tables: { customers: table(["id", "tier", "owner_id"]), memos: table(["id"]) },
+    }) ?? "{}",
+  );
+  expect(Object.keys(tables.tables)).toEqual(["customers"]);
+});
+
+test("a model renamed back onto a name a newer model took drops the newer model's tables first", () => {
+  const snapshot = JSON.stringify({
+    tables: {
+      clients: { name: "clients", columns: { id: { name: "id" } } },
+      customers: { name: "customers", columns: { id: { name: "id" } } },
+      customers_reads: { name: "customers_reads", columns: { id: { name: "id" } } },
+      orders: {
+        name: "orders",
+        columns: { id: { name: "id" }, customer_id: { name: "customer_id" } },
+        foreignKeys: {
+          fk: { tableTo: "customers", columnsFrom: ["customer_id"], columnsTo: ["id"] },
+        },
+      },
+    },
+  });
+  const dropped = JSON.parse(dropTakenTables(snapshot, "Client", "Customer") ?? "{}");
+  // The newer model's tables, the kit's beside it too.
+  expect(Object.keys(dropped.tables)).toEqual(["clients", "orders"]);
+  expect(dropped.tables.orders.foreignKeys).toEqual({});
+  expect(dropTakenTables(snapshot, "Client", "Buyer")).toBeUndefined();
+});
+
+test("a model's passing name is taken while any of its tables is there, the kit's beside it too", () => {
+  const snapshot = JSON.stringify({
+    tables: {
+      customers_reads: { name: "customers_reads", columns: { id: { name: "id" } } },
+    },
+  });
+  expect(inSnapshot(snapshot, "Customer")).toBe(true);
+  expect(inSnapshot(snapshot, "Client")).toBe(false);
+  expect(inSnapshot(snapshot, "Customer", "id")).toBe(false);
 });
 
 test("a reference added to an existing table names its table quoted", () => {

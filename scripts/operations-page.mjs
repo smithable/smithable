@@ -151,5 +151,21 @@ export function operationsPage(root) {
 Every change to an app goes through an operation: it checks the change, edits the spec files, regenerates the code, migrates the database and commits a checkpoint, so \`smithable undo\` takes it back. This page is generated from the operations themselves (${OPERATIONS.length} of them), so it matches the Smithable it was built with. Run one with \`smithable op <name> …\`; \`smithable op <name> --help\` shows the same, and \`smithable mcp\` offers them as tools to AI agents. [Change an app without writing code](change.md) walks through five of them.
 
 ${groups.map(([name, ops]) => `## ${name}\n\n${ops.map(entry).join("\n\n")}`).join("\n\n")}
+
+## History
+
+These read the app's history, so the command line, Studio and \`smithable mcp\` offer them, not \`smithable op\`.
+
+### undo
+
+\`smithable undo [<number> | --change <id>] [--check] [--yes]\` takes a change back: the newest with its records, an earlier one as a new change. MCP: \`smithable_undo\`.
+
+### redo
+
+\`smithable redo [--yes]\` makes again the last change undone, until another change is made.
+
+### apply-version
+
+\`smithable apply-version <change> [--check] [--yes]\` applies an earlier version: the app's definition as it was after that change, as a new change that Undo takes back. Sign-in, admins and the API stay as they are today. \`--check\` says what it would do, who could see more first, and changes nothing. Values with no place in the version, or a role people hold, are refused until \`--yes\`. MCP: \`smithable_apply_version\`.
 `;
 }

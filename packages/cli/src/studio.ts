@@ -108,7 +108,7 @@ import {
   stylePreview,
 } from "./studio-picture-styles.js";
 import { translate } from "./translate.js";
-import { undo, undoChange } from "./undo.js";
+import { undo, undoChange, undoLatest } from "./undo.js";
 import { loadSpec, projectTranslations } from "./validate.js";
 import { countConsequences, customUsers, environment, readKept, verify } from "./verify.js";
 import { warmPreview } from "./warm.js";
@@ -1888,7 +1888,7 @@ export async function studio(
           }
           return json({ ...result, needsConfirm });
         }
-        const result = await capture((io) => undo(dir, io));
+        const result = await capture((io) => undoLatest(dir, io));
         // The database went back to its snapshot: the preview reopens it, then the result is kept.
         if (result.ok) restored(packages);
         if (result.ok) undoResult();

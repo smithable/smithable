@@ -317,9 +317,23 @@ export const COMMANDS: Command[] = [
   },
   {
     name: "redo",
-    usage: "redo",
-    text: ["Make again the last change undone, until another change is made"],
-    options: ["dir"],
+    usage: "redo [--yes]",
+    text: [
+      "Make again the last change undone, until another change is made; a version applied is",
+      "planned again and asks again when it would lose values or leave people without a role",
+    ],
+    options: ["yes", "dir"],
+  },
+  {
+    name: "apply-version",
+    usage: "apply-version <change> [--check] [--yes]",
+    text: [
+      "Apply an earlier version: the app's definition as it was after that change (a number or",
+      "an id from the history), as a new change; sign-in, admins and the API stay as today.",
+      "--check says what it would do (access first) and changes nothing; --yes accepts values",
+      "deleted or a role taken from people",
+    ],
+    options: ["check", "yes", "dir"],
   },
   {
     name: "report",

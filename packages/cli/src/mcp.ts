@@ -19,9 +19,10 @@ import { describe, TEST_ARGS } from "./inspect.js";
 import { type Io, keepStdoutForProtocol } from "./io.js";
 import { runOperation } from "./op.js";
 import { loadPlugins } from "./plugins.js";
+import { restore } from "./restore.js";
 import { projectIndex } from "./rules.js";
 import { childEnv } from "./secrets.js";
-import { undo } from "./undo.js";
+import { undoLatest } from "./undo.js";
 import { loadSpec } from "./validate.js";
 import { verify } from "./verify.js";
 import { VERSION } from "./version.js";
@@ -219,7 +220,31 @@ function tools(dir: string): Tool[] {
       name: "smithable_undo",
       description: "Undoes the last operation: the spec, the code and the development database.",
       inputSchema: noInput,
-      run: (_, io) => undo(dir, io),
+      run: (_, io) => undoLatest(dir, io),
+    },
+    {
+      name: "smithable_apply_version",
+      description:
+        "Applies an earlier version of the app's definition (a change number or id from the history) as a new change; sign-in, admins and the API stay as today. With check, only says what it would do. Values with no place in the version, or a role people hold, are refused until confirmed.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          change: { type: "string", description: "The version: a change number or a commit id." },
+          check: { type: "boolean", description: "Only say what applying it would do." },
+          confirm: {
+            type: "boolean",
+            description:
+              "Only after the user agreed: confirms deleting values or taking a role from people, when a first call said so.",
+          },
+        },
+        required: ["change"],
+      },
+      run: ({ change, check, confirm }, io) =>
+        restore(dir, io, String(change), {
+          check: check === true,
+          yes: confirm === true,
+          mcp: true,
+        }),
     },
   ];
 }
