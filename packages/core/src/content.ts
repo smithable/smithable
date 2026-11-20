@@ -911,7 +911,7 @@ function readPicture(
   );
   const width = own && readWidths(ctx, own.value, where, false)?.[0];
   const widths = copies && readWidths(ctx, copies.value, where, true);
-  // The file itself is the widest offered, or a phone would load the smallest enlargement.
+  // The file itself is always offered, or a phone would load the smallest enlargement.
   const misfit =
     widths &&
     (!width
