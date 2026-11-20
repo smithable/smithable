@@ -335,7 +335,21 @@ function recordedRenames(dir: string, version: string, today: SpecIR, then: Spec
   const fields = new Map<string, string | undefined>(
     then.models.flatMap((m) => m.fields.map((f) => [`${m.name}\x1f${f.name}`, f.name] as const)),
   );
-  const rename = (op: string | undefined, args: Record<string, unknown>) => {
+  const rename = (op: string | undefined, args: Record<string, unknown>, back = false) => {
+    // A removal ends an identity at once, so a newer one on the name in the same commit is another.
+    if (back && op === "addModel" && typeof args.model === "string") {
+      for (const [name, current] of models) if (current === args.model) models.set(name, undefined);
+    }
+    if (
+      ((back && op === "addField") || (!back && op === "removeField")) &&
+      typeof args.model === "string" &&
+      typeof args.field === "string"
+    ) {
+      const owner = [...models].find(([, current]) => current === args.model)?.[0];
+      for (const [key, current] of fields)
+        if (owner && key.startsWith(`${owner}\x1f`) && current === args.field)
+          fields.set(key, undefined);
+    }
     if (op === "renameModel" && typeof args.from === "string" && typeof args.to === "string") {
       for (const [name, current] of models) if (current === args.from) models.set(name, args.to);
     }
@@ -352,7 +366,9 @@ function recordedRenames(dir: string, version: string, today: SpecIR, then: Spec
     }
   };
   // A commit's recorded steps, in order: a batch's operations, an applied version's renames.
-  const steps = (message: string): { op?: string; args: Record<string, unknown> }[] => {
+  const steps = (
+    message: string,
+  ): { op?: string; args: Record<string, unknown>; back?: boolean }[] => {
     let recorded: { op?: string; args?: Record<string, unknown> } = {};
     try {
       recorded = JSON.parse(trailer(message, "Smithable-Op") ?? "{}");
@@ -381,20 +397,29 @@ function recordedRenames(dir: string, version: string, today: SpecIR, then: Spec
     if (!reverted?.ok) return undefined;
     return effect(reverted.out, depth + 1)
       ?.reverse()
-      .map((step) => ({ ...step, args: { ...step.args, from: step.args.to, to: step.args.from } }));
+      .map((step) => ({
+        ...step,
+        back: !step.back,
+        args: { ...step.args, from: step.args.to, to: step.args.from },
+      }));
   };
-  // The models and their fields as a commit left its spec; undefined when it cannot be read.
+  // The models and their fields as a commit left its spec; undefined when it cannot be read or
+  // is not a map of models each with a map of fields.
   const shapeAt = (sha: string): Map<string, Set<string>> | undefined => {
     const shown = git(dir, ["show", `${sha}:./${SPEC_FILES.spec}`]);
     if (!shown.ok) return undefined;
+    const isMap = (v: unknown): v is Record<string, unknown> =>
+      typeof v === "object" && v !== null && !Array.isArray(v);
     try {
-      const all = new YamlEditor(shown.out).get(["models"]) as Record<string, unknown> | null;
-      return new Map(
-        Object.entries(all ?? {}).map(([name, m]) => [
-          name,
-          new Set(Object.keys((m as { fields?: Record<string, unknown> } | null)?.fields ?? {})),
-        ]),
-      );
+      const all = new YamlEditor(shown.out).get(["models"]) ?? {};
+      if (!isMap(all)) return undefined;
+      const shape = new Map<string, Set<string>>();
+      for (const [name, m] of Object.entries(all)) {
+        const fields = isMap(m) ? (m.fields ?? {}) : undefined;
+        if (!isMap(fields)) return undefined;
+        shape.set(name, new Set(Object.keys(fields)));
+      }
+      return shape;
     } catch {
       return undefined;
     }
@@ -407,7 +432,7 @@ function recordedRenames(dir: string, version: string, today: SpecIR, then: Spec
     const done = effect(message);
     const shape = shapeAt(sha);
     if (!done || !shape) return { models: [], fields: [], unresolved: true };
-    for (const step of done) rename(step.op, step.args);
+    for (const step of done) rename(step.op, step.args, step.back);
     for (const [name, current] of models)
       if (current !== undefined && !shape.has(current)) models.set(name, undefined);
     for (const [key, current] of fields) {

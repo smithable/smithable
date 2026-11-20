@@ -450,3 +450,27 @@ test("§8.2 an undo whose change Git cannot find refuses: what was renamed is no
   const plan = restorePlan(dir, b);
   expect(plan).toMatch(/could not be followed/);
 });
+
+test("§8.2 a renamed field removed and added again in one batch is a newer one, not renamed back", async () => {
+  const dir = project();
+  const b = await op(dir, "addField", { model: "Customer", field: "phone", type: "string" });
+  await op(dir, "renameField", { model: "Customer", from: "phone", to: "mobile" });
+  await op(dir, "batch", {
+    operations: [
+      { op: "removeField", args: { model: "Customer", field: "mobile" } },
+      { op: "addField", args: { model: "Customer", field: "mobile", type: "string" } },
+    ],
+  });
+  const plan = restorePlan(dir, b);
+  if (typeof plan === "string") throw new Error(plan);
+  expect(plan.effects.filter((e) => e.kind === "rename-field")).toEqual([]);
+});
+
+test("§8.2 a change since the version whose models cannot be read refuses", async () => {
+  const dir = project();
+  const b = await op(dir, "addField", { model: "Customer", field: "phone", type: "string" });
+  const now = read(dir, "smithable.yml");
+  commitEdit(dir, "smithable.yml", "smithable: 0.1\napp: { name: Shop }\nmodels: []\n");
+  commitEdit(dir, "smithable.yml", now);
+  expect(restorePlan(dir, b)).toMatch(/could not be followed/);
+});
