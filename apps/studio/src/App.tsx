@@ -17,6 +17,7 @@ import {
   type Making as MakingState,
   type PeopleState,
   type Project,
+  type TraceEntry,
   waking,
 } from "./api";
 import wordmark from "./brand/wordmark.svg";
@@ -35,10 +36,10 @@ import { FeedbackDialog } from "./Feedback";
 import { FirstLook } from "./FirstLook";
 import { lookSeenKey, seenLook } from "./first-look";
 import { doneKey, guideOff, presentedKey, TOURS } from "./guide";
-import { grouped, line } from "./history";
+import { entryText, grouped, line } from "./history";
 import { logStore } from "./logs";
 import { Making } from "./Making";
-import { OLD_TAB, OldVersion, type OpenOld, openOldTab } from "./OldVersion";
+import { OldVersion, type OpenOld, openOldTab } from "./OldVersion";
 import { OutboxDialog } from "./Outbox";
 import { PeoplePanel } from "./People";
 import { usePan } from "./pan";
@@ -62,6 +63,7 @@ import { keptPage, Preview, Trace } from "./shared";
 import { useStudioQuestion } from "./studio-questions";
 import { TroubleshootDialog } from "./Troubleshoot";
 import { Button, cx, Panel, Tabs, useMedia } from "./ui";
+import { VersionHistory } from "./VersionHistory";
 import { type PresentedDiagnostic, ValidationNotice } from "./validation-notice";
 import {
   gridOf,
@@ -241,7 +243,7 @@ export function App() {
   const wakingNow = useSyncExternalStore(waking.subscribe, waking.get);
   const [outbox, setOutbox] = useState(false);
   const [help, setHelp] = useState(false);
-  const [changesOpen, setChangesOpen] = useState(false);
+  const [changesView, setChangesView] = useState<"history" | "details">();
   const [workspaceControls, setWorkspaceControls] = useState<boolean>();
   const [addressHost, setAddressHost] = useState<HTMLDivElement | null>(null);
   // The sample users' panel, their state as the daemon last said, and a page for the preview (Follow).
@@ -424,39 +426,84 @@ export function App() {
   // Smith's window on a phone: Smith or, under him, Changes, chosen by the tabs or a swipe.
   const [phoneSub, setPhoneSub] = useState<"smith" | "changes">("smith");
   const [changesAt, setChangesAt] = useState<{ id: string; at: number }>();
-  // An old version open in the preview's place (old-version-preview.md §4), or being prepared.
   const [old, setOld] = useState<OpenOld>();
   const [opening, setOpening] = useState<string>();
-  // The old version's own tab (OldVersion.tsx): opened at the click, closed by Back to now.
+  const [closingOld, setClosingOld] = useState(false);
+  const [oldCloseError, setOldCloseError] = useState<string>();
+  const oldRequest = useRef<{
+    result: ReturnType<typeof api.openOldVersion>;
+    cancelled: boolean;
+  }>(undefined);
   const oldTab = useRef<Window | null>(null);
-  const seeVersion = async (id: string) => {
-    const entry = project?.trace.find((e) => e.id === id);
-    if (!entry) return;
-    oldTab.current = openOldTab();
-    setOpening(entry.description);
-    const result = await api
-      .openOldVersion(id)
-      .catch((e: Error) => ({ ok: false as const, message: e.message }));
+  const viewingOld = old !== undefined || opening !== undefined;
+  const seeVersion = async (entry: TraceEntry) => {
+    if (viewingOld) return;
+    const tab = openOldTab();
+    if (!tab) {
+      setMessage({ ok: false, text: "Allow Studio to open a tab to preview this version." });
+      return;
+    }
+    oldTab.current = tab;
+    const description = entryText(entry, words);
+    setOpening(description);
+    const request = {
+      result: api
+        .openOldVersion(entry.id)
+        .catch((e: Error) => ({ ok: false as const, message: e.message })),
+      cancelled: false,
+    };
+    oldRequest.current = request;
+    const result = await request.result;
+    if (request.cancelled) return;
+    oldRequest.current = undefined;
     setOpening(undefined);
     if (!result.ok) {
-      oldTab.current?.close();
+      tab.close();
       oldTab.current = null;
-      return setMessage({ ok: false, text: result.message });
+      setMessage({ ok: false, text: result.message });
+      return;
     }
-    if (oldTab.current && !oldTab.current.closed) oldTab.current.location.href = result.url;
-    else oldTab.current = window.open(result.url, OLD_TAB, "noopener");
-    setOld({ url: result.url, entry, data: result.data, pictures: result.pictures });
+    if (!tab.closed) tab.location.href = result.url;
+    setOld({
+      url: result.url,
+      description,
+      at: entry.at,
+      data: result.data,
+      pictures: result.pictures,
+    });
   };
-  const backToNow = () => {
-    oldTab.current?.close();
-    oldTab.current = null;
-    setOld(undefined);
-    void api.closeOldVersion();
+  const backToCurrent = async () => {
+    if (closingOld) return;
+    const request = oldRequest.current;
+    if (request) request.cancelled = true;
+    setClosingOld(true);
+    setOldCloseError(undefined);
+    try {
+      await api.closeOldVersion();
+      // The DELETE may have reached Studio before the opening request did.
+      if (request && (await request.result).ok) await api.closeOldVersion();
+      if (request) oldTab.current?.close(); // This tab is still on the preparing page.
+      oldTab.current = null;
+      oldRequest.current = undefined;
+      setOpening(undefined);
+      setOld(undefined);
+    } catch (error) {
+      setOldCloseError((error as Error).message);
+    } finally {
+      setClosingOld(false);
+    }
   };
   const showOldTab = () => {
     if (!old) return;
-    if (oldTab.current && !oldTab.current.closed) oldTab.current.focus();
-    else window.open(old.url, OLD_TAB, "noopener");
+    if (oldTab.current && !oldTab.current.closed) {
+      oldTab.current.focus();
+      return;
+    }
+    const tab = openOldTab();
+    if (tab) {
+      oldTab.current = tab;
+      tab.location.href = old.url;
+    }
   };
   // The preview's arrows hide the window left or right of it for a while, for a bigger preview.
   // Floating, Smith leaves the first place and the preview takes the width: the window there
@@ -924,11 +971,11 @@ export function App() {
   // Ctrl+Shift+Z or Ctrl+Y makes it again.
   const undoKey = useRef(() => {});
   undoKey.current = () => {
-    if (!busy) void undo();
+    if (!busy && !viewingOld) void undo();
   };
   const redoKey = useRef(() => {});
   redoKey.current = () => {
-    if (!busy && project?.canRedo) void redo();
+    if (!busy && !viewingOld && project?.canRedo) void redo();
   };
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -1208,7 +1255,7 @@ export function App() {
     const at = id ?? project?.trace[0]?.id;
     if (at) setChangesAt({ id: at, at: Date.now() });
     pauseGuide();
-    setChangesOpen(true);
+    setChangesView("details");
   };
   if (!project) return <p className="p-6 text-sm text-quiet">Opening the project…</p>;
   const button = selectedButton(selectedPart, spec);
@@ -1450,8 +1497,11 @@ export function App() {
       </ToolbarButton>
       <ToolbarButton
         label="Changes"
-        pressed={changesOpen}
-        onClick={() => (changesOpen ? setChangesOpen(false) : showChanges())}
+        pressed={Boolean(changesView)}
+        onClick={() => {
+          pauseGuide();
+          setChangesView(changesView ? undefined : "history");
+        }}
         text={narrow}
       >
         <path d="M9 6h11M9 12h11M9 18h11M4 6h1M4 12h1M4 18h1" />
@@ -1473,7 +1523,14 @@ export function App() {
         words={words}
         plugins={spec.plugins}
         onUndo={(ids) => void undoChanges(ids)}
-        {...(project.oldVersions ? { onSee: (id: string) => void seeVersion(id) } : {})}
+        onSee={
+          project.oldVersions
+            ? (id) => {
+                const entry = project.trace.find((item) => item.id === id);
+                if (entry) void seeVersion(entry);
+              }
+            : undefined
+        }
         {...(changesAt ? { openAt: changesAt } : {})}
         onMilestone={async (id, name) => {
           const named = await api
@@ -1813,14 +1870,34 @@ export function App() {
             }}
           />
         )}
-        {changesOpen && (
+        {changesView && (
           <StudioOverlay
             name="changes"
             title="Changes"
             narrow={narrow}
-            onClose={() => setChangesOpen(false)}
+            onClose={() => setChangesView(undefined)}
           >
-            {changeTrace()}
+            {changesView === "history" ? (
+              <VersionHistory
+                entries={project.trace}
+                words={words}
+                onSee={project.oldVersions ? (entry) => void seeVersion(entry) : undefined}
+              />
+            ) : (
+              changeTrace()
+            )}
+            {project.trace.length > 0 && (
+              <div className="sticky bottom-0 border-t border-line bg-panel px-2 py-1">
+                <Button
+                  variant="ghost"
+                  onClick={() =>
+                    changesView === "history" ? showChanges() : setChangesView("history")
+                  }
+                >
+                  {changesView === "history" ? "Change details" : "Version history"}
+                </Button>
+              </div>
+            )}
           </StudioOverlay>
         )}
         {fixLine && (
@@ -2037,38 +2114,27 @@ export function App() {
                 )}
                 style={{ gridArea: area(placed("preview")) }}
               >
-                {old ? (
-                  <OldVersion open={old} onBack={backToNow} onOpenAgain={showOldTab} />
-                ) : opening ? (
-                  <p
-                    role="status"
-                    className="grid h-full place-items-center p-6 text-sm text-quiet"
-                  >
-                    Preparing the app as it was after "{opening}"…
-                  </p>
-                ) : (
-                  <Preview
-                    url={project.preview}
-                    version={version}
-                    updating={updating || busy}
-                    selecting={selecting || shiftSelect}
-                    inCode={selectingCode}
-                    addressHost={addressHost}
-                    onShowPage={openPreviewWindow}
-                    highlight={highlight}
-                    pages={pages}
-                    go={go}
-                    following={following}
-                    onFollowing={
-                      // Behavior and Layout follow the preview; Who can and Content have no page
-                      // to follow, so the link is not offered then (T907).
-                      slotOf("nocode") !== undefined &&
-                      ["behavior", "layout", "look", undefined].includes(place.nocode.sub)
-                        ? setFollowing
-                        : undefined
-                    }
-                  />
-                )}
+                <Preview
+                  url={project.preview}
+                  version={version}
+                  updating={updating || busy}
+                  selecting={selecting || shiftSelect}
+                  inCode={selectingCode}
+                  addressHost={addressHost}
+                  onShowPage={openPreviewWindow}
+                  highlight={highlight}
+                  pages={pages}
+                  go={go}
+                  following={following}
+                  onFollowing={
+                    // Behavior and Layout follow the preview; Who can and Content have no page
+                    // to follow, so the link is not offered then (T907).
+                    slotOf("nocode") !== undefined &&
+                    ["behavior", "layout", "look", undefined].includes(place.nocode.sub)
+                      ? setFollowing
+                      : undefined
+                  }
+                />
                 {!narrow && (
                   <PreviewArrows
                     left={
@@ -2250,7 +2316,7 @@ export function App() {
                             className={cx(
                               "min-h-0",
                               content === "smith+changes" ? "flex-[2] border-t" : "flex-1",
-                              changesOpen && "hidden",
+                              Boolean(changesView) && "hidden",
                             )}
                           >
                             {changeTrace()}
@@ -2294,6 +2360,16 @@ export function App() {
           </PhoneRow>
         )}
       </div>
+      {viewingOld && (
+        <OldVersion
+          description={old?.description ?? opening ?? ""}
+          open={old}
+          closing={closingOld}
+          error={oldCloseError}
+          onBack={() => void backToCurrent()}
+          onOpenAgain={showOldTab}
+        />
+      )}
       {pickingLook && (
         <FirstLook
           project={pickingLook.project}

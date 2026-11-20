@@ -1,26 +1,19 @@
-// The app as it was at an earlier change (docs/design/old-version-preview.md §4): a copy with its
-// own data, open in a tab of its own (its host name is not the preview's, and a framed page on
-// another site keeps no sign-in cookie), with Studio's bar in the preview's place. Nothing done in
-// it is kept.
-import type { TraceEntry } from "./api";
+// The isolated copy runs in its own tab so its sign-in cookie works on its separate host.
+import { useLayoutEffect, useRef } from "react";
+import { versionTime } from "./history";
 import { Button } from "./ui";
 
 export interface OpenOld {
+  description: string;
+  at: string;
   url: string;
-  entry: TraceEntry;
   data: "then" | "samples";
   pictures: "today" | "none";
 }
 
-/** The tab's name: opening it again reuses the same tab. */
-export const OLD_TAB = "smithable-old-version";
-
-/**
- * A tab for the old version, opened at the person's click (a tab opened later, after the copy is
- * ready, is a pop-up the browser blocks), with no way back to Studio's page from it.
- */
+/** Open the tab at the user's click so the browser does not block it after preparation. */
 export function openOldTab(): Window | null {
-  const tab = window.open("", OLD_TAB);
+  const tab = window.open("", "_blank");
   if (tab) {
     tab.opener = null;
     tab.document.title = "Preparing the old version…";
@@ -30,49 +23,79 @@ export function openOldTab(): Window | null {
 }
 
 export function OldVersion({
+  description,
   open,
+  closing,
+  error,
   onBack,
   onOpenAgain,
 }: {
-  open: OpenOld;
+  description: string;
+  open: OpenOld | undefined;
+  closing: boolean;
+  error: string | undefined;
   onBack: () => void;
   onOpenAgain: () => void;
 }) {
-  const when = new Date(open.entry.at).toLocaleString([], {
-    day: "numeric",
-    month: "long",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  const dialog = useRef<HTMLDialogElement>(null);
+  useLayoutEffect(() => {
+    const node = dialog.current;
+    node?.showModal();
+    return () => node?.close();
+  }, []);
+  useLayoutEffect(() => {
+    if (!closing) dialog.current?.querySelector<HTMLButtonElement>("[data-back-current]")?.focus();
+  }, [closing]);
+
   return (
-    <section aria-label="An old version" className="flex h-full flex-col">
-      <div
-        role="status"
-        className="flex items-center gap-3 border-b border-line bg-subtle px-3 py-1.5 text-sm"
-      >
-        <p className="flex-1">
-          <strong>The app as it was on {when}</strong> · after "{open.entry.description}" ·{" "}
-          {open.data === "then" ? "a copy with the data from then" : "with sample data"}
-          {open.pictures === "today"
-            ? ", today's pictures"
-            : open.pictures === "none"
-              ? ", without pictures"
-              : ""}
-          . Nothing you do there is kept.
-        </p>
-        <Button className="h-7" onClick={onBack}>
-          Back to now
+    <dialog
+      ref={dialog}
+      aria-label="An old version"
+      className="fixed inset-0 m-0 h-full max-h-none w-full max-w-none border-0 bg-panel p-0 text-fg open:flex open:flex-col"
+      onCancel={(event) => {
+        event.preventDefault();
+        if (event.cancelable && !closing) onBack();
+      }}
+      onClose={(event) => {
+        if (!event.currentTarget.open) event.currentTarget.showModal();
+        if (!closing) onBack();
+      }}
+    >
+      <header className="flex flex-wrap items-start justify-between gap-3 border-b border-line bg-subtle px-4 py-3">
+        <div className="min-w-0">
+          <h2 className="text-base font-semibold">
+            {open ? "Viewing an old version" : "Old version"}
+          </h2>
+          <p className="break-words text-sm text-muted">{description}</p>
+          {open && (
+            <time dateTime={open.at} className="text-xs text-muted">
+              {versionTime(open.at)}
+            </time>
+          )}
+        </div>
+        <Button data-back-current variant="ghost" onClick={onBack} disabled={closing}>
+          {open ? "Back to current" : "Cancel preview"}
         </Button>
-      </div>
+      </header>
       <div className="m-auto max-w-md space-y-3 p-6 text-center text-sm">
-        <p>
-          The old version is open in a tab of its own, where you can sign in and click through it.
-          Back to now removes the copy; close its tab when you are done there.
-        </p>
-        <Button variant="ghost" onClick={onOpenAgain}>
-          Show its tab
-        </Button>
+        {error && <p role="alert">{error} Try again.</p>}
+        {closing ? (
+          <p role="status">Closing the preview…</p>
+        ) : open ? (
+          <>
+            <p>
+              The old version is open in its own tab{" "}
+              {open.data === "then" ? "with a copy of the data from then" : "with sample data"}
+              {open.pictures === "today" ? " and today’s pictures" : ", without pictures"}. You can
+              sign in and try it. Back to current removes the copy and discards everything you did
+              there. Close its tab when you’re done.
+            </p>
+            <Button onClick={onOpenAgain}>Show its tab</Button>
+          </>
+        ) : (
+          <p role="status">Preparing the old version…</p>
+        )}
       </div>
-    </section>
+    </dialog>
   );
 }
