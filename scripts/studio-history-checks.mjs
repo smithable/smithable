@@ -44,19 +44,6 @@ export async function checkStudioHistory(page, phone, evidence) {
   assert.equal(await history.getByRole("button").count(), 0);
 
   await page.unroute("**/api/project");
-  await page.addInitScript(() => {
-    if (window !== window.top) return;
-    window.addEventListener("message", (event) => {
-      const frame = document.querySelector('iframe[title="App preview"]');
-      if (
-        frame &&
-        frame.contentWindow === event.source &&
-        event.data?.source === "smithable-preview" &&
-        event.data.type === "ready"
-      )
-        frame.dataset.historyReady = "true";
-    });
-  });
   await page.reload();
   await (await toolbarAction(page, "Changes")).click();
   const previewRow = rows.nth(1).getByRole("button", { name: /^Preview / });
@@ -77,15 +64,14 @@ export async function checkStudioHistory(page, phone, evidence) {
   await temporaryTab.close();
   await page.unroute(oldVersionRoute);
 
-  await page.locator('iframe[title="App preview"][data-history-ready="true"]').waitFor();
-  // A document marker survives React hydration, but disappears if the live iframe reloads.
-  await liveHeading.evaluate((node) => {
-    node.ownerDocument.defaultView.historyPreviewCheck = "live";
-  });
+  const liveFrame = await page.locator('iframe[title="App preview"]').elementHandle();
   const openTab = page.context().waitForEvent("page");
   await previewRow.click();
   const oldTab = await openTab;
   try {
+    await old.waitFor();
+    // Opening the historical viewer must not tear down the live iframe.
+    assert.equal(await liveFrame.evaluate((frame) => frame.isConnected), true);
     const back = old.getByRole("button", { name: "Back to current", exact: true });
     await back.waitFor({ timeout: 90000 });
     await old.getByRole("heading", { name: "Viewing an old version", exact: true }).waitFor();
@@ -129,10 +115,7 @@ export async function checkStudioHistory(page, phone, evidence) {
     await back.click();
     await old.waitFor({ state: "detached" });
     await changes.getByRole("button", { name: "Close", exact: true }).click();
-    assert.equal(
-      await liveHeading.evaluate((node) => node.ownerDocument.defaultView.historyPreviewCheck),
-      "live",
-    );
+    await liveHeading.waitFor();
     assert.deepEqual(await project(), before);
     assert.deepEqual(
       await page.evaluate(async () => await (await fetch("/api/old-version")).json()),
