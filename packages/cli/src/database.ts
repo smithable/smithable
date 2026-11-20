@@ -17,6 +17,11 @@ function snapshotPath(dir: string, id: string): string {
   return join(dir, "data", ".smithable", "snapshots", `${id}.db`);
 }
 
+/** Whether the copy of the dev database a change saved is still there. */
+export function hasSnapshot(dir: string, id: string): boolean {
+  return existsSync(snapshotPath(dir, id));
+}
+
 /** Saves a consistent copy of the dev database (if there is one). Returns whether it did. */
 export function snapshotDatabase(dir: string, id: string): boolean {
   if (!existsSync(databasePath(dir))) return false;

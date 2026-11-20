@@ -35,6 +35,7 @@ import { preview } from "./preview.js";
 import { projectRevision } from "./project-revision.js";
 import { redo } from "./redo.js";
 import { report } from "./report.js";
+import { restore as applyVersion } from "./restore.js";
 import { holdSecrets, holdSecretsFromJson } from "./secrets.js";
 import { type Level, security, updateSecurity } from "./security.js";
 import { staticPages } from "./static.js";
@@ -45,7 +46,7 @@ import { themeLab } from "./theme-lab.js";
 import { themes } from "./themes.js";
 import { timers } from "./timers.js";
 import { translate } from "./translate.js";
-import { undo, undoChange, undoNumbers } from "./undo.js";
+import { undoChange, undoLatest, undoNumbers } from "./undo.js";
 import { upgrade } from "./upgrade.js";
 import { validate } from "./validate.js";
 import { notPassedLines, verify } from "./verify.js";
@@ -233,8 +234,20 @@ export async function run(argv: string[], io: Io = processIo): Promise<number> {
             check: values.check === true,
             yes: values.yes === true,
           })
-        : undo(values.dir ?? ".", io);
-  if (command === "redo") return redo(values.dir ?? ".", io);
+        : undoLatest(values.dir ?? ".", io, { yes: values.yes === true });
+  if (command === "redo") return redo(values.dir ?? ".", io, { yes: values.yes === true });
+  if (command === "apply-version") {
+    if (!args[0]) {
+      io.err(
+        "Name the version to apply: smithable apply-version <change> (a number or an id from the history).\n",
+      );
+      return 1;
+    }
+    return applyVersion(values.dir ?? ".", io, args[0], {
+      check: values.check === true,
+      yes: values.yes === true,
+    });
+  }
   if (command === "report")
     return report(values.dir ?? ".", io, {
       send: values.send === true,

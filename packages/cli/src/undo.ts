@@ -3,7 +3,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "no
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { validateSpec } from "@smithable/core";
-import { restoreDatabase } from "./database.js";
+import { hasSnapshot, restoreDatabase } from "./database.js";
 import { git, nextChangeNumber, ownRepository, trailer, uncommittedRefusal } from "./git.js";
 import { exec, type Io } from "./io.js";
 import { isManaged, showAt, validateManaged } from "./managed.js";
@@ -21,6 +21,10 @@ interface Change {
   /** Without "smithable: ". */
   subject: string;
   snapshot?: string;
+  /** The operation it recorded (Smithable-Op). */
+  op?: string;
+  /** It applied a version that deleted values (its recorded `lost`). */
+  lost?: true;
 }
 
 /** The changes that are a person's own and not undone, newest first. */
@@ -38,10 +42,16 @@ export function undoableChanges(dir: string): Change[] {
     // A change that set the project up for its owner (op --setup) is not the owner's to undo.
     if (reverted.has(sha) || trailer(body, "Smithable-Setup")) continue;
     const snapshot = trailer(body, "Smithable-Snapshot");
+    let recorded: { op?: string; args?: { lost?: unknown } } = {};
+    try {
+      recorded = JSON.parse(trailer(body, "Smithable-Op") ?? "{}");
+    } catch {}
     changes.push({
       sha,
       subject: subject.slice(11),
       ...(snapshot && snapshot !== "none" ? { snapshot } : {}),
+      ...(recorded.op ? { op: recorded.op } : {}),
+      ...(Array.isArray(recorded.args?.lost) && recorded.args.lost.length ? { lost: true } : {}),
     });
   }
   return changes;
@@ -153,7 +163,8 @@ export async function undoChange(
     io.err(`No change ${change} to undo: it is not in the history, or it is undone already.\n`);
     return 1;
   }
-  if (target.sha === changes[0]?.sha) {
+  const forward = forwardOnly(dir, target);
+  if (target.sha === changes[0]?.sha && !forward) {
     if (flags.check) {
       io.out(`Safe to undo "${target.subject}": it is the newest change.\n`);
       return 0;
@@ -172,6 +183,10 @@ export async function undoChange(
     return 1;
   }
   const files = reverted.files;
+  if (forward && target.lost)
+    io.out(
+      "The values deleted when this version was applied do not come back: the copy of the database from before it is gone.\n",
+    );
   if (files["smithable.yml"] === null) {
     io.err(`Cannot undo "${target.subject}": it made the app itself.\n`);
     return 1;
@@ -261,6 +276,33 @@ function lostFieldsOf(dir: string, text: string): string[] {
   ).ir;
   const then = validateSpec({ path: "smithable.yml", text }, { plugins }).ir;
   return now && then ? lostFields(now, then) : [];
+}
+
+/**
+ * Whether the change is taken out as a new change even when it is the newest: a version applied
+ * whose copy of the database is gone (apply-old-version.md §6). Reverting its commit would put
+ * back the code and migrations from before it over a database migrated past them.
+ */
+function forwardOnly(dir: string, change: Change): boolean {
+  return (
+    change.op === "restoreVersion" &&
+    change.snapshot !== undefined &&
+    !hasSnapshot(dir, change.snapshot)
+  );
+}
+
+/**
+ * `smithable undo` with nothing named: the newest change, as `undo` takes it back, or forward
+ * when it applied a version whose database copy is gone (forwardOnly).
+ */
+export async function undoLatest(
+  dir: string,
+  io: Io,
+  flags: { yes?: boolean } = {},
+): Promise<number> {
+  const newest = ownRepository(dir) ? undoableChanges(dir)[0] : undefined;
+  if (newest && forwardOnly(dir, newest)) return undoChange(dir, io, newest.sha, flags);
+  return undo(dir, io);
 }
 
 /**
