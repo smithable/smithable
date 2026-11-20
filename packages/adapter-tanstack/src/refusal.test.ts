@@ -29,5 +29,9 @@ test("every surface says a refusal in words, never its code (T1010)", () => {
     expect(said(code)).not.toContain(code);
   // Anything else is said as it came, and nothing at all as the surface's own fallback.
   expect(said("The order is already sent.")).toBe("The order is already sent.");
-  expect(kit.refusalText("not an error", "Try again.")).toBe("Try again.");
+  expect(kit.refusalText("The order is already sent.", "Try again.")).toBe(
+    "The order is already sent.",
+  );
+  expect(kit.refusalText("no-right:Orders", "Try again.")).toMatch(/orders records are not yours/);
+  expect(kit.refusalText(undefined, "Try again.")).toBe("Try again.");
 });

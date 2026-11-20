@@ -116,7 +116,8 @@ export function refusalText(
   } = {},
 ): string {
   const label = on.label ?? w.record;
-  const message = error instanceof Error ? error.message : "";
+  // A thrown string is a message too (a row's save, a selection's delete).
+  const message = error instanceof Error ? error.message : typeof error === "string" ? error : "";
   const taken = /^taken:(\w+)$/.exec(message)?.[1];
   if (taken) {
     const field = on.fields?.find(
