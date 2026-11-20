@@ -20,6 +20,7 @@ function AiIcon({ className, label }: { className: string; label?: string }) {
       aria-hidden={label ? undefined : true}
     >
       <path
+        fill="#000"
         fillRule="evenodd"
         d="M272.03,100.72c100.92,0,182.74,81.82,182.74,182.75s-81.82,182.74-182.74,182.74-182.75-81.82-182.75-182.74,81.82-182.75,182.75-182.75"
       />
@@ -62,7 +63,7 @@ export function AiMarked({
           className="pointer-events-none absolute right-2 bottom-2 z-10 flex items-center gap-1"
         >
           <AiIcon className="size-7" />
-          <span className="rounded-sm bg-black/70 px-1.5 py-0.5 text-xs font-medium text-white">
+          <span className="rounded-sm bg-black/70 px-1.5 py-0.5 text-xs font-medium whitespace-nowrap text-white">
             {w.aiGenerated}
           </span>
         </span>
