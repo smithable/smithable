@@ -1112,6 +1112,8 @@ const PICTURE_COLUMNS = {
 };
 
 /** A gallery's pictures side by side, two on a phone. */
+/** The gallery's columns from md to lg, for its pictures' sizes. */
+const GALLERY_MIDDLE = { 2: 2, 3: 3, 4: 3, 5: 3, 6: 4 };
 const GALLERY_COLUMNS = {
   2: "",
   3: "md:grid-cols-3",
@@ -1911,7 +1913,8 @@ function GalleryView({
                     alt={item.image.alt}
                     srcSet={item.image.srcSet}
                     sizes={
-                      item.image.srcSet && `(min-width: 1024px) ${Math.ceil(100 / columns)}vw, 50vw`
+                      item.image.srcSet &&
+                      `(min-width: 1024px) ${Math.ceil(100 / columns)}vw, (min-width: 768px) ${Math.ceil(100 / GALLERY_MIDDLE[columns])}vw, 50vw`
                     }
                     loading="lazy"
                     {...mediaSize(aspect)}

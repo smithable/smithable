@@ -171,6 +171,18 @@ test("a hero the library has in several widths comes with its copies, and the co
     width: 1536,
     widths: [1600, 2400],
   });
+  // A width the content file would refuse: the hero alone.
+  const wide: Record<string, string> = { "smithable.content.yml": "smithableContent: 0.1\n" };
+  const alone = await addLibraryPictures({
+    description: "a café",
+    ir,
+    files: wide,
+    io: { out: () => {}, err: () => {} } as never,
+    fetchFn: fakeFetch,
+    index: [{ ...sized[0], width: 4096 }] as PictureEntry[],
+  });
+  expect(alone.map((w) => w.file)).toEqual(["hero.webp"]);
+  expect(wide["smithable.content.yml"]).not.toContain("width");
 });
 
 test("a model with drafted records gets its own pictures, named in its sample file", async () => {

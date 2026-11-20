@@ -313,13 +313,18 @@ async function heroCopies(
   written: PlacedPicture[],
 ): Promise<{ width: number; widths: number[] } | undefined> {
   const width = entry.width;
-  if (!width || !Number.isInteger(width)) return undefined;
+  // The content file takes widths from 100 to 4000 pixels.
+  const fits = (w: number) => Number.isInteger(w) && w >= 100 && w <= 4000;
+  if (!width || !fits(width)) return undefined;
   const widths: number[] = [];
-  const listed = [...(entry.widths ?? [])].sort((a, b) => a.width - b.width);
+  // At most six tried, so a library listing many that fail is not fetched on and on.
+  const listed = (entry.widths ?? [])
+    .filter((c) => fits(c.width) && c.width !== width)
+    .sort((a, b) => a.width - b.width)
+    .filter((c, n, all) => n === 0 || c.width !== all[n - 1]?.width)
+    .slice(0, 6);
   for (const copy of listed) {
     const w = copy.width;
-    if (widths.length === 6 || !Number.isInteger(w) || w < 100 || w > 4000) continue;
-    if (w === width || w <= (widths.at(-1) ?? 0)) continue;
     const bytes = await libraryBytes(copy.url, fetchFn);
     if (!bytes) continue;
     widths.push(w);

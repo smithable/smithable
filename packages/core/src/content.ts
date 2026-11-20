@@ -997,8 +997,11 @@ function readImage(
  * The file of a picture's copy at a width: `images/hero.webp` at 2400 is `images/hero-2400.webp`.
  * A preview's address tag (`?v=…`, which changes with the file) stays on it.
  */
-export const imageAt = (src: string, width: number) =>
-  src.replace(/(\.[a-z0-9]+)(\?[^?]*)?$/, `-${width}$1$2`);
+export const imageAt = (src: string, width: number) => {
+  const at = src.indexOf("?");
+  const file = at < 0 ? src : src.slice(0, at);
+  return `${file.replace(/(\.[a-z0-9]+)$/, `-${width}$1`)}${at < 0 ? "" : src.slice(at)}`;
+};
 
 /** A list of items, each a mapping of texts; a pricing plan's features are a list of texts. */
 function readItems(

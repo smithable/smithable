@@ -207,6 +207,7 @@ pages:
   ).toBe("unknown-key");
   expect(imageAt("images/hero.webp", 2400)).toBe("images/hero-2400.webp");
   expect(imageAt("images/hero.webp?v=ab12", 800)).toBe("images/hero-800.webp?v=ab12");
+  expect(imageAt("images/hero.webp?v=a?b.jpg", 800)).toBe("images/hero-800.webp?v=a?b.jpg");
 });
 
 test("contact, gallery and footer sections: their texts, pictures and links", () => {
