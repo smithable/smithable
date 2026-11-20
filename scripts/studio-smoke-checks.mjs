@@ -1,7 +1,12 @@
 import assert from "node:assert/strict";
 import { join } from "node:path";
 import { stubPictureCatalogue } from "./first-look-checks.mjs";
-import { openFormEntry, showWorkspaceControls, toolbarAction } from "./studio-form-checks.mjs";
+import {
+  openFormEntry,
+  openPreviewAddress,
+  showWorkspaceControls,
+  toolbarAction,
+} from "./studio-form-checks.mjs";
 import { checkStudioHistory } from "./studio-history-checks.mjs";
 
 async function checkBuilder(page, phone) {
@@ -77,6 +82,36 @@ async function checkBuilder(page, phone) {
   await preview("Overview");
 }
 
+async function checkPreviewRange(page) {
+  const address = await openPreviewAddress(page);
+  await address.fill("/customers");
+  await address.press("Enter");
+  const iframe = page.locator('iframe[title="App preview"]');
+  const preview = iframe.contentFrame();
+  const rows = preview.locator('tbody input[data-part="select"]').filter({ visible: true });
+  await preview.locator("body[data-hydrated=true]").waitFor({ timeout: 60000 });
+  await rows.nth(2).waitFor({ timeout: 60000 });
+  await rows.nth(0).click();
+  const label = rows.nth(2).locator("xpath=..");
+  // Target the label itself, just as a pointer landing on its padding would. Chromium still
+  // performs the label's native checkbox activation, regardless of the current table layout.
+  await label.dispatchEvent("click", { shiftKey: true });
+  assert.ok(await rows.nth(1).isChecked(), "Shift+click on label padding selected the middle row");
+  assert.ok(await rows.nth(2).isChecked(), "Shift+click on label padding selected the last row");
+  assert.equal(await preview.locator("[data-sm-selected]").count(), 0);
+  const passedArrow = await preview.locator("body").evaluate((body) =>
+    body.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: "ArrowRight",
+        shiftKey: true,
+        bubbles: true,
+        cancelable: true,
+      }),
+    ),
+  );
+  assert.ok(passedArrow, "Shift+Arrow is available to the app outside explicit Select mode");
+}
+
 export async function checkStudioSmoke(browser, base, evidence) {
   for (const [phone, choice] of [
     [false, "Keep this look"],
@@ -128,6 +163,7 @@ export async function checkStudioSmoke(browser, base, evidence) {
       assert.equal(await look.count(), 0);
       assert.equal(await presentation.count(), 0);
       await checkStudioHistory(page, phone, evidence);
+      if (!phone) await checkPreviewRange(page);
     } catch (error) {
       await page
         .screenshot({ path: join(evidence, `${layout}.png`), timeout: 3000 })

@@ -2118,7 +2118,8 @@ export function App() {
                   url={project.preview}
                   version={version}
                   updating={updating || busy}
-                  selecting={selecting || shiftSelect}
+                  selecting={selecting}
+                  shiftSelecting={shiftSelect}
                   inCode={selectingCode}
                   addressHost={addressHost}
                   onShowPage={openPreviewWindow}

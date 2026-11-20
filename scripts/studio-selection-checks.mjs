@@ -86,7 +86,7 @@ export async function checkStudioSelection(browser, base) {
 
     await page.locator('iframe[title="App preview"]').focus();
     await page.keyboard.down("Shift");
-    await link.click({ modifiers: ["Shift"] });
+    await link.click({ modifiers: ["Shift"], position: { x: 2, y: 2 } });
     await page.keyboard.up("Shift");
     await form.waitFor();
     assert.ok(await form.evaluate((element) => Boolean(element.closest("[data-guide=change]"))));
