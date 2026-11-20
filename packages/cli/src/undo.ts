@@ -3,7 +3,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "no
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { validateSpec } from "@smithable/core";
-import { hasSnapshot, restoreDatabase } from "./database.js";
+import { databasePath, hasSnapshot, restoreDatabase } from "./database.js";
 import { git, nextChangeNumber, ownRepository, trailer, uncommittedRefusal } from "./git.js";
 import { exec, type Io } from "./io.js";
 import { isManaged, showAt, validateManaged } from "./managed.js";
@@ -280,15 +280,15 @@ function lostFieldsOf(dir: string, text: string): string[] {
 
 /**
  * Whether the change is taken out as a new change even when it is the newest: a version applied
- * whose copy of the database is gone (apply-old-version.md §6). Reverting its commit would put
+ * whose copy of the database is gone, or that had none to copy and has a database now
+ * (apply-old-version.md §6). Reverting its commit would put
  * back the code and migrations from before it over a database migrated past them.
  */
 function forwardOnly(dir: string, change: Change): boolean {
-  return (
-    change.op === "restoreVersion" &&
-    change.snapshot !== undefined &&
-    !hasSnapshot(dir, change.snapshot)
-  );
+  if (change.op !== "restoreVersion") return false;
+  // No database when it was applied, and one since: it was made on the applied schema.
+  if (change.snapshot === undefined) return existsSync(databasePath(dir));
+  return !hasSnapshot(dir, change.snapshot);
 }
 
 /**

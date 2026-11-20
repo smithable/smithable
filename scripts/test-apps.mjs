@@ -7738,14 +7738,22 @@ function operationsFlow(dir) {
     if (remarks !== notes || !notes) throw new Error(JSON.stringify({ notes, remarks }));
   });
   step(
-    "apply-version: a version from before a rename gets its values back under the old name, a newer field on that name goes, and undo takes it back",
+    "apply-version: a version from before a rename gets its values back under the old name, a newer field on that name goes, a removed field comes back beside one that goes, and undo takes it back",
     () => {
       const [{ remarks }] = query(dir, "select remarks from customers where id = 1");
-      // The version just before the rename: notes, and no new notes field.
+      // The version just before the rename: notes and website, no tier.
       const version = run("git", ["rev-parse", "HEAD~1"], dir).trim();
       expectOk(smithable(dir, "op", "addField", "Customer", "notes", "string"));
+      // One column goes and another comes back in the same table: drizzle-kit would ask
+      // whether they are one renamed, and without a terminal that is an error.
+      expectOk(smithable(dir, "op", "addField", "Customer", "tier", "string"));
+      expectOk(smithable(dir, "op", "removeField", "Customer", "website", "--yes"));
       const check = smithable(dir, "apply-version", version.slice(0, 10), "--check");
-      if (check.code !== 0 || !check.out.includes("Customer · notes"))
+      if (
+        check.code !== 0 ||
+        !check.out.includes("Customer · notes") ||
+        !check.out.includes("Customer · website")
+      )
         throw new Error(`--check:\n${check.out}`);
       expectOk(smithable(dir, "apply-version", version.slice(0, 10)));
       const [{ notes }] = query(dir, "select notes from customers where id = 1");
@@ -7753,12 +7761,13 @@ function operationsFlow(dir) {
       const columns = query(dir, "select name from pragma_table_info('customers')").map(
         (c) => c.name,
       );
-      if (columns.includes("remarks")) throw new Error(`remarks is still a column: ${columns}`);
+      if (columns.includes("remarks") || columns.includes("tier") || !columns.includes("website"))
+        throw new Error(`columns after the apply: ${columns}`);
       run("pnpm", ["typecheck"], dir);
       expectOk(smithable(dir, "undo"));
       const back = query(dir, "select remarks, notes from customers where id = 1")[0];
       if (back.remarks !== remarks) throw new Error(JSON.stringify(back));
-      expectOk(smithable(dir, "undo"));
+      for (let i = 0; i < 3; i++) expectOk(smithable(dir, "undo"));
       if (run("git", ["status", "--porcelain"], dir).trim()) throw new Error("undo left changes");
     },
   );

@@ -163,6 +163,24 @@ test("§8.2 a field renamed since the version is renamed back, its values kept",
   expect(plan.lost).toEqual([]);
 });
 
+test("§8.2 a rename from before the version, undone since, is renamed back the other way", async () => {
+  const dir = project();
+  await op(dir, "addField", { model: "Customer", field: "phone", type: "string" });
+  const b = await op(dir, "renameField", { model: "Customer", from: "phone", to: "mobile" });
+  expect(await undoLatest(dir, captureIo())).toBe(0);
+  const plan = restorePlan(dir, b);
+  if (typeof plan === "string") throw new Error(plan);
+  expect(plan.effects).toContainEqual({
+    kind: "rename-field",
+    model: "Customer",
+    from: "phone",
+    to: "mobile",
+    storage: "value",
+  });
+  expect(plan.goes).toEqual([]);
+  expect(plan.comesBack).toEqual([]);
+});
+
 test("§8.3 admins, allowed domains and the API stay as today; a rule that widens is in the access block", async () => {
   const dir = project();
   const wide = auth("public:\n  read: [Customer]\n").replace(
@@ -190,6 +208,13 @@ test("§8.3 admins, allowed domains and the API stay as today; a rule that widen
   expect(text).not.toContain("old.example");
   expect(text).toContain("read: [Customer]");
   expect(plan.access).toEqual(["Anyone can read Customer again."]);
+  // Access that widens asks first, as a loss does.
+  const asked = captureIo();
+  expect(await restore(dir, asked, b)).toBe(1);
+  expect(asked.stderr).toContain("This version lets more in:\n  Anyone can read Customer again.");
+  expect(asked.stderr).toContain("--yes");
+  expect(await restore(dir, captureIo(), b, { yes: true })).toBe(0);
+  expect(read(dir, "smithable.auth.yml")).toContain("read: [Customer]");
   // A key today lacks is taken out of the version's file.
   expect(
     keepAccessKeys(
@@ -201,9 +226,10 @@ test("§8.3 admins, allowed domains and the API stay as today; a rule that widen
 
 test("§8.4 undo right after the apply gives the files and database of before; redo asks again", async () => {
   const dir = project();
+  // As the migrations leave it (generate is mocked here): level is there, empty.
   database(
     dir,
-    "CREATE TABLE customers (id integer primary key, name text, email text, notes text);",
+    "CREATE TABLE customers (id integer primary key, name text, email text, notes text, level integer);",
   );
   const b = await op(dir, "addField", { model: "Customer", field: "phone", type: "string" });
   await op(dir, "removeField", { model: "Customer", field: "phone" });
@@ -215,10 +241,7 @@ test("§8.4 undo right after the apply gives the files and database of before; r
   expect(managedOnDisk(dir)).toEqual(before);
   expect(dump(dir)).toEqual(dbBefore);
   // Now a value in level would be lost: Redo plans again and asks.
-  database(
-    dir,
-    "ALTER TABLE customers ADD COLUMN level integer; INSERT INTO customers (name, level) VALUES ('Ann', 3);",
-  );
+  database(dir, "INSERT INTO customers (name, level) VALUES ('Ann', 3);");
   const asked = captureIo();
   expect(await redo(dir, asked)).toBe(1);
   expect(asked.stderr).toContain("This version has no place for: Customer · level (1 value).");
@@ -316,6 +339,13 @@ test("§8.6 each refusal leaves the folder, the database and the history as they
   const broken = commitEdit(dir, "smithable.yml", `${SPEC}  ghosts: { crud: Ghost }\n`);
   git(dir, ["revert", "--no-edit", broken]);
   await refused("does not fit the app as it is today", broken.slice(0, 8));
+  // Without today's sign-in settings there is nothing to keep them from.
+  const noAuth = captureIo();
+  rmSync(join(dir, "smithable.auth.yml"));
+  git(dir, ["commit", "-qam", "no auth"]);
+  expect(await restore(dir, noAuth, b, { yes: true })).toBe(1);
+  expect(noAuth.stderr).toContain("has no smithable.auth.yml");
+  git(dir, ["revert", "--no-edit", "HEAD"]);
   // A stale revision.
   await refused("The app changed while you were looking", b, {
     yes: true,
@@ -325,6 +355,11 @@ test("§8.6 each refusal leaves the folder, the database and the history as they
   const { generate } = await import("./generate.js");
   vi.mocked(generate).mockResolvedValueOnce(1);
   await refused("", b, { yes: true });
+  // Records that cannot be counted are never taken as none to lose.
+  database(dir, "ALTER TABLE customers RENAME TO customers_away;");
+  const unread = captureIo();
+  expect(await restore(dir, unread, b, { yes: true })).toBe(1);
+  expect(unread.stderr).toContain("could not be read");
 });
 
 test("§8.8 a fix branch is refused; two requests at once make one change", async () => {

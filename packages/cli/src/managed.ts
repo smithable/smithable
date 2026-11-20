@@ -121,14 +121,15 @@ export function validateManaged(dir: string, files: Record<string, string | null
     const said: string[] = [];
     const io: Io = { out: () => {}, err: (text) => said.push(text) };
     const loaded = loadSpec(scratch, io, [], found);
+    // The scratch folder's path is never said, with either separator.
+    const local = (text: string) =>
+      text.split(`${scratch}/`).join("").split(`${scratch}\\`).join("");
     const errors = found
       .filter((d) => d.severity === "error")
-      .map((d) => formatDiagnostic(d).split(`${scratch}/`).join(""));
+      .map((d) => local(formatDiagnostic(d)));
     // A refusal said without a finding (a missing auth file, a plugin that does not load).
     if (!errors.length && !loaded.ir)
-      errors.push(
-        said.join("").trim().split(`${scratch}/`).join("") || "The files could not be read.",
-      );
+      errors.push(local(said.join("").trim()) || "The files could not be read.");
     return errors;
   } finally {
     rmSync(scratch, { recursive: true, force: true });

@@ -8,6 +8,8 @@ import { pathToFileURL } from "node:url";
 import {
   choiceValueSql,
   dropTakenColumn,
+  goneFirst,
+  inTurn,
   quoteReferences,
   renameColumnSql,
   renameInSnapshot,
@@ -144,25 +146,28 @@ export async function createMigration(
     // taken (an older version applied) drops that column first.
     const statements: string[] = [];
     let base = JSON.stringify(prev);
-    for (const m of migration.models ?? []) {
+    const diff = async (from: string, to: Snapshot) =>
+      (await api.generateSQLiteMigration(JSON.parse(from) as Snapshot, to)).map(quoteReferences);
+    for (const m of inTurn(migration.models ?? [])) {
       statements.push(...renameModelSql(base, m.from, m.to));
       base = renameModelInSnapshot(base, m.from, m.to);
     }
-    for (const r of migration.renames) {
+    for (const r of inTurn(migration.renames, (r) => r.model)) {
       const taken = dropTakenColumn(base, r.model, r.to, r.reference);
       if (taken) {
-        statements.push(...taken.sql);
+        statements.push(...(await diff(base, JSON.parse(taken.snapshot) as Snapshot)));
         base = taken.snapshot;
       }
       statements.push(renameColumnSql(r.model, r.from, r.to, r.reference));
       base = renameInSnapshot(base, r.model, r.from, r.to, r.reference);
     }
-    statements.push(
-      ...(await api.generateSQLiteMigration(JSON.parse(base) as Snapshot, current)).map(
-        quoteReferences,
-      ),
-      ...valueSql(migration),
-    );
+    // What goes before what comes, when drizzle-kit would otherwise ask if they are one renamed.
+    const settled = goneFirst(base, current as unknown as Parameters<typeof goneFirst>[1]);
+    if (settled) {
+      statements.push(...(await diff(base, JSON.parse(settled) as Snapshot)));
+      base = settled;
+    }
+    statements.push(...(await diff(base, current)), ...valueSql(migration));
     if (statements.length === 0) return true;
     const idx = last.idx + 1;
     const tag = `${numbered(idx)}_${migration.name}`;

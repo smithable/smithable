@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import { columnOf } from "@smithable/adapter-tanstack";
 import {
@@ -137,9 +138,12 @@ export function restorePlan(dir: string, change: string): RestorePlan | string {
     return "This version is no longer stored.";
   const now = managedOnDisk(dir);
   const auth = now[SPEC_FILES.auth];
+  // Today's sign-in, admins and API are what the version gets (§2): without them, nothing to keep.
+  if (!auth?.trim())
+    return `The app has no ${SPEC_FILES.auth} to keep its sign-in settings from: put it back, then apply the version.`;
   const wanted: Record<string, string> = {
     ...then,
-    ...(auth ? { [SPEC_FILES.auth]: keepAccessKeys(thenAuth, auth) } : {}),
+    [SPEC_FILES.auth]: keepAccessKeys(thenAuth, auth),
   };
   const files = managedDiff(now, wanted);
   const problems = validateManaged(dir, files);
@@ -159,6 +163,8 @@ export function restorePlan(dir: string, change: string): RestorePlan | string {
   const authOf = (text: string | undefined, ir: SpecIR) =>
     text ? validateAuth({ path: SPEC_FILES.auth, text }, ir).auth : undefined;
   const holders = roleHolders(dir);
+  // What cannot be counted is never taken as nothing to lose.
+  if (shape.unread || !holders) return UNREAD;
   const access = accessBlock(authOf(auth, today), authOf(wanted[SPEC_FILES.auth], target), holders);
   const roles = new Set(authOf(wanted[SPEC_FILES.auth], target)?.roles.map((r) => r.name) ?? []);
   const rolesGone = [...holders]
@@ -179,6 +185,9 @@ export function restorePlan(dir: string, change: string): RestorePlan | string {
     ],
   };
 }
+
+const UNREAD =
+  "The app's records could not be read to see what this version would delete or who holds which role: try again when nothing else is using the database.";
 
 /** The refusal of a plan's loss or roles, said as Studio says it; undefined when none. */
 export function lossRefusal(plan: RestorePlan): string | undefined {
@@ -209,7 +218,7 @@ export function planText(plan: RestorePlan): string {
 
 /**
  * `smithable apply-version <change>`: applies a version. `check` says what it would do and changes
- * nothing; a loss or a role people hold asks first, and `yes` is the answer. The plan is made
+ * nothing; a loss, a role people hold or access that widens asks first, and `yes` is the answer. The plan is made
  * again under the project's lock, so every check sees the project as the change finds it.
  */
 export async function restore(
@@ -246,8 +255,15 @@ export async function restore(
         const plan = restorePlan(root, change);
         if (typeof plan === "string") return plan;
         const refusal = lossRefusal(plan);
-        if (refusal && !flags.yes)
-          return `${refusal}\n${plan.rolesGone.length ? "With the answer yes, those people are left without that role. " : ""}Run again with ${flags.mcp ? "confirm: true" : "--yes"} to apply it${plan.lost.length ? "; those values are deleted" : ""}.`;
+        // A loss, a role people hold, or access that widens: asked first (§3, §4.5, §4.6).
+        if ((refusal || plan.access.length) && !flags.yes)
+          return [
+            ...(plan.access.length
+              ? [`This version lets more in:\n${plan.access.map((a) => `  ${a}`).join("\n")}`]
+              : []),
+            ...(refusal ? [refusal] : []),
+            `${plan.rolesGone.length ? "With the answer yes, those people are left without that role. " : ""}Run again with ${flags.mcp ? "confirm: true" : "--yes"} to apply it${plan.lost.length ? "; those values are deleted" : ""}.`,
+          ].join("\n");
         if (!Object.keys(plan.files).length)
           return "This version is the app as it is now: applying it changes nothing.";
         if (plan.access.length) io.out(`Access:\n${plan.access.map((a) => `  ${a}\n`).join("")}`);
@@ -288,7 +304,8 @@ interface Renames {
 
 /**
  * The renames between a version and now, read from the recorded operations (each commit's
- * Smithable-Op) on the main line, a change undone since left out, and kept only where the two
+ * Smithable-Op) on the main line, a change undone since left out (one from before the version
+ * undone since played backwards), and kept only where the two
  * shapes bear them out: a rename is never guessed from the shapes alone (§4.5).
  */
 function recordedRenames(dir: string, version: string, today: SpecIR, then: SpecIR): Renames {
@@ -326,21 +343,37 @@ function recordedRenames(dir: string, version: string, today: SpecIR, then: Spec
           fields.set(key, args.to);
     }
   };
-  for (const entry of log) {
-    const [sha = "", message = ""] = entry.trim().split("\x1f");
-    if (reverted.has(sha)) continue;
+  // A commit's recorded steps, in order: a batch's operations, an applied version's renames.
+  const steps = (message: string): { op?: string; args: Record<string, unknown> }[] => {
     let recorded: { op?: string; args?: Record<string, unknown> } = {};
     try {
       recorded = JSON.parse(trailer(message, "Smithable-Op") ?? "{}");
     } catch {}
     const args = recorded.args ?? {};
     if (recorded.op === "batch" && Array.isArray(args.operations))
-      for (const step of args.operations as { op?: string; args?: Record<string, unknown> }[])
-        rename(step.op, step.args ?? {});
-    else if (recorded.op === "restoreVersion" && Array.isArray(args.renamed))
-      for (const r of args.renamed as { model?: string; from: string; to: string }[])
-        rename(r.model ? "renameField" : "renameModel", r);
-    else rename(recorded.op, args);
+      return (args.operations as { op?: string; args?: Record<string, unknown> }[]).map((s) => ({
+        op: s.op,
+        args: s.args ?? {},
+      }));
+    if (recorded.op === "restoreVersion" && Array.isArray(args.renamed))
+      return (args.renamed as { model?: string; from: string; to: string }[]).map((r) => ({
+        op: r.model ? "renameField" : "renameModel",
+        args: r,
+      }));
+    return [{ op: recorded.op, args }];
+  };
+  const logged = new Set(log.map((e) => e.trim().split("\x1f")[0]));
+  for (const entry of log) {
+    const [sha = "", message = ""] = entry.trim().split("\x1f");
+    if (reverted.has(sha)) continue;
+    const undone = /This reverts commit ([0-9a-f]{40})/.exec(message)?.[1];
+    if (undone && !logged.has(undone)) {
+      // An undo of a change from before the version: that change's renames, backwards.
+      for (const step of steps(git(dir, ["log", "-1", "--format=%B", undone]).out).reverse())
+        rename(step.op, { ...step.args, from: step.args.to, to: step.args.from });
+      continue;
+    }
+    for (const step of steps(message)) rename(step.op, step.args);
   }
   const model = (ir: SpecIR, name: string) => ir.models.find((m) => m.name === name);
   const result: Renames = { models: [], fields: [] };
@@ -375,6 +408,13 @@ function shapeChange(dir: string, today: SpecIR, then: SpecIR, renames: Renames)
   const goes: string[] = [];
   const lost: { key: string; says: string }[] = [];
   const count = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+  // A count the database did not give, while there is one, is unknown, never none.
+  const database = existsSync(databasePath(dir));
+  let unread = false;
+  const read = <T>(value: T | undefined): T | undefined => {
+    if (value === undefined && database) unread = true;
+    return value;
+  };
   // Today's model as the version names it, and back.
   const thenModel = (name: string) =>
     renames.models.find((m) => m.now === name)?.was ??
@@ -394,7 +434,8 @@ function shapeChange(dir: string, today: SpecIR, then: SpecIR, renames: Renames)
     const name = thenModel(model.name);
     const old = name ? then.models.find((m) => m.name === name) : undefined;
     if (!old) {
-      const rows = countValues(dir, columnOf(model.name, "id", false).table, "id")?.total ?? 0;
+      const rows =
+        read(countValues(dir, columnOf(model.name, "id", false).table, "id"))?.total ?? 0;
       goes.push(model.name);
       if (rows)
         lost.push({ key: model.name, says: `${model.name} (${count(rows, "record", "records")})` });
@@ -410,7 +451,7 @@ function shapeChange(dir: string, today: SpecIR, then: SpecIR, renames: Renames)
           : old.fields.find((f) => f.name === field.name);
       const reference = storageOf(field) === "reference";
       const { table, column } = columnOf(model.name, field.name, reference);
-      const filled = () => countValues(dir, table, column)?.filled ?? 0;
+      const filled = () => read(countValues(dir, table, column))?.filled ?? 0;
       const where = `${model.name} · ${field.name}`;
       if (!match || storageOf(match) === "none") {
         goes.push(where);
@@ -438,7 +479,7 @@ function shapeChange(dir: string, today: SpecIR, then: SpecIR, renames: Renames)
         const gone = field.type.values.filter((v) => !kept.includes(v));
         const cleared: Record<string, string> = {};
         for (const value of gone) {
-          const n = countValue(dir, table, column, value) ?? 0;
+          const n = read(countValue(dir, table, column, value)) ?? 0;
           if (!n) continue;
           cleared[value] = "";
           lost.push({
@@ -470,26 +511,31 @@ function shapeChange(dir: string, today: SpecIR, then: SpecIR, renames: Renames)
         comesBack.push(`${model.name} · ${field.name}`);
     }
   }
-  return { effects, comesBack, goes, lost };
+  return { effects, comesBack, goes, lost, unread };
 }
 
 /** How many people hold each role in the development database (none when there is none). */
-export function roleHolders(dir: string): Map<string, number> {
+export function roleHolders(dir: string): Map<string, number> | undefined {
   const holders = new Map<string, number>();
+  // No database, or an app without sign-in: nobody holds a role.
+  if (!existsSync(databasePath(dir))) return holders;
   let db: DatabaseSync | undefined;
   try {
     db = new DatabaseSync(databasePath(dir), { readOnly: true, timeout: BUSY_MS });
+    if (!db.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'user'").get())
+      return holders;
     const rows = db.prepare('SELECT role, count(*) AS n FROM "user" GROUP BY role').all() as {
       role: string | null;
       n: number;
     }[];
     for (const row of rows) if (row.role) holders.set(row.role, Number(row.n));
+    return holders;
   } catch {
-    // No database, or an app without sign-in: nobody holds a role.
+    // Locked or unreadable: unknown, which the plan refuses (never "nobody").
+    return undefined;
   } finally {
     db?.close();
   }
-  return holders;
 }
 
 /**

@@ -4,6 +4,7 @@ import { dirname, join } from "node:path";
 import {
   dropTakenColumn,
   generateApp,
+  inTurn,
   quoteReferences,
   renameColumnSql,
   renameInSnapshot,
@@ -263,7 +264,7 @@ function migrate(
   // A renamed model becomes a custom migration with RENAME TABLE (and its indexes under their
   // new names), the snapshot describing the renamed tables, so drizzle-kit never sees a dropped
   // table and a new one.
-  for (const renamed of migration?.models ?? []) {
+  for (const renamed of inTurn(migration?.models ?? [])) {
     if (
       !run(["exec", "drizzle-kit", "generate", "--custom", "--name", migration?.name ?? "rename"])
     )
@@ -279,7 +280,7 @@ function migrate(
   }
   // A rename becomes a custom migration with RENAME COLUMN, so drizzle-kit never sees a
   // drop plus an add (which it would ask about) and the data is kept.
-  for (const rename of migration?.renames ?? []) {
+  for (const rename of inTurn(migration?.renames ?? [], (r) => r.model)) {
     if (
       !run(["exec", "drizzle-kit", "generate", "--custom", "--name", migration?.name ?? "rename"])
     )

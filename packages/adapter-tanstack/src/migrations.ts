@@ -48,9 +48,88 @@ type Snapshot = {
     {
       columns: Record<string, { name: string }>;
       indexes?: Record<string, { columns: string[] }>;
+      uniqueConstraints?: Record<string, { columns: string[] }>;
+      compositePrimaryKeys?: Record<string, { columns: string[] }>;
+      foreignKeys?: Record<string, { tableTo?: string; columnsFrom?: string[] }>;
     }
   >;
 };
+
+/**
+ * The snapshot without some tables and columns, and without every index, key and reference
+ * that names them: what drizzle-kit is then asked to reach from the one before.
+ */
+function without(snapshot: Snapshot, tables: Set<string>, columns: Map<string, Set<string>>) {
+  for (const table of tables) delete snapshot.tables[table];
+  for (const [name, t] of Object.entries(snapshot.tables)) {
+    const gone = columns.get(name) ?? new Set<string>();
+    for (const column of gone) delete t.columns[column];
+    for (const key of ["indexes", "uniqueConstraints", "compositePrimaryKeys"] as const) {
+      const entries = t[key];
+      if (entries)
+        for (const [n, v] of Object.entries(entries))
+          if (v.columns.some((c) => gone.has(c))) delete entries[n];
+    }
+    for (const [n, fk] of Object.entries(t.foreignKeys ?? {}))
+      if (fk.columnsFrom?.some((c) => gone.has(c)) || (fk.tableTo && tables.has(fk.tableTo)))
+        delete t.foreignKeys?.[n];
+  }
+  return snapshot;
+}
+
+/**
+ * drizzle-kit asks whether a table (or a column of one table) that goes and another that comes
+ * are one renamed, and without a terminal that question is an error. Smithable says its renames
+ * itself (renameColumnSql, renameModelSql), so what is left is never a rename: when both are
+ * there, this is the snapshot with what goes taken out, for a first step of drops alone and a
+ * second of additions alone, neither of which asks. Undefined when nothing could be asked.
+ */
+export function goneFirst(
+  previousJson: string,
+  current: { tables: Record<string, { columns: Record<string, unknown> }> },
+): string | undefined {
+  const previous = JSON.parse(previousJson) as Snapshot;
+  if (!previous.tables) return undefined;
+  const tables = new Set(Object.keys(previous.tables).filter((t) => !current.tables[t]));
+  const columns = new Map<string, Set<string>>();
+  let asks = tables.size > 0 && Object.keys(current.tables).some((t) => !previous.tables[t]);
+  for (const [name, t] of Object.entries(previous.tables)) {
+    const now = current.tables[name];
+    if (!now) continue;
+    const gone = Object.keys(t.columns).filter((c) => !now.columns[c]);
+    if (gone.length) columns.set(name, new Set(gone));
+    if (gone.length && Object.keys(now.columns).some((c) => !t.columns[c])) asks = true;
+  }
+  if (!asks) return undefined;
+  return `${JSON.stringify(without(previous, tables, columns), null, 2)}\n`;
+}
+
+/**
+ * Renames in an order where none lands on a name another has still to leave (a, b become b, c:
+ * b goes to c before a goes to b), a cycle (a and b swapped) broken through a passing name.
+ * `scope` keeps apart the names of different tables.
+ */
+export function inTurn<T extends { from: string; to: string }>(
+  renames: T[],
+  scope: (rename: T) => string = () => "",
+): T[] {
+  const pending = [...renames];
+  const ordered: T[] = [];
+  while (pending.length) {
+    const free = pending.findIndex(
+      (r) => !pending.some((o) => o !== r && scope(o) === scope(r) && o.from === r.to),
+    );
+    if (free >= 0) {
+      ordered.push(...pending.splice(free, 1));
+      continue;
+    }
+    const first = pending[0] as T;
+    const passing = `${first.from}Passing${ordered.length}`;
+    ordered.push({ ...first, to: passing });
+    pending[0] = { ...first, from: passing };
+  }
+  return ordered;
+}
 
 /**
  * drizzle-kit gives a custom migration a copy of the previous schema snapshot. After a
@@ -84,7 +163,9 @@ export function renameInSnapshot(
 /**
  * A rename back onto a name a newer column has taken (an older version applied, the newer field
  * going and the older coming back under its name): the newer column is dropped first, with its
- * indexes, and the snapshot no longer has it. Undefined when the name is free.
+ * indexes, and the snapshot no longer has it. Undefined when the name is free. The SQL is for
+ * the command line's custom migration; the tools have drizzle-kit write the drop from the
+ * snapshot instead, since SQLite drops no column a reference or a key names.
  */
 export function dropTakenColumn(
   snapshotJson: string,
@@ -96,14 +177,11 @@ export function dropTakenColumn(
   const { table, column } = columnOf(model, to, reference);
   const t = snapshot.tables[table];
   if (!t?.columns[column]) return undefined;
-  const sql: string[] = [];
-  for (const [name, index] of Object.entries(t.indexes ?? {}))
-    if (index.columns.includes(column)) {
-      sql.push(`DROP INDEX IF EXISTS \`${name}\`;\n`);
-      delete t.indexes?.[name];
-    }
+  const sql = Object.entries(t.indexes ?? {})
+    .filter(([, index]) => index.columns.includes(column))
+    .map(([name]) => `DROP INDEX IF EXISTS \`${name}\`;\n`);
   sql.push(`ALTER TABLE \`${table}\` DROP COLUMN \`${column}\`;\n`);
-  delete t.columns[column];
+  without(snapshot, new Set(), new Map([[table, new Set([column])]]));
   return { sql, snapshot: `${JSON.stringify(snapshot, null, 2)}\n` };
 }
 

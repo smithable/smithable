@@ -2,6 +2,8 @@ import { expect, test } from "vitest";
 import {
   columnOf,
   dropTakenColumn,
+  goneFirst,
+  inTurn,
   quoteReferences,
   renameColumnSql,
   renameInSnapshot,
@@ -58,6 +60,67 @@ test("a rename onto a name a newer field took drops that column and its indexes 
   // A name nobody holds needs nothing dropped.
   expect(dropTakenColumn(before, "Customer", "fax")).toBeUndefined();
   expect(dropTakenColumn(before, "Supplier", "phone")).toBeUndefined();
+});
+
+test("renames go in turn: none lands on a name another has still to leave, a swap passes through a free name", () => {
+  const chain = inTurn(
+    [
+      { model: "Customer", from: "c", to: "b" },
+      { model: "Customer", from: "b", to: "a" },
+      { model: "Order", from: "a", to: "z" },
+    ],
+    (r) => r.model,
+  );
+  expect(chain.map((r) => `${r.from}>${r.to}`)).toEqual(["b>a", "c>b", "a>z"]);
+  const swap = inTurn(
+    [
+      { model: "Customer", from: "a", to: "b" },
+      { model: "Customer", from: "b", to: "a" },
+    ],
+    (r) => r.model,
+  );
+  expect(swap.map((r) => `${r.from}>${r.to}`)).toEqual(["a>aPassing0", "b>a", "aPassing0>b"]);
+});
+
+test("what goes is dropped first only when drizzle-kit would ask whether it was renamed", () => {
+  const table = (columns: string[], more = {}) => ({
+    columns: Object.fromEntries(columns.map((c) => [c, { name: c }])),
+    ...more,
+  });
+  const previous = JSON.stringify({
+    tables: {
+      customers: table(["id", "tier", "owner_id"], {
+        indexes: { customers_tier_idx: { columns: ["tier"] } },
+        foreignKeys: { fk: { tableTo: "users", columnsFrom: ["owner_id"] } },
+      }),
+      notes: table(["id"]),
+    },
+  });
+  // Only a column added, or only one gone: nothing to ask.
+  expect(
+    goneFirst(previous, {
+      tables: { customers: table(["id", "tier", "owner_id", "website"]), notes: table(["id"]) },
+    }),
+  ).toBeUndefined();
+  expect(
+    goneFirst(previous, { tables: { customers: table(["id", "owner_id"]), notes: table(["id"]) } }),
+  ).toBeUndefined();
+  // One gone and one new in the same table: the first step drops what goes, with its index and key.
+  const settled = JSON.parse(
+    goneFirst(previous, {
+      tables: { customers: table(["id", "website"]), notes: table(["id"]) },
+    }) ?? "{}",
+  );
+  expect(Object.keys(settled.tables.customers.columns)).toEqual(["id"]);
+  expect(settled.tables.customers.indexes).toEqual({});
+  expect(settled.tables.customers.foreignKeys).toEqual({});
+  // A table gone and another new.
+  const tables = JSON.parse(
+    goneFirst(previous, {
+      tables: { customers: table(["id", "tier", "owner_id"]), memos: table(["id"]) },
+    }) ?? "{}",
+  );
+  expect(Object.keys(tables.tables)).toEqual(["customers"]);
 });
 
 test("a reference added to an existing table names its table quoted", () => {

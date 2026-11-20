@@ -17,6 +17,8 @@ export {
   choiceValueSql,
   columnOf,
   dropTakenColumn,
+  goneFirst,
+  inTurn,
   quoteReferences,
   renameColumnSql,
   renameInSnapshot,
