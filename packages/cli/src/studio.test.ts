@@ -2,7 +2,7 @@ import { spawnSync } from "node:child_process";
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "vitest";
-import { changeDetail, refusal, studio, trace, unchangedEdit } from "./studio.js";
+import { changeDetail, pictureRefusal, refusal, studio, trace, unchangedEdit } from "./studio.js";
 import { tempDir } from "./test-dir.js";
 import { captureIo } from "./test-io.js";
 
@@ -183,4 +183,15 @@ test("an edit of a whole file that only formats it is no change; a different fil
   expect(unchangedEdit(dir, "editSpec", { text: "", file: "smithable.ux.yml" })).toBe(false);
   expect(unchangedEdit(dir, "addField", { text: formatted })).toBe(false);
   rmSync(dir, { recursive: true, force: true });
+});
+
+test("only the logo brings a picture with a change, so no upload replaces a picture that has smaller copies", () => {
+  const webp = new Uint8Array([1, 2, 3]);
+  expect(pictureRefusal("setLogo", "public/images/logo.webp", webp)).toBeUndefined();
+  // A hero's file written over itself would keep its src, and with it the old picture's widths.
+  expect(pictureRefusal("setText", "public/images/hero.webp", webp)).toMatch(/Only the logo/);
+  expect(pictureRefusal("setLogo", "public/hero.webp", webp)).toMatch(/at most 2 MB/);
+  expect(pictureRefusal("setLogo", "public/images/logo.webp", new Uint8Array())).toMatch(
+    /at most 2 MB/,
+  );
 });
