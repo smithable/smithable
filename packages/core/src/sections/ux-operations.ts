@@ -1088,7 +1088,7 @@ const setAiBadge: Operation<{ shown?: "true" | "false" }> = {
   name: "setAiBadge",
   sets: ["smithable.ux.yml:aiBadge"],
   summary:
-    'Mark pictures an AI made with "AI-generated" or "AI" (true, the default) or not (false): whether your audience needs it is your responsibility.',
+    "Mark pictures an AI made with the EU’s common icon for AI-generated content (true, the default) or not (false): whether your audience needs it is your responsibility.",
   schema: {
     type: "object",
     additionalProperties: false,

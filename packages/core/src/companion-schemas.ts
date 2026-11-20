@@ -608,7 +608,7 @@ export const UX_SCHEMA: JsonSchema = {
     aiBadge: {
       type: "boolean",
       description:
-        'Whether pictures an AI made carry the badge ("AI-generated", "AI"): on unless you switch it off; whether your audience needs it is your responsibility.',
+        "Whether pictures an AI made carry the badge (the EU’s common icon for AI-generated content): on unless you switch it off; whether your audience needs it is your responsibility.",
     },
     tones: {
       type: "object",
