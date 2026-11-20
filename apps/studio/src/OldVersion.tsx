@@ -26,12 +26,14 @@ export function OldVersion({
   description,
   open,
   closing,
+  error,
   onBack,
   onOpenAgain,
 }: {
   description: string;
   open: OpenOld | undefined;
   closing: boolean;
+  error: string | undefined;
   onBack: () => void;
   onOpenAgain: () => void;
 }) {
@@ -42,9 +44,8 @@ export function OldVersion({
     return () => node?.close();
   }, []);
   useLayoutEffect(() => {
-    if (open && !closing)
-      dialog.current?.querySelector<HTMLButtonElement>("[data-back-current]")?.focus();
-  }, [open, closing]);
+    if (!closing) dialog.current?.querySelector<HTMLButtonElement>("[data-back-current]")?.focus();
+  }, [closing]);
 
   return (
     <dialog
@@ -53,7 +54,11 @@ export function OldVersion({
       className="fixed inset-0 m-0 h-full max-h-none w-full max-w-none border-0 bg-panel p-0 text-fg open:flex open:flex-col"
       onCancel={(event) => {
         event.preventDefault();
-        if (open && !closing) onBack();
+        if (event.cancelable && !closing) onBack();
+      }}
+      onClose={(event) => {
+        if (!event.currentTarget.open) event.currentTarget.showModal();
+        if (!closing) onBack();
       }}
     >
       <header className="flex flex-wrap items-start justify-between gap-3 border-b border-line bg-subtle px-4 py-3">
@@ -68,13 +73,12 @@ export function OldVersion({
             </time>
           )}
         </div>
-        {open && (
-          <Button data-back-current variant="ghost" onClick={onBack} disabled={closing}>
-            Back to current
-          </Button>
-        )}
+        <Button data-back-current variant="ghost" onClick={onBack} disabled={closing}>
+          {open ? "Back to current" : "Cancel preview"}
+        </Button>
       </header>
       <div className="m-auto max-w-md space-y-3 p-6 text-center text-sm">
+        {error && <p role="alert">{error} Try again.</p>}
         {closing ? (
           <p role="status">Closing the preview…</p>
         ) : open ? (
@@ -83,7 +87,8 @@ export function OldVersion({
               The old version is open in its own tab{" "}
               {open.data === "then" ? "with a copy of the data from then" : "with sample data"}
               {open.pictures === "today" ? " and today’s pictures" : ", without pictures"}. You can
-              sign in and try it. Changes in that tab are discarded when you go back.
+              sign in and try it. Back to current removes the copy and discards everything you did
+              there. Close its tab when you’re done.
             </p>
             <Button onClick={onOpenAgain}>Show its tab</Button>
           </>

@@ -5,8 +5,8 @@ import { toolbarAction } from "./studio-form-checks.mjs";
 export async function checkStudioHistory(page, phone, evidence) {
   const project = () =>
     page.evaluate(async () => {
-      const { revision, trace } = await (await fetch("/api/project")).json();
-      return { revision, trace };
+      const { revision, trace, canRedo } = await (await fetch("/api/project")).json();
+      return { revision, trace, canRedo };
     });
   const before = await project();
   const preview = page.frameLocator('iframe[title="App preview"]');
@@ -16,6 +16,8 @@ export async function checkStudioHistory(page, phone, evidence) {
   const history = changes.getByRole("list", { name: "Version history", exact: true });
   const rows = history.getByRole("listitem");
   await rows.first().getByText("Current version", { exact: true }).waitFor();
+  assert.equal(before.canRedo, true);
+  assert.equal(before.trace[0].isUndo, true);
   assert.deepEqual(
     await history.locator("time").evaluateAll((times) => times.map((time) => time.dateTime)),
     before.trace.map((entry) => entry.at),
@@ -47,14 +49,28 @@ export async function checkStudioHistory(page, phone, evidence) {
   await liveHeading.evaluate((node) => {
     node.dataset.historyCheck = "live";
   });
+  const previewRow = rows.nth(1).getByRole("button", { name: /^Preview / });
+  const old = page.getByRole("dialog", { name: "An old version", exact: true });
+  const oldVersionRoute = "**/api/old-version";
+  const { promise: pending, resolve: hold } = Promise.withResolvers();
+  await page.route(oldVersionRoute, (route) =>
+    route.request().method() === "POST" ? hold(route) : route.continue(),
+  );
+  const preparingTab = page.context().waitForEvent("page");
+  await previewRow.click();
+  const opening = await pending;
+  const temporaryTab = await preparingTab;
+  const cancel = old.getByRole("button", { name: "Cancel preview", exact: true });
+  await cancel.press("Escape");
+  await opening.fulfill({ status: 409, json: { ok: false, message: "Preview cancelled." } });
+  await old.waitFor({ state: "detached" });
+  await temporaryTab.close();
+  await page.unroute(oldVersionRoute);
+
   const openTab = page.context().waitForEvent("page");
-  await rows
-    .nth(1)
-    .getByRole("button", { name: /^Preview / })
-    .click();
+  await previewRow.click();
   const oldTab = await openTab;
   try {
-    const old = page.getByRole("dialog", { name: "An old version", exact: true });
     const back = old.getByRole("button", { name: "Back to current", exact: true });
     await back.waitFor({ timeout: 90000 });
     await old.getByRole("heading", { name: "Viewing an old version", exact: true }).waitFor();
@@ -84,9 +100,19 @@ export async function checkStudioHistory(page, phone, evidence) {
 
     await page.screenshot({ path: join(evidence, "history-viewing-old.png") });
     await oldTab.screenshot({ path: join(evidence, "history-isolated-app.png") });
+    await page.route(oldVersionRoute, (route) =>
+      route.request().method() === "DELETE"
+        ? route.fulfill({ status: 500, body: "Fixture close failure" })
+        : route.continue(),
+    );
+    await back.click();
+    await old
+      .getByRole("alert")
+      .getByText("Studio could not close the old version. Try again.", { exact: true })
+      .waitFor();
+    await page.unroute(oldVersionRoute);
     await back.click();
     await old.waitFor({ state: "detached" });
-    assert.equal(oldTab.isClosed(), true);
     await changes.getByRole("button", { name: "Close", exact: true }).click();
     assert.equal(await liveHeading.getAttribute("data-history-check"), "live");
     assert.deepEqual(await project(), before);
@@ -98,6 +124,7 @@ export async function checkStudioHistory(page, phone, evidence) {
     await oldTab.screenshot({ path: join(evidence, "isolated-app-failure.png") }).catch(() => {});
     throw error;
   } finally {
+    await page.unroute(oldVersionRoute);
     if (!oldTab.isClosed()) {
       await page.evaluate(() =>
         fetch("/api/old-version", {

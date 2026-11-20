@@ -429,6 +429,11 @@ export function App() {
   const [old, setOld] = useState<OpenOld>();
   const [opening, setOpening] = useState<string>();
   const [closingOld, setClosingOld] = useState(false);
+  const [oldCloseError, setOldCloseError] = useState<string>();
+  const oldRequest = useRef<{
+    result: ReturnType<typeof api.openOldVersion>;
+    cancelled: boolean;
+  }>(undefined);
   const oldTab = useRef<Window | null>(null);
   const viewingOld = old !== undefined || opening !== undefined;
   const seeVersion = async (entry: TraceEntry) => {
@@ -441,9 +446,16 @@ export function App() {
     oldTab.current = tab;
     const description = entryText(entry, words);
     setOpening(description);
-    const result = await api
-      .openOldVersion(entry.id)
-      .catch((e: Error) => ({ ok: false as const, message: e.message }));
+    const request = {
+      result: api
+        .openOldVersion(entry.id)
+        .catch((e: Error) => ({ ok: false as const, message: e.message })),
+      cancelled: false,
+    };
+    oldRequest.current = request;
+    const result = await request.result;
+    if (request.cancelled) return;
+    oldRequest.current = undefined;
     setOpening(undefined);
     if (!result.ok) {
       tab.close();
@@ -462,15 +474,22 @@ export function App() {
   };
   const backToCurrent = async () => {
     if (closingOld) return;
+    const request = oldRequest.current;
+    if (request) request.cancelled = true;
     setClosingOld(true);
+    setOldCloseError(undefined);
     try {
       await api.closeOldVersion();
-    } catch (error) {
-      setMessage({ ok: false, text: (error as Error).message });
-    } finally {
-      oldTab.current?.close();
+      // The DELETE may have reached Studio before the opening request did.
+      if (request && (await request.result).ok) await api.closeOldVersion();
+      if (request) oldTab.current?.close(); // This tab is still on the preparing page.
       oldTab.current = null;
+      oldRequest.current = undefined;
+      setOpening(undefined);
       setOld(undefined);
+    } catch (error) {
+      setOldCloseError((error as Error).message);
+    } finally {
       setClosingOld(false);
     }
   };
@@ -2346,6 +2365,7 @@ export function App() {
           description={old?.description ?? opening ?? ""}
           open={old}
           closing={closingOld}
+          error={oldCloseError}
           onBack={() => void backToCurrent()}
           onOpenAgain={showOldTab}
         />
