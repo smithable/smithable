@@ -20,6 +20,7 @@ if (typeof window !== "undefined" && window.parent !== window) {
   let design = new URLSearchParams(location.search).has("__sm_look");
   const designOnly = () => design ||= new URLSearchParams(location.search).has("__sm_look");
   let selecting = false;
+  let studioShift = false;
   let temporary = false;
   // In Studio's Code mode a text is not changed in place: Studio opens its line instead.
   let code = false;
@@ -68,7 +69,16 @@ if (typeof window !== "undefined" && window.parent !== window) {
   const editing = (element) => element instanceof Element && Boolean(element.closest(
     'input, textarea, select, [contenteditable=true], [role=textbox]'
   ));
-  const armed = (event) => selecting || temporary || (event?.shiftKey && !editing(event.target));
+  const armed = () => selecting || temporary || studioShift;
+  const canPick = (event) => {
+    if (selecting) return true;
+    const target = event.target;
+    if (!event.shiftKey || !(target instanceof Element) || editing(target)) return false;
+    const mark = target.closest("[data-sm-concept], [data-sm-text]");
+    if (!mark) return false;
+    const control = target.closest("a, button, label, summary, [role=button], [role=link], [role=checkbox], [role=radio], [role=switch]");
+    return !control || control.contains(mark);
+  };
   const textAt = (element) => element instanceof Element
     ? element.closest("[data-sm-text]") ?? element.closest("a,button")?.querySelector("[data-sm-text]")
     : null;
@@ -288,13 +298,16 @@ if (typeof window !== "undefined" && window.parent !== window) {
     if (Number.isSafeInteger(event.data.followContext) && event.data.followContext >= followContext) followContext = event.data.followContext;
     report();
     selecting = Boolean(event.data.on);
+    studioShift = Boolean(event.data.shift);
     code = Boolean(event.data.code);
     // Visible to people (a cursor) and to tests: the page is in select mode.
     paintSelect();
   });
   document.addEventListener("mouseover", (event) => {
-    if (designOnly() || !armed(event)) return;
+    if (designOnly()) return;
     hovered?.removeAttribute("data-sm-hover");
+    hovered = null;
+    if (!canPick(event)) return;
     hovered = heroButton(textAt(event.target)) ?? markedAt(event.target);
     hovered?.setAttribute("data-sm-hover", "");
     if (hovered?.dataset.smPart === "column") hovered.draggable = true;
@@ -302,7 +315,7 @@ if (typeof window !== "undefined" && window.parent !== window) {
   // A text marked with its place in smithable.content.yml is changed in place: Enter or
   // leaving it saves, Escape cancels.
   document.addEventListener("click", (event) => {
-    if (designOnly() || !armed(event)) return;
+    if (designOnly() || !canPick(event)) return;
     const text = textAt(event.target);
     if (!text || text.isContentEditable) return;
     event.preventDefault();
@@ -337,7 +350,7 @@ if (typeof window !== "undefined" && window.parent !== window) {
     text.addEventListener("blur", blur);
   }, true);
   document.addEventListener("click", (event) => {
-    if (designOnly() || !armed(event)) return;
+    if (designOnly() || !canPick(event)) return;
     const marked = markedAt(event.target);
     event.preventDefault();
     event.stopPropagation();
@@ -354,7 +367,7 @@ if (typeof window !== "undefined" && window.parent !== window) {
   document.addEventListener("dragstart", (event) => {
     if (designOnly()) return;
     const marked = markedAt(event.target);
-    if (armed(event) && marked?.dataset.smPart === "column") dragged = marked;
+    if (canPick(event) && marked?.dataset.smPart === "column") dragged = marked;
   });
   document.addEventListener("dragover", (event) => {
     if (designOnly()) return;
@@ -391,7 +404,7 @@ if (typeof window !== "undefined" && window.parent !== window) {
       post({ type: "undo" });
     }
     // A selected column moves with Alt+Left and Alt+Right: the drag's keyboard way (A 231).
-    const chosen = !designOnly() && armed(event) && selected?.dataset.smPart === "column" ? selected : null;
+    const chosen = !designOnly() && selecting && selected?.dataset.smPart === "column" ? selected : null;
     if (chosen && event.altKey && (event.key === "ArrowLeft" || event.key === "ArrowRight") && !typing) {
       const headers = [...(chosen.closest("tr")?.querySelectorAll("[data-sm-part=column]") ?? [])];
       const at = headers.indexOf(chosen);
@@ -404,7 +417,7 @@ if (typeof window !== "undefined" && window.parent !== window) {
       }
       return;
     }
-    if (!designOnly() && armed(event) && !typing && !event.ctrlKey && !event.metaKey && !event.altKey) {
+    if (!designOnly() && selecting && !typing && !event.ctrlKey && !event.metaKey && !event.altKey) {
       if (event.key === "Enter" && hovered instanceof HTMLElement) {
         event.preventDefault();
         hovered.click();
@@ -431,8 +444,9 @@ if (typeof window !== "undefined" && window.parent !== window) {
     }
   }, true);
   const releaseShift = () => {
-    if (!temporary) return;
+    if (!temporary && !studioShift) return;
     temporary = false;
+    studioShift = false;
     paintSelect();
   };
   document.addEventListener("keyup", (event) => { if (event.key === "Shift") releaseShift(); }, true);

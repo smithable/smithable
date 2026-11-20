@@ -68,6 +68,7 @@ export function Preview({
   version,
   updating,
   selecting,
+  shiftSelecting,
   inCode,
   addressHost,
   onShowPage,
@@ -83,6 +84,8 @@ export function Preview({
   updating?: boolean;
   /** Select mode: clicking in the preview selects a part of the spec instead of using the app. */
   selecting?: boolean;
+  /** The Shift key is held in Studio around the preview. */
+  shiftSelecting?: boolean;
   /** Code mode: a text clicked in select mode goes to its line in the content file instead of
    * being changed in place. */
   inCode?: boolean;
@@ -239,6 +242,7 @@ export function Preview({
         {
           type: "smithable:select-mode",
           on: Boolean(selecting),
+          shift: Boolean(shiftSelecting),
           code: Boolean(inCode),
           followContext: previewFollowContext(),
         },
@@ -250,7 +254,7 @@ export function Preview({
     };
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
-  }, [selecting, inCode]);
+  }, [selecting, shiftSelecting, inCode]);
   // What the last change touched, flashed in the page (motion.md 9a): at once, for a change the
   // page shows without reloading (a text edited in place), and again to each page that says it
   // is ready until one answers that it has flashed it. A change may reload the page more than
