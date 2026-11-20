@@ -5,6 +5,7 @@
 import { type ChildProcess, execFileSync, spawn } from "node:child_process";
 import { createHash, randomBytes } from "node:crypto";
 import {
+  appendFileSync,
   cpSync,
   existsSync,
   lstatSync,
@@ -18,7 +19,7 @@ import {
 } from "node:fs";
 import { createServer } from "node:net";
 import { homedir } from "node:os";
-import { dirname, join, resolve } from "node:path";
+import { dirname, join, resolve, sep } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { tool } from "./io.js";
 import { childEnv } from "./secrets.js";
@@ -214,8 +215,8 @@ function run(
 export async function openOldVersion(
   dir: string,
   commit: string,
-  options: { lookKey?: string; log?: (line: string) => void } = {},
-): Promise<OldVersion & { child: ChildProcess; url: string }> {
+  options: { lookKey?: string; log?: (line: string) => void; studioOrigin?: string } = {},
+): Promise<OldVersion & { child: ChildProcess; url: string; closeKey?: string }> {
   closeOldVersion(dir);
   const abort = new AbortController();
   const children = new Set<ChildProcess>();
@@ -294,6 +295,30 @@ export async function openOldVersion(
       record.pictures = "today";
     }
     signal.throwIfAborted();
+    // An isolated tab without an opener can close itself. Attach the listener to the disposable
+    // router so the preview keeps using whatever Vite configuration it had.
+    const router = join(folder, "src", "router.tsx");
+    let closeKey: string | undefined;
+    if (
+      options.studioOrigin &&
+      lstatSync(router, { throwIfNoEntry: false })?.isFile() &&
+      realpathSync(router).startsWith(realpathSync(folder) + sep)
+    ) {
+      const key = randomBytes(24).toString("hex");
+      appendFileSync(
+        router,
+        `
+if (typeof window !== "undefined") {
+  window.addEventListener("message", (event) => {
+    if (event.origin === ${JSON.stringify(options.studioOrigin)} &&
+      event.data?.type === "smithable:close-old-version" &&
+      event.data.key === ${JSON.stringify(key)}) window.close();
+  });
+}
+`,
+      );
+      closeKey = key;
+    }
     // The worktree's own vite, started directly so it leads its process group and closing stops
     // it: pnpm exec would start it in a group of its own, out of reach. On the copy's own host.
     const child = spawn(
@@ -305,7 +330,7 @@ export async function openOldVersion(
     child.stderr?.on("data", (d) => options.log?.(String(d)));
     if (child.pid) record.pid = child.pid;
     writeFileSync(recordPath(dir), JSON.stringify(record));
-    return { ...record, child, url };
+    return { ...record, child, url, closeKey };
   } catch (error) {
     // Only this opening's own: a newer one has already closed it and started its own.
     if (running.get(dir)?.abort === abort) closeOldVersion(dir);

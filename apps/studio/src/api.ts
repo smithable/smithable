@@ -71,8 +71,19 @@ export interface Making {
 
 /** An old version opened as a copy, or why not. */
 export type OldVersionResult =
-  | { ok: true; commit: string; url: string; data: "then" | "samples"; pictures: "today" | "none" }
+  | {
+      ok: true;
+      commit: string;
+      url: string;
+      data: "then" | "samples";
+      pictures: "today" | "none";
+      closeKey?: string;
+    }
   | { ok: false; message: string };
+
+export type ApplyVersionResult =
+  | { ok: true; output: string }
+  | { ok: false; output: string; plan?: string; changed?: boolean };
 
 export interface ReleaseReview {
   /** Local evidence only: absence is not proof that a hosted app was never published. */
@@ -128,7 +139,7 @@ export interface ModelUsage {
 
 export interface Project {
   name: string;
-  /** Source fingerprint, including Git HEAD, for the look picker's conditional changes. */
+  /** Source fingerprint, including Git HEAD, for conditional changes. */
   revision?: string;
   files: {
     spec?: string;
@@ -347,7 +358,7 @@ export const EXPECT_RELOAD = "smithable:expect-reload";
 let latestChange: string | undefined;
 export const lastChange = () => latestChange;
 
-const changing = async (result: Promise<Result>) => {
+const changing = async <R extends Result>(result: Promise<R>): Promise<R> => {
   const r = await result;
   if (r.ok) window.dispatchEvent(new Event(EXPECT_RELOAD));
   latestChange = r.ok ? r.change : undefined;
@@ -411,6 +422,12 @@ export const api = {
   releaseReview: () => call<ReleaseReview>("/api/release-review"),
   /** An old version as a copy (old-version-preview.md): open it, close it. */
   openOldVersion: (commit: string) => call<OldVersionResult>("/api/old-version", { commit }),
+  checkVersion: (commit: string, revision: string) =>
+    call<ApplyVersionResult>("/api/apply-version", { commit, revision, confirm: false }),
+  applyVersion: (commit: string, revision: string, plan: string) =>
+    changing(
+      call<ApplyVersionResult>("/api/apply-version", { commit, revision, confirm: true, plan }),
+    ),
   closeOldVersion: () =>
     // A change like any other: Studio's header and JSON, or the daemon refuses it (refusal()).
     fetch("/api/old-version", {

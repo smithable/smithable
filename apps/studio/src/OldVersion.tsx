@@ -1,9 +1,13 @@
 // The isolated copy runs in its own tab so its sign-in cookie works on its separate host.
 import { useLayoutEffect, useRef } from "react";
+import type { ApplyVersionResult } from "./api";
 import { versionTime } from "./history";
 import { Button } from "./ui";
 
 export interface OpenOld {
+  commit: string;
+  revision?: string;
+  closeKey?: string;
   description: string;
   at: string;
   url: string;
@@ -29,6 +33,7 @@ export function OldVersion({
   error,
   onBack,
   onOpenAgain,
+  onApply,
 }: {
   description: string;
   open: OpenOld | undefined;
@@ -36,6 +41,7 @@ export function OldVersion({
   error: string | undefined;
   onBack: () => void;
   onOpenAgain: () => void;
+  onApply?: () => void;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
   useLayoutEffect(() => {
@@ -91,9 +97,74 @@ export function OldVersion({
               there. Close its tab when you’re done.
             </p>
             <Button onClick={onOpenAgain}>Show its tab</Button>
+            {onApply && (
+              <Button variant="ghost" onClick={onApply}>
+                Apply this version
+              </Button>
+            )}
           </>
         ) : (
           <p role="status">Preparing the old version…</p>
+        )}
+      </div>
+    </dialog>
+  );
+}
+
+export function ApplyVersionDialog({
+  result,
+  applying,
+  onApply,
+  onClose,
+}: {
+  result?: ApplyVersionResult;
+  applying: boolean;
+  onApply: (plan: string) => void;
+  onClose: () => void;
+}) {
+  const dialog = useRef<HTMLDialogElement>(null);
+  useLayoutEffect(() => {
+    const node = dialog.current;
+    node?.showModal();
+    return () => node?.close();
+  }, []);
+  useLayoutEffect(() => {
+    if (!applying) dialog.current?.querySelector<HTMLButtonElement>("[data-close-apply]")?.focus();
+  }, [applying]);
+  const plan = result?.ok === false ? result.plan : undefined;
+
+  return (
+    <dialog
+      ref={dialog}
+      aria-label="Apply this version"
+      aria-busy={applying || !result}
+      className="m-auto w-[min(32rem,92vw)] rounded-lg bg-panel p-5 text-fg shadow-xl backdrop:bg-black/30"
+      onCancel={(event) => {
+        event.preventDefault();
+        if (!applying) onClose();
+      }}
+    >
+      <h2 className="mb-3 text-base font-semibold">Apply this version</h2>
+      {result?.ok === false && result.changed && (
+        <p role="alert" className="mb-2 font-medium">
+          The plan changed. Review what applying it would do now.
+        </p>
+      )}
+      {result ? (
+        <p className="whitespace-pre-wrap break-words text-sm" role={plan ? undefined : "status"}>
+          {result.output}
+        </p>
+      ) : (
+        <p role="status">Checking what would change…</p>
+      )}
+      <div className="mt-4 flex justify-end gap-2">
+        <Button data-close-apply variant="ghost" onClick={onClose} disabled={applying}>
+          {plan || !result ? "Cancel" : "Close"}
+        </Button>
+        {plan && (
+          <Button disabled={applying} onClick={() => onApply(plan)}>
+            {applying ? "Applying…" : "Apply this version"}
+          </Button>
         )}
       </div>
     </dialog>

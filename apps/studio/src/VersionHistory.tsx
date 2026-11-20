@@ -6,10 +6,12 @@ export function VersionHistory({
   entries,
   words,
   onSee,
+  onApply,
 }: {
   entries: TraceEntry[];
   words: Words;
   onSee?: (entry: TraceEntry) => void;
+  onApply?: (entry: TraceEntry) => void;
 }) {
   if (!entries.length) return <p className="px-4 py-3 text-sm text-quiet">No changes yet.</p>;
 
@@ -36,14 +38,26 @@ export function VersionHistory({
               </p>
             </div>
             {!current && onSee && (
-              <Button
-                variant="ghost"
-                className="h-7 shrink-0 px-2 text-xs"
-                aria-label={`Preview ${description}, ${when}`}
-                onClick={() => onSee(entry)}
-              >
-                Preview
-              </Button>
+              <div className="flex shrink-0 flex-wrap justify-end gap-1">
+                <Button
+                  variant="ghost"
+                  className="h-7 shrink-0 px-2 text-xs"
+                  aria-label={`Preview ${description}, ${when}`}
+                  onClick={() => onSee(entry)}
+                >
+                  Preview
+                </Button>
+                {onApply && (
+                  <Button
+                    variant="ghost"
+                    className="h-7 px-2 text-xs"
+                    aria-label={`Apply this version: ${description}, ${when}`}
+                    onClick={() => onApply(entry)}
+                  >
+                    Apply this version
+                  </Button>
+                )}
+              </div>
             )}
           </li>
         );

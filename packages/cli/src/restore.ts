@@ -21,6 +21,8 @@ import type { Io } from "./io.js";
 import { managedAt, managedDiff, managedOnDisk, SPEC_FILES, validateManaged } from "./managed.js";
 import { type FilesPlan, runFilesChange } from "./op.js";
 import { loadPlugins } from "./plugins.js";
+import { ProjectBusyError, ProjectLockError, withProjectMutationSync } from "./project-mutation.js";
+import { projectRevision } from "./project-revision.js";
 
 /**
  * Apply this version (docs/design/apply-old-version.md): an earlier version's definition made
@@ -230,6 +232,20 @@ export function planDigest(plan: RestorePlan): string {
 const answer = (plan: RestorePlan, mcp?: boolean) =>
   mcp ? `confirm: true and plan: "${planDigest(plan)}"` : `--yes --plan ${planDigest(plan)}`;
 
+const NOTHING_TO_APPLY = "This version is the app as it is now: applying it changes nothing.";
+
+/** Studio receives a digest only for a plan it lets the person apply. */
+interface StudioRestoreReview {
+  output: string;
+  plan?: string;
+}
+
+function studioReview(plan: RestorePlan): StudioRestoreReview {
+  if (!Object.keys(plan.files).length) return { output: NOTHING_TO_APPLY };
+  const output = planText(plan).trimEnd();
+  return lossRefusal(plan) ? { output } : { output, plan: planDigest(plan) };
+}
+
 /** What `--check` and the confirmation say: the access block first, then the shape, then the records. */
 export function planText(plan: RestorePlan): string {
   const lines = [
@@ -260,16 +276,42 @@ export async function restore(
     mcp?: boolean;
     /** The plan's digest as seen (`--check` or the first refusal): applied only if it is still the plan. */
     plan?: string;
+    /** Studio cannot agree to a loss or apply without the digest it showed. */
+    studio?: (review: StudioRestoreReview) => void;
   } = {},
 ): Promise<number> {
   if (flags.check) {
+    const review = flags.studio;
+    if (review) {
+      try {
+        return withProjectMutationSync(dir, (root) => {
+          if (projectRevision(root) !== flags.expectedRevision) {
+            io.err(
+              "The app changed while you were looking. See the latest change, then apply again.\n",
+            );
+            return 1;
+          }
+          const plan = restorePlan(root, change);
+          if (typeof plan === "string") {
+            io.err(`${plan}\n`);
+            return 1;
+          }
+          review(studioReview(plan));
+          return 0;
+        });
+      } catch (error) {
+        if (!(error instanceof ProjectBusyError || error instanceof ProjectLockError)) throw error;
+        io.err(`${error.message}\n`);
+        return 1;
+      }
+    }
     const plan = restorePlan(dir, change);
     if (typeof plan === "string") {
       io.err(`${plan}\n`);
       return 1;
     }
     if (!Object.keys(plan.files).length) {
-      io.out("This version is the app as it is now: applying it changes nothing.\n");
+      io.out(`${NOTHING_TO_APPLY}\n`);
       return 0;
     }
     io.out(planText(plan));
@@ -287,6 +329,13 @@ export async function restore(
       build: (root) => {
         const plan = restorePlan(root, change);
         if (typeof plan === "string") return plan;
+        if (flags.studio) {
+          const review = studioReview(plan);
+          if (!flags.expectedRevision || !flags.yes || !review.plan || flags.plan !== review.plan) {
+            flags.studio(review);
+            return review.output;
+          }
+        }
         // An answer given to another plan is not an answer to this one: the app or its records
         // changed since it was seen.
         if (flags.plan !== undefined && flags.plan !== planDigest(plan))
@@ -308,8 +357,7 @@ export async function restore(
             ...(refusal ? [refusal] : []),
             `${plan.rolesGone.length ? "With the answer yes, those people are left without that role. " : ""}Run again with ${answer(plan, flags.mcp)} to apply it${plan.lost.length ? "; those values are deleted" : ""}.`,
           ].join("\n");
-        if (!Object.keys(plan.files).length)
-          return "This version is the app as it is now: applying it changes nothing.";
+        if (!Object.keys(plan.files).length) return NOTHING_TO_APPLY;
         if (plan.access.length) io.out(`Access:\n${plan.access.map((a) => `  ${a}\n`).join("")}`);
         // Said with the answer given beforehand too, so what goes is never deleted unseen.
         if (refusal) io.out(`${refusal}\n`);
