@@ -54,10 +54,11 @@ All of them run before anything is written, under the project's mutation lock, a
    - a field with the same name and another type, or a relation that changed its target: the operation layer's own conversion check;
    - a choice value that is gone and in use.
 
-   **A rename is not guessed.** A version from before "phone → mobile" has `phone` and no `mobile`; by shape alone that is a loss of `mobile`. The host reads the recorded operations between the version and now (each commit's `Smithable-Op`): where the fields and models that differ are explained by recorded renames, the migration renames back; where they are not, it is a loss.
+   **A rename is not guessed.** A version from before "phone → mobile" has `phone` and no `mobile`; by shape alone that is a loss of `mobile`. The host reads the recorded operations between the version and now (each commit's `Smithable-Op`): where the fields and models that differ are explained by recorded renames, the migration renames back; where they are not, it is a loss. A rename back onto a name that a newer field has taken (`phone` renamed to `mobile`, then a new `phone` added) is two things at once, the newer field going and the older coming back under its name: the newer field's values are the loss, and the migration drops it before it renames.
 
    On a loss Studio refuses and lists it: "This version has no place for: Instructor · phone (41 values)." The command line asks, and takes `--yes`, as for every change that loses data. The check is made again inside the migration's own transaction, since a record can arrive without the project's revision changing.
-6. **It would change something.** A version whose managed files equal today's is not offered.
+6. **Nobody is left with a role that is gone.** A role the version does not have, and that a person in the development database holds, is refused by Studio with the role and the count ("The role Trainer is not in this version; 3 people have it"); the command line asks, and with `--yes` those people are left without that role, as when a role is removed by its own operation.
+7. **It would change something.** A version whose managed files equal today's is not offered.
 
 If a later step fails (writing, generating, migrating, the commit), the pipeline's existing rule holds: every file is put back as in the last commit and the database's snapshot is restored.
 
@@ -76,7 +77,7 @@ What the build changes in the host:
 
 ## 6. Undo and Redo
 
-- **Undo of the Apply while it is the newest change** is the ordinary undo: the commit reverted, the development database back at its snapshot from before the Apply. Records made in the development database after the Apply go with it; that is today's rule for every change, and the confirmation of that Undo says it when there are any. When the snapshot is gone, the bare revert would leave the files and the database apart, so the undo takes the other path instead: a new change with the earlier files, migrated forward.
+- **Undo of the Apply while it is the newest change** is the ordinary undo: the commit reverted, the development database back at its snapshot from before the Apply. Records made in the development database after the Apply go with it; that is today's rule for every change, and the confirmation of that Undo says it when there are any. When the snapshot is gone, the bare revert would leave the files and the database apart, so the undo takes the other path instead: a new change with the earlier files, migrated forward. That path brings a dropped column back empty, so when the Apply lost values (it was confirmed with `--yes`) and its snapshot is gone, the Undo says so before it runs: the values do not come back.
 - **Undo of the Apply later** is the three-way path of any earlier change, over the managed files.
 - **Redo** is offered by the existing rule: only while no other change came after the undo. It does not replay through the operation registry: the host rebuilds the plan from the recorded commit and runs every check of §4 again, with today's records and today's access. It asks again on a loss; it never runs with the answer already given.
 - After `apply B → undo → C`, Redo of the Apply is gone, and B is still in the list to apply again.
