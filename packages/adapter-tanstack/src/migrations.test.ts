@@ -4,6 +4,7 @@ import {
   dropTakenColumn,
   dropTakenTables,
   goneFirst,
+  inSnapshot,
   inTurn,
   quoteReferences,
   renameColumnSql,
@@ -171,6 +172,17 @@ test("a model renamed back onto a name a newer model took drops the newer model'
   expect(Object.keys(dropped.tables)).toEqual(["clients", "orders"]);
   expect(dropped.tables.orders.foreignKeys).toEqual({});
   expect(dropTakenTables(snapshot, "Client", "Buyer")).toBeUndefined();
+});
+
+test("a model's passing name is taken while any of its tables is there, the kit's beside it too", () => {
+  const snapshot = JSON.stringify({
+    tables: {
+      customers_reads: { name: "customers_reads", columns: { id: { name: "id" } } },
+    },
+  });
+  expect(inSnapshot(snapshot, "Customer")).toBe(true);
+  expect(inSnapshot(snapshot, "Client")).toBe(false);
+  expect(inSnapshot(snapshot, "Customer", "id")).toBe(false);
 });
 
 test("a reference added to an existing table names its table quoted", () => {

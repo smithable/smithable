@@ -159,6 +159,7 @@ export function restorePlan(dir: string, change: string): RestorePlan | string {
   const target = spec(wanted[SPEC_FILES.spec]);
   if (!today || !target) return "This version does not fit the app as it is today.";
   const renames = recordedRenames(dir, version.sha, today, target);
+  if (renames.unresolved) return UNFOLLOWED;
   const shape = shapeChange(dir, today, target, renames);
   const authOf = (text: string | undefined, ir: SpecIR) =>
     text ? validateAuth({ path: SPEC_FILES.auth, text }, ir).auth : undefined;
@@ -185,6 +186,9 @@ export function restorePlan(dir: string, change: string): RestorePlan | string {
     ],
   };
 }
+
+const UNFOLLOWED =
+  "The changes since this version could not be followed (an undo of an undo too many levels deep, or a change Git cannot find or read), so what was renamed since is not known: nothing was changed.";
 
 const UNREAD =
   "The app's records could not be read to see what this version would delete or who holds which role: try again when nothing else is using the database.";
@@ -300,6 +304,8 @@ export async function restore(
 interface Renames {
   models: { now: string; was: string }[];
   fields: { model: string; now: string; was: string; reference: boolean }[];
+  /** The history since the version could not be followed: what was renamed is not known. */
+  unresolved?: boolean;
 }
 
 /**
@@ -309,22 +315,24 @@ interface Renames {
  * shapes bear them out: a rename is never guessed from the shapes alone (§4.5).
  */
 function recordedRenames(dir: string, version: string, today: SpecIR, then: SpecIR): Renames {
-  const log = git(dir, [
+  const range = git(dir, [
     "log",
     "--first-parent",
     "--reverse",
     "--format=%H%x1f%B%x1e",
     `${version}..HEAD`,
-  ])
-    .out.split("\x1e")
-    .filter((e) => e.trim());
-  const entries = log.map((e) => {
-    const [sha = "", message = ""] = e.trim().split("\x1f");
-    return { sha, message };
-  });
-  // Each of the version's models and fields, by the name it has after each rename in turn.
-  const models = new Map(then.models.map((m) => [m.name, m.name]));
-  const fields = new Map(
+  ]);
+  const entries = range.out
+    .split("\x1e")
+    .filter((e) => e.trim())
+    .map((e) => {
+      const [sha = "", message = ""] = e.trim().split("\x1f");
+      return { sha, message };
+    });
+  // Each of the version's models and fields, by the name it has after each rename in turn
+  // (undefined once it has gone).
+  const models = new Map<string, string | undefined>(then.models.map((m) => [m.name, m.name]));
+  const fields = new Map<string, string | undefined>(
     then.models.flatMap((m) => m.fields.map((f) => [`${m.name}\x1f${f.name}`, f.name] as const)),
   );
   const rename = (op: string | undefined, args: Record<string, unknown>) => {
@@ -363,39 +371,61 @@ function recordedRenames(dir: string, version: string, today: SpecIR, then: Spec
     return [{ op: recorded.op, args }];
   };
   const revertOf = (message: string) => /This reverts commit ([0-9a-f]{40})/.exec(message)?.[1];
-  // What a commit did, a revert being what it reverted done backwards (to a few levels).
+  // What a commit did, a revert being what it reverted done backwards; undefined when the chain
+  // of reverts cannot be followed to its end (too deep, or a commit Git cannot find).
   type Step = ReturnType<typeof steps>[number];
-  const effect = (message: string, depth = 0): Step[] => {
+  const effect = (message: string, depth = 0): Step[] | undefined => {
     const target = revertOf(message);
-    if (!target || depth > 8) return steps(message);
-    return effect(git(dir, ["log", "-1", "--format=%B", target]).out, depth + 1)
-      .reverse()
+    if (!target) return steps(message);
+    const reverted = depth < 8 ? git(dir, ["log", "-1", "--format=%B", target]) : undefined;
+    if (!reverted?.ok) return undefined;
+    return effect(reverted.out, depth + 1)
+      ?.reverse()
       .map((step) => ({ ...step, args: { ...step.args, from: step.args.to, to: step.args.from } }));
   };
-  // A commit counts when no counting commit after it in the range reverts it; a revert whose
-  // change is in the range then cancels nothing that is counted.
-  const logged = new Set(entries.map((e) => e.sha));
-  const dead = new Set<string>();
-  for (const { sha, message } of [...entries].reverse()) {
-    if (dead.has(sha)) continue;
-    const target = revertOf(message);
-    if (target) dead.add(target);
-  }
+  // The models and their fields as a commit left its spec; undefined when it cannot be read.
+  const shapeAt = (sha: string): Map<string, Set<string>> | undefined => {
+    const shown = git(dir, ["show", `${sha}:./${SPEC_FILES.spec}`]);
+    if (!shown.ok) return undefined;
+    try {
+      const all = new YamlEditor(shown.out).get(["models"]) as Record<string, unknown> | null;
+      return new Map(
+        Object.entries(all ?? {}).map(([name, m]) => [
+          name,
+          new Set(Object.keys((m as { fields?: Record<string, unknown> } | null)?.fields ?? {})),
+        ]),
+      );
+    } catch {
+      return undefined;
+    }
+  };
+  // Every commit in turn, a revert as its change backwards. A model or field that is not in a
+  // commit's spec under the name followed has gone, and one on that name later is another: its
+  // identity ends there and no rename brings today's back as the version's.
+  if (!range.ok) return { models: [], fields: [], unresolved: true };
   for (const { sha, message } of entries) {
-    if (dead.has(sha)) continue;
-    const target = revertOf(message);
-    if (target && logged.has(target)) continue;
-    for (const step of effect(message)) rename(step.op, step.args);
+    const done = effect(message);
+    const shape = shapeAt(sha);
+    if (!done || !shape) return { models: [], fields: [], unresolved: true };
+    for (const step of done) rename(step.op, step.args);
+    for (const [name, current] of models)
+      if (current !== undefined && !shape.has(current)) models.set(name, undefined);
+    for (const [key, current] of fields) {
+      const owner = models.get(key.split("\x1f")[0] ?? "");
+      if (current !== undefined && (owner === undefined || !shape.get(owner)?.has(current)))
+        fields.set(key, undefined);
+    }
   }
   const model = (ir: SpecIR, name: string) => ir.models.find((m) => m.name === name);
   const result: Renames = { models: [], fields: [] };
   // A newer model on the old name goes (shapeChange counts what it holds); the rename stands.
   for (const [name, current] of models)
-    if (current !== name && model(today, current)) result.models.push({ now: current, was: name });
+    if (current !== undefined && current !== name && model(today, current))
+      result.models.push({ now: current, was: name });
   const nowName = (name: string) => result.models.find((m) => m.was === name)?.now ?? name;
   for (const [key, current] of fields) {
     const [owner = "", name = ""] = key.split("\x1f");
-    if (current === name) continue;
+    if (current === undefined || current === name) continue;
     const was = model(then, owner)?.fields.find((f) => f.name === name);
     const is = model(today, nowName(owner))?.fields.find((f) => f.name === current);
     if (!was || !is || storageOf(was) === "none" || storageOf(was) !== storageOf(is)) continue;

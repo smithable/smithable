@@ -411,3 +411,42 @@ test("§8.8 a fix branch is refused; two requests at once make one change", asyn
   expect(results.filter((r) => r === 0)).toHaveLength(1);
   expect(Number(count())).toBe(was + 1);
 });
+
+test("§8.2 a renamed model removed since is not the one a newer model on its name is", async () => {
+  const dir = project();
+  const b = await op(dir, "addModel", { model: "Errand", fields: { title: "string!" } });
+  await op(dir, "renameModel", { from: "Errand", to: "Chore" });
+  commitEdit(dir, "smithable.yml", SPEC);
+  await op(dir, "addModel", { model: "Errand", fields: { body: "text" } });
+  await op(dir, "addModel", { model: "Chore", fields: { due: "date" } });
+  const plan = restorePlan(dir, b);
+  if (typeof plan === "string") throw new Error(plan);
+  expect(plan.effects.filter((e) => e.kind === "rename-model")).toEqual([]);
+  expect(plan.goes).toContain("Chore");
+});
+
+test("§8.2 a renamed field removed since is not the one a newer field on its name is", async () => {
+  const dir = project();
+  const b = await op(dir, "addField", { model: "Customer", field: "phone", type: "string" });
+  await op(dir, "renameField", { model: "Customer", from: "phone", to: "mobile" });
+  await op(dir, "removeField", { model: "Customer", field: "mobile" });
+  await op(dir, "addField", { model: "Customer", field: "phone", type: "string" });
+  await op(dir, "addField", { model: "Customer", field: "mobile", type: "string" });
+  const plan = restorePlan(dir, b);
+  if (typeof plan === "string") throw new Error(plan);
+  expect(plan.effects.filter((e) => e.kind === "rename-field")).toEqual([]);
+});
+
+test("§8.2 an undo whose change Git cannot find refuses: what was renamed is not known", async () => {
+  const dir = project();
+  const b = await op(dir, "addField", { model: "Customer", field: "phone", type: "string" });
+  git(dir, [
+    "commit",
+    "-q",
+    "--allow-empty",
+    "-m",
+    `Revert "gone"\n\nThis reverts commit ${"0".repeat(40)}.\n`,
+  ]);
+  const plan = restorePlan(dir, b);
+  expect(plan).toMatch(/could not be followed/);
+});

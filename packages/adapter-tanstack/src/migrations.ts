@@ -270,7 +270,10 @@ export function dropTakenTables(
   return `${JSON.stringify(without(snapshot, new Set(landing), new Map()), null, 2)}\n`;
 }
 
-/** Whether the snapshot has a column for a model's field (or a table for a model, without one). */
+/**
+ * Whether the snapshot has a column for a model's field, or, without one, any table of the
+ * model's (its own or one the kit keeps beside it), so a passing name never lands on one.
+ */
 export function inSnapshot(
   snapshotJson: string,
   model: string,
@@ -281,7 +284,7 @@ export function inSnapshot(
   const { table, column } = columnOf(model, field ?? "id", reference);
   return field
     ? Boolean(snapshot.tables?.[table]?.columns[column])
-    : Boolean(snapshot.tables?.[table]);
+    : OWN_TABLES.some((suffix) => snapshot.tables?.[`${table}${suffix}`]);
 }
 
 /** A partial index's condition names its table in quotes: "customers"."deleted_at" is null. */
