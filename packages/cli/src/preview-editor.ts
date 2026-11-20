@@ -70,15 +70,9 @@ if (typeof window !== "undefined" && window.parent !== window) {
     'input, textarea, select, [contenteditable=true], [role=textbox]'
   ));
   const armed = () => selecting || temporary || studioShift;
-  const canPick = (event) => {
-    if (selecting) return true;
-    const target = event.target;
-    if (!event.shiftKey || !(target instanceof Element) || editing(target)) return false;
-    const mark = target.closest("[data-sm-concept], [data-sm-text]");
-    if (!mark) return false;
-    const control = target.closest("a, button, label, summary, [role=button], [role=link], [role=checkbox], [role=radio], [role=switch]");
-    return !control || control.contains(mark);
-  };
+  const controlAt = (target) => target instanceof Element && target.closest(
+    "a, button, label, summary, [role=button], [role=link], [role=checkbox], [role=radio], [role=switch]"
+  );
   const textAt = (element) => element instanceof Element
     ? element.closest("[data-sm-text]") ?? element.closest("a,button")?.querySelector("[data-sm-text]")
     : null;
@@ -86,6 +80,17 @@ if (typeof window !== "undefined" && window.parent !== window) {
     text && /^pages[.][^.]+[.][^.]+[.](button|secondButton)$/.test(text.dataset.smText ?? "")
       ? text.closest("[data-hero] a, [data-hero] button")
       : null;
+  const canPick = (event) => {
+    if (selecting) return true;
+    const target = event.target;
+    if (!event.shiftKey || !(target instanceof Element) || editing(target)) return false;
+    // A marked hero action is one editor target, including the padding around its text.
+    if (heroButton(textAt(target))) return true;
+    const mark = target.closest("[data-sm-concept], [data-sm-text]");
+    if (!mark) return false;
+    const control = controlAt(target);
+    return !control || control.contains(mark);
+  };
   const selectPart = (marked, concept, part = null) => {
     clear("data-sm-selected");
     selected = marked;
@@ -404,7 +409,7 @@ if (typeof window !== "undefined" && window.parent !== window) {
       post({ type: "undo" });
     }
     // A selected column moves with Alt+Left and Alt+Right: the drag's keyboard way (A 231).
-    const chosen = !designOnly() && selecting && selected?.dataset.smPart === "column" ? selected : null;
+    const chosen = !designOnly() && (selecting || event.shiftKey) && selected?.dataset.smPart === "column" ? selected : null;
     if (chosen && event.altKey && (event.key === "ArrowLeft" || event.key === "ArrowRight") && !typing) {
       const headers = [...(chosen.closest("tr")?.querySelectorAll("[data-sm-part=column]") ?? [])];
       const at = headers.indexOf(chosen);
@@ -417,14 +422,15 @@ if (typeof window !== "undefined" && window.parent !== window) {
       }
       return;
     }
-    if (!designOnly() && selecting && !typing && !event.ctrlKey && !event.metaKey && !event.altKey) {
-      if (event.key === "Enter" && hovered instanceof HTMLElement) {
+    if (!designOnly() && !typing && !event.ctrlKey && !event.metaKey && !event.altKey) {
+      if (event.key === "Enter" && hovered instanceof HTMLElement && (selecting || (event.shiftKey && !controlAt(t)))) {
         event.preventDefault();
-        hovered.click();
+        if (selecting) hovered.click();
+        else hovered.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, shiftKey: true }));
         return;
       }
       const move = ({ ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 })[event.key];
-      if (move) {
+      if (selecting && move) {
         const parts = [...document.querySelectorAll("[data-sm-concept], [data-sm-text]")]
           .filter((element) => element.getClientRects().length && !editing(element));
         if (parts.length) {
