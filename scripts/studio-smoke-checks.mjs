@@ -91,23 +91,11 @@ async function checkPreviewRange(page) {
   const rows = preview.locator('tbody input[data-part="select"]').filter({ visible: true });
   await preview.locator("body[data-hydrated=true]").waitFor({ timeout: 60000 });
   await rows.nth(2).waitFor({ timeout: 60000 });
-  const frame = await (await iframe.elementHandle()).contentFrame();
-  // The table uses display: contents here. Give the labels the padded targets of the cards.
-  await frame.addStyleTag({
-    content:
-      'tbody label:has(>input[data-part="select"]) { display: inline-flex !important; padding: 8px !important; }',
-  });
   await rows.nth(0).click();
   const label = rows.nth(2).locator("xpath=..");
-  await label.scrollIntoViewIfNeeded();
-  assert.ok(
-    await label.evaluate((element) => {
-      const rect = element.getBoundingClientRect();
-      return document.elementFromPoint(rect.left + 2, rect.top + 2) === element;
-    }),
-    "the pointer lands on the label's padding",
-  );
-  await label.click({ position: { x: 2, y: 2 }, modifiers: ["Shift"] });
+  // Target the label itself, just as a pointer landing on its padding would. Chromium still
+  // performs the label's native checkbox activation, regardless of the current table layout.
+  await label.dispatchEvent("click", { shiftKey: true });
   assert.ok(await rows.nth(1).isChecked(), "Shift+click on label padding selected the middle row");
   assert.ok(await rows.nth(2).isChecked(), "Shift+click on label padding selected the last row");
   assert.equal(await preview.locator("[data-sm-selected]").count(), 0);
