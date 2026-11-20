@@ -4,6 +4,10 @@
 // lines are the trace's entries, a request's several changes as one.
 import type { TraceEntry } from "./api";
 
+const versionDate = new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" });
+
+export const versionTime = (at: string) => versionDate.format(new Date(at));
+
 export type Words = (op: string, args: Record<string, unknown>) => string | undefined;
 
 /** Consecutive changes made for one request to a model, which the list shows as one line. */

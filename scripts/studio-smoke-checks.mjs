@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { join } from "node:path";
 import { stubPictureCatalogue } from "./first-look-checks.mjs";
 import { openFormEntry, showWorkspaceControls, toolbarAction } from "./studio-form-checks.mjs";
+import { checkStudioHistory } from "./studio-history-checks.mjs";
 
 async function checkBuilder(page, phone) {
   const tab = (name) => page.getByRole("tab", { name, exact: true });
@@ -126,6 +127,7 @@ export async function checkStudioSmoke(browser, base, evidence) {
       await checkBuilder(page, phone);
       assert.equal(await look.count(), 0);
       assert.equal(await presentation.count(), 0);
+      await checkStudioHistory(page, phone, evidence);
     } catch (error) {
       await page
         .screenshot({ path: join(evidence, `${layout}.png`), timeout: 3000 })

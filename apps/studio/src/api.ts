@@ -417,7 +417,9 @@ export const api = {
       method: "DELETE",
       headers: { "Content-Type": "application/json", "X-Smithable": "1" },
       body: "{}",
-    }).then(() => undefined),
+    }).then((response) => {
+      if (!response.ok) throw new Error("Studio could not close the old version.");
+    }),
   /** The app card as Markdown and HTML (app-card.md), or what stops it. */
   card: () => call<{ md: string; html: string } | { error: string }>("/api/card"),
   logs: () => call<string[]>("/api/logs"),
