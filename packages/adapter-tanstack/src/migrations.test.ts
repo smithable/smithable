@@ -2,6 +2,7 @@ import { expect, test } from "vitest";
 import {
   columnOf,
   dropTakenColumn,
+  dropTakenTables,
   goneFirst,
   inTurn,
   quoteReferences,
@@ -80,6 +81,16 @@ test("renames go in turn: none lands on a name another has still to leave, a swa
     (r) => r.model,
   );
   expect(swap.map((r) => `${r.from}>${r.to}`)).toEqual(["a>aPassing0", "b>a", "aPassing0>b"]);
+  // A passing name the schema already has is never used.
+  const around = inTurn(
+    [
+      { model: "Customer", from: "a", to: "b" },
+      { model: "Customer", from: "b", to: "a" },
+    ],
+    (r) => r.model,
+    (name) => name === "aPassing0",
+  );
+  expect(around.map((r) => `${r.from}>${r.to}`)).toEqual(["a>aPassing1", "b>a", "aPassing1>b"]);
 });
 
 test("what goes is dropped first only when drizzle-kit would ask whether it was renamed", () => {
@@ -114,6 +125,23 @@ test("what goes is dropped first only when drizzle-kit would ask whether it was 
   expect(Object.keys(settled.tables.customers.columns)).toEqual(["id"]);
   expect(settled.tables.customers.indexes).toEqual({});
   expect(settled.tables.customers.foreignKeys).toEqual({});
+  // A reference into a column that goes goes with it.
+  const into = JSON.parse(
+    goneFirst(
+      JSON.stringify({
+        tables: {
+          customers: table(["id", "code"]),
+          orders: table(["id", "customer_code"], {
+            foreignKeys: {
+              fk: { tableTo: "customers", columnsFrom: ["customer_code"], columnsTo: ["code"] },
+            },
+          }),
+        },
+      }),
+      { tables: { customers: table(["id", "label"]), orders: table(["id", "customer_code"]) } },
+    ) ?? "{}",
+  );
+  expect(into.tables.orders.foreignKeys).toEqual({});
   // A table gone and another new.
   const tables = JSON.parse(
     goneFirst(previous, {
@@ -121,6 +149,28 @@ test("what goes is dropped first only when drizzle-kit would ask whether it was 
     }) ?? "{}",
   );
   expect(Object.keys(tables.tables)).toEqual(["customers"]);
+});
+
+test("a model renamed back onto a name a newer model took drops the newer model's tables first", () => {
+  const snapshot = JSON.stringify({
+    tables: {
+      clients: { name: "clients", columns: { id: { name: "id" } } },
+      customers: { name: "customers", columns: { id: { name: "id" } } },
+      customers_reads: { name: "customers_reads", columns: { id: { name: "id" } } },
+      orders: {
+        name: "orders",
+        columns: { id: { name: "id" }, customer_id: { name: "customer_id" } },
+        foreignKeys: {
+          fk: { tableTo: "customers", columnsFrom: ["customer_id"], columnsTo: ["id"] },
+        },
+      },
+    },
+  });
+  const dropped = JSON.parse(dropTakenTables(snapshot, "Client", "Customer") ?? "{}");
+  // The newer model's tables, the kit's beside it too.
+  expect(Object.keys(dropped.tables)).toEqual(["clients", "orders"]);
+  expect(dropped.tables.orders.foreignKeys).toEqual({});
+  expect(dropTakenTables(snapshot, "Client", "Buyer")).toBeUndefined();
 });
 
 test("a reference added to an existing table names its table quoted", () => {

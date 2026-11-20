@@ -8,7 +8,9 @@ import { pathToFileURL } from "node:url";
 import {
   choiceValueSql,
   dropTakenColumn,
+  dropTakenTables,
   goneFirst,
+  inSnapshot,
   inTurn,
   quoteReferences,
   renameColumnSql,
@@ -148,11 +150,21 @@ export async function createMigration(
     let base = JSON.stringify(prev);
     const diff = async (from: string, to: Snapshot) =>
       (await api.generateSQLiteMigration(JSON.parse(from) as Snapshot, to)).map(quoteReferences);
-    for (const m of inTurn(migration.models ?? [])) {
+    const first = base;
+    for (const m of inTurn(migration.models ?? [], undefined, (name) => inSnapshot(first, name))) {
+      // A newer model on the name goes first (an older version applied).
+      const occupied = dropTakenTables(base, m.from, m.to);
+      if (occupied) {
+        statements.push(...(await diff(base, JSON.parse(occupied) as Snapshot)));
+        base = occupied;
+      }
       statements.push(...renameModelSql(base, m.from, m.to));
       base = renameModelInSnapshot(base, m.from, m.to);
     }
-    for (const r of inTurn(migration.renames, (r) => r.model)) {
+    const fieldsFirst = base;
+    const inUse = (name: string, r: (typeof migration.renames)[number]) =>
+      inSnapshot(fieldsFirst, r.model, name, r.reference);
+    for (const r of inTurn(migration.renames, (r) => r.model, inUse)) {
       const taken = dropTakenColumn(base, r.model, r.to, r.reference);
       if (taken) {
         statements.push(...(await diff(base, JSON.parse(taken.snapshot) as Snapshot)));

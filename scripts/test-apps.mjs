@@ -7772,6 +7772,30 @@ function operationsFlow(dir) {
     },
   );
   step(
+    "apply-version: a model renamed since comes back under its old name, its records kept, a newer model on that name goes, and undo takes it back",
+    () => {
+      expectOk(smithable(dir, "op", "addModel", "Errand", "title=string!"));
+      const version = run("git", ["rev-parse", "HEAD"], dir).trim();
+      write(
+        dir,
+        "insert into errands (title, created_at, updated_at) values ('Post the letters', 1, 1)",
+      );
+      expectOk(smithable(dir, "op", "renameModel", "Errand", "Chore"));
+      // A newer model on the old name: its tables are where the rename back lands.
+      expectOk(smithable(dir, "op", "addModel", "Errand", "body=text"));
+      expectOk(smithable(dir, "apply-version", version.slice(0, 10)));
+      const [{ title }] = query(dir, "select title from errands");
+      if (title !== "Post the letters") throw new Error(`errands: ${title}`);
+      const tables = query(dir, "select name from sqlite_master where type = 'table'").map(
+        (t) => t.name,
+      );
+      if (tables.includes("chores")) throw new Error(`tables after the apply: ${tables}`);
+      run("pnpm", ["typecheck"], dir);
+      for (let i = 0; i < 4; i++) expectOk(smithable(dir, "undo"));
+      if (run("git", ["status", "--porcelain"], dir).trim()) throw new Error("undo left changes");
+    },
+  );
+  step(
     "op renameField on a reference keeps every link, and flags custom code using the old name",
     () => {
       const before = query(dir, "select id, customer_id from follow_ups order by id");

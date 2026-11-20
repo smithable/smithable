@@ -305,7 +305,7 @@ interface Renames {
 /**
  * The renames between a version and now, read from the recorded operations (each commit's
  * Smithable-Op) on the main line, a change undone since left out (one from before the version
- * undone since played backwards), and kept only where the two
+ * undone since played backwards, a revert of a revert forwards again), and kept only where the two
  * shapes bear them out: a rename is never guessed from the shapes alone (§4.5).
  */
 function recordedRenames(dir: string, version: string, today: SpecIR, then: SpecIR): Renames {
@@ -318,10 +318,10 @@ function recordedRenames(dir: string, version: string, today: SpecIR, then: Spec
   ])
     .out.split("\x1e")
     .filter((e) => e.trim());
-  const reverted = new Set<string>();
-  for (const entry of log)
-    for (const match of entry.matchAll(/This reverts commit ([0-9a-f]{40})/g))
-      reverted.add(match[1] ?? "");
+  const entries = log.map((e) => {
+    const [sha = "", message = ""] = e.trim().split("\x1f");
+    return { sha, message };
+  });
   // Each of the version's models and fields, by the name it has after each rename in turn.
   const models = new Map(then.models.map((m) => [m.name, m.name]));
   const fields = new Map(
@@ -362,24 +362,36 @@ function recordedRenames(dir: string, version: string, today: SpecIR, then: Spec
       }));
     return [{ op: recorded.op, args }];
   };
-  const logged = new Set(log.map((e) => e.trim().split("\x1f")[0]));
-  for (const entry of log) {
-    const [sha = "", message = ""] = entry.trim().split("\x1f");
-    if (reverted.has(sha)) continue;
-    const undone = /This reverts commit ([0-9a-f]{40})/.exec(message)?.[1];
-    if (undone && !logged.has(undone)) {
-      // An undo of a change from before the version: that change's renames, backwards.
-      for (const step of steps(git(dir, ["log", "-1", "--format=%B", undone]).out).reverse())
-        rename(step.op, { ...step.args, from: step.args.to, to: step.args.from });
-      continue;
-    }
-    for (const step of steps(message)) rename(step.op, step.args);
+  const revertOf = (message: string) => /This reverts commit ([0-9a-f]{40})/.exec(message)?.[1];
+  // What a commit did, a revert being what it reverted done backwards (to a few levels).
+  type Step = ReturnType<typeof steps>[number];
+  const effect = (message: string, depth = 0): Step[] => {
+    const target = revertOf(message);
+    if (!target || depth > 8) return steps(message);
+    return effect(git(dir, ["log", "-1", "--format=%B", target]).out, depth + 1)
+      .reverse()
+      .map((step) => ({ ...step, args: { ...step.args, from: step.args.to, to: step.args.from } }));
+  };
+  // A commit counts when no counting commit after it in the range reverts it; a revert whose
+  // change is in the range then cancels nothing that is counted.
+  const logged = new Set(entries.map((e) => e.sha));
+  const dead = new Set<string>();
+  for (const { sha, message } of [...entries].reverse()) {
+    if (dead.has(sha)) continue;
+    const target = revertOf(message);
+    if (target) dead.add(target);
+  }
+  for (const { sha, message } of entries) {
+    if (dead.has(sha)) continue;
+    const target = revertOf(message);
+    if (target && logged.has(target)) continue;
+    for (const step of effect(message)) rename(step.op, step.args);
   }
   const model = (ir: SpecIR, name: string) => ir.models.find((m) => m.name === name);
   const result: Renames = { models: [], fields: [] };
+  // A newer model on the old name goes (shapeChange counts what it holds); the rename stands.
   for (const [name, current] of models)
-    if (current !== name && model(today, current) && !model(today, name))
-      result.models.push({ now: current, was: name });
+    if (current !== name && model(today, current)) result.models.push({ now: current, was: name });
   const nowName = (name: string) => result.models.find((m) => m.was === name)?.now ?? name;
   for (const [key, current] of fields) {
     const [owner = "", name = ""] = key.split("\x1f");

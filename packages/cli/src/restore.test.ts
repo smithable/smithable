@@ -163,6 +163,37 @@ test("§8.2 a field renamed since the version is renamed back, its values kept",
   expect(plan.lost).toEqual([]);
 });
 
+test("§8.2 a model renamed since comes back under its old name; a newer model on that name goes", async () => {
+  const dir = project();
+  const b = await op(dir, "addModel", { model: "Errand", fields: { title: "string!" } });
+  await op(dir, "renameModel", { from: "Errand", to: "Chore" });
+  await op(dir, "addModel", { model: "Errand", fields: { body: "text" } });
+  const plan = restorePlan(dir, b);
+  if (typeof plan === "string") throw new Error(plan);
+  expect(plan.effects).toContainEqual({ kind: "rename-model", from: "Chore", to: "Errand" });
+  expect(plan.goes).toContain("Errand");
+  expect(plan.goes).not.toContain("Chore");
+});
+
+test("§8.2 a rename undone just before the version and taken back by hand since is renamed back", async () => {
+  const dir = project();
+  await op(dir, "addField", { model: "Customer", field: "phone", type: "string" });
+  await op(dir, "renameField", { model: "Customer", from: "phone", to: "mobile" });
+  expect(await undoLatest(dir, captureIo())).toBe(0);
+  const b = git(dir, ["rev-parse", "HEAD"]).out.trim();
+  git(dir, ["revert", "--no-edit", b]);
+  const plan = restorePlan(dir, b);
+  if (typeof plan === "string") throw new Error(plan);
+  expect(plan.effects).toContainEqual({
+    kind: "rename-field",
+    model: "Customer",
+    from: "mobile",
+    to: "phone",
+    storage: "value",
+  });
+  expect(plan.goes).toEqual([]);
+});
+
 test("§8.2 a rename from before the version, undone since, is renamed back the other way", async () => {
   const dir = project();
   await op(dir, "addField", { model: "Customer", field: "phone", type: "string" });

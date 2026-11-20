@@ -50,7 +50,10 @@ type Snapshot = {
       indexes?: Record<string, { columns: string[] }>;
       uniqueConstraints?: Record<string, { columns: string[] }>;
       compositePrimaryKeys?: Record<string, { columns: string[] }>;
-      foreignKeys?: Record<string, { tableTo?: string; columnsFrom?: string[] }>;
+      foreignKeys?: Record<
+        string,
+        { tableTo?: string; columnsFrom?: string[]; columnsTo?: string[] }
+      >;
     }
   >;
 };
@@ -70,9 +73,15 @@ function without(snapshot: Snapshot, tables: Set<string>, columns: Map<string, S
         for (const [n, v] of Object.entries(entries))
           if (v.columns.some((c) => gone.has(c))) delete entries[n];
     }
-    for (const [n, fk] of Object.entries(t.foreignKeys ?? {}))
-      if (fk.columnsFrom?.some((c) => gone.has(c)) || (fk.tableTo && tables.has(fk.tableTo)))
+    for (const [n, fk] of Object.entries(t.foreignKeys ?? {})) {
+      const to = fk.tableTo ? columns.get(fk.tableTo) : undefined;
+      if (
+        fk.columnsFrom?.some((c) => gone.has(c)) ||
+        (fk.tableTo && tables.has(fk.tableTo)) ||
+        fk.columnsTo?.some((c) => to?.has(c))
+      )
         delete t.foreignKeys?.[n];
+    }
   }
   return snapshot;
 }
@@ -106,12 +115,14 @@ export function goneFirst(
 
 /**
  * Renames in an order where none lands on a name another has still to leave (a, b become b, c:
- * b goes to c before a goes to b), a cycle (a and b swapped) broken through a passing name.
- * `scope` keeps apart the names of different tables.
+ * b goes to c before a goes to b), a cycle (a and b swapped) broken through a passing name that
+ * no rename names and `taken` (the schema as it is) does not have. `scope` keeps apart the names
+ * of different tables.
  */
 export function inTurn<T extends { from: string; to: string }>(
   renames: T[],
   scope: (rename: T) => string = () => "",
+  taken: (name: string, rename: T) => boolean = () => false,
 ): T[] {
   const pending = [...renames];
   const ordered: T[] = [];
@@ -124,7 +135,12 @@ export function inTurn<T extends { from: string; to: string }>(
       continue;
     }
     const first = pending[0] as T;
-    const passing = `${first.from}Passing${ordered.length}`;
+    const named = new Set(
+      renames.filter((r) => scope(r) === scope(first)).flatMap((r) => [r.from, r.to]),
+    );
+    let n = ordered.length;
+    while (named.has(`${first.from}Passing${n}`) || taken(`${first.from}Passing${n}`, first)) n++;
+    const passing = `${first.from}Passing${n}`;
     ordered.push({ ...first, to: passing });
     pending[0] = { ...first, from: passing };
   }
@@ -233,6 +249,39 @@ function renamedTables(
     from: `${old}${suffix}`,
     to: `${renamed}${suffix}`,
   }));
+}
+
+/**
+ * A model renamed back onto a name a newer model has taken (an older version applied, the newer
+ * model going and the older coming back under its name): the snapshot without the newer model's
+ * tables, for drizzle-kit to drop first. Undefined when the name is free.
+ */
+export function dropTakenTables(
+  snapshotJson: string,
+  from: string,
+  to: string,
+): string | undefined {
+  const snapshot = JSON.parse(snapshotJson) as Snapshot;
+  if (!renamedTables(snapshot as unknown as RenameSnapshot, from, to).length) return undefined;
+  // The newer model's own tables, the kit's beside it included: they all go with it.
+  const own = columnOf(to, "id").table;
+  const landing = OWN_TABLES.map((suffix) => `${own}${suffix}`).filter((t) => snapshot.tables[t]);
+  if (!landing.length) return undefined;
+  return `${JSON.stringify(without(snapshot, new Set(landing), new Map()), null, 2)}\n`;
+}
+
+/** Whether the snapshot has a column for a model's field (or a table for a model, without one). */
+export function inSnapshot(
+  snapshotJson: string,
+  model: string,
+  field?: string,
+  reference = false,
+): boolean {
+  const snapshot = JSON.parse(snapshotJson) as Snapshot;
+  const { table, column } = columnOf(model, field ?? "id", reference);
+  return field
+    ? Boolean(snapshot.tables?.[table]?.columns[column])
+    : Boolean(snapshot.tables?.[table]);
 }
 
 /** A partial index's condition names its table in quotes: "customers"."deleted_at" is null. */
