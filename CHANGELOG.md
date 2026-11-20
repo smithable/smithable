@@ -22,6 +22,7 @@ The entries are filled in from the merged pull requests at each release. A fix t
 
 ### Fixes
 
+- Generated apps: a refused change is said in words on every surface that changes records (rows edited in place, actions, the selection bar, merge and split, replies, restore, API keys, the contact form), not only in the record form; a mail with nobody to send to no longer refuses a change over a value it cannot work out (`fixes/kit-refusal-words.yml`).
 - Generated apps: the mark on a picture an AI made is the EU's common icon for AI-generated content, drawn in the app kit; a picture across the page has the words beside it (`fixes/eu-ai-icon.yml`).
 
 - Generated apps: a mail, push or sms may name a worked-out field of its record (`{total}` in its text, or in `show`): it is worked out in the change's own transaction, with the lines it sums, and written as the record page writes it; one with no value refuses the change, and nothing is changed or sent (`fixes/mail-worked-out-values.yml`).

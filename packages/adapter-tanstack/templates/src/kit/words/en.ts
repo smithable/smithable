@@ -361,6 +361,8 @@ export const w = {
   speakingSpeed: "Speaking speed",
   voiceSample: "Hello. This is my voice.",
   stopSpeech: "Stop",
+  /** A record of any kind, where its own kind is not known (a refusal after an action). */
+  record: "Record",
   records: "Records",
   remove: "Remove",
   removeUser: "Remove user",

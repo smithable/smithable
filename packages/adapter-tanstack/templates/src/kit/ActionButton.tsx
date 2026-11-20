@@ -7,6 +7,7 @@ import { Button } from "#/components/ui/button";
 import { Card } from "#/components/ui/card";
 import { ModelForm } from "./ModelForm";
 import { type AppUi, type ModelUi, type Options, textMarker } from "./model";
+import { refusalText } from "./refusal";
 import { tx, w } from "./words";
 
 export function ActionButton({
@@ -69,7 +70,7 @@ export function ActionButton({
       );
       asking.current?.showModal();
     } catch (error) {
-      setFailure(error instanceof Error ? error.message : w.somethingWentWrong);
+      setFailure(refusalText(error, w.somethingWentWrong, { label: ask?.ui.label }));
     } finally {
       setBusy(false);
     }
@@ -81,7 +82,7 @@ export function ActionButton({
       try {
         setOptions(await ask.loadOptions());
       } catch (error) {
-        setFailure(error instanceof Error ? error.message : w.somethingWentWrong);
+        setFailure(refusalText(error, w.somethingWentWrong, { label: ask?.ui.label }));
         return;
       } finally {
         setBusy(false);
@@ -95,20 +96,8 @@ export function ActionButton({
     try {
       await onRun();
     } catch (error) {
-      // A worked-out value the mail names, with no value (record-documents.md §3).
-      const missing = error instanceof Error && /^no-value:(.+)$/.exec(error.message)?.[1];
-      const message = error instanceof Error ? error.message : "";
-      setFailure(
-        missing
-          ? w.noValue(missing)
-          : message === "document-read"
-            ? w.document.sendRefused
-            : message === "document-settings"
-              ? w.document.sendSettings
-              : error instanceof Error
-                ? error.message
-                : w.somethingWentWrong,
-      );
+      // A worked-out value the mail names with no value, a booking full, … (refusal.ts).
+      setFailure(refusalText(error, w.somethingWentWrong, { label: ask?.ui.label }));
     }
     setBusy(false);
   };

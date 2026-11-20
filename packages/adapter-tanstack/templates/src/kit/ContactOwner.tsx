@@ -6,6 +6,7 @@ import { useId, useState } from "react";
 import { Button } from "#/components/ui/button";
 import { Card } from "#/components/ui/card";
 import { Input, Label } from "#/components/ui/input";
+import { refusalText } from "./refusal";
 import { w } from "./words";
 
 export interface ContactValues {
@@ -41,7 +42,7 @@ export function ContactOwner({
     try {
       setState((await onSend(values))?.kept ? "kept" : "sent");
     } catch (error) {
-      setFailure(error instanceof Error ? error.message : w.messageNotSent);
+      setFailure(refusalText(error, w.messageNotSent));
       setState("idle");
     }
   }

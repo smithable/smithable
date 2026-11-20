@@ -1,0 +1,9 @@
+id: kit-refusal-words
+title: A refused change showed its code (in-use, full, no-value:Total) instead of words, everywhere but the record form; and a mail with nobody to send to could refuse a change over a value it could not work out.
+severity: fix
+exposure: none
+introduced: unknown
+affects:
+  kit: [src/kit/refusal.ts, src/kit/InlineRows.tsx, src/kit/ActionButton.tsx, src/kit/SelectionBar.tsx, src/kit/MergeDialog.tsx, src/kit/SplitDialog.tsx, src/kit/Thread.tsx, src/kit/Trash.tsx, src/kit/Keys.tsx, src/kit/ContactOwner.tsx, src/kit/ModelForm.tsx]
+  features: [section:outgoing]
+migration: none

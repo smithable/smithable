@@ -7,6 +7,7 @@ import { Button } from "#/components/ui/button";
 import { Card } from "#/components/ui/card";
 import { formatValue } from "./format";
 import type { AppUi, ModelUi } from "./model";
+import { refusalText } from "./refusal";
 import { tx, w } from "./words";
 
 /** One of the records, as the form names it. */
@@ -144,7 +145,10 @@ export function MergeDialog({
         );
       },
       (error) =>
-        current && setFailure(error instanceof Error ? error.message : w.somethingWentWrong),
+        current &&
+        setFailure(
+          refusalText(error, w.somethingWentWrong, { label: ui.label, fields: ui.fields }),
+        ),
     );
     return () => {
       current = false;
@@ -184,7 +188,7 @@ export function MergeDialog({
         ...(into === "new" ? { made: Number(made) } : {}),
       });
     } catch (error) {
-      setFailure(error instanceof Error ? error.message : w.somethingWentWrong);
+      setFailure(refusalText(error, w.somethingWentWrong, { label: ui.label, fields: ui.fields }));
     }
     setBusy(false);
   };
@@ -342,7 +346,12 @@ export function MergeButton({
       );
       picker.current?.showModal();
     } catch (error) {
-      setFailure(error instanceof Error ? error.message : w.somethingWentWrong);
+      setFailure(
+        refusalText(error, w.somethingWentWrong, {
+          label: dialog.ui.label,
+          fields: dialog.ui.fields,
+        }),
+      );
     }
   };
   return (

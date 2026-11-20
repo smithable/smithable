@@ -4,6 +4,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Button } from "#/components/ui/button";
 import { Card } from "#/components/ui/card";
+import { refusalText } from "./refusal";
 import { tx, w } from "./words";
 
 const NOTICE = "splitFrom";
@@ -58,7 +59,7 @@ export function SplitButton({
       }
       await onDone(id);
     } catch (error) {
-      setFailure(error instanceof Error ? error.message : w.somethingWentWrong);
+      setFailure(refusalText(error, w.somethingWentWrong));
     }
     setBusy(false);
   };
@@ -183,7 +184,7 @@ export function SplitNotice({
               setFrom(undefined);
               setStayed(result.stayed || undefined);
             } catch (error) {
-              setFailure(error instanceof Error ? error.message : w.somethingWentWrong);
+              setFailure(refusalText(error, w.somethingWentWrong));
             }
           }}
         >

@@ -366,6 +366,10 @@ pages:
   expect(module).toContain(
     "const worked = entry.worked ? WORKED[model]?.(tx, record.id as number, entry.worked) : undefined;",
   );
+  // Recipients first: an entry with nobody to send to never refuses for a value it cannot work out.
+  const nobody = module.indexOf("if (!to.length) continue;");
+  expect(nobody).toBeGreaterThan(0);
+  expect(nobody).toBeLessThan(module.indexOf("const worked = entry.worked"));
 });
 
 test("an app whose only mail goes to a list's addresses still imports what the query needs", () => {
