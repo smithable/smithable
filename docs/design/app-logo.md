@@ -18,7 +18,7 @@ Design, 2026-10-09 (Fable). Johan's question and go (2026-10-09): the starters s
 
   `initials: SY` in `smithable.content.yml`, beside `logo`, says otherwise: one or two letters by the rule above (the validator's `initials-form`), set by the operation `setInitials`, an empty value going back to the default. Like `logo` it is not a text to translate: it is left out of the content file's text paths and of the word editor.
 - **Lettering styles** (a second step, after the default is in): two or three named treatments of the wordmark, picked from the sheets with Johan, as one key `lettering` in `smithable.ux.yml` and a row in Studio's Look tab. Not in the first build.
-- An app with a `logo` keeps the wordmark: the picture stands before it and is the favicon, as §2 says, and the tile is generated as the fallback only. All nine starters ship a `logo` today, so none of them shows its tile; whether a starter gives up its picture for the wordmark alone is Johan's to say when he has seen both (§8, step 5).
+- An app with a `logo` keeps the wordmark: the picture stands before it and is the favicon, as §2 says, and the tile is generated as the fallback only; the web manifest, where there is one, lists the logo's file too, so an installed app carries the same picture as its tab. All nine starters ship a `logo` today, so none of them shows its tile; whether a starter gives up its picture for the wordmark alone is Johan's to say when he has seen both (§8, step 5).
 
 ## 1. The place: `logo` in `smithable.content.yml`
 
