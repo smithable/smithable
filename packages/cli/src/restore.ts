@@ -271,6 +271,8 @@ export async function restore(
         if (!Object.keys(plan.files).length)
           return "This version is the app as it is now: applying it changes nothing.";
         if (plan.access.length) io.out(`Access:\n${plan.access.map((a) => `  ${a}\n`).join("")}`);
+        // Said with the answer given beforehand too, so what goes is never deleted unseen.
+        if (refusal) io.out(`${refusal}\n`);
         const lost = plan.lost.map((l) => l.key);
         const result: FilesPlan = {
           files: plan.files,

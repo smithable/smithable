@@ -277,7 +277,10 @@ test("§8.4 undo right after the apply gives the files and database of before; r
   expect(await redo(dir, asked)).toBe(1);
   expect(asked.stderr).toContain("This version has no place for: Customer · level (1 value).");
   expect(asked.stderr).toContain("--yes");
-  expect(await redo(dir, captureIo(), { yes: true })).toBe(0);
+  const told = captureIo();
+  expect(await redo(dir, told, { yes: true })).toBe(0);
+  // Answered beforehand, what goes is still said.
+  expect(told.stdout).toContain("This version has no place for: Customer · level (1 value).");
   expect(read(dir, "smithable.yml")).toContain("phone");
 });
 
