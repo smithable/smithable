@@ -4610,15 +4610,28 @@ async function picturesFlow(dir, base) {
       ),
     );
     if (served.join() !== "200,200,404") throw new Error(`the pictures answered ${served.join()}`);
-    if (readdirSync(uploads).filter((f) => !before.has(f)).length !== 2)
-      throw new Error("the two pictures were not both stored");
+    // Each picture with the smaller copies its width allows (T1054): 480 and 960 below it.
+    const files = async (n) => {
+      const body = await (await page.request.get(`${base}/files/post/1/gallery/${n}`)).body();
+      const chunk = body.toString("latin1", 12, 16);
+      const width =
+        chunk === "VP8X"
+          ? body.readUIntLE(24, 3) + 1
+          : chunk === "VP8L"
+            ? (body.readUInt32LE(21) & 0x3fff) + 1
+            : body.readUInt16LE(26) & 0x3fff;
+      return 1 + [480, 960].filter((w) => w < width).length;
+    };
+    const stored = (await files(0)) + (await files(1));
+    if (readdirSync(uploads).filter((f) => !before.has(f)).length !== stored)
+      throw new Error("the two pictures were not both stored with their copies");
     await page.getByRole("button", { name: "Remove picture 2" }).click();
     await page.getByRole("button", { name: "Save changes" }).click();
     await page.waitForURL(/\/posts$/);
-    if (readdirSync(uploads).length !== before.size + 1)
-      throw new Error("the removed picture's file was not deleted");
+    if (readdirSync(uploads).length !== before.size + (await files(0)))
+      throw new Error("the removed picture's files were not deleted");
     console.log(
-      "  ✓ browser: several pictures are added at once, described, reordered (the first is the cover) and served in order; removing one deletes its file",
+      "  ✓ browser: several pictures are added at once, described, reordered (the first is the cover) and served in order, with their smaller copies; removing one deletes its files",
     );
   } catch (error) {
     console.log(
@@ -4634,7 +4647,9 @@ async function picturesFlow(dir, base) {
  * A picture field (an instructor's portrait): the seeded portrait shows in the list and is
  * served as WebP; an admin replaces it from a file (scaled and encoded in the browser, checked
  * on the server), the new one is kept and the old file is gone; a visitor sees a public
- * instructor's portrait but cannot upload; a picture that is not one is refused.
+ * instructor's portrait but cannot upload; a picture that is not one is refused. A wider picture
+ * also gets its smaller copies (T1054): listed in the list's srcset, served by ?w=, refused under
+ * another's receipt, and gone with the picture.
  */
 async function pictureFlow(dir, base) {
   const browser = await chromium.launch();
@@ -4671,20 +4686,47 @@ async function pictureFlow(dir, base) {
     await page.getByLabel("Description (for those who cannot see it)").fill("Emma at the studio");
     await page.getByRole("button", { name: "Save changes" }).click();
     await page.waitForURL(/\/instructors$/);
+    // The smaller copies the browser made, as the list offers them.
+    const srcset =
+      (await page
+        .locator('img[src^="/files/instructor/1/portrait"]:visible')
+        .first()
+        .getAttribute("srcset")) ?? "";
+    const widths = [...srcset.matchAll(/\?w=(\d+)&v=[a-f0-9]{24} (\d+)w/g)];
+    if (!widths.length || widths.some((m) => m[1] !== m[2] || !["480", "960"].includes(m[1])))
+      throw new Error(`no smaller copies in the srcset ("${srcset}")`);
+    const small = await page.request.get(`${base}/files/instructor/1/portrait?w=480`);
+    const smallBytes = await small.body();
+    if (!small.ok() || smallBytes.toString("latin1", 8, 12) !== "WEBP")
+      throw new Error(`the 480 copy is not served (${small.status()})`);
+    if ((await page.request.get(`${base}/files/instructor/1/portrait?w=481`)).status() !== 400)
+      throw new Error("a width the app does not keep was answered");
+    const forged = await page.request.post(
+      `${base}/files/instructor/portrait?smallerOf=${"0".repeat(32)}`,
+      {
+        headers: { "content-type": "image/webp", "sec-fetch-site": "same-origin" },
+        data: smallBytes,
+      },
+    );
+    if (forged.status() !== 400)
+      throw new Error(`a copy without its picture's receipt was stored (${forged.status()})`);
     await open(page, `${base}/instructors/1`);
     await page.getByRole("img", { name: "Emma at the studio" }).waitFor({ timeout: 10000 * P });
-    // The new file is kept and the old one, no other record's, is gone; the new one goes when
-    // removed.
+    // The new file and its copies are kept and the old one, no other record's, is gone; all of
+    // them go when removed.
     const after = readdirSync(uploads);
     if (!after.some((f) => !before.has(f))) throw new Error("the new file was not kept");
-    if (after.length !== before.size) throw new Error("the replaced file was not deleted");
+    if (after.length !== before.size + widths.length)
+      throw new Error(
+        `the replaced file was not deleted, or copies are missing (${after.length} files)`,
+      );
     await page.getByRole("button", { name: "Remove" }).click();
     await page.getByRole("button", { name: "Save changes" }).click();
     await page.waitForURL(/\/instructors$/);
     if (readdirSync(uploads).length !== before.size - 1)
       throw new Error("the removed file was not deleted");
     console.log(
-      "  ✓ browser: a portrait is served from its record, replaced from a file (scaled in the browser, checked on the server) and removed with its file; visitors and junk are refused",
+      "  ✓ browser: a portrait is served from its record, replaced from a file (scaled in the browser, checked on the server, with smaller copies served by ?w=) and removed with its files; visitors, junk and a copy without its receipt are refused",
     );
   } catch (error) {
     console.log(

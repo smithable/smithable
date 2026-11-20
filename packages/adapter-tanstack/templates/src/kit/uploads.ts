@@ -28,7 +28,19 @@ export interface Picture {
   height: number;
   /** Made by an AI: the image library's sample pictures; a person's own only when they say so. */
   generated?: true;
+  /** The same picture at PICTURE_WIDTHS narrower than it, each a file named by its own content. */
+  smaller?: SmallerPicture[];
 }
+
+/** A smaller copy of a stored picture, for small screens and cards (?w= on its address). */
+export interface SmallerPicture {
+  file: string;
+  width: number;
+  height: number;
+}
+
+/** The widths a wider picture is also kept at; the file routes serve no other. */
+export const PICTURE_WIDTHS = [480, 960] as const;
 
 export const PICTURE_MAX_BYTES = 1_000_000;
 /** The longest side a browser scales a picture to before sending it. */
@@ -99,6 +111,32 @@ export function savePicture(
   return { file, alt, ...size };
 }
 
+/**
+ * Stores a smaller copy of the picture `main` (the stored picture's width, height and size) and
+ * returns it. Its header must say WebP, one of PICTURE_WIDTHS narrower than the picture, its height
+ * the picture's shape to a pixel, and it no larger than the picture. That it shows the same
+ * picture is not checked (the server decodes nothing): it is shown only where its uploader's
+ * picture is.
+ */
+export function saveSmaller(
+  model: string,
+  bytes: Uint8Array,
+  main: { width: number; height: number; bytes: number },
+  held?: UploadReservation,
+): SmallerPicture {
+  const size = webpSize(bytes);
+  if (
+    !size ||
+    !(PICTURE_WIDTHS as readonly number[]).includes(size.width) ||
+    size.width >= main.width ||
+    Math.abs(size.height - Math.round((main.height * size.width) / main.width)) > 1 ||
+    bytes.length >= main.bytes
+  )
+    throw new BadPicture(w.pictureKinds);
+  const { file, width, height } = savePicture(model, bytes, "", false, held);
+  return { file, width, height };
+}
+
 /** The file of a stored picture, or undefined when it is gone. */
 export function readPicture(picture: Picture): Buffer | undefined {
   if (!PICTURE_FILE.test(picture.file)) return undefined;
@@ -106,9 +144,22 @@ export function readPicture(picture: Picture): Buffer | undefined {
   return existsSync(path) ? readFileSync(path) : undefined;
 }
 
-/** Removes a picture's file, unless `stillUsed` says another record keeps it. */
-export function deletePicture(picture: Picture | null | undefined, stillUsed: boolean): void {
-  if (!picture || stillUsed || !PICTURE_FILE.test(picture.file)) return;
+/**
+ * Removes a picture's file, unless `stillUsed` says another record keeps it, and each of its
+ * smaller copies that `used` says no record has (a copy is named by its own content, so the same
+ * picture sent twice shares them).
+ */
+export function deletePicture(
+  picture: Picture | null | undefined,
+  stillUsed: boolean,
+  used?: (file: string) => boolean,
+): void {
+  if (!picture) return;
+  if (used)
+    for (const copy of picture.smaller ?? [])
+      if (PICTURE_FILE.test(copy.file) && !used(copy.file))
+        removeStored(join(uploadsDir(), copy.file));
+  if (stillUsed || !PICTURE_FILE.test(picture.file)) return;
   removeStored(join(uploadsDir(), picture.file));
 }
 
@@ -149,7 +200,15 @@ export function samplePicture(
   const source = join("public", "images", "samples", name);
   if (!existsSync(source)) return null;
   const bytes = readFileSync(source);
-  const picture = savePicture(model, bytes, alt, true);
+  const picture: Picture = savePicture(model, bytes, alt, true);
+  // The image library's smaller copies beside it (<name>-480.webp, -960.webp), where it has them.
+  const smaller = PICTURE_WIDTHS.flatMap((width) => {
+    const copy = join("public", "images", "samples", name.replace(/\.webp$/, `-${width}.webp`));
+    if (width >= picture.width || !existsSync(copy)) return [];
+    const saved = savePicture(model, readFileSync(copy), "", true);
+    return saved.width === width ? [{ file: saved.file, width, height: saved.height }] : [];
+  });
+  if (smaller.length) picture.smaller = smaller;
   return generated ? { ...picture, generated: true } : picture;
 }
 
@@ -587,8 +646,22 @@ export function uploadResponse(
   stored: unknown,
   everyone: boolean,
 ): Response {
-  const found = stored as (Picture & StoredFile) | null | undefined;
-  const bytes = found && (kind === "picture" ? readPicture(found) : readFile(found));
+  let found = stored as (Picture & StoredFile) | null | undefined;
+  // ?w= asks for a smaller copy: only one of PICTURE_WIDTHS, and only one the picture lists; the
+  // picture itself where it has none (an older picture, a copy gone missing).
+  const width = new URL(request.url).searchParams.get("w");
+  let copyBytes: Buffer | undefined;
+  if (width !== null) {
+    if (kind !== "picture" || !PICTURE_WIDTHS.some((n) => String(n) === width))
+      return new Response("No such width", { status: 400 });
+    const copy = found?.smaller?.find((s) => String(s.width) === width);
+    copyBytes =
+      found && typeof copy?.file === "string"
+        ? readPicture({ ...found, file: copy.file })
+        : undefined;
+    if (found && copy && copyBytes) found = { ...found, file: copy.file };
+  }
+  const bytes = copyBytes ?? (found && (kind === "picture" ? readPicture(found) : readFile(found)));
   if (!found || !bytes) return new Response("Not found", { status: 404 });
   const tag = kind === "picture" ? pictureTag(found) : fileTag(found);
   const headers = {

@@ -25,7 +25,7 @@ import {
 import { cn } from "#/lib/utils";
 import { AiMarked } from "./AiMark";
 import { csvName, csvOf, download } from "./csv";
-import { versioned } from "./file-address";
+import { pictureSet, versioned } from "./file-address";
 import { displayValue, formatValue, numberText } from "./format";
 import { MoreOnScroll } from "./MoreOnScroll";
 import { type AppUi, editorMarker, type RecordFieldUi, type RecordUi, type Row } from "./model";
@@ -301,13 +301,13 @@ export function ModelTable<R extends Row>({
   const secondary = others.find((f) => f !== status && f !== amount && f !== date);
   const description = ui.fields.find((f) => f.name === ui.descriptionField);
   const pictureField = ui.fields.find((f) => f.kind === "picture" || f.kind === "pictures");
-  // A picture's address; for several pictures, the cover's (the first).
-  const pictureSrc = (field: RecordFieldUi<R>, row: R) => {
+  // A picture's address; for several pictures, the cover's (the first). With its smaller copies
+  // as a srcset, so a thumbnail or a card loads no more than it shows.
+  const pictureAt = (field: RecordFieldUi<R>, row: R) => {
     const value = (row as Record<string, unknown>)[field.name];
-    return versioned(
-      `/files/${ui.model?.replace(/[A-Z]/g, (c, i) => `${i ? "-" : ""}${c.toLowerCase()}`)}/${row.id}/${field.name}${field.kind === "pictures" ? "/0" : ""}`,
-      (Array.isArray(value) ? value[0] : value) as { file?: string } | undefined,
-    );
+    const address = `/files/${ui.model?.replace(/[A-Z]/g, (c, i) => `${i ? "-" : ""}${c.toLowerCase()}`)}/${row.id}/${field.name}${field.kind === "pictures" ? "/0" : ""}`;
+    const stored = (Array.isArray(value) ? value[0] : value) as Parameters<typeof pictureSet>[1];
+    return { src: versioned(address, stored), srcSet: pictureSet(address, stored) };
   };
   // The mark before a title: a picture where asked and there is one, else initials on a hue of the
   // chart's, the same for the same name everywhere.
@@ -326,7 +326,8 @@ export function ModelTable<R extends Row>({
         <AiMarked generated={generatedPicture(row, pictureField)} tiny className="shrink-0">
           <img
             data-part="mark"
-            src={pictureSrc(pictureField, row)}
+            {...pictureAt(pictureField, row)}
+            sizes="2rem"
             alt=""
             className="size-8 shrink-0 rounded-full object-cover"
           />
@@ -360,7 +361,8 @@ export function ModelTable<R extends Row>({
       return (
         <AiMarked generated={generatedPicture(row, field)} tiny className="w-fit">
           <img
-            src={pictureSrc(field, row)}
+            {...pictureAt(field, row)}
+            sizes="2.5rem"
             alt={text}
             className="h-10 w-10 rounded-md border object-cover"
           />
@@ -469,7 +471,8 @@ export function ModelTable<R extends Row>({
                     className="-mx-5 w-[calc(100%+2.5rem)]"
                   >
                     <img
-                      src={pictureSrc(pictureField, row)}
+                      {...pictureAt(pictureField, row)}
+                      sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
                       alt={formatValue(pictureField, displayValue(pictureField, row), app)}
                       loading="lazy"
                       className={cn(

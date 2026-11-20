@@ -1882,12 +1882,12 @@ ${dropPictures(
       ? `    cleanUploads(() => {\n${[
           ...singles.map(
             (k) =>
-              `    if (row.${k} && row.${k}.file !== ${after(k)}) deletePicture(row.${k}, ${stillShown(k, `row.${k}.file`)});\n`,
+              `    if (row.${k} && row.${k}.file !== ${after(k)}) deletePicture(row.${k}, ${stillShown(k, `row.${k}.file`)}, (file) => ${stillShown(k, "file")});\n`,
           ),
           // Of several pictures, each one no longer among them.
           ...pictureLists.map(
             (k) =>
-              `    for (const p of row.${k} ?? []) if (!${afterList(k)}.includes(p.file)) deletePicture(p, ${stillShown(k, "p.file")});\n`,
+              `    for (const p of row.${k} ?? []) if (!${afterList(k)}.includes(p.file)) deletePicture(p, ${stillShown(k, "p.file")}, (file) => ${stillShown(k, "file")});\n`,
           ),
           // Documents the same way.
           ...docSingles.map(
@@ -2214,7 +2214,7 @@ ${
 function checkFiles<V extends Partial<${n.settableValues}>>(viewer: Viewer | null, values: V, before?: Record<string, unknown>): V {
   return {
     ...values,
-${uploadFields.map((f) => `    ...("${dataKey(f)}" in values ? { ${dataKey(f)}: acceptFiles(viewer, ${JSON.stringify(kebab(model.name))}, ${JSON.stringify(f.name)}, values.${dataKey(f)}, before?.${dataKey(f)}) } : {}),`).join("\n")}
+${uploadFields.map((f) => `    ...("${dataKey(f)}" in values ? { ${dataKey(f)}: acceptFiles(viewer, ${JSON.stringify(kebab(model.name))}, ${JSON.stringify(f.name)}, values.${dataKey(f)}, before?.${dataKey(f)}${model.review?.includes(f.name) ? ", false" : ""}) } : {}),`).join("\n")}
   };
 }
 `
@@ -3251,10 +3251,10 @@ export function refinement(field: FieldIR, visitors = false, folder = ""): strin
       return bounds(100) ? `(s) => s${bounds(100)}` : undefined;
     case "picture":
       // What src/kit/uploads.ts returned, plus the description a person wrote.
-      return `z.object({ file: ${stored("webp")}, alt: z.string().trim().max(200), width: z.int().positive(), height: z.int().positive(), generated: z.literal(true).optional(), receipt: z.string().max(64).optional() })${optional}`;
+      return `z.object({ file: ${stored("webp")}, alt: z.string().trim().max(200), width: z.int().positive(), height: z.int().positive(), generated: z.literal(true).optional(), smaller: z.array(z.object({ file: ${stored("webp")}, width: z.union([z.literal(480), z.literal(960)]), height: z.int().positive() })).max(2).optional(), receipt: z.string().max(64).optional() })${optional}`;
     case "pictures":
       // Several of them, at most the field's maximum.
-      return `z.array(z.object({ file: ${stored("webp")}, alt: z.string().trim().max(200), width: z.int().positive(), height: z.int().positive(), generated: z.literal(true).optional(), receipt: z.string().max(64).optional() })).max(${field.max ?? PICTURES_MAX})${optional}`;
+      return `z.array(z.object({ file: ${stored("webp")}, alt: z.string().trim().max(200), width: z.int().positive(), height: z.int().positive(), generated: z.literal(true).optional(), smaller: z.array(z.object({ file: ${stored("webp")}, width: z.union([z.literal(480), z.literal(960)]), height: z.int().positive() })).max(2).optional(), receipt: z.string().max(64).optional() })).max(${field.max ?? PICTURES_MAX})${optional}`;
     case "file":
       // What src/kit/uploads.ts returned for a document. Its type is shown, never served: the
       // file is sent with the type of its extension (fileHeaders).

@@ -1,14 +1,15 @@
 // Smithable app kit: a browser sends a record's picture or document here before saving the
 // record (see src/kit/PictureInput.tsx and src/kit/FileInput.tsx). Whoever may add or change the
 // model's records may send one; the file is checked and stored by src/kit/uploads.ts and the
-// record keeps what this returns. A document's name comes in the X-File-Name header.
+// record keeps what this returns. A document's name comes in the X-File-Name header. A picture's
+// smaller copy comes after it, with ?smallerOf= and the receipt the picture was given.
 import { createFileRoute } from "@tanstack/react-router";
 import { UPLOADS } from "#/generated/uploads";
 import { allows } from "#/kit/access";
 import { BodyLimit, bodySize, boundedBody } from "#/kit/bounded-body";
 import { writeAllowed } from "#/kit/limit";
 import { log } from "#/kit/log.server";
-import { storeUpload } from "#/kit/receipts.server";
+import { storeSmaller, storeUpload } from "#/kit/receipts.server";
 import {
   BadFile,
   BadPicture,
@@ -63,6 +64,19 @@ export const Route = createFileRoute("/files/$model/$field")({
           }
           const bytes = await boundedBody(request, maximum);
           await scanned(bytes);
+          const smallerOf = new URL(request.url).searchParams.get("smallerOf");
+          if (smallerOf !== null)
+            return Response.json(
+              storeSmaller(
+                viewer?.id ?? null,
+                params.model,
+                params.field,
+                smallerOf,
+                entry.data.uses,
+                bytes,
+                held,
+              ),
+            );
           return Response.json(
             storeUpload(viewer?.id ?? null, params.model, params.field, entry.data.uses, () =>
               savePicture(params.model, bytes, "", false, held),

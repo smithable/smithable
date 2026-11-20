@@ -134,3 +134,9 @@ pages:
   );
   expect(at("src/generated/tenant.server.ts")).toContain("row: veiled(viewer, [shown])[0],");
 });
+
+test("a reviewed picture keeps no smaller copies: only what the reviewer saw is served (T1054)", () => {
+  expect(file("src/generated/listing.server.ts")).toContain(
+    'acceptFiles(viewer, "listing", "photo", values.photo, before?.photo, false)',
+  );
+});
