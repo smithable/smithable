@@ -23,6 +23,10 @@ export interface PictureEntry {
   generated?: boolean;
   /** A photograph's source and licence, for the app's public/images/CREDITS.md. */
   credit?: PictureCredit;
+  /** What else a sample may serve as, judged by a person: `hero` (a calm area for text), `filler`. */
+  uses?: string[];
+  /** Enlarged copies of the picture, wider than its own `width`, narrowest first. */
+  widths?: { width: number; height?: number; url: string; sha256?: string }[];
 }
 
 export interface PictureCredit {
@@ -206,9 +210,14 @@ export function pickPictures(
   );
   const wordSet: Words = { said, spec };
   const text = `${options.description}\n${options.ir?.app.name ?? ""}`;
-  /** Of the entries of a kind that fit as well as the best, the one the text's hash picks. */
+  /**
+   * Of the entries of a kind that fit as well as the best, the one the text's hash picks. A
+   * sample a person marked fit for a hero (`uses: [hero]`) is one of the heroes.
+   */
   const fitting = (kind: string, n: number, keep = (_: PictureEntry) => true) => {
-    const all = index.filter((e) => e.kind === kind && keep(e)).sort(byScore(wordSet));
+    const all = index
+      .filter((e) => (e.kind === kind || e.uses?.includes(kind)) && keep(e))
+      .sort(byScore(wordSet));
     const best = all[0];
     const good = best ? all.filter((e) => asGood(e, best, wordSet)) : [];
     return { all, chosen: good[n % (good.length || 1)] };

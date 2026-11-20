@@ -11327,14 +11327,11 @@ exports[`../../../examples/api/smithable.yml > file list and generated code > sr
 // The development door (docs/design/sample-users.md §3–§4): the development build's clock, moved
 // so "a week later" is a call; a demo has no such call.
 import { createFileRoute } from "@tanstack/react-router";
-import { doorShut, refused } from "#/kit/dev-door.server";
+import { doorShut } from "#/kit/dev-door.server";
 import { now, setClockAt, setClockOffset } from "#/kit/now";
 
 /** At most a year either way. */
 const MOST = 366 * 86_400_000;
-
-/** One move of the clock at a time: a second waits until the first's due work has run. */
-let moving: Promise<unknown> = Promise.resolve();
 
 export const Route = createFileRoute("/_dev/clock")({
   server: {
@@ -11348,22 +11345,14 @@ export const Route = createFileRoute("/_dev/clock")({
           const at = typeof body.at === "string" ? Date.parse(body.at) : Number.NaN;
           if (!Number.isFinite(at) || new Date(at).toISOString() !== body.at)
             return Response.json({ refused: true, status: 400, message: "at: a canonical ISO time." }, { status: 400 });
+          setClockAt(at);
         } else {
           const { offset } = body;
           if (typeof offset !== "number" || !Number.isFinite(offset) || Math.abs(offset) > MOST)
             return Response.json({ refused: true, status: 400, message: "offset: milliseconds from now, within a year." }, { status: 400 });
+          setClockOffset(offset);
         }
-        const move = moving.then(async () => {
-          if (body.at !== undefined) setClockAt(Date.parse(body.at as string));
-          else setClockOffset(body.offset as number);
-          return now().toISOString();
-        });
-        moving = move.catch(() => undefined);
-        try {
-          return Response.json({ now: await move });
-        } catch (error) {
-          return refused(error);
-        }
+        return Response.json({ now: now().toISOString() });
       },
     },
   },
@@ -14128,15 +14117,15 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/FieldInput.tsx": "39e40fcb kit",
   "src/kit/FileInput.tsx": "5d567f82 kit",
   "src/kit/ImportDialog.tsx": "d65da47a kit",
-  "src/kit/InlineRows.tsx": "5a097006 kit",
+  "src/kit/InlineRows.tsx": "b2c801d6 kit",
   "src/kit/Inspector.tsx": "2425cac5 kit",
-  "src/kit/Keys.tsx": "f32c246d kit",
-  "src/kit/ModelForm.tsx": "b857b574 kit",
-  "src/kit/ModelTable.tsx": "aeabcaa1 kit",
+  "src/kit/Keys.tsx": "aa99e677 kit",
+  "src/kit/ModelForm.tsx": "6bdbf213 kit",
+  "src/kit/ModelTable.tsx": "a8ae6290 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "fb5e87dc kit",
   "src/kit/PictureDialog.tsx": "1495b136 kit",
-  "src/kit/PictureInput.tsx": "993db3fb kit",
+  "src/kit/PictureInput.tsx": "47a52232 kit",
   "src/kit/RecordSummary.tsx": "f0415723 kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
   "src/kit/SignIn.tsx": "21a3d26d kit",
@@ -14157,7 +14146,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/csv-read.ts": "324bc527 kit",
   "src/kit/csv.ts": "7d2a0f31 kit",
   "src/kit/dev-door.server.ts": "f8d865f5 kit",
-  "src/kit/file-address.ts": "951d9935 kit",
+  "src/kit/file-address.ts": "2a579e98 kit",
   "src/kit/format.ts": "b9e92275 kit",
   "src/kit/formats.ts": "2257fcc1 kit",
   "src/kit/formula.ts": "d73c0380 kit",
@@ -14175,8 +14164,8 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/params.ts": "65a69da0 kit",
   "src/kit/people-match.ts": "09a0f7dc kit",
   "src/kit/person-time.server.ts": "5d9e216d kit",
-  "src/kit/receipts.server.ts": "78a1bc4e kit",
-  "src/kit/refusal.ts": "de3353a0 kit",
+  "src/kit/receipts.server.ts": "23b63f60 kit",
+  "src/kit/refusal.ts": "c3d97f37 kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "b6f52acc kit",
   "src/kit/speech.test.ts": "19252a6e kit",
@@ -14185,11 +14174,11 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "8c886a7b kit",
   "src/kit/unused-samples.ts": "860c6650 kit",
-  "src/kit/uploads.ts": "724b80f6 kit",
+  "src/kit/uploads.ts": "1218e9e3 kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "a509a677 kit",
+  "src/kit/words/en.ts": "14f776a8 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "8cdb1ad7 generated",
@@ -14198,7 +14187,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/router.tsx": "1da2e059 kit",
   "src/routes/[_dev]/act.ts": "c57e01e2 generated",
   "src/routes/[_dev]/ask.ts": "bf4a5d88 generated",
-  "src/routes/[_dev]/clock.ts": "a1ccbe93 generated",
+  "src/routes/[_dev]/clock.ts": "a02ee4a6 generated",
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
   "src/routes/__root.tsx": "72e51f25 generated",
   "src/routes/admin/activity.tsx": "225b605d generated",
@@ -14231,7 +14220,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/routes/api/v1/tasks[.]csv.ts": "b9d31159 generated",
   "src/routes/api/v1/users.ts": "0798ee24 generated",
   "src/routes/app-card.tsx": "48827720 generated",
-  "src/routes/files/$model.$field.ts": "37c1c781 kit",
+  "src/routes/files/$model.$field.ts": "5059a1b3 kit",
   "src/routes/files/$model.$id.$field.$n.ts": "5288014d kit",
   "src/routes/files/$model.$id.$field.ts": "93378bd7 kit",
   "src/routes/health.ts": "362c9904 kit",
@@ -16539,7 +16528,7 @@ import { w } from "#/kit/words";
 export const barberSettable = createInsertSchema(schema.barbers, {
   name: (s) => s.trim().min(1, w.required).max(200, w.atMostCharacters(200)),
   bio: (s) => s.max(10000, w.atMostCharacters(10000)),
-  portrait: z.object({ file: z.string().regex(/^barber\\/[a-f0-9]{24}\\.webp$/), alt: z.string().trim().max(200), width: z.int().positive(), height: z.int().positive(), generated: z.literal(true).optional(), smaller: z.array(z.object({ file: z.string().regex(/^barber\\/[a-f0-9]{24}\\.webp$/), width: z.union([z.literal(480), z.literal(960)]), height: z.int().positive() })).max(2).optional(), receipt: z.string().max(64).optional() }).nullish(),
+  portrait: z.object({ file: z.string().regex(/^barber\\/[a-f0-9]{24}\\.webp$/), alt: z.string().trim().max(200), width: z.int().positive(), height: z.int().positive(), generated: z.literal(true).optional(), receipt: z.string().max(64).optional() }).nullish(),
 }).omit({ id: true, ownerId: true, createdAt: true, updatedAt: true });
 /** What a barber's form sends, checked. */
 export const barberSchema = barberSettable;
@@ -16558,7 +16547,7 @@ import { AccessDenied, allows, check, Conflict, type ModelAccess, personOf, read
 import { audit, changedFields } from "#/kit/audit.server";
 import { refusal } from "#/kit/log.server";
 import { contains } from "#/kit/search";
-import { deletePicture, dropCopies } from "#/kit/uploads";
+import { deletePicture } from "#/kit/uploads";
 import { acceptFiles, cleanUploads, keepsUpload } from "#/kit/receipts.server";
 import { afterChange, afterDelete } from "./hooks";
 import { timeOffData } from "./time-off.server";
@@ -16781,8 +16770,7 @@ export const barberData = {
       throw refusal(error);
     }
     cleanUploads(() => {
-    if (row.portrait && row.portrait.file !== changed.portrait?.file) deletePicture(row.portrait, keepsUpload(row.portrait.file) || !!db.select({ id: schema.barbers.id }).from(schema.barbers).where(sql\`\${schema.barbers.portrait} like \${\`%"file":"\${row.portrait.file}"%\`}\`).get(), (file) => keepsUpload(file) || !!db.select({ id: schema.barbers.id }).from(schema.barbers).where(sql\`\${schema.barbers.portrait} like \${\`%"file":"\${file}"%\`}\`).get());
-    dropCopies(row.portrait, changed.portrait, (file) => keepsUpload(file) || !!db.select({ id: schema.barbers.id }).from(schema.barbers).where(sql\`\${schema.barbers.portrait} like \${\`%"file":"\${file}"%\`}\`).get());
+    if (row.portrait && row.portrait.file !== changed.portrait?.file) deletePicture(row.portrait, keepsUpload(row.portrait.file) || !!db.select({ id: schema.barbers.id }).from(schema.barbers).where(sql\`\${schema.barbers.portrait} like \${\`%"file":"\${row.portrait.file}"%\`}\`).get());
     });
     await afterChange("afterUpdate", "Barber", changed, viewer);
     return changed;
@@ -16814,7 +16802,7 @@ export const barberData = {
       throw refusal(error);
     }
     cleanUploads(() => {
-    if (row.portrait && row.portrait.file !== undefined) deletePicture(row.portrait, keepsUpload(row.portrait.file) || !!db.select({ id: schema.barbers.id }).from(schema.barbers).where(sql\`\${schema.barbers.portrait} like \${\`%"file":"\${row.portrait.file}"%\`}\`).get(), (file) => keepsUpload(file) || !!db.select({ id: schema.barbers.id }).from(schema.barbers).where(sql\`\${schema.barbers.portrait} like \${\`%"file":"\${file}"%\`}\`).get());
+    if (row.portrait && row.portrait.file !== undefined) deletePicture(row.portrait, keepsUpload(row.portrait.file) || !!db.select({ id: schema.barbers.id }).from(schema.barbers).where(sql\`\${schema.barbers.portrait} like \${\`%"file":"\${row.portrait.file}"%\`}\`).get());
     });
     await afterDelete("Barber", id, viewer);
   },
@@ -16851,7 +16839,7 @@ export const barberData = {
     });
     for (const row of rows) {
       cleanUploads(() => {
-      if (row.portrait && row.portrait.file !== undefined) deletePicture(row.portrait, keepsUpload(row.portrait.file) || !!db.select({ id: schema.barbers.id }).from(schema.barbers).where(sql\`\${schema.barbers.portrait} like \${\`%"file":"\${row.portrait.file}"%\`}\`).get(), (file) => keepsUpload(file) || !!db.select({ id: schema.barbers.id }).from(schema.barbers).where(sql\`\${schema.barbers.portrait} like \${\`%"file":"\${file}"%\`}\`).get());
+      if (row.portrait && row.portrait.file !== undefined) deletePicture(row.portrait, keepsUpload(row.portrait.file) || !!db.select({ id: schema.barbers.id }).from(schema.barbers).where(sql\`\${schema.barbers.portrait} like \${\`%"file":"\${row.portrait.file}"%\`}\`).get());
       });
       await afterDelete("Barber", row.id, viewer);
     }
@@ -18147,9 +18135,6 @@ export function outgoing(tx: Tx, viewer: Viewer | null, model: string, what: str
     if (entry.model !== model || !counts(entry.when, what, entry.fits, record, before, entry.fields)) continue;
     const shown = SHOWN[model]?.(tx, record);
     if (!shown || !entry.to) continue;
-    // Whom it goes to, first: with nobody to send to, a value that cannot be worked out refuses nothing.
-    const to = entry.to(tx, record);
-    if (!to.length) continue;
     const { title, labels, values, ...rest } = shown;
     const prior = before && (entry.previous || entry.before) ? SHOWN[model]?.(tx, before) : undefined;
     const more = entry.more?.(tx, record);
@@ -18157,6 +18142,7 @@ export function outgoing(tx: Tx, viewer: Viewer | null, model: string, what: str
     const fill = (text: string, oneLine = false) =>
       fillText(text, (path) => path === "title" ? title : path === "link" ? linkTo(rest.link) : path === "by" ? (viewer && !viewer.system ? viewer.name : "") : path.startsWith("before.") ? blank(prior?.values[path.slice(7)]) : blank(more?.[path] ?? values[path]), oneLine);
     const happening: Happening = { ...rest, subject: entry.subject ? fill(entry.subject, true) : rest.subject, ...(entry.text ? { text: fill(entry.text) } : {}), fields: shownFields(labels, values, prior?.values, entry.show, entry.previous), entry: entry.name, model, record: record.id as number };
+    const to = entry.to(tx, record);
     queueMail(tx, viewer, happening, to, entry.when === "created");
   }
 }
@@ -19563,14 +19549,11 @@ exports[`../../../examples/barbers/smithable.yml > file list and generated code 
 // The development door (docs/design/sample-users.md §3–§4): the development build's clock, moved
 // so "a week later" is a call; a demo has no such call.
 import { createFileRoute } from "@tanstack/react-router";
-import { doorShut, refused } from "#/kit/dev-door.server";
+import { doorShut } from "#/kit/dev-door.server";
 import { now, setClockAt, setClockOffset } from "#/kit/now";
 
 /** At most a year either way. */
 const MOST = 366 * 86_400_000;
-
-/** One move of the clock at a time: a second waits until the first's due work has run. */
-let moving: Promise<unknown> = Promise.resolve();
 
 export const Route = createFileRoute("/_dev/clock")({
   server: {
@@ -19584,22 +19567,14 @@ export const Route = createFileRoute("/_dev/clock")({
           const at = typeof body.at === "string" ? Date.parse(body.at) : Number.NaN;
           if (!Number.isFinite(at) || new Date(at).toISOString() !== body.at)
             return Response.json({ refused: true, status: 400, message: "at: a canonical ISO time." }, { status: 400 });
+          setClockAt(at);
         } else {
           const { offset } = body;
           if (typeof offset !== "number" || !Number.isFinite(offset) || Math.abs(offset) > MOST)
             return Response.json({ refused: true, status: 400, message: "offset: milliseconds from now, within a year." }, { status: 400 });
+          setClockOffset(offset);
         }
-        const move = moving.then(async () => {
-          if (body.at !== undefined) setClockAt(Date.parse(body.at as string));
-          else setClockOffset(body.offset as number);
-          return now().toISOString();
-        });
-        moving = move.catch(() => undefined);
-        try {
-          return Response.json({ now: await move });
-        } catch (error) {
-          return refused(error);
-        }
+        return Response.json({ now: now().toISOString() });
       },
     },
   },
@@ -21895,8 +21870,8 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/generated/appointment.ts": "1e72ecc9 generated",
   "src/generated/barber.import.server.ts": "ba93731a generated",
   "src/generated/barber.import.ts": "76b4b2ca generated",
-  "src/generated/barber.schema.ts": "4e204ae0 generated",
-  "src/generated/barber.server.ts": "aa2e295a generated",
+  "src/generated/barber.schema.ts": "cb113b73 generated",
+  "src/generated/barber.server.ts": "2fcd1fde generated",
   "src/generated/barber.ts": "dcdf162d generated",
   "src/generated/card.server.ts": "86f8f526 generated",
   "src/generated/card.ts": "5cab12e4 generated",
@@ -21904,7 +21879,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/generated/dev-door.server.ts": "3818e56e generated",
   "src/generated/hooks.ts": "199beb1e generated",
   "src/generated/my-time.ts": "c315432b generated",
-  "src/generated/outgoing.server.ts": "ecc3987a generated",
+  "src/generated/outgoing.server.ts": "822284a5 generated",
   "src/generated/pages.ts": "efdc3236 generated",
   "src/generated/roles.ts": "12ea3da4 generated",
   "src/generated/service.import.server.ts": "b222252e generated",
@@ -21919,7 +21894,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/generated/time-off.server.ts": "dd4540f1 generated",
   "src/generated/time-off.ts": "94851289 generated",
   "src/generated/uploads.ts": "40a253ac generated",
-  "src/kit/ActionButton.tsx": "6a3b0c0a kit",
+  "src/kit/ActionButton.tsx": "44e711df kit",
   "src/kit/ActivityLog.tsx": "e53a5289 kit",
   "src/kit/AiMark.tsx": "00588184 kit",
   "src/kit/AppCard.tsx": "76e8455d kit",
@@ -21933,19 +21908,19 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/FileInput.tsx": "5d567f82 kit",
   "src/kit/Filters.tsx": "ceea52dc kit",
   "src/kit/ImportDialog.tsx": "d65da47a kit",
-  "src/kit/InlineRows.tsx": "5a097006 kit",
-  "src/kit/Landing.tsx": "a528f50e kit",
+  "src/kit/InlineRows.tsx": "b2c801d6 kit",
+  "src/kit/Landing.tsx": "46b7b2a6 kit",
   "src/kit/LegalPage.tsx": "f9a9df1e kit",
   "src/kit/Live.tsx": "fbaa47cd kit",
-  "src/kit/ModelForm.tsx": "b857b574 kit",
-  "src/kit/ModelTable.tsx": "aeabcaa1 kit",
+  "src/kit/ModelForm.tsx": "6bdbf213 kit",
+  "src/kit/ModelTable.tsx": "a8ae6290 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "fb5e87dc kit",
   "src/kit/PictureDialog.tsx": "1495b136 kit",
-  "src/kit/PictureInput.tsx": "993db3fb kit",
+  "src/kit/PictureInput.tsx": "47a52232 kit",
   "src/kit/RecordSummary.tsx": "f0415723 kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
-  "src/kit/SelectionBar.tsx": "97aa9165 kit",
+  "src/kit/SelectionBar.tsx": "d4714066 kit",
   "src/kit/SignIn.tsx": "21a3d26d kit",
   "src/kit/Slots.tsx": "2dc8163f kit",
   "src/kit/Together.tsx": "66a45263 kit",
@@ -21960,7 +21935,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/csv-read.ts": "324bc527 kit",
   "src/kit/csv.ts": "7d2a0f31 kit",
   "src/kit/dev-door.server.ts": "f8d865f5 kit",
-  "src/kit/file-address.ts": "951d9935 kit",
+  "src/kit/file-address.ts": "2a579e98 kit",
   "src/kit/filter.ts": "ac5ee469 kit",
   "src/kit/format.ts": "b9e92275 kit",
   "src/kit/formats.ts": "2257fcc1 kit",
@@ -21980,8 +21955,8 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/params.ts": "65a69da0 kit",
   "src/kit/people-match.ts": "09a0f7dc kit",
   "src/kit/person-time.server.ts": "5d9e216d kit",
-  "src/kit/receipts.server.ts": "78a1bc4e kit",
-  "src/kit/refusal.ts": "de3353a0 kit",
+  "src/kit/receipts.server.ts": "23b63f60 kit",
+  "src/kit/refusal.ts": "c3d97f37 kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "b6f52acc kit",
   "src/kit/slots.ts": "911e04a7 kit",
@@ -21989,10 +21964,10 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/time-text.ts": "eb8db028 kit",
   "src/kit/trace.server.ts": "8c886a7b kit",
   "src/kit/unused-samples.ts": "860c6650 kit",
-  "src/kit/uploads.ts": "724b80f6 kit",
+  "src/kit/uploads.ts": "1218e9e3 kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "a509a677 kit",
+  "src/kit/words/en.ts": "14f776a8 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "2f8e44ff generated",
@@ -22000,7 +21975,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/lib/viewer.server.ts": "61bef2b7 generated",
   "src/router.tsx": "1da2e059 kit",
   "src/routes/[_dev]/act.ts": "c57e01e2 generated",
-  "src/routes/[_dev]/clock.ts": "a1ccbe93 generated",
+  "src/routes/[_dev]/clock.ts": "a02ee4a6 generated",
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
   "src/routes/__root.tsx": "f40e387f generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
@@ -22013,7 +21988,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/routes/barbers/new.tsx": "49d2cb83 generated",
   "src/routes/day/index.tsx": "84bc75d1 generated",
   "src/routes/events.ts": "cdf9dd08 generated",
-  "src/routes/files/$model.$field.ts": "37c1c781 kit",
+  "src/routes/files/$model.$field.ts": "5059a1b3 kit",
   "src/routes/files/$model.$id.$field.$n.ts": "5288014d kit",
   "src/routes/files/$model.$id.$field.ts": "93378bd7 kit",
   "src/routes/health.ts": "362c9904 kit",
@@ -27999,7 +27974,7 @@ import { w } from "#/kit/words";
 export const instructorSettable = createInsertSchema(schema.instructors, {
   name: (s) => s.trim().min(1, w.required).max(200, w.atMostCharacters(200)),
   bio: (s) => s.max(50000, w.atMostCharacters(50000)),
-  portrait: z.object({ file: z.string().regex(/^instructor\\/[a-f0-9]{24}\\.webp$/), alt: z.string().trim().max(200), width: z.int().positive(), height: z.int().positive(), generated: z.literal(true).optional(), smaller: z.array(z.object({ file: z.string().regex(/^instructor\\/[a-f0-9]{24}\\.webp$/), width: z.union([z.literal(480), z.literal(960)]), height: z.int().positive() })).max(2).optional(), receipt: z.string().max(64).optional() }).nullish(),
+  portrait: z.object({ file: z.string().regex(/^instructor\\/[a-f0-9]{24}\\.webp$/), alt: z.string().trim().max(200), width: z.int().positive(), height: z.int().positive(), generated: z.literal(true).optional(), receipt: z.string().max(64).optional() }).nullish(),
 }).omit({ id: true, ownerId: true, createdAt: true, updatedAt: true });
 /** What a instructor's form sends, checked. */
 export const instructorSchema = instructorSettable;
@@ -28020,7 +27995,7 @@ import { refusal } from "#/kit/log.server";
 import { contains } from "#/kit/search";
 import { BadInput } from "#/kit/refusal";
 import { aggregate, type Filterable, nearest, sortOf, whereOf, wordsOf } from "#/kit/where";
-import { deletePicture, dropCopies } from "#/kit/uploads";
+import { deletePicture } from "#/kit/uploads";
 import { acceptFiles, cleanUploads, keepsUpload } from "#/kit/receipts.server";
 import { afterChange, afterDelete } from "./hooks";
 import { sessionData } from "./session.server";
@@ -28499,8 +28474,7 @@ export const instructorData = {
       throw refusal(error);
     }
     cleanUploads(() => {
-    if (row.portrait && row.portrait.file !== changed.portrait?.file) deletePicture(row.portrait, keepsUpload(row.portrait.file) || !!db.select({ id: schema.instructors.id }).from(schema.instructors).where(sql\`\${schema.instructors.portrait} like \${\`%"file":"\${row.portrait.file}"%\`}\`).get(), (file) => keepsUpload(file) || !!db.select({ id: schema.instructors.id }).from(schema.instructors).where(sql\`\${schema.instructors.portrait} like \${\`%"file":"\${file}"%\`}\`).get());
-    dropCopies(row.portrait, changed.portrait, (file) => keepsUpload(file) || !!db.select({ id: schema.instructors.id }).from(schema.instructors).where(sql\`\${schema.instructors.portrait} like \${\`%"file":"\${file}"%\`}\`).get());
+    if (row.portrait && row.portrait.file !== changed.portrait?.file) deletePicture(row.portrait, keepsUpload(row.portrait.file) || !!db.select({ id: schema.instructors.id }).from(schema.instructors).where(sql\`\${schema.instructors.portrait} like \${\`%"file":"\${row.portrait.file}"%\`}\`).get());
     });
     await afterChange("afterUpdate", "Instructor", changed, viewer);
     return changed;
@@ -28532,7 +28506,7 @@ export const instructorData = {
       throw refusal(error);
     }
     cleanUploads(() => {
-    if (row.portrait && row.portrait.file !== undefined) deletePicture(row.portrait, keepsUpload(row.portrait.file) || !!db.select({ id: schema.instructors.id }).from(schema.instructors).where(sql\`\${schema.instructors.portrait} like \${\`%"file":"\${row.portrait.file}"%\`}\`).get(), (file) => keepsUpload(file) || !!db.select({ id: schema.instructors.id }).from(schema.instructors).where(sql\`\${schema.instructors.portrait} like \${\`%"file":"\${file}"%\`}\`).get());
+    if (row.portrait && row.portrait.file !== undefined) deletePicture(row.portrait, keepsUpload(row.portrait.file) || !!db.select({ id: schema.instructors.id }).from(schema.instructors).where(sql\`\${schema.instructors.portrait} like \${\`%"file":"\${row.portrait.file}"%\`}\`).get());
     });
     await afterDelete("Instructor", id, viewer);
   },
@@ -28569,7 +28543,7 @@ export const instructorData = {
     });
     for (const row of rows) {
       cleanUploads(() => {
-      if (row.portrait && row.portrait.file !== undefined) deletePicture(row.portrait, keepsUpload(row.portrait.file) || !!db.select({ id: schema.instructors.id }).from(schema.instructors).where(sql\`\${schema.instructors.portrait} like \${\`%"file":"\${row.portrait.file}"%\`}\`).get(), (file) => keepsUpload(file) || !!db.select({ id: schema.instructors.id }).from(schema.instructors).where(sql\`\${schema.instructors.portrait} like \${\`%"file":"\${file}"%\`}\`).get());
+      if (row.portrait && row.portrait.file !== undefined) deletePicture(row.portrait, keepsUpload(row.portrait.file) || !!db.select({ id: schema.instructors.id }).from(schema.instructors).where(sql\`\${schema.instructors.portrait} like \${\`%"file":"\${row.portrait.file}"%\`}\`).get());
       });
       await afterDelete("Instructor", row.id, viewer);
     }
@@ -29667,9 +29641,6 @@ export function outgoing(tx: Tx, viewer: Viewer | null, model: string, what: str
     if (entry.model !== model || !counts(entry.when, what, entry.fits, record, before, entry.fields)) continue;
     const shown = SHOWN[model]?.(tx, record);
     if (!shown || !entry.to) continue;
-    // Whom it goes to, first: with nobody to send to, a value that cannot be worked out refuses nothing.
-    const to = entry.to(tx, record);
-    if (!to.length) continue;
     const { title, labels, values, ...rest } = shown;
     const prior = before && (entry.previous || entry.before) ? SHOWN[model]?.(tx, before) : undefined;
     const more = entry.more?.(tx, record);
@@ -29677,6 +29648,7 @@ export function outgoing(tx: Tx, viewer: Viewer | null, model: string, what: str
     const fill = (text: string, oneLine = false) =>
       fillText(text, (path) => path === "title" ? title : path === "link" ? linkTo(rest.link) : path === "by" ? (viewer && !viewer.system ? viewer.name : "") : path.startsWith("before.") ? blank(prior?.values[path.slice(7)]) : blank(more?.[path] ?? values[path]), oneLine);
     const happening: Happening = { ...rest, subject: entry.subject ? fill(entry.subject, true) : rest.subject, ...(entry.text ? { text: fill(entry.text) } : {}), fields: shownFields(labels, values, prior?.values, entry.show, entry.previous), entry: entry.name, model, record: record.id as number };
+    const to = entry.to(tx, record);
     queueMail(tx, viewer, happening, to, entry.when === "created");
   }
 }
@@ -29850,7 +29822,7 @@ export const postSettable = createInsertSchema(schema.posts, {
   title: (s) => s.trim().min(1, w.required).max(200, w.atMostCharacters(200)),
   address: (s) => s.max(200, w.atMostCharacters(200)),
   summary: (s) => s.max(10000, w.atMostCharacters(10000)),
-  cover: z.object({ file: z.string().regex(/^post\\/[a-f0-9]{24}\\.webp$/), alt: z.string().trim().max(200), width: z.int().positive(), height: z.int().positive(), generated: z.literal(true).optional(), smaller: z.array(z.object({ file: z.string().regex(/^post\\/[a-f0-9]{24}\\.webp$/), width: z.union([z.literal(480), z.literal(960)]), height: z.int().positive() })).max(2).optional(), receipt: z.string().max(64).optional() }).nullish(),
+  cover: z.object({ file: z.string().regex(/^post\\/[a-f0-9]{24}\\.webp$/), alt: z.string().trim().max(200), width: z.int().positive(), height: z.int().positive(), generated: z.literal(true).optional(), receipt: z.string().max(64).optional() }).nullish(),
   body: (s) => s.trim().min(1, w.required).max(50000, w.atMostCharacters(50000)),
   publishedOn: (s) => s.regex(/^\\d{4}-\\d{2}-\\d{2}$/, w.enterValidDate),
 }).omit({ id: true, ownerId: true, createdAt: true, updatedAt: true });
@@ -29873,7 +29845,7 @@ import { refusal } from "#/kit/log.server";
 import { contains } from "#/kit/search";
 import { BadInput } from "#/kit/refusal";
 import { aggregate, type Filterable, nearest, sortOf, whereOf, wordsOf } from "#/kit/where";
-import { deletePicture, dropCopies } from "#/kit/uploads";
+import { deletePicture } from "#/kit/uploads";
 import { acceptFiles, cleanUploads, keepsUpload } from "#/kit/receipts.server";
 import { afterChange, afterDelete } from "./hooks";
 import { type PostSettable } from "./post";
@@ -30343,8 +30315,7 @@ export const postData = {
       throw refusal(error);
     }
     cleanUploads(() => {
-    if (row.cover && row.cover.file !== changed.cover?.file) deletePicture(row.cover, keepsUpload(row.cover.file) || !!db.select({ id: schema.posts.id }).from(schema.posts).where(sql\`\${schema.posts.cover} like \${\`%"file":"\${row.cover.file}"%\`}\`).get(), (file) => keepsUpload(file) || !!db.select({ id: schema.posts.id }).from(schema.posts).where(sql\`\${schema.posts.cover} like \${\`%"file":"\${file}"%\`}\`).get());
-    dropCopies(row.cover, changed.cover, (file) => keepsUpload(file) || !!db.select({ id: schema.posts.id }).from(schema.posts).where(sql\`\${schema.posts.cover} like \${\`%"file":"\${file}"%\`}\`).get());
+    if (row.cover && row.cover.file !== changed.cover?.file) deletePicture(row.cover, keepsUpload(row.cover.file) || !!db.select({ id: schema.posts.id }).from(schema.posts).where(sql\`\${schema.posts.cover} like \${\`%"file":"\${row.cover.file}"%\`}\`).get());
     });
     await afterChange("afterUpdate", "Post", changed, viewer);
     return changed;
@@ -30374,7 +30345,7 @@ export const postData = {
       throw refusal(error);
     }
     cleanUploads(() => {
-    if (row.cover && row.cover.file !== undefined) deletePicture(row.cover, keepsUpload(row.cover.file) || !!db.select({ id: schema.posts.id }).from(schema.posts).where(sql\`\${schema.posts.cover} like \${\`%"file":"\${row.cover.file}"%\`}\`).get(), (file) => keepsUpload(file) || !!db.select({ id: schema.posts.id }).from(schema.posts).where(sql\`\${schema.posts.cover} like \${\`%"file":"\${file}"%\`}\`).get());
+    if (row.cover && row.cover.file !== undefined) deletePicture(row.cover, keepsUpload(row.cover.file) || !!db.select({ id: schema.posts.id }).from(schema.posts).where(sql\`\${schema.posts.cover} like \${\`%"file":"\${row.cover.file}"%\`}\`).get());
     });
     await afterDelete("Post", id, viewer);
   },
@@ -30409,7 +30380,7 @@ export const postData = {
     });
     for (const row of rows) {
       cleanUploads(() => {
-      if (row.cover && row.cover.file !== undefined) deletePicture(row.cover, keepsUpload(row.cover.file) || !!db.select({ id: schema.posts.id }).from(schema.posts).where(sql\`\${schema.posts.cover} like \${\`%"file":"\${row.cover.file}"%\`}\`).get(), (file) => keepsUpload(file) || !!db.select({ id: schema.posts.id }).from(schema.posts).where(sql\`\${schema.posts.cover} like \${\`%"file":"\${file}"%\`}\`).get());
+      if (row.cover && row.cover.file !== undefined) deletePicture(row.cover, keepsUpload(row.cover.file) || !!db.select({ id: schema.posts.id }).from(schema.posts).where(sql\`\${schema.posts.cover} like \${\`%"file":"\${row.cover.file}"%\`}\`).get());
       });
       await afterDelete("Post", row.id, viewer);
     }
@@ -32074,15 +32045,12 @@ exports[`../../../examples/booking/smithable.yml > file list and generated code 
 // The development door (docs/design/sample-users.md §3–§4): the development build's clock, moved
 // so "a week later" is a call; a demo has no such call.
 import { createFileRoute } from "@tanstack/react-router";
-import { doorShut, refused } from "#/kit/dev-door.server";
+import { doorShut } from "#/kit/dev-door.server";
 import { now, setClockAt, setClockOffset } from "#/kit/now";
 import { tick } from "#/generated/timers.server";
 
 /** At most a year either way. */
 const MOST = 366 * 86_400_000;
-
-/** One move of the clock at a time: a second waits until the first's due work has run. */
-let moving: Promise<unknown> = Promise.resolve();
 
 export const Route = createFileRoute("/_dev/clock")({
   server: {
@@ -32096,24 +32064,16 @@ export const Route = createFileRoute("/_dev/clock")({
           const at = typeof body.at === "string" ? Date.parse(body.at) : Number.NaN;
           if (!Number.isFinite(at) || new Date(at).toISOString() !== body.at)
             return Response.json({ refused: true, status: 400, message: "at: a canonical ISO time." }, { status: 400 });
+          setClockAt(at);
         } else {
           const { offset } = body;
           if (typeof offset !== "number" || !Number.isFinite(offset) || Math.abs(offset) > MOST)
             return Response.json({ refused: true, status: 400, message: "offset: milliseconds from now, within a year." }, { status: 400 });
+          setClockOffset(offset);
         }
-        const move = moving.then(async () => {
-          if (body.at !== undefined) setClockAt(Date.parse(body.at as string));
-          else setClockOffset(body.offset as number);
-          // A development build has no tick of its own: what came due by the new "now" runs here.
-          await tick(now());
-          return now().toISOString();
-        });
-        moving = move.catch(() => undefined);
-        try {
-          return Response.json({ now: await move });
-        } catch (error) {
-          return refused(error);
-        }
+        // A development build has no tick of its own: what came due by the new "now" runs here.
+        await tick(now());
+        return Response.json({ now: now().toISOString() });
       },
     },
   },
@@ -37228,8 +37188,8 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/hooks.ts": "dad75c4a generated",
   "src/generated/instructor.import.server.ts": "fccf980a generated",
   "src/generated/instructor.import.ts": "73c07c95 generated",
-  "src/generated/instructor.schema.ts": "6e0adbca generated",
-  "src/generated/instructor.server.ts": "431932c6 generated",
+  "src/generated/instructor.schema.ts": "96eaebce generated",
+  "src/generated/instructor.server.ts": "cd793440 generated",
   "src/generated/instructor.ts": "f02243c8 generated",
   "src/generated/message.import.server.ts": "529f366e generated",
   "src/generated/message.import.ts": "63ded8df generated",
@@ -37237,12 +37197,12 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/message.server.ts": "9269a145 generated",
   "src/generated/message.ts": "f222d475 generated",
   "src/generated/my-time.ts": "c315432b generated",
-  "src/generated/outgoing.server.ts": "b61401f0 generated",
+  "src/generated/outgoing.server.ts": "b3b41ca7 generated",
   "src/generated/pages.ts": "c08f710d generated",
   "src/generated/post.import.server.ts": "779addc6 generated",
   "src/generated/post.import.ts": "d5299966 generated",
-  "src/generated/post.schema.ts": "67ddc9a8 generated",
-  "src/generated/post.server.ts": "9ec32b97 generated",
+  "src/generated/post.schema.ts": "bc3914c3 generated",
+  "src/generated/post.server.ts": "99f7cd73 generated",
   "src/generated/post.ts": "3b8935b4 generated",
   "src/generated/roles.ts": "12ea3da4 generated",
   "src/generated/session.formulas.ts": "26cfcc26 generated",
@@ -37257,7 +37217,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/uploads.ts": "11494e99 generated",
   "src/generated/user-choices.server.ts": "d953aad5 generated",
   "src/generated/users.ts": "f77bb99b generated",
-  "src/kit/ActionButton.tsx": "6a3b0c0a kit",
+  "src/kit/ActionButton.tsx": "44e711df kit",
   "src/kit/ActivityLog.tsx": "e53a5289 kit",
   "src/kit/AiMark.tsx": "00588184 kit",
   "src/kit/AppCard.tsx": "76e8455d kit",
@@ -37274,23 +37234,23 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/FileInput.tsx": "5d567f82 kit",
   "src/kit/Filters.tsx": "ceea52dc kit",
   "src/kit/ImportDialog.tsx": "d65da47a kit",
-  "src/kit/InlineRows.tsx": "5a097006 kit",
+  "src/kit/InlineRows.tsx": "b2c801d6 kit",
   "src/kit/Inspector.tsx": "2425cac5 kit",
-  "src/kit/Landing.tsx": "a528f50e kit",
+  "src/kit/Landing.tsx": "46b7b2a6 kit",
   "src/kit/LegalPage.tsx": "f9a9df1e kit",
   "src/kit/Live.tsx": "fbaa47cd kit",
   "src/kit/Markdown.tsx": "24e2fcd2 kit",
   "src/kit/MarkdownFormatted.tsx": "300ef9a1 kit",
-  "src/kit/ModelForm.tsx": "b857b574 kit",
-  "src/kit/ModelTable.tsx": "aeabcaa1 kit",
+  "src/kit/ModelForm.tsx": "6bdbf213 kit",
+  "src/kit/ModelTable.tsx": "a8ae6290 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "fb5e87dc kit",
   "src/kit/PictureDialog.tsx": "1495b136 kit",
-  "src/kit/PictureInput.tsx": "993db3fb kit",
+  "src/kit/PictureInput.tsx": "47a52232 kit",
   "src/kit/RecordSummary.tsx": "f0415723 kit",
   "src/kit/Reserve.tsx": "0fdf155f kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
-  "src/kit/SelectionBar.tsx": "97aa9165 kit",
+  "src/kit/SelectionBar.tsx": "d4714066 kit",
   "src/kit/SignIn.tsx": "21a3d26d kit",
   "src/kit/SoundControls.tsx": "5699608e kit",
   "src/kit/Together.tsx": "66a45263 kit",
@@ -37309,7 +37269,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/csv-read.ts": "324bc527 kit",
   "src/kit/csv.ts": "7d2a0f31 kit",
   "src/kit/dev-door.server.ts": "f8d865f5 kit",
-  "src/kit/file-address.ts": "951d9935 kit",
+  "src/kit/file-address.ts": "2a579e98 kit",
   "src/kit/filter.ts": "ac5ee469 kit",
   "src/kit/format.ts": "b9e92275 kit",
   "src/kit/formats.ts": "2257fcc1 kit",
@@ -37330,8 +37290,8 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/params.ts": "65a69da0 kit",
   "src/kit/people-match.ts": "09a0f7dc kit",
   "src/kit/person-time.server.ts": "5d9e216d kit",
-  "src/kit/receipts.server.ts": "78a1bc4e kit",
-  "src/kit/refusal.ts": "de3353a0 kit",
+  "src/kit/receipts.server.ts": "23b63f60 kit",
+  "src/kit/refusal.ts": "c3d97f37 kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "b6f52acc kit",
   "src/kit/speech.test.ts": "19252a6e kit",
@@ -37341,11 +37301,11 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "8c886a7b kit",
   "src/kit/unused-samples.ts": "860c6650 kit",
-  "src/kit/uploads.ts": "724b80f6 kit",
+  "src/kit/uploads.ts": "1218e9e3 kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "a509a677 kit",
+  "src/kit/words/en.ts": "14f776a8 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "a5e9568e generated",
@@ -37354,7 +37314,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/router.tsx": "1da2e059 kit",
   "src/routes/[_dev]/act.ts": "c57e01e2 generated",
   "src/routes/[_dev]/ask.ts": "66ce855e generated",
-  "src/routes/[_dev]/clock.ts": "72446040 generated",
+  "src/routes/[_dev]/clock.ts": "a43168cd generated",
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
   "src/routes/__root.tsx": "9d801633 generated",
   "src/routes/about/index.tsx": "88b46859 generated",
@@ -37389,7 +37349,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/class-types/index.tsx": "4d83873e generated",
   "src/routes/class-types/new.tsx": "d4e202b3 generated",
   "src/routes/events.ts": "98860b46 generated",
-  "src/routes/files/$model.$field.ts": "37c1c781 kit",
+  "src/routes/files/$model.$field.ts": "5059a1b3 kit",
   "src/routes/files/$model.$id.$field.$n.ts": "5288014d kit",
   "src/routes/files/$model.$id.$field.ts": "93378bd7 kit",
   "src/routes/health.ts": "362c9904 kit",
@@ -41079,7 +41039,6 @@ import { orderUi } from "#/generated/order";
 import { runScheduleFollowUps } from "./actions/schedule-follow-ups.server";
 import { scheduleFollowUpsInput } from "./actions/schedule-follow-ups.input";
 import { previewMergeCustomers, runMergeCustomers } from "./actions/merge-customers.server";
-import { mergeCustomersAccess } from "./actions/merge-customers";
 
 /** The moves of each role, and of a visitor without a session. */
 const MOVES: Record<string, DoorMove[]> = {
@@ -41400,7 +41359,6 @@ const OPEN: Record<string, (viewer: Viewer | null, move: DoorMove) => Promise<Op
       records: await followUpData.candidateIds(viewer, (row) => allows(followUpAccess.delete, viewer, row.ownerId as string | null)),
     }),
   "merge:mergeCustomers": async (viewer, move) => {
-    if (!allows(mergeCustomersAccess, viewer)) return undefined;
     const records = await customerData.candidateIds(viewer, (row) => allows(customerAccess.write, viewer, row.accountManagerId as string | null));
     return records.length > 1 ? { ...move, records } : undefined;
   },
@@ -44573,14 +44531,11 @@ exports[`../../../examples/crm/smithable.yml > file list and generated code > sr
 // The development door (docs/design/sample-users.md §3–§4): the development build's clock, moved
 // so "a week later" is a call; a demo has no such call.
 import { createFileRoute } from "@tanstack/react-router";
-import { doorShut, refused } from "#/kit/dev-door.server";
+import { doorShut } from "#/kit/dev-door.server";
 import { now, setClockAt, setClockOffset } from "#/kit/now";
 
 /** At most a year either way. */
 const MOST = 366 * 86_400_000;
-
-/** One move of the clock at a time: a second waits until the first's due work has run. */
-let moving: Promise<unknown> = Promise.resolve();
 
 export const Route = createFileRoute("/_dev/clock")({
   server: {
@@ -44594,22 +44549,14 @@ export const Route = createFileRoute("/_dev/clock")({
           const at = typeof body.at === "string" ? Date.parse(body.at) : Number.NaN;
           if (!Number.isFinite(at) || new Date(at).toISOString() !== body.at)
             return Response.json({ refused: true, status: 400, message: "at: a canonical ISO time." }, { status: 400 });
+          setClockAt(at);
         } else {
           const { offset } = body;
           if (typeof offset !== "number" || !Number.isFinite(offset) || Math.abs(offset) > MOST)
             return Response.json({ refused: true, status: 400, message: "offset: milliseconds from now, within a year." }, { status: 400 });
+          setClockOffset(offset);
         }
-        const move = moving.then(async () => {
-          if (body.at !== undefined) setClockAt(Date.parse(body.at as string));
-          else setClockOffset(body.offset as number);
-          return now().toISOString();
-        });
-        moving = move.catch(() => undefined);
-        try {
-          return Response.json({ now: await move });
-        } catch (error) {
-          return refused(error);
-        }
+        return Response.json({ now: now().toISOString() });
       },
     },
   },
@@ -47197,7 +47144,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/generated/customer.schema.ts": "e6ad7cbe generated",
   "src/generated/customer.server.ts": "0670ff0a generated",
   "src/generated/customer.ts": "8c21bca9 generated",
-  "src/generated/dev-door.server.ts": "2011c475 generated",
+  "src/generated/dev-door.server.ts": "c6582e43 generated",
   "src/generated/follow-up.formulas.ts": "464cc51b generated",
   "src/generated/follow-up.import.server.ts": "747d6cf1 generated",
   "src/generated/follow-up.import.ts": "39b736bf generated",
@@ -47220,7 +47167,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/generated/users.server.ts": "aedee060 generated",
   "src/generated/users.test.ts": "18f42451 generated",
   "src/generated/users.ts": "f77bb99b generated",
-  "src/kit/ActionButton.tsx": "6a3b0c0a kit",
+  "src/kit/ActionButton.tsx": "44e711df kit",
   "src/kit/ActivityLog.tsx": "e53a5289 kit",
   "src/kit/AiMark.tsx": "00588184 kit",
   "src/kit/AppCard.tsx": "76e8455d kit",
@@ -47234,22 +47181,22 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/FieldInput.tsx": "39e40fcb kit",
   "src/kit/Filters.tsx": "ceea52dc kit",
   "src/kit/ImportDialog.tsx": "d65da47a kit",
-  "src/kit/InlineRows.tsx": "5a097006 kit",
+  "src/kit/InlineRows.tsx": "b2c801d6 kit",
   "src/kit/Inspector.tsx": "2425cac5 kit",
-  "src/kit/Landing.tsx": "a528f50e kit",
-  "src/kit/MergeDialog.tsx": "9794e745 kit",
-  "src/kit/ModelForm.tsx": "b857b574 kit",
-  "src/kit/ModelTable.tsx": "aeabcaa1 kit",
+  "src/kit/Landing.tsx": "46b7b2a6 kit",
+  "src/kit/MergeDialog.tsx": "54b364dd kit",
+  "src/kit/ModelForm.tsx": "6bdbf213 kit",
+  "src/kit/ModelTable.tsx": "a8ae6290 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "fb5e87dc kit",
   "src/kit/PictureDialog.tsx": "1495b136 kit",
   "src/kit/RecordSummary.tsx": "f0415723 kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
-  "src/kit/SelectionBar.tsx": "97aa9165 kit",
+  "src/kit/SelectionBar.tsx": "d4714066 kit",
   "src/kit/SignIn.tsx": "21a3d26d kit",
   "src/kit/SoundControls.tsx": "5699608e kit",
   "src/kit/Together.tsx": "66a45263 kit",
-  "src/kit/Trash.tsx": "23a35263 kit",
+  "src/kit/Trash.tsx": "77988823 kit",
   "src/kit/Users.tsx": "ce0bde9c kit",
   "src/kit/access.ts": "fa1402b7 kit",
   "src/kit/address.server.ts": "76112e4f kit",
@@ -47265,7 +47212,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/csv-read.ts": "324bc527 kit",
   "src/kit/csv.ts": "7d2a0f31 kit",
   "src/kit/dev-door.server.ts": "f8d865f5 kit",
-  "src/kit/file-address.ts": "951d9935 kit",
+  "src/kit/file-address.ts": "2a579e98 kit",
   "src/kit/filter.ts": "ac5ee469 kit",
   "src/kit/format.ts": "b9e92275 kit",
   "src/kit/formats.ts": "2257fcc1 kit",
@@ -47283,7 +47230,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/params.ts": "65a69da0 kit",
   "src/kit/people-match.ts": "09a0f7dc kit",
   "src/kit/person-time.server.ts": "5d9e216d kit",
-  "src/kit/refusal.ts": "de3353a0 kit",
+  "src/kit/refusal.ts": "c3d97f37 kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "b6f52acc kit",
   "src/kit/speech.test.ts": "19252a6e kit",
@@ -47295,7 +47242,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "a509a677 kit",
+  "src/kit/words/en.ts": "14f776a8 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "a5bc8760 generated",
@@ -47305,7 +47252,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/routes/-start-parts.tsx": "c178be52 generated",
   "src/routes/[_dev]/act.ts": "c57e01e2 generated",
   "src/routes/[_dev]/ask.ts": "3e066e2e generated",
-  "src/routes/[_dev]/clock.ts": "a1ccbe93 generated",
+  "src/routes/[_dev]/clock.ts": "a02ee4a6 generated",
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
   "src/routes/__root.tsx": "3a1f8636 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
@@ -54647,9 +54594,6 @@ export function outgoing(tx: Tx, viewer: Viewer | null, model: string, what: str
     if (entry.model !== model || !counts(entry.when, what, entry.fits, record, before, entry.fields)) continue;
     const shown = SHOWN[model]?.(tx, record);
     if (!shown || !entry.to) continue;
-    // Whom it goes to, first: with nobody to send to, a value that cannot be worked out refuses nothing.
-    const to = entry.to(tx, record);
-    if (!to.length) continue;
     const { title, labels, values, ...rest } = shown;
     const prior = before && (entry.previous || entry.before) ? SHOWN[model]?.(tx, before) : undefined;
     const more = entry.more?.(tx, record);
@@ -54657,6 +54601,7 @@ export function outgoing(tx: Tx, viewer: Viewer | null, model: string, what: str
     const fill = (text: string, oneLine = false) =>
       fillText(text, (path) => path === "title" ? title : path === "link" ? linkTo(rest.link) : path === "by" ? (viewer && !viewer.system ? viewer.name : "") : path.startsWith("before.") ? blank(prior?.values[path.slice(7)]) : blank(more?.[path] ?? values[path]), oneLine);
     const happening: Happening = { ...rest, subject: entry.subject ? fill(entry.subject, true) : rest.subject, ...(entry.text ? { text: fill(entry.text) } : {}), fields: shownFields(labels, values, prior?.values, entry.show, entry.previous), entry: entry.name, model, record: record.id as number };
+    const to = entry.to(tx, record);
     queueMail(tx, viewer, happening, to, entry.when === "created");
   }
 }
@@ -55236,15 +55181,12 @@ exports[`../../../examples/invoicing/smithable.yml > file list and generated cod
 // The development door (docs/design/sample-users.md §3–§4): the development build's clock, moved
 // so "a week later" is a call; a demo has no such call.
 import { createFileRoute } from "@tanstack/react-router";
-import { doorShut, refused } from "#/kit/dev-door.server";
+import { doorShut } from "#/kit/dev-door.server";
 import { now, setClockAt, setClockOffset } from "#/kit/now";
 import { tick } from "#/generated/timers.server";
 
 /** At most a year either way. */
 const MOST = 366 * 86_400_000;
-
-/** One move of the clock at a time: a second waits until the first's due work has run. */
-let moving: Promise<unknown> = Promise.resolve();
 
 export const Route = createFileRoute("/_dev/clock")({
   server: {
@@ -55258,24 +55200,16 @@ export const Route = createFileRoute("/_dev/clock")({
           const at = typeof body.at === "string" ? Date.parse(body.at) : Number.NaN;
           if (!Number.isFinite(at) || new Date(at).toISOString() !== body.at)
             return Response.json({ refused: true, status: 400, message: "at: a canonical ISO time." }, { status: 400 });
+          setClockAt(at);
         } else {
           const { offset } = body;
           if (typeof offset !== "number" || !Number.isFinite(offset) || Math.abs(offset) > MOST)
             return Response.json({ refused: true, status: 400, message: "offset: milliseconds from now, within a year." }, { status: 400 });
+          setClockOffset(offset);
         }
-        const move = moving.then(async () => {
-          if (body.at !== undefined) setClockAt(Date.parse(body.at as string));
-          else setClockOffset(body.offset as number);
-          // A development build has no tick of its own: what came due by the new "now" runs here.
-          await tick(now());
-          return now().toISOString();
-        });
-        moving = move.catch(() => undefined);
-        try {
-          return Response.json({ now: await move });
-        } catch (error) {
-          return refused(error);
-        }
+        // A development build has no tick of its own: what came due by the new "now" runs here.
+        await tick(now());
+        return Response.json({ now: now().toISOString() });
       },
     },
   },
@@ -57437,13 +57371,13 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/generated/invoice.server.ts": "d6f05e64 generated",
   "src/generated/invoice.ts": "99ac7b80 generated",
   "src/generated/my-time.ts": "c315432b generated",
-  "src/generated/outgoing.server.ts": "8a4f3007 generated",
+  "src/generated/outgoing.server.ts": "85ef1ab0 generated",
   "src/generated/pages.ts": "97850e87 generated",
   "src/generated/roles.ts": "d284ad2a generated",
   "src/generated/site.ts": "97fb8041 generated",
   "src/generated/timers.server.ts": "8ff1c211 generated",
   "src/generated/uploads.ts": "a6f745ae generated",
-  "src/kit/ActionButton.tsx": "6a3b0c0a kit",
+  "src/kit/ActionButton.tsx": "44e711df kit",
   "src/kit/ActivityLog.tsx": "e53a5289 kit",
   "src/kit/AiMark.tsx": "00588184 kit",
   "src/kit/AppCard.tsx": "76e8455d kit",
@@ -57459,21 +57393,21 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/FileInput.tsx": "5d567f82 kit",
   "src/kit/Filters.tsx": "ceea52dc kit",
   "src/kit/ImportDialog.tsx": "d65da47a kit",
-  "src/kit/InlineRows.tsx": "5a097006 kit",
+  "src/kit/InlineRows.tsx": "b2c801d6 kit",
   "src/kit/Inspector.tsx": "2425cac5 kit",
-  "src/kit/Landing.tsx": "a528f50e kit",
+  "src/kit/Landing.tsx": "46b7b2a6 kit",
   "src/kit/LegalPage.tsx": "f9a9df1e kit",
   "src/kit/Live.tsx": "fbaa47cd kit",
-  "src/kit/ModelForm.tsx": "b857b574 kit",
-  "src/kit/ModelTable.tsx": "aeabcaa1 kit",
+  "src/kit/ModelForm.tsx": "6bdbf213 kit",
+  "src/kit/ModelTable.tsx": "a8ae6290 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Onboarding.tsx": "b68216f0 kit",
   "src/kit/Overflow.tsx": "fb5e87dc kit",
   "src/kit/PictureDialog.tsx": "1495b136 kit",
-  "src/kit/PictureInput.tsx": "993db3fb kit",
+  "src/kit/PictureInput.tsx": "47a52232 kit",
   "src/kit/RecordSummary.tsx": "f0415723 kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
-  "src/kit/SelectionBar.tsx": "97aa9165 kit",
+  "src/kit/SelectionBar.tsx": "d4714066 kit",
   "src/kit/SignIn.tsx": "21a3d26d kit",
   "src/kit/SoundControls.tsx": "5699608e kit",
   "src/kit/Together.tsx": "66a45263 kit",
@@ -57493,7 +57427,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/csv-read.ts": "324bc527 kit",
   "src/kit/csv.ts": "7d2a0f31 kit",
   "src/kit/dev-door.server.ts": "f8d865f5 kit",
-  "src/kit/file-address.ts": "951d9935 kit",
+  "src/kit/file-address.ts": "2a579e98 kit",
   "src/kit/filter.ts": "ac5ee469 kit",
   "src/kit/format.ts": "b9e92275 kit",
   "src/kit/formats.ts": "2257fcc1 kit",
@@ -57514,8 +57448,8 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/params.ts": "65a69da0 kit",
   "src/kit/people-match.ts": "09a0f7dc kit",
   "src/kit/person-time.server.ts": "5d9e216d kit",
-  "src/kit/receipts.server.ts": "78a1bc4e kit",
-  "src/kit/refusal.ts": "de3353a0 kit",
+  "src/kit/receipts.server.ts": "23b63f60 kit",
+  "src/kit/refusal.ts": "c3d97f37 kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "b6f52acc kit",
   "src/kit/speech.test.ts": "19252a6e kit",
@@ -57525,11 +57459,11 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "8c886a7b kit",
   "src/kit/unused-samples.ts": "860c6650 kit",
-  "src/kit/uploads.ts": "724b80f6 kit",
+  "src/kit/uploads.ts": "1218e9e3 kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "a509a677 kit",
+  "src/kit/words/en.ts": "14f776a8 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "abeccae5 generated",
@@ -57538,7 +57472,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/router.tsx": "1da2e059 kit",
   "src/routes/[_dev]/act.ts": "c57e01e2 generated",
   "src/routes/[_dev]/ask.ts": "7678e5fc generated",
-  "src/routes/[_dev]/clock.ts": "72446040 generated",
+  "src/routes/[_dev]/clock.ts": "a43168cd generated",
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
   "src/routes/__root.tsx": "48718742 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
@@ -57547,7 +57481,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/routes/clients/index.tsx": "12269975 generated",
   "src/routes/clients/new.tsx": "1194d3e4 generated",
   "src/routes/events.ts": "2a5e5b78 generated",
-  "src/routes/files/$model.$field.ts": "37c1c781 kit",
+  "src/routes/files/$model.$field.ts": "5059a1b3 kit",
   "src/routes/files/$model.$id.$field.$n.ts": "5288014d kit",
   "src/routes/files/$model.$id.$field.ts": "93378bd7 kit",
   "src/routes/health.ts": "362c9904 kit",
@@ -61062,7 +60996,7 @@ import { w } from "#/kit/words";
 export const dishSettable = createInsertSchema(schema.dishes, {
   name: (s) => s.trim().min(1, w.required).max(200, w.atMostCharacters(200)),
   description: (s) => s.max(10000, w.atMostCharacters(10000)),
-  picture: z.object({ file: z.string().regex(/^dish\\/[a-f0-9]{24}\\.webp$/), alt: z.string().trim().max(200), width: z.int().positive(), height: z.int().positive(), generated: z.literal(true).optional(), smaller: z.array(z.object({ file: z.string().regex(/^dish\\/[a-f0-9]{24}\\.webp$/), width: z.union([z.literal(480), z.literal(960)]), height: z.int().positive() })).max(2).optional(), receipt: z.string().max(64).optional() }).nullish(),
+  picture: z.object({ file: z.string().regex(/^dish\\/[a-f0-9]{24}\\.webp$/), alt: z.string().trim().max(200), width: z.int().positive(), height: z.int().positive(), generated: z.literal(true).optional(), receipt: z.string().max(64).optional() }).nullish(),
   allergens: (s) => s.max(200, w.atMostCharacters(200)),
 }).omit({ id: true, ownerId: true, createdAt: true, updatedAt: true });
 /** What a dish's form sends, checked. */
@@ -61082,7 +61016,7 @@ import { AccessDenied, allows, check, Conflict, type ModelAccess, personOf, read
 import { audit, changedFields } from "#/kit/audit.server";
 import { refusal } from "#/kit/log.server";
 import { contains } from "#/kit/search";
-import { deletePicture, dropCopies } from "#/kit/uploads";
+import { deletePicture } from "#/kit/uploads";
 import { acceptFiles, cleanUploads, keepsUpload } from "#/kit/receipts.server";
 import { afterChange, afterDelete } from "./hooks";
 import { orderLineUi } from "./order-line";
@@ -61301,8 +61235,7 @@ export const dishData = {
       throw refusal(error);
     }
     cleanUploads(() => {
-    if (row.picture && row.picture.file !== changed.picture?.file) deletePicture(row.picture, keepsUpload(row.picture.file) || !!db.select({ id: schema.dishes.id }).from(schema.dishes).where(sql\`\${schema.dishes.picture} like \${\`%"file":"\${row.picture.file}"%\`}\`).get(), (file) => keepsUpload(file) || !!db.select({ id: schema.dishes.id }).from(schema.dishes).where(sql\`\${schema.dishes.picture} like \${\`%"file":"\${file}"%\`}\`).get());
-    dropCopies(row.picture, changed.picture, (file) => keepsUpload(file) || !!db.select({ id: schema.dishes.id }).from(schema.dishes).where(sql\`\${schema.dishes.picture} like \${\`%"file":"\${file}"%\`}\`).get());
+    if (row.picture && row.picture.file !== changed.picture?.file) deletePicture(row.picture, keepsUpload(row.picture.file) || !!db.select({ id: schema.dishes.id }).from(schema.dishes).where(sql\`\${schema.dishes.picture} like \${\`%"file":"\${row.picture.file}"%\`}\`).get());
     });
     await afterChange("afterUpdate", "Dish", changed, viewer);
     return changed;
@@ -61334,7 +61267,7 @@ export const dishData = {
       throw refusal(error);
     }
     cleanUploads(() => {
-    if (row.picture && row.picture.file !== undefined) deletePicture(row.picture, keepsUpload(row.picture.file) || !!db.select({ id: schema.dishes.id }).from(schema.dishes).where(sql\`\${schema.dishes.picture} like \${\`%"file":"\${row.picture.file}"%\`}\`).get(), (file) => keepsUpload(file) || !!db.select({ id: schema.dishes.id }).from(schema.dishes).where(sql\`\${schema.dishes.picture} like \${\`%"file":"\${file}"%\`}\`).get());
+    if (row.picture && row.picture.file !== undefined) deletePicture(row.picture, keepsUpload(row.picture.file) || !!db.select({ id: schema.dishes.id }).from(schema.dishes).where(sql\`\${schema.dishes.picture} like \${\`%"file":"\${row.picture.file}"%\`}\`).get());
     });
     await afterDelete("Dish", id, viewer);
   },
@@ -61371,7 +61304,7 @@ export const dishData = {
     });
     for (const row of rows) {
       cleanUploads(() => {
-      if (row.picture && row.picture.file !== undefined) deletePicture(row.picture, keepsUpload(row.picture.file) || !!db.select({ id: schema.dishes.id }).from(schema.dishes).where(sql\`\${schema.dishes.picture} like \${\`%"file":"\${row.picture.file}"%\`}\`).get(), (file) => keepsUpload(file) || !!db.select({ id: schema.dishes.id }).from(schema.dishes).where(sql\`\${schema.dishes.picture} like \${\`%"file":"\${file}"%\`}\`).get());
+      if (row.picture && row.picture.file !== undefined) deletePicture(row.picture, keepsUpload(row.picture.file) || !!db.select({ id: schema.dishes.id }).from(schema.dishes).where(sql\`\${schema.dishes.picture} like \${\`%"file":"\${row.picture.file}"%\`}\`).get());
       });
       await afterDelete("Dish", row.id, viewer);
     }
@@ -62936,9 +62869,6 @@ export function outgoing(tx: Tx, viewer: Viewer | null, model: string, what: str
     }
     const shown = SHOWN[model]?.(tx, record);
     if (!shown || !entry.to) continue;
-    // Whom it goes to, first: with nobody to send to, a value that cannot be worked out refuses nothing.
-    const to = entry.to(tx, record);
-    if (!to.length) continue;
     const { title, labels, values, ...rest } = shown;
     const prior = before && (entry.previous || entry.before) ? SHOWN[model]?.(tx, before) : undefined;
     const more = entry.more?.(tx, record);
@@ -62946,6 +62876,7 @@ export function outgoing(tx: Tx, viewer: Viewer | null, model: string, what: str
     const fill = (text: string, oneLine = false) =>
       fillText(text, (path) => path === "title" ? title : path === "link" ? linkTo(rest.link) : path === "by" ? (viewer && !viewer.system ? viewer.name : "") : path.startsWith("before.") ? blank(prior?.values[path.slice(7)]) : blank(more?.[path] ?? values[path]), oneLine);
     const happening: Happening = { ...rest, subject: entry.subject ? fill(entry.subject, true) : rest.subject, ...(entry.text ? { text: fill(entry.text) } : {}), fields: shownFields(labels, values, prior?.values, entry.show, entry.previous), entry: entry.name, model, record: record.id as number };
+    const to = entry.to(tx, record);
     if (entry.push) queuePush(tx, viewer, happening, to);
     if (entry.mail !== false) queueMail(tx, viewer, happening, to, entry.when === "created");
   }
@@ -64306,14 +64237,11 @@ exports[`../../../examples/kiosk/smithable.yml > file list and generated code > 
 // The development door (docs/design/sample-users.md §3–§4): the development build's clock, moved
 // so "a week later" is a call; a demo has no such call.
 import { createFileRoute } from "@tanstack/react-router";
-import { doorShut, refused } from "#/kit/dev-door.server";
+import { doorShut } from "#/kit/dev-door.server";
 import { now, setClockAt, setClockOffset } from "#/kit/now";
 
 /** At most a year either way. */
 const MOST = 366 * 86_400_000;
-
-/** One move of the clock at a time: a second waits until the first's due work has run. */
-let moving: Promise<unknown> = Promise.resolve();
 
 export const Route = createFileRoute("/_dev/clock")({
   server: {
@@ -64327,22 +64255,14 @@ export const Route = createFileRoute("/_dev/clock")({
           const at = typeof body.at === "string" ? Date.parse(body.at) : Number.NaN;
           if (!Number.isFinite(at) || new Date(at).toISOString() !== body.at)
             return Response.json({ refused: true, status: 400, message: "at: a canonical ISO time." }, { status: 400 });
+          setClockAt(at);
         } else {
           const { offset } = body;
           if (typeof offset !== "number" || !Number.isFinite(offset) || Math.abs(offset) > MOST)
             return Response.json({ refused: true, status: 400, message: "offset: milliseconds from now, within a year." }, { status: 400 });
+          setClockOffset(offset);
         }
-        const move = moving.then(async () => {
-          if (body.at !== undefined) setClockAt(Date.parse(body.at as string));
-          else setClockOffset(body.offset as number);
-          return now().toISOString();
-        });
-        moving = move.catch(() => undefined);
-        try {
-          return Response.json({ now: await move });
-        } catch (error) {
-          return refused(error);
-        }
+        return Response.json({ now: now().toISOString() });
       },
     },
   },
@@ -66780,8 +66700,8 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/generated/dev-door.server.ts": "45e8136d generated",
   "src/generated/dish.import.server.ts": "aee46d8b generated",
   "src/generated/dish.import.ts": "44be2252 generated",
-  "src/generated/dish.schema.ts": "134b49aa generated",
-  "src/generated/dish.server.ts": "c54fc9a1 generated",
+  "src/generated/dish.schema.ts": "30168a95 generated",
+  "src/generated/dish.server.ts": "ed8a702b generated",
   "src/generated/dish.ts": "3b947d71 generated",
   "src/generated/hooks.ts": "5c440337 generated",
   "src/generated/my-time.ts": "c315432b generated",
@@ -66795,7 +66715,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/generated/order.schema.ts": "cf6bfc1f generated",
   "src/generated/order.server.ts": "39ad8be0 generated",
   "src/generated/order.ts": "db4c9478 generated",
-  "src/generated/outgoing.server.ts": "f1653b4c generated",
+  "src/generated/outgoing.server.ts": "4615ff1f generated",
   "src/generated/pages.ts": "7d21451f generated",
   "src/generated/push.ts": "22b841d2 generated",
   "src/generated/roles.ts": "6b44c69a generated",
@@ -66808,7 +66728,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/generated/uploads.ts": "a35206c8 generated",
   "src/generated/users.server.ts": "875974ba generated",
   "src/generated/users.test.ts": "7acaec15 generated",
-  "src/kit/ActionButton.tsx": "6a3b0c0a kit",
+  "src/kit/ActionButton.tsx": "44e711df kit",
   "src/kit/ActivityLog.tsx": "e53a5289 kit",
   "src/kit/AiMark.tsx": "00588184 kit",
   "src/kit/AppCard.tsx": "76e8455d kit",
@@ -66821,20 +66741,20 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/FileInput.tsx": "5d567f82 kit",
   "src/kit/Filters.tsx": "ceea52dc kit",
   "src/kit/ImportDialog.tsx": "d65da47a kit",
-  "src/kit/InlineRows.tsx": "5a097006 kit",
-  "src/kit/Landing.tsx": "a528f50e kit",
+  "src/kit/InlineRows.tsx": "b2c801d6 kit",
+  "src/kit/Landing.tsx": "46b7b2a6 kit",
   "src/kit/Live.tsx": "fbaa47cd kit",
-  "src/kit/ModelForm.tsx": "b857b574 kit",
-  "src/kit/ModelTable.tsx": "aeabcaa1 kit",
+  "src/kit/ModelForm.tsx": "6bdbf213 kit",
+  "src/kit/ModelTable.tsx": "a8ae6290 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/OrderPage.tsx": "d4a74208 kit",
   "src/kit/Overflow.tsx": "fb5e87dc kit",
   "src/kit/PictureDialog.tsx": "1495b136 kit",
-  "src/kit/PictureInput.tsx": "993db3fb kit",
+  "src/kit/PictureInput.tsx": "47a52232 kit",
   "src/kit/PushChoices.tsx": "ec2ec02f kit",
   "src/kit/RecordSummary.tsx": "f0415723 kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
-  "src/kit/SelectionBar.tsx": "97aa9165 kit",
+  "src/kit/SelectionBar.tsx": "d4714066 kit",
   "src/kit/SignIn.tsx": "21a3d26d kit",
   "src/kit/Together.tsx": "66a45263 kit",
   "src/kit/Users.tsx": "ce0bde9c kit",
@@ -66849,7 +66769,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/csv-read.ts": "324bc527 kit",
   "src/kit/csv.ts": "7d2a0f31 kit",
   "src/kit/dev-door.server.ts": "f8d865f5 kit",
-  "src/kit/file-address.ts": "951d9935 kit",
+  "src/kit/file-address.ts": "2a579e98 kit",
   "src/kit/filter.ts": "ac5ee469 kit",
   "src/kit/format.ts": "b9e92275 kit",
   "src/kit/formats.ts": "2257fcc1 kit",
@@ -66872,8 +66792,8 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/person-time.server.ts": "5d9e216d kit",
   "src/kit/push-crypto.server.ts": "5d88f4a0 kit",
   "src/kit/push.server.ts": "38f4b235 kit",
-  "src/kit/receipts.server.ts": "78a1bc4e kit",
-  "src/kit/refusal.ts": "de3353a0 kit",
+  "src/kit/receipts.server.ts": "23b63f60 kit",
+  "src/kit/refusal.ts": "c3d97f37 kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "b6f52acc kit",
   "src/kit/sequence.server.ts": "89a0dd0d kit",
@@ -66881,10 +66801,10 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/time-text.ts": "eb8db028 kit",
   "src/kit/trace.server.ts": "8c886a7b kit",
   "src/kit/unused-samples.ts": "860c6650 kit",
-  "src/kit/uploads.ts": "724b80f6 kit",
+  "src/kit/uploads.ts": "1218e9e3 kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "a509a677 kit",
+  "src/kit/words/en.ts": "14f776a8 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "5a8d99b1 generated",
@@ -66892,7 +66812,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/lib/viewer.server.ts": "61bef2b7 generated",
   "src/router.tsx": "1da2e059 kit",
   "src/routes/[_dev]/act.ts": "c57e01e2 generated",
-  "src/routes/[_dev]/clock.ts": "a1ccbe93 generated",
+  "src/routes/[_dev]/clock.ts": "a02ee4a6 generated",
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
   "src/routes/__root.tsx": "3cfd0626 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
@@ -66901,7 +66821,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/routes/dishes/index.tsx": "bbffbf09 generated",
   "src/routes/dishes/new.tsx": "7aa588df generated",
   "src/routes/events.ts": "e5bcb4f0 generated",
-  "src/routes/files/$model.$field.ts": "37c1c781 kit",
+  "src/routes/files/$model.$field.ts": "5059a1b3 kit",
   "src/routes/files/$model.$id.$field.$n.ts": "5288014d kit",
   "src/routes/files/$model.$id.$field.ts": "93378bd7 kit",
   "src/routes/health.ts": "362c9904 kit",
@@ -68794,7 +68714,7 @@ import { w } from "#/kit/words";
 /** What a item may be given: a form's values and what the app fills (an action's set). */
 export const itemSettable = createInsertSchema(schema.items, {
   title: (s) => s.trim().min(1, w.required).max(200, w.atMostCharacters(200)),
-  photos: z.array(z.object({ file: z.string().regex(/^item\\/[a-f0-9]{24}\\.webp$/), alt: z.string().trim().max(200), width: z.int().positive(), height: z.int().positive(), generated: z.literal(true).optional(), smaller: z.array(z.object({ file: z.string().regex(/^item\\/[a-f0-9]{24}\\.webp$/), width: z.union([z.literal(480), z.literal(960)]), height: z.int().positive() })).max(2).optional(), receipt: z.string().max(64).optional() })).max(10),
+  photos: z.array(z.object({ file: z.string().regex(/^item\\/[a-f0-9]{24}\\.webp$/), alt: z.string().trim().max(200), width: z.int().positive(), height: z.int().positive(), generated: z.literal(true).optional(), receipt: z.string().max(64).optional() })).max(10),
   description: (s) => s.trim().min(1, w.required).max(10000, w.atMostCharacters(10000)),
   place: (s) => s.max(200, w.atMostCharacters(200)),
 }).omit({ id: true, ownerId: true, createdAt: true, updatedAt: true });
@@ -68817,7 +68737,7 @@ import { refusal } from "#/kit/log.server";
 import { contains } from "#/kit/search";
 import { BadInput } from "#/kit/refusal";
 import { aggregate, type Filterable, nearest, sortOf, whereOf, wordsOf } from "#/kit/where";
-import { deletePicture, dropCopies } from "#/kit/uploads";
+import { deletePicture } from "#/kit/uploads";
 import { acceptFiles, cleanUploads, keepsUpload } from "#/kit/receipts.server";
 import { tellReviewers } from "#/kit/review-mail.server";
 import { afterChange, afterDelete } from "./hooks";
@@ -68921,7 +68841,7 @@ const BY: string[] = ["category","condition","available"];
 function checkFiles<V extends Partial<ItemSettable>>(viewer: Viewer | null, values: V, before?: Record<string, unknown>): V {
   return {
     ...values,
-    ...("photos" in values ? { photos: acceptFiles(viewer, "item", "photos", values.photos, before?.photos, false) } : {}),
+    ...("photos" in values ? { photos: acceptFiles(viewer, "item", "photos", values.photos, before?.photos) } : {}),
   };
 }
 
@@ -69363,7 +69283,7 @@ export const itemData = {
       throw refusal(error);
     }
     cleanUploads(() => {
-    for (const p of row.photos ?? []) if (!(changed.photos ?? []).map((p) => p.file).includes(p.file)) deletePicture(p, keepsUpload(p.file) || !!db.select({ id: schema.items.id }).from(schema.items).where(sql\`\${schema.items.photos} like \${\`%"file":"\${p.file}"%\`}\`).get(), (file) => keepsUpload(file) || !!db.select({ id: schema.items.id }).from(schema.items).where(sql\`\${schema.items.photos} like \${\`%"file":"\${file}"%\`}\`).get()); else dropCopies(p, (changed.photos ?? []).find((q) => q.file === p.file), (file) => keepsUpload(file) || !!db.select({ id: schema.items.id }).from(schema.items).where(sql\`\${schema.items.photos} like \${\`%"file":"\${file}"%\`}\`).get());
+    for (const p of row.photos ?? []) if (!(changed.photos ?? []).map((p) => p.file).includes(p.file)) deletePicture(p, keepsUpload(p.file) || !!db.select({ id: schema.items.id }).from(schema.items).where(sql\`\${schema.items.photos} like \${\`%"file":"\${p.file}"%\`}\`).get());
     });
     await afterChange("afterUpdate", "Item", changed, viewer);
     return changed;
@@ -69393,7 +69313,7 @@ export const itemData = {
       throw refusal(error);
     }
     cleanUploads(() => {
-    for (const p of row.photos ?? []) if (!([] as string[]).includes(p.file)) deletePicture(p, keepsUpload(p.file) || !!db.select({ id: schema.items.id }).from(schema.items).where(sql\`\${schema.items.photos} like \${\`%"file":"\${p.file}"%\`}\`).get(), (file) => keepsUpload(file) || !!db.select({ id: schema.items.id }).from(schema.items).where(sql\`\${schema.items.photos} like \${\`%"file":"\${file}"%\`}\`).get());
+    for (const p of row.photos ?? []) if (!([] as string[]).includes(p.file)) deletePicture(p, keepsUpload(p.file) || !!db.select({ id: schema.items.id }).from(schema.items).where(sql\`\${schema.items.photos} like \${\`%"file":"\${p.file}"%\`}\`).get());
     });
     await afterDelete("Item", id, viewer);
   },
@@ -69428,7 +69348,7 @@ export const itemData = {
     });
     for (const row of rows) {
       cleanUploads(() => {
-      for (const p of row.photos ?? []) if (!([] as string[]).includes(p.file)) deletePicture(p, keepsUpload(p.file) || !!db.select({ id: schema.items.id }).from(schema.items).where(sql\`\${schema.items.photos} like \${\`%"file":"\${p.file}"%\`}\`).get(), (file) => keepsUpload(file) || !!db.select({ id: schema.items.id }).from(schema.items).where(sql\`\${schema.items.photos} like \${\`%"file":"\${file}"%\`}\`).get());
+      for (const p of row.photos ?? []) if (!([] as string[]).includes(p.file)) deletePicture(p, keepsUpload(p.file) || !!db.select({ id: schema.items.id }).from(schema.items).where(sql\`\${schema.items.photos} like \${\`%"file":"\${p.file}"%\`}\`).get());
       });
       await afterDelete("Item", row.id, viewer);
     }
@@ -69700,7 +69620,7 @@ interface Reviewed {
   href(id: number): string | undefined;
   fields: Record<string, { label: string; kind: "picture" | "file" }>;
   usedElsewhere(file: string, id: number): boolean;
-  takeOut(id: number, field: string, file: string): { smaller?: { file: string }[] } | undefined;
+  takeOut(id: number, field: string, file: string): void;
 }
 
 const MODELS: Record<string, Reviewed> = {
@@ -69721,15 +69641,12 @@ const MODELS: Record<string, Reviewed> = {
       "photos": { label: "Photos", kind: "picture" },
     },
     // A rejected file leaves the record: out of a list, or the field emptied; a required single
-    // file stays (it cannot be empty), held from others until a new one is sent. Returns what left,
-    // for a picture's smaller copies.
+    // file stays (it cannot be empty), held from others until a new one is sent.
     takeOut: (id, field, file) => {
       if (field === "photos") {
         const row = db.select({ value: schema.items.photos }).from(schema.items).where(eq(schema.items.id, id)).get();
         db.update(schema.items).set({ photos: (row?.value ?? []).filter((v) => v.file !== file) }).where(eq(schema.items.id, id)).run();
-        return (row?.value ?? []).find((v) => v.file === file);
       }
-      return undefined;
     },
     // Another record still shows the same file (files are named by their content).
     usedElsewhere: (file, id) =>
@@ -69850,15 +69767,10 @@ export function decide(viewer: Viewer | null, id: number, approve: boolean, reas
   });
   const model = MODELS[row.model];
   if (approve || !model) return;
-  const out = model.takeOut(row.recordId, row.field, row.file);
+  model.takeOut(row.recordId, row.field, row.file);
   const stored = { file: row.file, alt: "", width: 0, height: 0, name: "", type: "", size: 0 };
   const used = model.usedElsewhere(row.file, row.recordId);
-  if (model.fields[row.field]?.kind === "picture")
-    deletePicture(
-      { ...stored, smaller: out?.smaller?.map((s) => ({ file: s.file, width: 0, height: 0 })) },
-      used,
-      (file) => model.usedElsewhere(file, row.recordId),
-    );
+  if (model.fields[row.field]?.kind === "picture") deletePicture(stored, used);
   else deleteFile(stored, used);
 }
 
@@ -70381,14 +70293,11 @@ exports[`../../../examples/marketplace/smithable.yml > file list and generated c
 // The development door (docs/design/sample-users.md §3–§4): the development build's clock, moved
 // so "a week later" is a call; a demo has no such call.
 import { createFileRoute } from "@tanstack/react-router";
-import { doorShut, refused } from "#/kit/dev-door.server";
+import { doorShut } from "#/kit/dev-door.server";
 import { now, setClockAt, setClockOffset } from "#/kit/now";
 
 /** At most a year either way. */
 const MOST = 366 * 86_400_000;
-
-/** One move of the clock at a time: a second waits until the first's due work has run. */
-let moving: Promise<unknown> = Promise.resolve();
 
 export const Route = createFileRoute("/_dev/clock")({
   server: {
@@ -70402,22 +70311,14 @@ export const Route = createFileRoute("/_dev/clock")({
           const at = typeof body.at === "string" ? Date.parse(body.at) : Number.NaN;
           if (!Number.isFinite(at) || new Date(at).toISOString() !== body.at)
             return Response.json({ refused: true, status: 400, message: "at: a canonical ISO time." }, { status: 400 });
+          setClockAt(at);
         } else {
           const { offset } = body;
           if (typeof offset !== "number" || !Number.isFinite(offset) || Math.abs(offset) > MOST)
             return Response.json({ refused: true, status: 400, message: "offset: milliseconds from now, within a year." }, { status: 400 });
+          setClockOffset(offset);
         }
-        const move = moving.then(async () => {
-          if (body.at !== undefined) setClockAt(Date.parse(body.at as string));
-          else setClockOffset(body.offset as number);
-          return now().toISOString();
-        });
-        moving = move.catch(() => undefined);
-        try {
-          return Response.json({ now: await move });
-        } catch (error) {
-          return refused(error);
-        }
+        return Response.json({ now: now().toISOString() });
       },
     },
   },
@@ -72237,17 +72138,17 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/generated/hooks.ts": "e268b462 generated",
   "src/generated/item.import.server.ts": "0fe6563a generated",
   "src/generated/item.import.ts": "0cb7ece1 generated",
-  "src/generated/item.schema.ts": "dffca266 generated",
-  "src/generated/item.server.ts": "419536a2 generated",
+  "src/generated/item.schema.ts": "1585b602 generated",
+  "src/generated/item.server.ts": "5c087807 generated",
   "src/generated/item.ts": "9051834d generated",
   "src/generated/my-time.ts": "c315432b generated",
   "src/generated/pages.ts": "85e88911 generated",
-  "src/generated/review.server.ts": "41afd3db generated",
+  "src/generated/review.server.ts": "05473a16 generated",
   "src/generated/review.ts": "c0f62730 generated",
   "src/generated/roles.ts": "d284ad2a generated",
   "src/generated/site.ts": "4c4ce201 generated",
   "src/generated/uploads.ts": "ca55296a generated",
-  "src/kit/ActionButton.tsx": "6a3b0c0a kit",
+  "src/kit/ActionButton.tsx": "44e711df kit",
   "src/kit/ActivityLog.tsx": "e53a5289 kit",
   "src/kit/AiMark.tsx": "00588184 kit",
   "src/kit/AppCard.tsx": "76e8455d kit",
@@ -72257,24 +72158,24 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/Ask.tsx": "e5277427 kit",
   "src/kit/Combobox.tsx": "c3a18c75 kit",
   "src/kit/Consent.tsx": "c5ee7e50 kit",
-  "src/kit/ContactOwner.tsx": "970fef36 kit",
+  "src/kit/ContactOwner.tsx": "bcbc5076 kit",
   "src/kit/FieldInput.tsx": "39e40fcb kit",
   "src/kit/FileInput.tsx": "5d567f82 kit",
   "src/kit/Filters.tsx": "ceea52dc kit",
   "src/kit/ImportDialog.tsx": "d65da47a kit",
-  "src/kit/InlineRows.tsx": "5a097006 kit",
+  "src/kit/InlineRows.tsx": "b2c801d6 kit",
   "src/kit/Inspector.tsx": "2425cac5 kit",
-  "src/kit/Landing.tsx": "a528f50e kit",
-  "src/kit/ModelForm.tsx": "b857b574 kit",
-  "src/kit/ModelTable.tsx": "aeabcaa1 kit",
+  "src/kit/Landing.tsx": "46b7b2a6 kit",
+  "src/kit/ModelForm.tsx": "6bdbf213 kit",
+  "src/kit/ModelTable.tsx": "a8ae6290 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "fb5e87dc kit",
   "src/kit/PictureDialog.tsx": "1495b136 kit",
-  "src/kit/PictureInput.tsx": "993db3fb kit",
+  "src/kit/PictureInput.tsx": "47a52232 kit",
   "src/kit/RecordSummary.tsx": "f0415723 kit",
   "src/kit/Review.tsx": "3dc198b3 kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
-  "src/kit/SelectionBar.tsx": "97aa9165 kit",
+  "src/kit/SelectionBar.tsx": "d4714066 kit",
   "src/kit/SignIn.tsx": "21a3d26d kit",
   "src/kit/SoundControls.tsx": "5699608e kit",
   "src/kit/Together.tsx": "66a45263 kit",
@@ -72291,7 +72192,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/csv-read.ts": "324bc527 kit",
   "src/kit/csv.ts": "7d2a0f31 kit",
   "src/kit/dev-door.server.ts": "f8d865f5 kit",
-  "src/kit/file-address.ts": "951d9935 kit",
+  "src/kit/file-address.ts": "2a579e98 kit",
   "src/kit/filter.ts": "ac5ee469 kit",
   "src/kit/format.ts": "b9e92275 kit",
   "src/kit/formats.ts": "2257fcc1 kit",
@@ -72309,8 +72210,8 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/params.ts": "65a69da0 kit",
   "src/kit/people-match.ts": "09a0f7dc kit",
   "src/kit/person-time.server.ts": "5d9e216d kit",
-  "src/kit/receipts.server.ts": "78a1bc4e kit",
-  "src/kit/refusal.ts": "de3353a0 kit",
+  "src/kit/receipts.server.ts": "23b63f60 kit",
+  "src/kit/refusal.ts": "c3d97f37 kit",
   "src/kit/review-mail.server.ts": "653c32e5 kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "b6f52acc kit",
@@ -72320,11 +72221,11 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "8c886a7b kit",
   "src/kit/unused-samples.ts": "860c6650 kit",
-  "src/kit/uploads.ts": "724b80f6 kit",
+  "src/kit/uploads.ts": "1218e9e3 kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "a509a677 kit",
+  "src/kit/words/en.ts": "14f776a8 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "074b32c0 generated",
@@ -72334,12 +72235,12 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/routes/$id.tsx": "d8498e96 generated",
   "src/routes/[_dev]/act.ts": "c57e01e2 generated",
   "src/routes/[_dev]/ask.ts": "7678e5fc generated",
-  "src/routes/[_dev]/clock.ts": "a1ccbe93 generated",
+  "src/routes/[_dev]/clock.ts": "a02ee4a6 generated",
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
   "src/routes/__root.tsx": "0929eb69 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/app-card.tsx": "48827720 generated",
-  "src/routes/files/$model.$field.ts": "37c1c781 kit",
+  "src/routes/files/$model.$field.ts": "5059a1b3 kit",
   "src/routes/files/$model.$id.$field.$n.ts": "5288014d kit",
   "src/routes/files/$model.$id.$field.ts": "93378bd7 kit",
   "src/routes/health.ts": "362c9904 kit",
@@ -75131,14 +75032,11 @@ exports[`../../../examples/records/smithable.yml > file list and generated code 
 // The development door (docs/design/sample-users.md §3–§4): the development build's clock, moved
 // so "a week later" is a call; a demo has no such call.
 import { createFileRoute } from "@tanstack/react-router";
-import { doorShut, refused } from "#/kit/dev-door.server";
+import { doorShut } from "#/kit/dev-door.server";
 import { now, setClockAt, setClockOffset } from "#/kit/now";
 
 /** At most a year either way. */
 const MOST = 366 * 86_400_000;
-
-/** One move of the clock at a time: a second waits until the first's due work has run. */
-let moving: Promise<unknown> = Promise.resolve();
 
 export const Route = createFileRoute("/_dev/clock")({
   server: {
@@ -75152,22 +75050,14 @@ export const Route = createFileRoute("/_dev/clock")({
           const at = typeof body.at === "string" ? Date.parse(body.at) : Number.NaN;
           if (!Number.isFinite(at) || new Date(at).toISOString() !== body.at)
             return Response.json({ refused: true, status: 400, message: "at: a canonical ISO time." }, { status: 400 });
+          setClockAt(at);
         } else {
           const { offset } = body;
           if (typeof offset !== "number" || !Number.isFinite(offset) || Math.abs(offset) > MOST)
             return Response.json({ refused: true, status: 400, message: "offset: milliseconds from now, within a year." }, { status: 400 });
+          setClockOffset(offset);
         }
-        const move = moving.then(async () => {
-          if (body.at !== undefined) setClockAt(Date.parse(body.at as string));
-          else setClockOffset(body.offset as number);
-          return now().toISOString();
-        });
-        moving = move.catch(() => undefined);
-        try {
-          return Response.json({ now: await move });
-        } catch (error) {
-          return refused(error);
-        }
+        return Response.json({ now: now().toISOString() });
       },
     },
   },
@@ -76348,7 +76238,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/generated/pages.ts": "e4262913 generated",
   "src/generated/roles.ts": "d284ad2a generated",
   "src/generated/site.ts": "307674d6 generated",
-  "src/kit/ActionButton.tsx": "6a3b0c0a kit",
+  "src/kit/ActionButton.tsx": "44e711df kit",
   "src/kit/ActivityLog.tsx": "e53a5289 kit",
   "src/kit/AiMark.tsx": "00588184 kit",
   "src/kit/AppCard.tsx": "76e8455d kit",
@@ -76361,17 +76251,17 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/FieldInput.tsx": "39e40fcb kit",
   "src/kit/Filters.tsx": "ceea52dc kit",
   "src/kit/ImportDialog.tsx": "d65da47a kit",
-  "src/kit/InlineRows.tsx": "5a097006 kit",
+  "src/kit/InlineRows.tsx": "b2c801d6 kit",
   "src/kit/Inspector.tsx": "2425cac5 kit",
-  "src/kit/Landing.tsx": "a528f50e kit",
-  "src/kit/ModelForm.tsx": "b857b574 kit",
-  "src/kit/ModelTable.tsx": "aeabcaa1 kit",
+  "src/kit/Landing.tsx": "46b7b2a6 kit",
+  "src/kit/ModelForm.tsx": "6bdbf213 kit",
+  "src/kit/ModelTable.tsx": "a8ae6290 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "fb5e87dc kit",
   "src/kit/PictureDialog.tsx": "1495b136 kit",
   "src/kit/RecordSummary.tsx": "f0415723 kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
-  "src/kit/SelectionBar.tsx": "97aa9165 kit",
+  "src/kit/SelectionBar.tsx": "d4714066 kit",
   "src/kit/SignIn.tsx": "21a3d26d kit",
   "src/kit/SoundControls.tsx": "5699608e kit",
   "src/kit/Together.tsx": "66a45263 kit",
@@ -76388,7 +76278,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/csv-read.ts": "324bc527 kit",
   "src/kit/csv.ts": "7d2a0f31 kit",
   "src/kit/dev-door.server.ts": "f8d865f5 kit",
-  "src/kit/file-address.ts": "951d9935 kit",
+  "src/kit/file-address.ts": "2a579e98 kit",
   "src/kit/filter.ts": "ac5ee469 kit",
   "src/kit/format.ts": "b9e92275 kit",
   "src/kit/formats.ts": "2257fcc1 kit",
@@ -76406,7 +76296,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/params.ts": "65a69da0 kit",
   "src/kit/people-match.ts": "09a0f7dc kit",
   "src/kit/person-time.server.ts": "5d9e216d kit",
-  "src/kit/refusal.ts": "de3353a0 kit",
+  "src/kit/refusal.ts": "c3d97f37 kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "b6f52acc kit",
   "src/kit/speech.test.ts": "19252a6e kit",
@@ -76418,7 +76308,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "a509a677 kit",
+  "src/kit/words/en.ts": "14f776a8 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "79f9bae2 generated",
@@ -76427,7 +76317,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/router.tsx": "1da2e059 kit",
   "src/routes/[_dev]/act.ts": "c57e01e2 generated",
   "src/routes/[_dev]/ask.ts": "7678e5fc generated",
-  "src/routes/[_dev]/clock.ts": "a1ccbe93 generated",
+  "src/routes/[_dev]/clock.ts": "a02ee4a6 generated",
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
   "src/routes/__root.tsx": "1d2deb00 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
@@ -87375,14 +87265,11 @@ exports[`../../../examples/status/smithable.yml > file list and generated code >
 // The development door (docs/design/sample-users.md §3–§4): the development build's clock, moved
 // so "a week later" is a call; a demo has no such call.
 import { createFileRoute } from "@tanstack/react-router";
-import { doorShut, refused } from "#/kit/dev-door.server";
+import { doorShut } from "#/kit/dev-door.server";
 import { now, setClockAt, setClockOffset } from "#/kit/now";
 
 /** At most a year either way. */
 const MOST = 366 * 86_400_000;
-
-/** One move of the clock at a time: a second waits until the first's due work has run. */
-let moving: Promise<unknown> = Promise.resolve();
 
 export const Route = createFileRoute("/_dev/clock")({
   server: {
@@ -87396,22 +87283,14 @@ export const Route = createFileRoute("/_dev/clock")({
           const at = typeof body.at === "string" ? Date.parse(body.at) : Number.NaN;
           if (!Number.isFinite(at) || new Date(at).toISOString() !== body.at)
             return Response.json({ refused: true, status: 400, message: "at: a canonical ISO time." }, { status: 400 });
+          setClockAt(at);
         } else {
           const { offset } = body;
           if (typeof offset !== "number" || !Number.isFinite(offset) || Math.abs(offset) > MOST)
             return Response.json({ refused: true, status: 400, message: "offset: milliseconds from now, within a year." }, { status: 400 });
+          setClockOffset(offset);
         }
-        const move = moving.then(async () => {
-          if (body.at !== undefined) setClockAt(Date.parse(body.at as string));
-          else setClockOffset(body.offset as number);
-          return now().toISOString();
-        });
-        moving = move.catch(() => undefined);
-        try {
-          return Response.json({ now: await move });
-        } catch (error) {
-          return refused(error);
-        }
+        return Response.json({ now: now().toISOString() });
       },
     },
   },
@@ -90833,7 +90712,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/generated/site.ts": "4365ed76 generated",
   "src/generated/users.server.ts": "82848c13 generated",
   "src/generated/users.test.ts": "253c266e generated",
-  "src/kit/ActionButton.tsx": "6a3b0c0a kit",
+  "src/kit/ActionButton.tsx": "44e711df kit",
   "src/kit/ActivityLog.tsx": "e53a5289 kit",
   "src/kit/AiMark.tsx": "00588184 kit",
   "src/kit/AppCard.tsx": "76e8455d kit",
@@ -90848,20 +90727,20 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/FieldInput.tsx": "39e40fcb kit",
   "src/kit/Filters.tsx": "ceea52dc kit",
   "src/kit/ImportDialog.tsx": "d65da47a kit",
-  "src/kit/InlineRows.tsx": "5a097006 kit",
+  "src/kit/InlineRows.tsx": "b2c801d6 kit",
   "src/kit/Inspector.tsx": "2425cac5 kit",
-  "src/kit/Keys.tsx": "f32c246d kit",
-  "src/kit/Landing.tsx": "a528f50e kit",
+  "src/kit/Keys.tsx": "aa99e677 kit",
+  "src/kit/Landing.tsx": "46b7b2a6 kit",
   "src/kit/Markdown.tsx": "24e2fcd2 kit",
   "src/kit/MarkdownFormatted.tsx": "300ef9a1 kit",
-  "src/kit/ModelForm.tsx": "b857b574 kit",
-  "src/kit/ModelTable.tsx": "aeabcaa1 kit",
+  "src/kit/ModelForm.tsx": "6bdbf213 kit",
+  "src/kit/ModelTable.tsx": "a8ae6290 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "fb5e87dc kit",
   "src/kit/PictureDialog.tsx": "1495b136 kit",
   "src/kit/RecordSummary.tsx": "f0415723 kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
-  "src/kit/SelectionBar.tsx": "97aa9165 kit",
+  "src/kit/SelectionBar.tsx": "d4714066 kit",
   "src/kit/SignIn.tsx": "21a3d26d kit",
   "src/kit/SoundControls.tsx": "5699608e kit",
   "src/kit/Together.tsx": "66a45263 kit",
@@ -90881,7 +90760,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/csv-read.ts": "324bc527 kit",
   "src/kit/csv.ts": "7d2a0f31 kit",
   "src/kit/dev-door.server.ts": "f8d865f5 kit",
-  "src/kit/file-address.ts": "951d9935 kit",
+  "src/kit/file-address.ts": "2a579e98 kit",
   "src/kit/filter.ts": "ac5ee469 kit",
   "src/kit/format.ts": "b9e92275 kit",
   "src/kit/formats.ts": "2257fcc1 kit",
@@ -90900,7 +90779,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/params.ts": "65a69da0 kit",
   "src/kit/people-match.ts": "09a0f7dc kit",
   "src/kit/person-time.server.ts": "5d9e216d kit",
-  "src/kit/refusal.ts": "de3353a0 kit",
+  "src/kit/refusal.ts": "c3d97f37 kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "b6f52acc kit",
   "src/kit/speech.test.ts": "19252a6e kit",
@@ -90912,7 +90791,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "a509a677 kit",
+  "src/kit/words/en.ts": "14f776a8 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "5849713f generated",
@@ -90921,7 +90800,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/router.tsx": "1da2e059 kit",
   "src/routes/[_dev]/act.ts": "c57e01e2 generated",
   "src/routes/[_dev]/ask.ts": "df6443c8 generated",
-  "src/routes/[_dev]/clock.ts": "a1ccbe93 generated",
+  "src/routes/[_dev]/clock.ts": "a02ee4a6 generated",
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
   "src/routes/__root.tsx": "c0360f5c generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
@@ -95190,9 +95069,6 @@ export function outgoing(tx: Tx, viewer: Viewer | null, model: string, what: str
     if (entry.model !== model || !counts(entry.when, what, entry.fits, record, before, entry.fields)) continue;
     const shown = SHOWN[model]?.(tx, record);
     if (!shown || !entry.to) continue;
-    // Whom it goes to, first: with nobody to send to, a value that cannot be worked out refuses nothing.
-    const to = entry.to(tx, record);
-    if (!to.length) continue;
     const { title, labels, values, ...rest } = shown;
     const prior = before && (entry.previous || entry.before) ? SHOWN[model]?.(tx, before) : undefined;
     const more = entry.more?.(tx, record);
@@ -95200,6 +95076,7 @@ export function outgoing(tx: Tx, viewer: Viewer | null, model: string, what: str
     const fill = (text: string, oneLine = false) =>
       fillText(text, (path) => path === "title" ? title : path === "link" ? linkTo(rest.link) : path === "by" ? (viewer && !viewer.system ? viewer.name : "") : path.startsWith("before.") ? blank(prior?.values[path.slice(7)]) : blank(more?.[path] ?? values[path]), oneLine);
     const happening: Happening = { ...rest, subject: entry.subject ? fill(entry.subject, true) : rest.subject, ...(entry.text ? { text: fill(entry.text) } : {}), fields: shownFields(labels, values, prior?.values, entry.show, entry.previous), entry: entry.name, model, record: record.id as number };
+    const to = entry.to(tx, record);
     queueMail(tx, viewer, happening, to, entry.when === "created");
   }
 }
@@ -96938,14 +96815,11 @@ exports[`../../../examples/support/smithable.yml > file list and generated code 
 // The development door (docs/design/sample-users.md §3–§4): the development build's clock, moved
 // so "a week later" is a call; a demo has no such call.
 import { createFileRoute } from "@tanstack/react-router";
-import { doorShut, refused } from "#/kit/dev-door.server";
+import { doorShut } from "#/kit/dev-door.server";
 import { now, setClockAt, setClockOffset } from "#/kit/now";
 
 /** At most a year either way. */
 const MOST = 366 * 86_400_000;
-
-/** One move of the clock at a time: a second waits until the first's due work has run. */
-let moving: Promise<unknown> = Promise.resolve();
 
 export const Route = createFileRoute("/_dev/clock")({
   server: {
@@ -96959,22 +96833,14 @@ export const Route = createFileRoute("/_dev/clock")({
           const at = typeof body.at === "string" ? Date.parse(body.at) : Number.NaN;
           if (!Number.isFinite(at) || new Date(at).toISOString() !== body.at)
             return Response.json({ refused: true, status: 400, message: "at: a canonical ISO time." }, { status: 400 });
+          setClockAt(at);
         } else {
           const { offset } = body;
           if (typeof offset !== "number" || !Number.isFinite(offset) || Math.abs(offset) > MOST)
             return Response.json({ refused: true, status: 400, message: "offset: milliseconds from now, within a year." }, { status: 400 });
+          setClockOffset(offset);
         }
-        const move = moving.then(async () => {
-          if (body.at !== undefined) setClockAt(Date.parse(body.at as string));
-          else setClockOffset(body.offset as number);
-          return now().toISOString();
-        });
-        moving = move.catch(() => undefined);
-        try {
-          return Response.json({ now: await move });
-        } catch (error) {
-          return refused(error);
-        }
+        return Response.json({ now: now().toISOString() });
       },
     },
   },
@@ -98902,7 +98768,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/generated/message.server.ts": "dcd218ac generated",
   "src/generated/message.ts": "bbf512fd generated",
   "src/generated/my-time.ts": "c315432b generated",
-  "src/generated/outgoing.server.ts": "c2c3f44b generated",
+  "src/generated/outgoing.server.ts": "8956b93c generated",
   "src/generated/pages.ts": "f7a896bd generated",
   "src/generated/roles.ts": "19b94e12 generated",
   "src/generated/support-case.import.server.ts": "1d171fe5 generated",
@@ -98915,7 +98781,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/generated/users.server.ts": "a6b70aa0 generated",
   "src/generated/users.test.ts": "5cb4d084 generated",
   "src/generated/users.ts": "f77bb99b generated",
-  "src/kit/ActionButton.tsx": "6a3b0c0a kit",
+  "src/kit/ActionButton.tsx": "44e711df kit",
   "src/kit/ActivityLog.tsx": "e53a5289 kit",
   "src/kit/AiMark.tsx": "00588184 kit",
   "src/kit/AppCard.tsx": "76e8455d kit",
@@ -98929,18 +98795,18 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/FileInput.tsx": "5d567f82 kit",
   "src/kit/Filters.tsx": "ceea52dc kit",
   "src/kit/ImportDialog.tsx": "d65da47a kit",
-  "src/kit/InlineRows.tsx": "5a097006 kit",
+  "src/kit/InlineRows.tsx": "b2c801d6 kit",
   "src/kit/Inspector.tsx": "2425cac5 kit",
   "src/kit/Live.tsx": "fbaa47cd kit",
-  "src/kit/ModelForm.tsx": "b857b574 kit",
-  "src/kit/ModelTable.tsx": "aeabcaa1 kit",
+  "src/kit/ModelForm.tsx": "6bdbf213 kit",
+  "src/kit/ModelTable.tsx": "a8ae6290 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "fb5e87dc kit",
   "src/kit/PictureDialog.tsx": "1495b136 kit",
-  "src/kit/PictureInput.tsx": "993db3fb kit",
+  "src/kit/PictureInput.tsx": "47a52232 kit",
   "src/kit/RecordSummary.tsx": "f0415723 kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
-  "src/kit/SelectionBar.tsx": "97aa9165 kit",
+  "src/kit/SelectionBar.tsx": "d4714066 kit",
   "src/kit/SignIn.tsx": "21a3d26d kit",
   "src/kit/SoundControls.tsx": "5699608e kit",
   "src/kit/Together.tsx": "66a45263 kit",
@@ -98959,7 +98825,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/csv-read.ts": "324bc527 kit",
   "src/kit/csv.ts": "7d2a0f31 kit",
   "src/kit/dev-door.server.ts": "f8d865f5 kit",
-  "src/kit/file-address.ts": "951d9935 kit",
+  "src/kit/file-address.ts": "2a579e98 kit",
   "src/kit/filter.ts": "ac5ee469 kit",
   "src/kit/format.ts": "b9e92275 kit",
   "src/kit/formats.ts": "2257fcc1 kit",
@@ -98980,8 +98846,8 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/params.ts": "65a69da0 kit",
   "src/kit/people-match.ts": "09a0f7dc kit",
   "src/kit/person-time.server.ts": "5d9e216d kit",
-  "src/kit/receipts.server.ts": "78a1bc4e kit",
-  "src/kit/refusal.ts": "de3353a0 kit",
+  "src/kit/receipts.server.ts": "23b63f60 kit",
+  "src/kit/refusal.ts": "c3d97f37 kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "b6f52acc kit",
   "src/kit/speech.test.ts": "19252a6e kit",
@@ -98991,11 +98857,11 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "8c886a7b kit",
   "src/kit/unused-samples.ts": "860c6650 kit",
-  "src/kit/uploads.ts": "724b80f6 kit",
+  "src/kit/uploads.ts": "1218e9e3 kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "a509a677 kit",
+  "src/kit/words/en.ts": "14f776a8 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "c686a476 generated",
@@ -99004,7 +98870,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/router.tsx": "1da2e059 kit",
   "src/routes/[_dev]/act.ts": "c57e01e2 generated",
   "src/routes/[_dev]/ask.ts": "f3d7d06d generated",
-  "src/routes/[_dev]/clock.ts": "a1ccbe93 generated",
+  "src/routes/[_dev]/clock.ts": "a02ee4a6 generated",
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
   "src/routes/__root.tsx": "05dab5c3 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
@@ -99013,7 +98879,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/routes/cases/index.tsx": "f45f99ca generated",
   "src/routes/cases/new.tsx": "0befc28f generated",
   "src/routes/events.ts": "f683a575 generated",
-  "src/routes/files/$model.$field.ts": "37c1c781 kit",
+  "src/routes/files/$model.$field.ts": "5059a1b3 kit",
   "src/routes/files/$model.$id.$field.$n.ts": "5288014d kit",
   "src/routes/files/$model.$id.$field.ts": "93378bd7 kit",
   "src/routes/health.ts": "362c9904 kit",

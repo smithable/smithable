@@ -2,8 +2,10 @@
 import {
   type AuthIR,
   type Condition,
+  type ContentImage,
   camel,
   humanize,
+  imageAt,
   isPictures,
   kebab,
   type LandingSection,
@@ -36,6 +38,29 @@ import {
   titleField,
 } from "../shared.js";
 import { LUCIDE, workspaceEntries } from "./root.js";
+
+/** A picture's widths as the img's srcset: the file and its copies, from the site's root. */
+/** A picture's files by width for the browser to choose from: its copies, and itself when its width is known. */
+const srcSetOf = ({ src, width, widths }: ContentImage) =>
+  widths &&
+  [
+    ...widths.map((w) => [w, `/${imageAt(src, w)}`] as const),
+    ...(width ? [[width, `/${src}`] as const] : []),
+  ]
+    .sort(([a], [b]) => a - b)
+    .map(([w, file]) => `${file} ${w}w`)
+    .join(", ");
+
+/** A picture of the content file as the kit takes it: served from the site's root, its copies as a srcset. */
+const picture = (image: ContentImage) => {
+  const srcSet = srcSetOf(image);
+  return {
+    src: `/${image.src}`,
+    alt: image.alt,
+    ...(image.generated ? { generated: true } : {}),
+    ...(srcSet ? { srcSet } : {}),
+  };
+};
 
 /**
  * A landing page: its sections in order, with texts from smithable.content.yml or derived ones.
@@ -233,7 +258,7 @@ export function landingRoute(
           }${
             own.image
               ? `
-          image={{ src: ${JSON.stringify(`/${own.image.src}`)}, alt: ${JSON.stringify(own.image.alt)}${own.image.generated ? ", generated: true" : ""} }}`
+          image={{ src: ${JSON.stringify(`/${own.image.src}`)}, alt: ${JSON.stringify(own.image.alt)}${own.image.generated ? ", generated: true" : ""}${srcSetOf(own.image) ? `, srcSet: ${JSON.stringify(srcSetOf(own.image))}` : ""} }}`
               : ""
           }${
             section.shortcuts?.length
@@ -255,7 +280,7 @@ export function landingRoute(
                     ).image
                   : undefined;
               const picture = dress?.image ?? borrowed;
-              const shortcut = `{ to: ${JSON.stringify(target.route)}, label: ${dress?.label ? JSON.stringify(dress.label) : t.pageTitleOf(id)}, icon: ${icon}${picture ? `, image: { src: ${JSON.stringify(`/${picture.src}`)}, alt: ${JSON.stringify(picture.alt)}${picture.generated ? ", generated: true" : ""} }` : ""} }`;
+              const shortcut = `{ to: ${JSON.stringify(target.route)}, label: ${dress?.label ? JSON.stringify(dress.label) : t.pageTitleOf(id)}, icon: ${icon}${picture ? `, image: { src: ${JSON.stringify(`/${picture.src}`)}, alt: ${JSON.stringify(picture.alt)}${picture.generated ? ", generated: true" : ""}${srcSetOf(picture) ? `, srcSet: ${JSON.stringify(srcSetOf(picture))}` : ""} }` : ""} }`;
               // A page behind sign-in is a shortcut only for those who may open it.
               if (!hasSignIn(auth) || auth.public.pages.includes(id)) return shortcut;
               imports.add("#/kit/access", "allows");
@@ -481,8 +506,8 @@ export function landingRoute(
         imports.add("#/kit/Landing", "Gallery");
         // Files in public/ are served from the site's root.
         const withRoot = (own.items ?? []).map((i) => {
-          const image = i.image as { src: string; alt: string } | undefined;
-          return image ? { ...i, image: { ...image, src: `/${image.src}` } } : i;
+          const image = i.image as ContentImage | undefined;
+          return image ? { ...i, image: picture(image) } : i;
         });
         return [
           `${open("Gallery")}${own.title ? `\n          title=${attr(own.title)}` : ""}${own.text ? `\n          text=${attr(own.text)}` : ""}
@@ -495,7 +520,7 @@ export function landingRoute(
         imports.add("#/kit/Landing", "MediaText");
         return [
           `${open("MediaText")}
-          id=${attr(section.name)}${own.title ? `\n          title=${attr(own.title)}` : ""}${own.text ? `\n          text=${attr(own.text)}` : ""}${own.caption ? `\n          caption=${attr(own.caption)}` : ""}${own.image ? `\n          image={${literal({ ...own.image, src: `/${own.image.src}` })}}` : ""}${section.button ? `\n          link=${link(routeOf(section.button), own.button ?? t.pageTitleOf(section.button))}` : ""}
+          id=${attr(section.name)}${own.title ? `\n          title=${attr(own.title)}` : ""}${own.text ? `\n          text=${attr(own.text)}` : ""}${own.caption ? `\n          caption=${attr(own.caption)}` : ""}${own.image ? `\n          image={${literal(picture(own.image))}}` : ""}${section.button ? `\n          link=${link(routeOf(section.button), own.button ?? t.pageTitleOf(section.button))}` : ""}
         />`,
         ];
       }

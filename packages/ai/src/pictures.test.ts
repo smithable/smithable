@@ -33,6 +33,21 @@ test("a yoga studio gets the yoga hero; a café the café hero and barista", () 
   expect(cafe.hero?.id).toBe("hero-cafe");
 });
 
+test("a sample the library marks fit for a hero may be the hero", () => {
+  const harbour = {
+    ...entry("harbour-boats", "sample", ["sample", "harbour", "boats"]),
+    uses: ["hero"],
+  };
+  const ferry = entry("ferry-deck", "sample", ["sample", "ferry", "boats"]);
+  expect(
+    pickPictures([...index, harbour, ferry], { description: "Boat rentals in the harbour" }).hero
+      ?.id,
+  ).toBe("harbour-boats");
+  expect(pickPictures([...index, ferry], { description: "Ferry deck tours" }).hero?.id).not.toBe(
+    "ferry-deck",
+  );
+});
+
 test("the models' names and fields count: a marketplace of items gets second-hand samples", () => {
   const ir = validateSpec({
     path: "smithable.yml",

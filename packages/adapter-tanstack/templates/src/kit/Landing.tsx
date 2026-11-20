@@ -534,6 +534,8 @@ export interface LandingImage {
   alt: string;
   /** Made by an AI: marked where it is shown whole (AiMark.tsx). */
   generated?: boolean;
+  /** Its copies in other widths ("/images/hero.webp 1536w, /images/hero-2400.webp 2400w"), when it has them. */
+  srcSet?: string;
 }
 
 function HeroView({
@@ -744,6 +746,8 @@ function HeroView({
           <img
             src={image.src}
             alt={image.alt}
+            srcSet={image.srcSet}
+            sizes={image.srcSet && "100vw"}
             width={1600}
             height={900}
             fetchPriority="high"
@@ -812,6 +816,8 @@ function HeroView({
             <img
               src={image.src}
               alt={image.alt}
+              srcSet={image.srcSet}
+              sizes={image.srcSet && "(min-width: 1024px) 66vw, 100vw"}
               width={1200}
               height={900}
               fetchPriority="high"
@@ -843,6 +849,8 @@ function HeroView({
                         <img
                           src={s.image.src}
                           alt=""
+                          srcSet={s.image.srcSet}
+                          sizes={s.image.srcSet && "(min-width: 1024px) 33vw, 100vw"}
                           width={800}
                           height={600}
                           loading="lazy"
@@ -891,6 +899,8 @@ function HeroView({
         <img
           src={image.src}
           alt={image.alt}
+          srcSet={image.srcSet}
+          sizes={image.srcSet && "100vw"}
           width={1600}
           height={900}
           fetchPriority="high"
@@ -933,6 +943,8 @@ function HeroView({
         <img
           src={image.src}
           alt={image.alt}
+          srcSet={image.srcSet}
+          sizes={image.srcSet && "100vw"}
           width={1200}
           height={800}
           fetchPriority="high"
@@ -1017,6 +1029,8 @@ function HeroView({
             <img
               src={image.src}
               alt={image.alt}
+              srcSet={image.srcSet}
+              sizes={image.srcSet && "(min-width: 1024px) 42vw, 100vw"}
               width={960}
               height={1200}
               fetchPriority="high"
@@ -1053,6 +1067,8 @@ function HeroView({
         <img
           src={image.src}
           alt={image.alt}
+          srcSet={image.srcSet}
+          sizes={image.srcSet && "(min-width: 1024px) 50vw, 100vw"}
           width={1200}
           height={800}
           fetchPriority="high"
@@ -1893,6 +1909,10 @@ function GalleryView({
                   <img
                     src={item.image.src}
                     alt={item.image.alt}
+                    srcSet={item.image.srcSet}
+                    sizes={
+                      item.image.srcSet && `(min-width: 1024px) ${Math.ceil(100 / columns)}vw, 50vw`
+                    }
                     loading="lazy"
                     {...mediaSize(aspect)}
                     className={cn(
@@ -2053,6 +2073,11 @@ function MediaTextView({
                 <img
                   src={image.src}
                   alt={image.alt}
+                  srcSet={image.srcSet}
+                  sizes={
+                    image.srcSet &&
+                    (layout === "split" ? "(min-width: 1024px) 50vw, 100vw" : "100vw")
+                  }
                   loading="lazy"
                   {...mediaSize(aspect)}
                   className={cn("block w-full", mediaClasses({ fit, aspect, focal }))}

@@ -1,7 +1,7 @@
 import { expect, test } from "vitest";
 import { applyOperation } from "./apply.js";
 import { validateAuth } from "./auth.js";
-import { validateContent } from "./content.js";
+import { imageAt, validateContent } from "./content.js";
 import type { SpecIR } from "./ir.js";
 import { validateSpec } from "./spec.js";
 
@@ -181,6 +181,32 @@ pages:
     "public/images/",
   );
   expect(hero("{ src: https://x.test/a.jpg, alt: x }").content).toBeUndefined();
+  // Its own width and its copies' widths, for a screen to choose from.
+  expect(
+    hero("{ src: images/hero.webp, alt: x, width: 1536, widths: [800, 2400] }").content?.pages.home,
+  ).toEqual({
+    sections: {
+      hero: { image: { src: "images/hero.webp", alt: "x", width: 1536, widths: [800, 2400] } },
+    },
+  });
+  for (const bad of [
+    "width: 1536, widths: [2400, 800]",
+    "widths: []",
+    "widths: [50]",
+    "widths: [1, 2, 3, 4, 5, 6, 7]",
+    "width: 1536, widths: [1536, 2400]",
+    "width: wide",
+    "width: 1536.5",
+  ])
+    expect(hero(`{ src: images/hero.webp, alt: x, ${bad} }`).diagnostics[0]?.code, bad).toBe(
+      "invalid-value",
+    );
+  expect(
+    check("smithableContent: 0.1\nlogo: { src: images/logo.webp, alt: A, widths: [800] }\n")
+      .diagnostics[0]?.code,
+  ).toBe("unknown-key");
+  expect(imageAt("images/hero.webp", 2400)).toBe("images/hero-2400.webp");
+  expect(imageAt("images/hero.webp?v=ab12", 800)).toBe("images/hero-800.webp?v=ab12");
 });
 
 test("contact, gallery and footer sections: their texts, pictures and links", () => {
