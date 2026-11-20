@@ -6946,7 +6946,9 @@ async function aiMarkCheck(dir, base) {
         const html = (
           await Promise.all(routes.map(async (r) => (await fetch(`${base}${r}`)).text()))
         ).join("");
-        const small = (html.match(/data-part="ai-mark"[^>]*>AI</g) ?? []).length;
+        // The EU's icon alone, named for a screen reader (AiMark.tsx); on a hero it comes with words.
+        const small = (html.match(/data-part="ai-mark"[^>]*><svg[^>]*\baria-label="/g) ?? [])
+          .length;
         const cards = sampled && html.includes('src="/files/') ? 1 : 0;
         if (small < gallery + cards)
           throw new Error(`${small} "AI" mark(s), expected at least ${gallery + cards}`);
@@ -6954,7 +6956,8 @@ async function aiMarkCheck(dir, base) {
         const first = /<section[^>]*data-hero[\s\S]*?<\/section>/.exec(html)?.[0] ?? "";
         const marked = first.includes('data-part="ai-mark"');
         if (hero && veiled && marked) throw new Error("the hero under its wash is marked");
-        if (hero && !veiled && !/data-part="ai-mark"[^>]*>AI-generated</.test(first))
+        const words = /data-part="ai-mark"[^>]*><svg[^>]*>[\s\S]*?<\/svg><span[^>]*>AI-generated</;
+        if (hero && !veiled && !words.test(first))
           throw new Error("the hero is not marked AI-generated");
       },
     );
