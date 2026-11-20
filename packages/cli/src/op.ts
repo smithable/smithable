@@ -63,6 +63,7 @@ import {
   refusalText,
 } from "./import.js";
 import { type Io, lap, lapFrom } from "./io.js";
+import { SPEC_FILES } from "./managed.js";
 import { currentHashes, placeStyle, reseedPictures } from "./picture-style.js";
 import { loadPlugins } from "./plugins.js";
 import { ProjectBusyError, ProjectLockError, withProjectMutation } from "./project-mutation.js";
@@ -200,13 +201,20 @@ const FAILED = -1;
  */
 /**
  * A change given as the files it ends with, not as an operation: the undo of an earlier change
- * (undo.ts), whose files are the change's commit reverted. It goes through the same pipeline as
- * an operation: validated, written, regenerated, migrated forward and committed, with a data
- * loss asking first.
+ * (undo.ts), whose files are the change's commit reverted, or a version applied (restore.ts). It
+ * goes through the same pipeline as an operation: validated, written, regenerated, migrated
+ * forward and committed, with a data loss asking first.
  */
 export interface FilesPlan {
-  /** Each editable file's new text, or null for one the change takes away. */
-  files: Partial<Record<"spec" | "auth" | "content" | "ux" | "context", string | null>>;
+  /** Each managed file's new text by its path (managed.ts), or null for one the change takes away. */
+  files: Record<string, string | null>;
+  /**
+   * What the change does to the records' shape that the files alone do not say: the renames a
+   * version applied takes back, so the migration renames the columns instead of dropping them.
+   */
+  effects?: Effect[];
+  /** The stored fields (Model.field) and models the change empties, when the plan worked them out. */
+  lost?: string[];
   /** The commit's subject (the trace reads it) and the lines of its body before the trailers. */
   subject: string;
   body: string;
@@ -216,12 +224,27 @@ export interface FilesPlan {
   recorded: { op: string; args: Record<string, unknown> };
 }
 
+/**
+ * A plan made under the project's lock, after the revision check and before anything else: its
+ * checks see the project as the change will find it. A string is a refusal, said as it is.
+ */
+export type PlanBuilder = (dir: string) => FilesPlan | string;
+
 export async function runFilesChange(
   dir: string,
   io: Io,
-  plan: FilesPlan,
+  plan: FilesPlan | { op: string; build: PlanBuilder },
   flags: OpFlags,
 ): Promise<number> {
+  if ("build" in plan)
+    return runOperation(
+      dir,
+      io,
+      plan.op,
+      {},
+      { ...flags, expectedRevision: flags.expectedRevision ?? projectRevision(dir) },
+      plan.build,
+    );
   return runOperation(
     dir,
     io,
@@ -264,7 +287,7 @@ export async function runOperation(
   name: string,
   args: OperationArgs,
   flags: OpFlags,
-  plan?: FilesPlan,
+  plan?: FilesPlan | PlanBuilder,
 ): Promise<number> {
   // A theme Apply's envelope given among the arguments, as callers before the flags sent it (an
   // MCP client, an older host): it is the envelope when the flags have none, and never an argument
@@ -300,7 +323,7 @@ async function runOperationLocked(
   name: string,
   args: OperationArgs,
   flags: OpFlags,
-  plan?: FilesPlan,
+  plan?: FilesPlan | PlanBuilder,
 ): Promise<number> {
   // What it says is kept, so that a failure can be reported (report.ts).
   const said: string[] = [];
@@ -329,9 +352,10 @@ async function applyAndCheckpoint(
   name: string,
   args: OperationArgs,
   flags: OpFlags,
-  plan: FilesPlan | undefined,
+  given: FilesPlan | PlanBuilder | undefined,
   out: { r?: OperationResult },
 ): Promise<number> {
+  let plan = typeof given === "function" ? undefined : given;
   if (flags.projectCheck && !flags.projectCheck()) {
     io.err("The current project changed while this request waited. Reopen its editor.\n");
     return 1;
@@ -346,8 +370,8 @@ async function applyAndCheckpoint(
     io.err("batch needs operations: a list of { op, args }.\n");
     return 2;
   }
-  let operation = plan || batch ? undefined : findOperation(name, plugins);
-  if (!plan && !batch && !operation) {
+  let operation = given || batch ? undefined : findOperation(name, plugins);
+  if (!given && !batch && !operation) {
     io.err(`Unknown operation "${name}".\n`);
     return 2;
   }
@@ -399,9 +423,19 @@ async function applyAndCheckpoint(
     io.err(
       name === "applyTheme"
         ? "The project source changed since this draft opened. Reload the saved look; the draft was not written.\n"
-        : "The project changed while this change waited. Reload before retrying.\n",
+        : name === "restoreVersion"
+          ? "The app changed while you were looking. See the latest change, then apply again.\n"
+          : "The project changed while this change waited. Reload before retrying.\n",
     );
     return 1;
+  }
+  if (typeof given === "function") {
+    const built = given(dir);
+    if (typeof built === "string") {
+      io.err(built.endsWith("\n") ? built : `${built}\n`);
+      return 1;
+    }
+    plan = built;
   }
   lap("start");
   if (name !== "applyTheme") ensureRepository(dir);
@@ -491,7 +525,7 @@ async function applyAndCheckpoint(
 
   lap("apply and validate");
   // A plan's data loss: the stored fields the files no longer have.
-  const lost = plan ? lostFields(before, after) : [];
+  const lost = plan ? (plan.lost ?? lostFields(before, after)) : [];
   const destructive = plan ? lost.length > 0 : result.destructive;
   const required = requiredButEmpty(dir, before, after, result.effects);
   // A required field over empty values is a consequence too, still refused (§4).
@@ -684,7 +718,8 @@ async function applyAndCheckpoint(
         `Pictures placed: ${placed.files.length ? placed.files.map((f) => f.path.replace("public/images/", "")).join(", ") : "none needed changing"}.${placed.kept.length ? ` Your own pictures stay: ${placed.kept.join(", ")}.` : ""}${reseeded ? ` Sample records with the new pictures: ${reseeded}.` : ""}\n`,
       );
     }
-    followInSamples(dir, result.effects);
+    // A plan's files are written as they are: its samples already follow its own names.
+    if (!plan) followInSamples(dir, result.effects);
     // The imported file is kept beside the checkpoint; the log names it instead of holding it.
     const recordedArgs = plan
       ? plan.recorded.args
@@ -778,6 +813,7 @@ async function applyAndCheckpoint(
       ),
     );
     if (args.trash === false && typeof args.model === "string") mayLose.add(args.model);
+    for (const key of lost) mayLose.add(key);
     const data = dataCheck(
       countedBefore,
       countModels(dir, after, v.changed.models),
@@ -871,27 +907,31 @@ function planResult(
 ): ReturnType<typeof applyOperation> {
   const next = { ...files };
   const removed: string[] = [];
-  const paths = {
-    spec: SPEC,
-    auth: AUTH,
-    content: CONTENT,
-    ux: UX,
-    context: "smithable.context.yml",
-  } as const;
-  for (const [key, text] of Object.entries(plan.files) as [keyof typeof paths, string | null][]) {
+  const added: { path: string; text: string }[] = [];
+  const keys = Object.fromEntries(
+    Object.entries(SPEC_FILES).map(([key, path]) => [path, key]),
+  ) as Record<string, keyof typeof SPEC_FILES>;
+  const translations = { ...(files.translations ?? {}) };
+  for (const [path, text] of Object.entries(plan.files)) {
+    const key = keys[path] ?? (path === PEOPLE_PATH ? "people" : undefined);
+    const language = /^smithable\.content\.([A-Za-z-]+)\.yml$/.exec(path)?.[1];
     if (text === null) {
-      if (key !== "spec") delete next[key];
-      removed.push(paths[key]);
-    } else next[key] = text;
+      removed.push(path);
+      if (key && key !== "spec") delete next[key];
+      if (language) delete translations[language];
+    } else if (key) next[key] = text;
+    else if (language) translations[language] = text;
+    else added.push({ path, text });
   }
+  next.translations = translations;
   return {
     ok: true,
     files: next,
-    added: [],
+    added,
     removed,
     description: plan.description,
     destructive: false,
-    effects: [],
+    effects: plan.effects ?? [],
   };
 }
 

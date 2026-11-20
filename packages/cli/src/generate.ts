@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import {
+  dropTakenColumn,
   generateApp,
   quoteReferences,
   renameColumnSql,
@@ -284,15 +285,25 @@ function migrate(
     )
       return false;
     const tag = latestMigration(dir);
+    const snapshot = join(dir, "drizzle", "meta", `${tag.slice(0, 4)}_snapshot.json`);
+    // A rename back onto a name a newer column has taken drops that column first.
+    const taken = dropTakenColumn(
+      readFileSync(snapshot, "utf8"),
+      rename.model,
+      rename.to,
+      rename.reference,
+    );
     writeFileSync(
       join(dir, "drizzle", `${tag}.sql`),
-      renameColumnSql(rename.model, rename.from, rename.to, rename.reference),
+      [
+        ...(taken?.sql ?? []),
+        renameColumnSql(rename.model, rename.from, rename.to, rename.reference),
+      ].join("--> statement-breakpoint\n"),
     );
-    const snapshot = join(dir, "drizzle", "meta", `${tag.slice(0, 4)}_snapshot.json`);
     writeFileSync(
       snapshot,
       renameInSnapshot(
-        readFileSync(snapshot, "utf8"),
+        taken?.snapshot ?? readFileSync(snapshot, "utf8"),
         rename.model,
         rename.from,
         rename.to,

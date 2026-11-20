@@ -7,8 +7,11 @@ import { dirname, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import {
   choiceValueSql,
+  dropTakenColumn,
   quoteReferences,
   renameColumnSql,
+  renameInSnapshot,
+  renameModelInSnapshot,
   renameModelSql,
 } from "@smithable/adapter-tanstack";
 import type { MigrationPlan } from "./generate.js";
@@ -135,14 +138,31 @@ export async function createMigration(
     ) as Snapshot;
     const schema = await importSchema(load, join(root, "src/db/schema.ts"));
     const current = await api.generateSQLiteDrizzleJson(schema, prev.id, "snake_case");
-    const statements = migration.models?.length
-      ? migration.models.flatMap((m) => renameModelSql(JSON.stringify(prev), m.from, m.to))
-      : migration.renames.length
-        ? migration.renames.map((r) => renameColumnSql(r.model, r.from, r.to, r.reference))
-        : [
-            ...(await api.generateSQLiteMigration(prev, current)).map(quoteReferences),
-            ...valueSql(migration),
-          ];
+    // Renamed models and columns first, as RENAME statements, each on the snapshot as the one
+    // before it left it; then what else differs, against that renamed snapshot, so drizzle-kit
+    // never sees a rename as a drop and an add. A rename back onto a name a newer column has
+    // taken (an older version applied) drops that column first.
+    const statements: string[] = [];
+    let base = JSON.stringify(prev);
+    for (const m of migration.models ?? []) {
+      statements.push(...renameModelSql(base, m.from, m.to));
+      base = renameModelInSnapshot(base, m.from, m.to);
+    }
+    for (const r of migration.renames) {
+      const taken = dropTakenColumn(base, r.model, r.to, r.reference);
+      if (taken) {
+        statements.push(...taken.sql);
+        base = taken.snapshot;
+      }
+      statements.push(renameColumnSql(r.model, r.from, r.to, r.reference));
+      base = renameInSnapshot(base, r.model, r.from, r.to, r.reference);
+    }
+    statements.push(
+      ...(await api.generateSQLiteMigration(JSON.parse(base) as Snapshot, current)).map(
+        quoteReferences,
+      ),
+      ...valueSql(migration),
+    );
     if (statements.length === 0) return true;
     const idx = last.idx + 1;
     const tag = `${numbered(idx)}_${migration.name}`;

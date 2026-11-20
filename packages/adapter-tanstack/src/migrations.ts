@@ -81,6 +81,32 @@ export function renameInSnapshot(
   return `${JSON.stringify(snapshot, null, 2)}\n`;
 }
 
+/**
+ * A rename back onto a name a newer column has taken (an older version applied, the newer field
+ * going and the older coming back under its name): the newer column is dropped first, with its
+ * indexes, and the snapshot no longer has it. Undefined when the name is free.
+ */
+export function dropTakenColumn(
+  snapshotJson: string,
+  model: string,
+  to: string,
+  reference = false,
+): { sql: string[]; snapshot: string } | undefined {
+  const snapshot = JSON.parse(snapshotJson) as Snapshot;
+  const { table, column } = columnOf(model, to, reference);
+  const t = snapshot.tables[table];
+  if (!t?.columns[column]) return undefined;
+  const sql: string[] = [];
+  for (const [name, index] of Object.entries(t.indexes ?? {}))
+    if (index.columns.includes(column)) {
+      sql.push(`DROP INDEX IF EXISTS \`${name}\`;\n`);
+      delete t.indexes?.[name];
+    }
+  sql.push(`ALTER TABLE \`${table}\` DROP COLUMN \`${column}\`;\n`);
+  delete t.columns[column];
+  return { sql, snapshot: `${JSON.stringify(snapshot, null, 2)}\n` };
+}
+
 /** The tables a model owns: its own, and the per-person ones the kit keeps beside it. */
 const OWN_TABLES = ["", "_favorites", "_reads"];
 
