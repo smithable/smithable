@@ -284,6 +284,38 @@ test("§8.4 undo right after the apply gives the files and database of before; r
   expect(read(dir, "smithable.yml")).toContain("phone");
 });
 
+test("§4.5 a yes is bound to the plan seen: a plan that changed since is refused, MCP needs the plan", async () => {
+  const dir = project();
+  database(
+    dir,
+    "CREATE TABLE customers (id integer primary key, name text, email text, notes text, level integer); INSERT INTO customers (name, level) VALUES ('Ann', 3);",
+  );
+  const b = await op(dir, "addField", { model: "Customer", field: "phone", type: "string" });
+  await op(dir, "removeField", { model: "Customer", field: "phone" });
+  await op(dir, "addField", { model: "Customer", field: "level", type: "int" });
+  const checked = captureIo();
+  expect(await restore(dir, checked, b, { check: true })).toBe(0);
+  const seen = /Plan ([0-9a-f]{12}): to apply exactly this, run again with --yes --plan \1\./.exec(
+    checked.stdout,
+  )?.[1];
+  expect(seen).toBeDefined();
+  // Through MCP, confirm without the plan asks again and names it.
+  const agent = captureIo();
+  expect(await restore(dir, agent, b, { yes: true, mcp: true })).toBe(1);
+  expect(agent.stderr).toContain(`confirm: true and plan: "${seen}"`);
+  // The app changes after the plan was seen: applying the version now also brings notes back.
+  await op(dir, "removeField", { model: "Customer", field: "notes" });
+  const late = captureIo();
+  expect(await restore(dir, late, b, { yes: true, plan: seen })).toBe(1);
+  expect(late.stderr).toContain(`changed since plan ${seen} was seen; nothing was changed`);
+  const now = /--yes --plan ([0-9a-f]{12}) to apply this/.exec(late.stderr)?.[1];
+  expect(now).toBeDefined();
+  expect(now).not.toBe(seen);
+  expect(read(dir, "smithable.yml")).not.toContain("phone");
+  expect(await restore(dir, captureIo(), b, { yes: true, plan: now, mcp: true })).toBe(0);
+  expect(read(dir, "smithable.yml")).toContain("phone");
+});
+
 test("§6 undo of an apply whose database copy is gone goes forward, and says the values stay lost", async () => {
   const dir = project();
   database(

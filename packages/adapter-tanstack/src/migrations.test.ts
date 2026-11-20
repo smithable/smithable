@@ -3,6 +3,7 @@ import {
   columnOf,
   dropTakenColumn,
   dropTakenTables,
+  dropTakenTablesSql,
   goneFirst,
   inSnapshot,
   inTurn,
@@ -172,6 +173,11 @@ test("a model renamed back onto a name a newer model took drops the newer model'
   expect(Object.keys(dropped.tables)).toEqual(["clients", "orders"]);
   expect(dropped.tables.orders.foreignKeys).toEqual({});
   expect(dropTakenTables(snapshot, "Client", "Buyer")).toBeUndefined();
+  // Without drizzle-kit's API, the statements too: the kit's table before the model's own.
+  const taken = dropTakenTablesSql(snapshot, "Client", "Customer");
+  expect(taken?.sql).toEqual(["DROP TABLE `customers_reads`;", "DROP TABLE `customers`;"]);
+  expect(taken?.snapshot).toBe(dropTakenTables(snapshot, "Client", "Customer"));
+  expect(dropTakenTablesSql(snapshot, "Client", "Buyer")).toBeUndefined();
 });
 
 test("a model's passing name is taken while any of its tables is there, the kit's beside it too", () => {

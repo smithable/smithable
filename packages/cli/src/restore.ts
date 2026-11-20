@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import { columnOf } from "@smithable/adapter-tanstack";
@@ -207,6 +208,28 @@ export function lossRefusal(plan: RestorePlan): string | undefined {
   return lines.length ? lines.join("\n") : undefined;
 }
 
+/**
+ * A short name for what a plan asks to be agreed to: the version, the files, the access it widens,
+ * what comes and goes, the values lost and the roles taken (not their counts, which a running app
+ * changes). Given back with the answer (`--plan`), it binds the answer to the plan that was seen.
+ */
+export function planDigest(plan: RestorePlan): string {
+  const seen = {
+    version: plan.version.sha,
+    files: Object.keys(plan.files).sort(),
+    access: plan.access,
+    comesBack: plan.comesBack,
+    goes: plan.goes,
+    lost: plan.lost.map((l) => l.key).sort(),
+    rolesGone: plan.rolesGone.map((r) => r.role).sort(),
+  };
+  return createHash("sha256").update(JSON.stringify(seen)).digest("hex").slice(0, 12);
+}
+
+/** How to answer yes to exactly this plan, on the command line or through MCP. */
+const answer = (plan: RestorePlan, mcp?: boolean) =>
+  mcp ? `confirm: true and plan: "${planDigest(plan)}"` : `--yes --plan ${planDigest(plan)}`;
+
 /** What `--check` and the confirmation say: the access block first, then the shape, then the records. */
 export function planText(plan: RestorePlan): string {
   const lines = [
@@ -235,6 +258,8 @@ export async function restore(
     expectedRevision?: string;
     trailer?: string;
     mcp?: boolean;
+    /** The plan's digest as seen (`--check` or the first refusal): applied only if it is still the plan. */
+    plan?: string;
   } = {},
 ): Promise<number> {
   if (flags.check) {
@@ -248,6 +273,10 @@ export async function restore(
       return 0;
     }
     io.out(planText(plan));
+    const needs = lossRefusal(plan) || plan.access.length;
+    io.out(
+      `Plan ${planDigest(plan)}${needs ? `: to apply exactly this, run again with ${answer(plan, flags.mcp)}` : ""}.\n`,
+    );
     return 0;
   }
   return runFilesChange(
@@ -258,15 +287,21 @@ export async function restore(
       build: (root) => {
         const plan = restorePlan(root, change);
         if (typeof plan === "string") return plan;
+        // An answer given to another plan is not an answer to this one: the app or its records
+        // changed since it was seen.
+        if (flags.plan !== undefined && flags.plan !== planDigest(plan))
+          return `What applying this version does changed since plan ${flags.plan} was seen; nothing was changed. It is now:\n${planText(plan)}Run again with ${answer(plan, flags.mcp)} to apply this.`;
         const refusal = lossRefusal(plan);
+        // Through MCP an agent answers for the user, so its yes counts only with the plan the user saw.
+        const agreed = flags.yes === true && (!flags.mcp || flags.plan !== undefined);
         // A loss, a role people hold, or access that widens: asked first (§3, §4.5, §4.6).
-        if ((refusal || plan.access.length) && !flags.yes)
+        if ((refusal || plan.access.length) && !agreed)
           return [
             ...(plan.access.length
               ? [`This version lets more in:\n${plan.access.map((a) => `  ${a}`).join("\n")}`]
               : []),
             ...(refusal ? [refusal] : []),
-            `${plan.rolesGone.length ? "With the answer yes, those people are left without that role. " : ""}Run again with ${flags.mcp ? "confirm: true" : "--yes"} to apply it${plan.lost.length ? "; those values are deleted" : ""}.`,
+            `${plan.rolesGone.length ? "With the answer yes, those people are left without that role. " : ""}Run again with ${answer(plan, flags.mcp)} to apply it${plan.lost.length ? "; those values are deleted" : ""}.`,
           ].join("\n");
         if (!Object.keys(plan.files).length)
           return "This version is the app as it is now: applying it changes nothing.";

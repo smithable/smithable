@@ -15,7 +15,7 @@ import { restore } from "./restore.js";
 export async function redo(
   dir: string,
   io: Io,
-  flags: { yes?: boolean; mcp?: boolean } = {},
+  flags: { yes?: boolean; mcp?: boolean; plan?: string } = {},
 ): Promise<number> {
   if (!ownRepository(dir)) {
     io.err("There is nothing to redo: this project has no history yet.\n");

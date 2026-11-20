@@ -235,7 +235,11 @@ export async function run(argv: string[], io: Io = processIo): Promise<number> {
             yes: values.yes === true,
           })
         : undoLatest(values.dir ?? ".", io, { yes: values.yes === true });
-  if (command === "redo") return redo(values.dir ?? ".", io, { yes: values.yes === true });
+  if (command === "redo")
+    return redo(values.dir ?? ".", io, {
+      yes: values.yes === true,
+      ...(values.plan ? { plan: values.plan } : {}),
+    });
   if (command === "apply-version") {
     if (!args[0]) {
       io.err(
@@ -246,6 +250,7 @@ export async function run(argv: string[], io: Io = processIo): Promise<number> {
     return applyVersion(values.dir ?? ".", io, args[0], {
       check: values.check === true,
       yes: values.yes === true,
+      ...(values.plan ? { plan: values.plan } : {}),
     });
   }
   if (command === "report")
@@ -525,6 +530,7 @@ const CONFIG = {
     yes: { type: "boolean" },
     setup: { type: "boolean" },
     change: { type: "string" },
+    plan: { type: "string" },
     check: { type: "boolean" },
     dir: { type: "string" },
     json: { type: "boolean" },

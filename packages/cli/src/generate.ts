@@ -3,6 +3,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync
 import { dirname, join } from "node:path";
 import {
   dropTakenColumn,
+  dropTakenTablesSql,
   generateApp,
   inTurn,
   quoteReferences,
@@ -255,7 +256,12 @@ export async function runTools(
   return 0;
 }
 
-/** Creates the migration for a schema change: drizzle-kit, with renames as custom SQL. */
+/**
+ * Creates the migration for a schema change: drizzle-kit, with renames as custom SQL, when
+ * drizzle-kit's API does not load here (tool-steps' createMigration does it in this process).
+ * What goes while something else comes (goneFirst) is left to drizzle-kit here, which asks
+ * whether they are one renamed and so fails, closed, without a terminal.
+ */
 function migrate(
   dir: string,
   migration: MigrationPlan | undefined,
@@ -271,10 +277,14 @@ function migrate(
       return false;
     const tag = latestMigration(dir);
     const snapshot = join(dir, "drizzle", "meta", `${tag.slice(0, 4)}_snapshot.json`);
-    const before = readFileSync(snapshot, "utf8");
+    // A newer model on the name goes first (an older version applied).
+    const taken = dropTakenTablesSql(readFileSync(snapshot, "utf8"), renamed.from, renamed.to);
+    const before = taken?.snapshot ?? readFileSync(snapshot, "utf8");
     writeFileSync(
       join(dir, "drizzle", `${tag}.sql`),
-      renameModelSql(before, renamed.from, renamed.to).join("--> statement-breakpoint\n"),
+      [...(taken?.sql ?? []), ...renameModelSql(before, renamed.from, renamed.to)].join(
+        "--> statement-breakpoint\n",
+      ),
     );
     writeFileSync(snapshot, renameModelInSnapshot(before, renamed.from, renamed.to));
   }

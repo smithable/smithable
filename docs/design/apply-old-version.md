@@ -68,7 +68,7 @@ If a later step fails (writing, generating, migrating, the commit), the pipeline
 
 The commit is recorded as `restoreVersion` with the version's commit as its argument, and a subject that says what a person did: `Applied the version from 12 November, 14:02 (after "Instructors: added a phone")`.
 
-`restoreVersion` is a host operation, like `undo`: it needs the history, which only a host package reads. It is not in core's registry (an entry there needs an apply step, and this one has none that core could run). The host lists it beside `undo` and `redo` for the command line (`smithable apply-version <change> [--check] [--yes]`; `restore` is taken by backups), the MCP tools (`smithable_apply_version`) and the operations page.
+`restoreVersion` is a host operation, like `undo`: it needs the history, which only a host package reads. It is not in core's registry (an entry there needs an apply step, and this one has none that core could run). The host lists it beside `undo` and `redo` for the command line (`smithable apply-version <change> [--check] [--yes --plan <digest>]`; `restore` is taken by backups), the MCP tools (`smithable_apply_version`) and the operations page. `--check` and the first refusal name the plan by a digest (the version, the files, the access block, what comes back and goes, the values lost and the roles taken, not their counts); `--plan` binds the yes to it, and a plan that changed since is refused and shown again with its new digest. Through MCP an agent answers for the user, so `confirm: true` counts only with `plan`; on the command line `--yes` alone still answers in advance, and what goes is said as it goes.
 
 What the build changes in the host:
 
