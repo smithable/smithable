@@ -11,9 +11,10 @@
 // Run after `pnpm build`: `node scripts/bench-m7.mjs [S] [A] [B]` (default: all three).
 // Writes docs/benchmarks/m7.md (or m7-<setups>.md for a partial run).
 import { spawn, spawnSync } from "node:child_process";
-import { cpSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { chromium } from "playwright";
 
 const repo = new URL("..", import.meta.url).pathname;
@@ -245,9 +246,23 @@ async function formHasField(page, url, label) {
   return (await page.getByLabel(new RegExp(`^${label}`)).count()) > 0;
 }
 
+let stopDevServer;
+for (const [signal, code] of [
+  ["SIGINT", 130],
+  ["SIGTERM", 143],
+]) {
+  process.once(signal, async () => {
+    await stopDevServer?.();
+    process.exit(code);
+  });
+}
+
 /** Runs every check so far on the app, in a dev server with the development sign-in. */
 async function checkAll(dir, upTo) {
-  const server = spawn("pnpm", ["exec", "vite", "dev", "--port", String(PORT), "--strictPort"], {
+  // Launch the generated app's own Vite directly so it leads the group we stop.
+  const vite = createRequire(join(dir, "package.json")).resolve("vite/package.json");
+  const bin = join(dirname(vite), JSON.parse(readFileSync(vite, "utf8")).bin.vite);
+  const server = spawn(process.execPath, [bin, "dev", "--port", String(PORT), "--strictPort"], {
     cwd: dir,
     env: {
       ...process.env,
@@ -255,24 +270,59 @@ async function checkAll(dir, upTo) {
       BETTER_AUTH_URL: `http://localhost:${PORT}`,
     },
     detached: true,
+    stdio: "ignore",
   });
-  const base = `http://localhost:${PORT}`;
-  const browser = await chromium.launch();
-  const page = await browser.newPage();
-  const signIn = async (role) => {
-    for (let attempt = 1; attempt <= 3; attempt++) {
-      await open(page, `${base}/sign-in`);
-      await page.getByRole("button", { name: `Sign in as ${role}` }).click();
-      try {
-        // The development user's name: "Sign out" is already there when switching roles.
-        await page.getByText(`Dev ${role}`, { exact: true }).waitFor({ timeout: 5000 });
-        return;
-      } catch {}
-    }
+  let spawnError;
+  server.on("error", (error) => {
+    spawnError = error;
+  });
+  const ended = new Promise((resolve) => server.once("exit", resolve));
+  const signalGroup = (signal) => {
+    if (!server.pid) return;
+    try {
+      process.kill(-server.pid, signal);
+    } catch {}
   };
+  const stop = async () => {
+    signalGroup("SIGTERM");
+    if (server.pid && server.exitCode === null && server.signalCode === null) {
+      let timer;
+      await Promise.race([
+        ended,
+        new Promise((resolve) => {
+          timer = setTimeout(resolve, 3000);
+        }),
+      ]);
+      clearTimeout(timer);
+      if (server.exitCode === null && server.signalCode === null) {
+        signalGroup("SIGKILL");
+        await ended;
+      }
+    }
+    if (stopDevServer === stop) stopDevServer = undefined;
+  };
+  stopDevServer = stop;
+  const base = `http://localhost:${PORT}`;
   const results = {};
+  let browser;
   try {
+    browser = await chromium.launch();
+    const page = await browser.newPage();
+    const signIn = async (role) => {
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        await open(page, `${base}/sign-in`);
+        await page.getByRole("button", { name: `Sign in as ${role}` }).click();
+        try {
+          // The development user's name: "Sign out" is already there when switching roles.
+          await page.getByText(`Dev ${role}`, { exact: true }).waitFor({ timeout: 5000 });
+          return;
+        } catch {}
+      }
+    };
     for (let i = 0; i < 60; i++) {
+      if (spawnError) throw spawnError;
+      if (server.exitCode !== null || server.signalCode !== null)
+        throw new Error("Vite stopped before it was ready.");
       try {
         if ((await fetch(`${base}/health`)).ok) break;
       } catch {}
@@ -290,10 +340,11 @@ async function checkAll(dir, upTo) {
       }
     }
   } finally {
-    await browser.close();
     try {
-      process.kill(-server.pid);
-    } catch {}
+      await browser?.close();
+    } finally {
+      await stop();
+    }
   }
   return results;
 }
