@@ -2214,7 +2214,7 @@ ${
 function checkFiles<V extends Partial<${n.settableValues}>>(viewer: Viewer | null, values: V, before?: Record<string, unknown>): V {
   return {
     ...values,
-${uploadFields.map((f) => `    ...("${dataKey(f)}" in values ? { ${dataKey(f)}: acceptFiles(viewer, ${JSON.stringify(kebab(model.name))}, ${JSON.stringify(f.name)}, values.${dataKey(f)}, before?.${dataKey(f)}) } : {}),`).join("\n")}
+${uploadFields.map((f) => `    ...("${dataKey(f)}" in values ? { ${dataKey(f)}: acceptFiles(viewer, ${JSON.stringify(kebab(model.name))}, ${JSON.stringify(f.name)}, values.${dataKey(f)}, before?.${dataKey(f)}${model.review?.includes(f.name) ? ", false" : ""}) } : {}),`).join("\n")}
   };
 }
 `

@@ -92,22 +92,17 @@ export function storeSmaller(
   return db.transaction(
     () => {
       const claims = db
-        .select({ file: uploads.file, uploader: uploads.uploader })
+        .select({ file: uploads.file, uploader: uploads.uploader, at: uploads.at })
         .from(uploads)
         .where(
-          and(
-            eq(uploads.receipt, receipt),
-            eq(uploads.model, model),
-            eq(uploads.field, field),
-            gt(uploads.at, new Date(Date.now() - DAY)),
-          ),
+          and(eq(uploads.receipt, receipt), eq(uploads.model, model), eq(uploads.field, field)),
         )
         .orderBy(asc(uploads.id))
         .all();
-      // The first claim is the picture's own; the rest are its copies.
+      // The first claim is the picture's own, still within its day; the rest are its copies.
       const main = claims[0];
       const picture =
-        main && main.uploader === uploader
+        main && main.uploader === uploader && main.at > new Date(Date.now() - DAY)
           ? readPicture({ file: main.file, alt: "", width: 0, height: 0 })
           : undefined;
       const size = picture && webpSize(picture);
@@ -188,14 +183,13 @@ export function acceptFiles<V>(
   field: string,
   value: V,
   before?: unknown,
+  copies = true,
 ): V {
   if (value === null || value === undefined) return value;
   const earlier = (Array.isArray(before) ? before : before ? [before] : []) as (Sent | null)[];
   const had = new Set(earlier.map((f) => f?.file));
-  // A picture the record had keeps the copies it had.
-  const hadSmaller = new Map(
-    earlier.map((f) => [f?.file, new Set(f?.smaller?.map((s) => s.file))]),
-  );
+  // A picture the record had keeps the copies it had, as they were stored.
+  const hadSmaller = new Map(earlier.map((f) => [f?.file, f?.smaller ?? []]));
   const attached = new Set<string>();
   const accepted = (sent: Sent) => {
     const { receipt, ...kept } = sent;
@@ -219,28 +213,39 @@ export function acceptFiles<V>(
     if (!had.has(kept.file) && (!own || !hasUpload(kept.file)))
       throw new BadInput(w.fileNotUploaded);
     if (own && typeof receipt === "string") attached.add(receipt);
-    if (!kept.smaller) return kept;
-    // Each smaller copy: one the picture had, or one sent under this picture's receipt. Any other
-    // is left out, and the picture is shown at its own size.
-    const smaller = kept.smaller.filter(
-      (s) =>
-        hadSmaller.get(kept.file)?.has(s.file) ||
-        (own &&
-          hasUpload(s.file) &&
-          !!db
-            .select({ id: uploads.id })
-            .from(uploads)
-            .where(
-              and(
-                eq(uploads.receipt, receipt as string),
-                eq(uploads.file, s.file),
-                eq(uploads.model, model),
-                eq(uploads.field, field),
-              ),
-            )
-            .get()),
-    );
-    const { smaller: _, ...rest } = kept;
+    const { smaller: listed, ...rest } = kept;
+    // A field whose pictures are reviewed shows only what the reviewer saw: no copies.
+    if (!listed || !copies) return rest;
+    // Each smaller copy: one the picture had, or one sent under this picture's receipt, with its
+    // size read from its file. Any other is left out, and the picture is shown at its own size.
+    const smaller: SmallerPicture[] = [];
+    for (const s of listed) {
+      if (s.file === kept.file || smaller.some((x) => x.file === s.file)) continue;
+      const stored = hadSmaller.get(kept.file)?.find((x) => x.file === s.file);
+      const claimed =
+        !stored &&
+        own &&
+        hasUpload(s.file) &&
+        !!db
+          .select({ id: uploads.id })
+          .from(uploads)
+          .where(
+            and(
+              eq(uploads.receipt, receipt as string),
+              eq(uploads.file, s.file),
+              eq(uploads.model, model),
+              eq(uploads.field, field),
+            ),
+          )
+          .get();
+      const bytes = claimed
+        ? readPicture({ file: s.file, alt: "", width: 0, height: 0 })
+        : undefined;
+      const size = bytes && webpSize(bytes);
+      if (stored) smaller.push(stored);
+      else if (size && (PICTURE_WIDTHS as readonly number[]).includes(size.width))
+        smaller.push({ file: s.file, ...size });
+    }
     return smaller.length ? { ...rest, smaller } : rest;
   };
   const result = (
