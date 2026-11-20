@@ -22,6 +22,8 @@ The entries are filled in from the merged pull requests at each release. A fix t
 
 ### Fixes
 
+- Generated apps: the mark on a picture an AI made is the EU's common icon for AI-generated content, drawn in the app kit; a picture across the page has the words beside it (`fixes/eu-ai-icon.yml`).
+
 - Generated apps: a mail, push or sms may name a worked-out field of its record (`{total}` in its text, or in `show`): it is worked out in the change's own transaction, with the lines it sums, and written as the record page writes it; one with no value refuses the change, and nothing is changed or sent (`fixes/mail-worked-out-values.yml`).
 
 - Generated apps: text in a theme's primary colour (links, eyebrows, the active menu item, a day's number) is darkened or lightened until it reads at 4.5:1, while buttons keep the theme's primary; a record's rows edited in place stack one value under another on a phone, and a dashboard tile's title wraps there instead of being cut (`fixes/readable-primary-text.yml`).
