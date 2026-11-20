@@ -8,6 +8,7 @@ import { Button } from "#/components/ui/button";
 import { cn } from "#/lib/utils";
 import { displayValue, formatValue, instantText } from "./format";
 import type { AppUi, RecordUi, Row } from "./model";
+import { refusalText } from "./refusal";
 import { w } from "./words";
 
 export function Thread<R extends Row>({
@@ -123,7 +124,7 @@ function ReplyBox({ reply }: { reply: (text: string) => Promise<unknown> }) {
           await reply(text.trim());
           setText("");
         } catch (error) {
-          setFailure(error instanceof Error ? error.message : w.somethingWentWrong);
+          setFailure(refusalText(error, w.somethingWentWrong));
         } finally {
           setBusy(false);
         }

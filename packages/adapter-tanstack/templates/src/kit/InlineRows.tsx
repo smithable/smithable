@@ -15,6 +15,7 @@ import {
 import { FieldInput } from "./FieldInput";
 import { displayValue, formatValue, fromInput, toInput } from "./format";
 import type { AppUi, FieldUi, Options, RecordUi, Row } from "./model";
+import { refusalText } from "./refusal";
 import { w } from "./words";
 
 type Inputs = Record<string, string | boolean>;
@@ -172,7 +173,7 @@ function InlineRow({
       if (row) setSaved(inputs);
       else setInputs(start());
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      setError(refusalText(e, w.tryAgain, { label, fields, timeZone: app.timeZone }));
     } finally {
       setBusy(false);
     }
@@ -247,7 +248,13 @@ function InlineRow({
                   try {
                     await remove();
                   } catch (e) {
-                    setError(e instanceof Error ? e.message : String(e));
+                    setError(
+                      refusalText(e, w.tryAgain, {
+                        label,
+                        fields,
+                        timeZone: app.timeZone,
+                      }),
+                    );
                     setBusy(false);
                   }
                 }}

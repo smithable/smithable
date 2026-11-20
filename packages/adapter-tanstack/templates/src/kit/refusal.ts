@@ -1,6 +1,9 @@
 // Smithable app kit: the refusals a program or an assistant can act on, in the app's words. The
 // API answers them as 400 and 404, the tools as their error, the panel as a line under the answer.
 
+import { clockText, whenAt } from "./time-text";
+import { w } from "./words";
+
 /** A value or a request the app cannot take: what is wrong, and what there is. */
 export class BadInput extends Error {}
 /** A record that is not there, or not one the caller may read: never which of the two. */
@@ -95,4 +98,55 @@ export function conflict(code: string): string {
   const booked = /^booked:(\d+)$/.exec(code)?.[1];
   if (booked) return `${booked} are already taken.`;
   return code;
+}
+
+/**
+ * A refused change in the person's words, on every surface that changes records (a form, a row
+ * edited in place, an action, a selection, a merge, a message): the server's codes ("taken:email",
+ * "in-use", "full", "no-value:Total", …) never reach the screen as they are. `label` is the
+ * record's kind; `fields` names a taken column; anything else is said as it came, or `fallback`.
+ */
+export function refusalText(
+  error: unknown,
+  fallback: string,
+  on: {
+    label?: string;
+    fields?: readonly { name: string; label: string }[];
+    timeZone?: string;
+  } = {},
+): string {
+  const label = on.label ?? w.record;
+  const message = error instanceof Error ? error.message : "";
+  const taken = /^taken:(\w+)$/.exec(message)?.[1];
+  if (taken) {
+    const field = on.fields?.find(
+      (f) => f.name.replace(/[A-Z]/g, (c) => `_${c.toLowerCase()}`) === taken,
+    );
+    return w.alreadyHas(label, field?.label ?? taken.replace(/_/g, " "));
+  }
+  if (message === "in-use" || inUseFacts(error)) return w.stillUsed(label);
+  const noRight = /^no-right:(.+)$/.exec(message)?.[1];
+  if (noRight) return w.noRightToDelete(noRight);
+  if (message === "full") return w.noPlacesLeft;
+  // A worked-out value a mail names, with no value (record-documents.md §3).
+  const missing = /^no-value:(.+)$/.exec(message)?.[1];
+  if (missing) return w.noValue(missing);
+  // A sent document's copy that could not be read (record-documents.md §5).
+  if (message === "document-read") return w.document.sendRefused;
+  if (message === "document-settings") return w.document.sendSettings;
+  if (message === "closed") return w.bookingClosed;
+  if (message === "cancel-closed") return w.cancellingClosed;
+  const booked = /^booked:(\d+)$/.exec(message)?.[1];
+  if (booked) return w.alreadyTaken(booked);
+  // A time someone does not have free, with the next free times that day.
+  const notFree = /^not-free:(.*)$/.exec(message)?.[1];
+  if (notFree !== undefined)
+    return w.notFree(
+      notFree
+        .split(",")
+        .filter(Boolean)
+        .map((at) => (({ hour, minute }) => clockText(hour, minute))(whenAt(at, on.timeZone)))
+        .join(", "),
+    );
+  return message || fallback;
 }

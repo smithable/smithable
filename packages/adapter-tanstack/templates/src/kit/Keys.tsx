@@ -5,6 +5,7 @@ import { type RefObject, useEffect, useId, useRef, useState } from "react";
 import { Button } from "#/components/ui/button";
 import { Card } from "#/components/ui/card";
 import { Input } from "#/components/ui/input";
+import { refusalText } from "./refusal";
 import type { RoleOption } from "./Users";
 import { w } from "./words";
 
@@ -181,7 +182,7 @@ export function Keys({
             setName("");
             setUntil("");
           } catch (error) {
-            setFailure(error instanceof Error ? error.message : w.somethingWentWrong);
+            setFailure(refusalText(error, w.somethingWentWrong));
           }
         }}
       >

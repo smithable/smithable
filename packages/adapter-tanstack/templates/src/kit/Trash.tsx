@@ -7,6 +7,7 @@ import { Card } from "#/components/ui/card";
 import { formatValue } from "./format";
 import { ModelTable } from "./ModelTable";
 import type { AppUi, ModelUi, RecordUi, Row } from "./model";
+import { refusalText } from "./refusal";
 import { SelectionBar } from "./SelectionBar";
 import { w } from "./words";
 
@@ -93,11 +94,7 @@ export function restoreRefusal(ui: Pick<ModelUi, "label" | "fields">, error: unk
   const message = error instanceof Error ? error.message : "";
   const root = /^restore-root-first:([^:]+):(.*)$/.exec(message);
   if (root) return w.restoreRootFirst(root[1] as string, root[2] as string);
-  const column = /^taken:(\w+)$/.exec(message)?.[1];
-  const field = ui.fields.find(
-    (f) => f.name.replace(/[A-Z]/g, (c) => `_${c.toLowerCase()}`) === column,
-  );
-  return field ? w.alreadyHas(ui.label, field.label) : message || w.tryAgain;
+  return refusalText(error, w.tryAgain, ui);
 }
 
 /** On a trashed record's page: since when, by whom, when it goes for good, and Restore. */

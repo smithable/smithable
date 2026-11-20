@@ -22,8 +22,8 @@ import {
   textMarker,
 } from "./model";
 import { PictureDialog } from "./PictureDialog";
+import { refusalText } from "./refusal";
 import { type InUse, inUseFacts, TogetherDialog } from "./Together";
-import { clockText, whenAt } from "./time-text";
 import { w } from "./words";
 
 interface ModelFormProps<S extends z.ZodType> {
@@ -761,35 +761,9 @@ function takenField(ui: ModelUi, error: unknown) {
   return ui.fields.find((f) => f.name.replace(/[A-Z]/g, (c) => `_${c.toLowerCase()}`) === column);
 }
 
-/** Explains server errors (see refusal in access.ts): a unique field taken, a record in use. */
+/** Explains server errors (refusal.ts): a unique field taken, a record in use, a booking full. */
 function failureMessage(ui: ModelUi, error: unknown, timeZone?: string): string {
-  const message = error instanceof Error ? error.message : "";
-  const field = takenField(ui, error);
-  if (field) return w.alreadyHas(ui.label, field.label);
-  if (message === "in-use") return w.stillUsed(ui.label);
-  const noRight = /^no-right:(.+)$/.exec(message)?.[1];
-  if (noRight) return w.noRightToDelete(noRight);
-  if (message === "full") return w.noPlacesLeft;
-  const missing = /^no-value:(.+)$/.exec(message)?.[1];
-  if (missing) return w.noValue(missing);
-  // A sent document's copy that could not be read (record-documents.md §5).
-  if (message === "document-read") return w.document.sendRefused;
-  if (message === "document-settings") return w.document.sendSettings;
-  if (message === "closed") return w.bookingClosed;
-  if (message === "cancel-closed") return w.cancellingClosed;
-  const booked = /^booked:(\d+)$/.exec(message)?.[1];
-  if (booked) return w.alreadyTaken(booked);
-  // A time someone does not have free, with the next free times that day.
-  const notFree = /^not-free:(.*)$/.exec(message)?.[1];
-  if (notFree !== undefined)
-    return w.notFree(
-      notFree
-        .split(",")
-        .filter(Boolean)
-        .map((at) => (({ hour, minute }) => clockText(hour, minute))(whenAt(at, timeZone)))
-        .join(", "),
-    );
-  return message || w.tryAgain;
+  return refusalText(error, w.tryAgain, { label: ui.label, fields: ui.fields, timeZone });
 }
 
 /** Form inputs for a record being edited, or for a new one: defaults, including formula defaults. */

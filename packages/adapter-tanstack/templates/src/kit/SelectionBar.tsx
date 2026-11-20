@@ -7,6 +7,7 @@ import { Card } from "#/components/ui/card";
 import { ActionButton } from "./ActionButton";
 import type { AppUi, ModelUi, Options } from "./model";
 import { Overflow } from "./Overflow";
+import { refusalText } from "./refusal";
 import { type InUse, inUseFacts, TogetherDialog } from "./Together";
 import { tx, w } from "./words";
 
@@ -70,12 +71,9 @@ export function SelectionBar({
   const words = (error: unknown) => {
     const text = error instanceof Error ? error.message : String(error);
     const inUse = /^in-use:(\d+)$/.exec(text);
-    const noRight = /^no-right:(.+)$/.exec(text)?.[1];
     return inUse
       ? w.stillInUse(titleOf(Number(inUse[1])))
-      : noRight
-        ? w.noRightToDelete(noRight)
-        : text;
+      : refusalText(error, text, { label: noun[0] });
   };
   const remove = async (together?: boolean) => {
     setBusy(true);

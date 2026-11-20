@@ -352,6 +352,7 @@ export const w = {
   speakingSpeed: "Uppläsningshastighet",
   voiceSample: "Hej. Det här är min röst.",
   stopSpeech: "Stoppa",
+  record: "Post",
   records: "Poster",
   remove: "Ta bort",
   removeUser: "Ta bort användare",
