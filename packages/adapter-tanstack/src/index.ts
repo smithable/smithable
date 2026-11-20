@@ -18,6 +18,7 @@ export {
   columnOf,
   dropTakenColumn,
   dropTakenTables,
+  dropTakenTablesSql,
   goneFirst,
   inSnapshot,
   inTurn,

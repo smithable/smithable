@@ -317,23 +317,24 @@ export const COMMANDS: Command[] = [
   },
   {
     name: "redo",
-    usage: "redo [--yes]",
+    usage: "redo [--yes --plan <digest>]",
     text: [
       "Make again the last change undone, until another change is made; a version applied is",
       "planned again and asks again when it would lose values or leave people without a role",
     ],
-    options: ["yes", "dir"],
+    options: ["yes", "plan", "dir"],
   },
   {
     name: "apply-version",
-    usage: "apply-version <change> [--check] [--yes]",
+    usage: "apply-version <change> [--check] [--yes --plan <digest>]",
     text: [
       "Apply an earlier version: the app's definition as it was after that change (a number or",
       "an id from the history), as a new change; sign-in, admins and the API stay as today.",
       "--check says what it would do (access first) and changes nothing; --yes accepts values",
-      "deleted or a role taken from people",
+      "deleted or a role taken from people; --plan <digest> (named by --check) applies it only",
+      "if it is still the plan that was seen",
     ],
-    options: ["check", "yes", "dir"],
+    options: ["check", "yes", "plan", "dir"],
   },
   {
     name: "report",

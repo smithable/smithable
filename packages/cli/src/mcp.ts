@@ -236,14 +236,20 @@ function tools(dir: string): Tool[] {
             description:
               "Only after the user agreed: confirms deleting values or taking a role from people, when a first call said so.",
           },
+          plan: {
+            type: "string",
+            description:
+              "The plan the user agreed to, as a first call or check named it: applied only if it is still what applying the version does.",
+          },
         },
         required: ["change"],
       },
-      run: ({ change, check, confirm }, io) =>
+      run: ({ change, check, confirm, plan }, io) =>
         restore(dir, io, String(change), {
           check: check === true,
           yes: confirm === true,
           mcp: true,
+          ...(typeof plan === "string" ? { plan } : {}),
         }),
     },
   ];

@@ -271,6 +271,25 @@ export function dropTakenTables(
 }
 
 /**
+ * dropTakenTables as a custom migration's statements, for when drizzle-kit's API is not there to
+ * write them: the newer model's tables dropped, the kit's beside it before its own (the migrator
+ * runs with foreign keys off), and the snapshot without them. Undefined when the name is free.
+ */
+export function dropTakenTablesSql(
+  snapshotJson: string,
+  from: string,
+  to: string,
+): { sql: string[]; snapshot: string } | undefined {
+  const snapshot = dropTakenTables(snapshotJson, from, to);
+  if (!snapshot) return undefined;
+  const kept = (JSON.parse(snapshot) as Snapshot).tables;
+  const gone = Object.keys((JSON.parse(snapshotJson) as Snapshot).tables)
+    .filter((t) => !kept[t])
+    .sort((a, b) => b.length - a.length || a.localeCompare(b));
+  return { sql: gone.map((t) => `DROP TABLE \`${t}\`;`), snapshot };
+}
+
+/**
  * Whether the snapshot has a column for a model's field, or, without one, any table of the
  * model's (its own or one the kit keeps beside it), so a passing name never lands on one.
  */
