@@ -13,6 +13,7 @@
 import { spawn, spawnSync } from "node:child_process";
 import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
+import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { chromium } from "playwright";
@@ -247,18 +248,33 @@ async function formHasField(page, url, label) {
 }
 
 let stopDevServer;
+let cancelling = false;
 for (const [signal, code] of [
   ["SIGINT", 130],
   ["SIGTERM", 143],
+  ["SIGHUP", 129],
 ]) {
-  process.once(signal, async () => {
-    await stopDevServer?.();
-    process.exit(code);
+  process.on(signal, async () => {
+    if (cancelling) return;
+    cancelling = true;
+    try {
+      await stopDevServer?.();
+    } finally {
+      process.exit(code);
+    }
   });
 }
 
 /** Runs every check so far on the app, in a dev server with the development sign-in. */
 async function checkAll(dir, upTo) {
+  if (cancelling) throw new Error("The benchmark was cancelled.");
+  // A previous server must not satisfy this run's health check.
+  await new Promise((resolve, reject) => {
+    const probe = createServer();
+    probe.once("error", reject);
+    probe.listen(PORT, () => probe.close(resolve));
+  });
+  if (cancelling) throw new Error("The benchmark was cancelled.");
   // Launch the generated app's own Vite directly so it leads the group we stop.
   const vite = createRequire(join(dir, "package.json")).resolve("vite/package.json");
   const bin = join(dirname(vite), JSON.parse(readFileSync(vite, "utf8")).bin.vite);
@@ -283,30 +299,38 @@ async function checkAll(dir, upTo) {
       process.kill(-server.pid, signal);
     } catch {}
   };
-  const stop = async () => {
-    signalGroup("SIGTERM");
-    if (server.pid && server.exitCode === null && server.signalCode === null) {
-      let timer;
-      await Promise.race([
-        ended,
-        new Promise((resolve) => {
-          timer = setTimeout(resolve, 3000);
-        }),
-      ]);
-      clearTimeout(timer);
-      if (server.exitCode === null && server.signalCode === null) {
-        signalGroup("SIGKILL");
-        await ended;
+  let stopped;
+  const stop = () =>
+    (stopped ??= (async () => {
+      signalGroup("SIGTERM");
+      if (server.pid && server.exitCode === null && server.signalCode === null) {
+        let timer;
+        await Promise.race([
+          ended,
+          new Promise((resolve) => {
+            timer = setTimeout(resolve, 3000);
+          }),
+        ]);
+        clearTimeout(timer);
       }
-    }
-    if (stopDevServer === stop) stopDevServer = undefined;
-  };
-  stopDevServer = stop;
+      // A worker can survive the leader's graceful exit.
+      signalGroup("SIGKILL");
+      if (server.pid && server.exitCode === null && server.signalCode === null) await ended;
+    })());
   const base = `http://localhost:${PORT}`;
   const results = {};
   let browser;
+  const cleanup = async () => {
+    await stop();
+    await browser?.close();
+  };
+  stopDevServer = cleanup;
   try {
-    browser = await chromium.launch();
+    browser = await chromium.launch({
+      handleSIGINT: false,
+      handleSIGTERM: false,
+      handleSIGHUP: false,
+    });
     const page = await browser.newPage();
     const signIn = async (role) => {
       for (let attempt = 1; attempt <= 3; attempt++) {
@@ -341,9 +365,9 @@ async function checkAll(dir, upTo) {
     }
   } finally {
     try {
-      await browser?.close();
+      await cleanup();
     } finally {
-      await stop();
+      if (stopDevServer === cleanup) stopDevServer = undefined;
     }
   }
   return results;
