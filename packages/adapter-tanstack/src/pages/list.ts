@@ -4,6 +4,7 @@ import {
   type CustomActionIR,
   type FieldIR,
   filterThrough,
+  galleryCover,
   humanize,
   kebab,
   type ModelIR,
@@ -669,6 +670,8 @@ export function listParts(
       }
     : undefined;
   const cards = presentation?.view === "cards";
+  // A gallery names its cover field: the ux file's, else the model's first picture (galleryCover).
+  const cover = presentation?.view === "gallery" ? galleryCover(model, presentation) : undefined;
   // A mark before each title, and every row action in a menu (the ux file's table, look-gap §4).
   const mark = presentation?.mark;
   const menu = presentation?.rowActions === "menu";
@@ -1062,7 +1065,7 @@ ${
           filtering && Object.keys(filtering.headers).length
             ? `\n        sorting={{ keys: ${literal(filtering.headers)}, value: sort, onChange: (next) => navigate({ to: ${JSON.stringify(page.route)}, search: (prev) => ({ ...prev, sort: next, page: undefined }), replace: true, resetScroll: false }) }}`
             : ""
-        }${cards ? '\n        view="cards"' : ""}${mark ? `\n        mark=${attr(mark)}` : ""}${icon ? `\n        icon={${icon}}` : ""}${favorites ? "\n        saved={{ ids: saved, onToggle: toggleSaved }}" : ""}${threadField ? `\n        thread={{ label: ${JSON.stringify(t.field(model, threadField).label ?? humanize(threadField.name))}, counts: threads }}` : ""}${selecting ? "\n        selection={selectable ? { ids: selected, onChange: setSelected } : undefined}" : ""}${
+        }${cards ? '\n        view="cards"' : ""}${cover ? `\n        view="gallery"\n        cover=${attr(key(cover.field.name))}` : ""}${mark ? `\n        mark=${attr(mark)}` : ""}${icon ? `\n        icon={${icon}}` : ""}${favorites ? "\n        saved={{ ids: saved, onToggle: toggleSaved }}" : ""}${threadField ? `\n        thread={{ label: ${JSON.stringify(t.field(model, threadField).label ?? humanize(threadField.name))}, counts: threads }}` : ""}${selecting ? "\n        selection={selectable ? { ids: selected, onChange: setSelected } : undefined}" : ""}${
           offered.length
             ? `
         rowActions={(row) => (

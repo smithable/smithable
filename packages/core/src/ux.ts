@@ -153,8 +153,13 @@ export interface PageUx {
   below?: Record<string, string>;
   /** The list's order until someone sorts it: a field, or "-field" for descending. */
   sort?: string;
-  /** How the list looks on a wide screen; a phone shows cards anyway. */
-  view?: "table" | "cards";
+  /**
+   * How the list looks on a wide screen; a phone shows cards anyway. A gallery shows each record's
+   * cover big, and opens the covers one after another.
+   */
+  view?: "table" | "cards" | "gallery";
+  /** A gallery's cover: a picture field of the model; unsaid, its first (galleryCover). */
+  cover?: string;
   /**
    * A round mark before each record's title (look-gap §4): its initials on a colour of their own,
    * or the model's first picture. Unsaid, none.
@@ -236,6 +241,20 @@ export function recordPicture(model: ModelIR): FieldIR | undefined {
       f.type.kind === "scalar" &&
       (f.type.name === "picture" || f.type.name === "pictures"),
   );
+}
+
+/**
+ * The picture field a gallery shows as each record's cover: the one `cover` names, else the
+ * model's first picture field in the spec's order, never one picked by its name.
+ */
+export function galleryCover(
+  model: ModelIR,
+  look: Pick<PageUx, "cover"> | undefined,
+): { field: FieldIR; byRule: boolean } | undefined {
+  const named = look?.cover && model.fields.find((f) => f.name === look.cover);
+  if (named) return { field: named, byRule: false };
+  const first = recordPicture(model);
+  return first && { field: first, byRule: true };
 }
 
 /** How a record page shows a list of related records (`record.lists`). */
@@ -1320,7 +1339,7 @@ export function validateUx(
             {
               allowed:
                 part.key === "table"
-                  ? ["columns", "below", "sort", "view", "totals", "mark", "actions"]
+                  ? ["columns", "below", "sort", "view", "cover", "totals", "mark", "actions"]
                   : ["fieldOrder", "sections", "columns", "control", "results", "aside"],
               later: part.key === "table" ? ["pageSize"] : [],
             },
@@ -1351,9 +1370,48 @@ export function validateUx(
                 );
             } else if (option.key === "view") {
               const view = readString(ctx, option.value, `"view" of ${where}`);
-              if (view === "table" || view === "cards") result.view = view;
+              const pictures = fields.some(
+                (f) =>
+                  !f.formula &&
+                  f.type.kind === "scalar" &&
+                  (f.type.name === "picture" || f.type.name === "pictures"),
+              );
+              if (view === "table" || view === "cards" || (view === "gallery" && pictures))
+                result.view = view;
+              else if (view === "gallery")
+                ctx.error(
+                  option.value,
+                  "invalid-value",
+                  `${owner} has no picture field for a gallery's covers; "cards" works for any model.`,
+                );
               else if (view !== undefined)
-                ctx.error(option.value, "invalid-value", `"view" is table or cards.`);
+                ctx.error(option.value, "invalid-value", `"view" is table, cards or gallery.`);
+            } else if (option.key === "cover") {
+              // A gallery's cover: a picture field, named; unsaid, the model's first (galleryCover).
+              const cover = readString(ctx, option.value, `"cover" of ${where}`);
+              const field = fields.find((f) => f.name === cover);
+              if (cover === undefined) continue;
+              if (!field)
+                ctx.error(
+                  option.value,
+                  "unknown-field",
+                  `${owner} has no field named "${cover}" to show as the cover.`,
+                  didYouMean(
+                    cover,
+                    fields.map((f) => f.name),
+                  ),
+                );
+              else if (
+                field.formula ||
+                field.type.kind !== "scalar" ||
+                (field.type.name !== "picture" && field.type.name !== "pictures")
+              )
+                ctx.error(
+                  option.value,
+                  "invalid-value",
+                  `A gallery's cover is a picture field; "${cover}" is not one.`,
+                );
+              else result.cover = cover;
             } else if (option.key === "mark") {
               // A picture mark needs a picture to show: the model's first picture field.
               const mark = readString(ctx, option.value, `"mark" of ${where}`);
@@ -1505,6 +1563,12 @@ export function validateUx(
             } else result.fieldOrder = names(option.value, `the field order of ${where}`, false);
           }
         }
+        if (result.cover && result.view !== "gallery")
+          ctx.error(
+            (doc.getIn(["pages", page.key, "table", "cover"], true) as ParsedNode) ?? page.keyNode,
+            "invalid-key",
+            `"cover" is a gallery's; ${where} shows no gallery (view: gallery).`,
+          );
         if (result.sections && result.fieldOrder)
           ctx.error(
             page.keyNode,

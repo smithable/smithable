@@ -29,6 +29,7 @@ import { pictureSet, versioned } from "./file-address";
 import { displayValue, formatValue, numberText } from "./format";
 import { MoreOnScroll } from "./MoreOnScroll";
 import { type AppUi, editorMarker, type RecordFieldUi, type RecordUi, type Row } from "./model";
+import { PictureDialog } from "./PictureDialog";
 import { w } from "./words";
 
 interface ModelTableProps<R extends Row> {
@@ -49,8 +50,13 @@ interface ModelTableProps<R extends Row> {
   below?: Partial<Record<keyof R & string, keyof R & string>>;
   /** The page showing the table, so the preview editor can change its columns. */
   page?: string;
-  /** Cards on wide screens too, instead of a table (a phone shows cards anyway). */
-  view?: "table" | "cards";
+  /**
+   * Cards on wide screens too, instead of a table (a phone shows cards anyway); or a gallery: big
+   * covers, two across, each opening the pictures of the records shown one after another.
+   */
+  view?: "table" | "cards" | "gallery";
+  /** A gallery's cover: the picture field shown on each tile (the generator names it). */
+  cover?: keyof R & string;
   /**
    * A round mark before each title (look-gap §4): the record's initials on a colour of their own,
    * or its picture (initials where it has none).
@@ -191,6 +197,7 @@ export function ModelTable<R extends Row>({
   below = {},
   page,
   view = "table",
+  cover,
   icon,
   saved,
   thread,
@@ -206,6 +213,9 @@ export function ModelTable<R extends Row>({
 }: ModelTableProps<R>) {
   // The row a shift-click selects from: a range, as in a file list or a spreadsheet.
   const anchor = useRef<number | null>(null);
+  // A gallery's picture shown whole: the dialog, and which of the covers it shows.
+  const dialog = useRef<HTMLDialogElement>(null);
+  const [shownAt, setShownAt] = useState(0);
   // A computed field the server sent is kept: a total over related records is worked out there,
   // where the records are (a list strips them). One it did not (a related list's rows) is filled in.
   const shown = ui.compute
@@ -291,16 +301,24 @@ export function ModelTable<R extends Row>({
   // A name made of parts, and the lines under it, as the server sets them (record-names.md).
   const named = (row: R) => (row as { $name?: string }).$name;
   const lines = (row: R) => (row as { $lines?: { subtitle?: string; detail?: string } }).$lines;
-  // Cards view shows the picture on top, so not again among the details.
+  // Cards and a gallery show the picture on top, so not again among the details.
+  const tiles = view === "cards" || view === "gallery";
   const others = columns.filter(
-    (f) => f !== title && !(view === "cards" && (f.kind === "picture" || f.kind === "pictures")),
+    (f) => f !== title && !(tiles && (f.kind === "picture" || f.kind === "pictures")),
   );
   const status = others.find((f) => f.kind === "choice");
   const amount = others.find((f) => numeric(f.kind));
   const date = others.find((f) => f.kind === "date" || f.kind === "datetime");
   const secondary = others.find((f) => f !== status && f !== amount && f !== date);
   const description = ui.fields.find((f) => f.name === ui.descriptionField);
-  const pictureField = ui.fields.find((f) => f.kind === "picture" || f.kind === "pictures");
+  const pictureField =
+    (view === "gallery" && ui.fields.find((f) => f.name === cover)) ||
+    ui.fields.find((f) => f.kind === "picture" || f.kind === "pictures");
+  const hasPicture = (row: R) =>
+    pictureField !== undefined &&
+    formatValue(pictureField, displayValue(pictureField, row), app) !== "—";
+  // A gallery's dialog steps through the covers of the records shown, in the list's order.
+  const covered = view === "gallery" ? shown.filter(hasPicture) : [];
   // A picture's address; for several pictures, the cover's (the first). With its smaller copies
   // as a srcset, so a thumbnail or a card loads no more than it shows.
   const pictureAt = (field: RecordFieldUi<R>, row: R) => {
@@ -311,11 +329,12 @@ export function ModelTable<R extends Row>({
   };
   // The mark before a title: a picture where asked and there is one, else initials on a hue of the
   // chart's, the same for the same name everywhere.
+  const nameOf = (row: R) =>
+    named(row) ??
+    formatValue(title as RecordFieldUi<R>, displayValue(title as RecordFieldUi<R>, row), app);
   const markOf = (row: R) => {
     if (!mark) return null;
-    const name =
-      named(row) ??
-      formatValue(title as RecordFieldUi<R>, displayValue(title as RecordFieldUi<R>, row), app);
+    const name = nameOf(row);
     if (
       mark === "picture" &&
       pictureField &&
@@ -440,7 +459,11 @@ export function ModelTable<R extends Row>({
       {/* Phones: one card per record: its name and status, a contact or other identifier, its description, then a date and a key amount. */}
       <ul
         className={
-          view === "cards" ? "grid gap-3 md:grid-cols-2 xl:grid-cols-3" : "space-y-3 md:hidden"
+          view === "gallery"
+            ? "grid gap-4 md:grid-cols-2"
+            : view === "cards"
+              ? "grid gap-3 md:grid-cols-2 xl:grid-cols-3"
+              : "space-y-3 md:hidden"
         }
       >
         {shown.map((row, index) => (
@@ -448,11 +471,11 @@ export function ModelTable<R extends Row>({
             <Card
               className={cn(
                 "relative space-y-3 p-5 hover:bg-hover",
-                view === "cards" && pictureField && "overflow-hidden pt-0",
+                tiles && pictureField && "overflow-hidden pt-0",
               )}
             >
               {/* The checkbox sits in the picture's corner, or in a column of its own beside the title. */}
-              {selection && view === "cards" && pictureField && (
+              {selection && tiles && pictureField && (
                 <span className="absolute top-1 left-1 z-10">
                   {check(
                     row,
@@ -463,9 +486,32 @@ export function ModelTable<R extends Row>({
                 </span>
               )}
               {/* Cards of a model with pictures show the record's, or a placeholder without one. */}
-              {view === "cards" &&
+              {/* A gallery's cover is a button: the picture whole, then the next record's. */}
+              {view === "gallery" && pictureField && hasPicture(row) ? (
+                <button
+                  type="button"
+                  data-part="cover"
+                  aria-label={w.openPicture(nameOf(row))}
+                  className="relative z-10 -mx-5 block w-[calc(100%+2.5rem)] cursor-zoom-in outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  onClick={() => {
+                    setShownAt(covered.indexOf(row));
+                    dialog.current?.showModal();
+                  }}
+                >
+                  <AiMarked generated={generatedPicture(row, pictureField)} className="w-full">
+                    <img
+                      {...pictureAt(pictureField, row)}
+                      sizes="(min-width: 768px) 50vw, 100vw"
+                      alt={nameOf(row)}
+                      loading="lazy"
+                      className="aspect-[4/3] w-full object-cover"
+                    />
+                  </AiMarked>
+                </button>
+              ) : (
+                tiles &&
                 pictureField &&
-                (formatValue(pictureField, displayValue(pictureField, row), app) !== "—" ? (
+                (hasPicture(row) ? (
                   <AiMarked
                     generated={generatedPicture(row, pictureField)}
                     className="-mx-5 w-[calc(100%+2.5rem)]"
@@ -486,11 +532,15 @@ export function ModelTable<R extends Row>({
                 ) : (
                   <PicturePlaceholder
                     icon={icon}
-                    className="-mx-5 aspect-[3/2] w-[calc(100%+2.5rem)]"
+                    className={cn(
+                      "-mx-5 w-[calc(100%+2.5rem)]",
+                      view === "gallery" ? "aspect-[4/3]" : "aspect-[3/2]",
+                    )}
                   />
-                ))}
+                ))
+              )}
               <div className="flex items-start justify-between gap-3">
-                {selection && !(view === "cards" && pictureField) && (
+                {selection && !(tiles && pictureField) && (
                   <span className="relative z-10 -my-2.5 -ml-3 flex size-11 shrink-0">
                     {check(
                       row,
@@ -502,7 +552,7 @@ export function ModelTable<R extends Row>({
                 )}
                 {/* The mark before the title, on a card too (a phone shows cards); a cards view
                     with a picture shows it on top instead. */}
-                {mark && !(view === "cards" && pictureField) && markOf(row)}
+                {mark && !(tiles && pictureField) && markOf(row)}
                 <div className="min-w-0 flex-1 space-y-1">
                   {named(row) !== undefined
                     ? open(row, named(row), "break-words text-base font-semibold")
@@ -723,10 +773,7 @@ export function ModelTable<R extends Row>({
       )}
       {totals && (
         // Cards, and the phone's list, have no last row: the totals as a line under them.
-        <p
-          data-part="totals-line"
-          className={cn("text-sm font-semibold", view !== "cards" && "md:hidden")}
-        >
+        <p data-part="totals-line" className={cn("text-sm font-semibold", !tiles && "md:hidden")}>
           {[
             w.totalsRow(totals.count),
             ...columns
@@ -743,6 +790,34 @@ export function ModelTable<R extends Row>({
           all={exportRows}
           name={exportName ?? ui.pluralLabel.toLowerCase().replace(/\s+/g, "-")}
           timeZone={app.timeZone}
+        />
+      )}
+      {pictureField && covered.length > 0 && (
+        <PictureDialog
+          dialog={dialog}
+          open={shownAt}
+          show={(i) => setShownAt((i + covered.length) % covered.length)}
+          pictures={covered.map((row) => ({
+            image: {
+              src: pictureAt(pictureField, row).src,
+              alt: nameOf(row),
+              generated: generatedPicture(row, pictureField),
+            },
+            caption: nameOf(row),
+            action: onOpen && (
+              <button
+                type="button"
+                data-part="record-open"
+                className="cursor-pointer underline underline-offset-4"
+                onClick={() => {
+                  dialog.current?.close();
+                  onOpen(row);
+                }}
+              >
+                {w.openIt}
+              </button>
+            ),
+          }))}
         />
       )}
     </div>

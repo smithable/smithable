@@ -110,3 +110,30 @@ test("Explain names explicit record emphasis instead of reporting automatic fiel
     "invoices summary (header and aside): status status, amount total, dates dueOn (named slots; omitted slots use automatic selection)",
   );
 });
+
+test("validate --explain says which picture field a gallery shows as its cover, by rule or as written", async () => {
+  const dir = tempDir("smithable-gallery-explain-");
+  writeFileSync(
+    join(dir, "smithable.yml"),
+    `smithable: 0.1
+app: { name: Builder }
+models:
+  Project:
+    fields: { name: string!, before: picture, photos: pictures }
+pages:
+  projects: { crud: Project }
+  shots: { crud: Project }
+`,
+  );
+  writeFileSync(
+    join(dir, "smithable.ux.yml"),
+    "smithableUx: 0.1\npages:\n  projects:\n    table: { view: gallery }\n  shots:\n    table: { view: gallery, cover: photos }\n",
+  );
+  writeFileSync(join(dir, "smithable.auth.yml"), "smithableAuth: 0.1\nsignIn: none\n");
+  const io = captureIo();
+  expect(await run(["validate", dir, "--explain"], io)).toBe(0);
+  expect(io.stdout).toContain(
+    "projects gallery: cover before (by rule: the model's first picture field; say it with cover)",
+  );
+  expect(io.stdout).toContain("shots gallery: cover photos (cover)");
+});

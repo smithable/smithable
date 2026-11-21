@@ -371,6 +371,7 @@ export {
   controlUnfit,
   emptyUx,
   FONTS,
+  galleryCover,
   HEADER_LOOKS,
   ICONS,
   inlineFields,

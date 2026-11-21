@@ -12,6 +12,7 @@ import {
   DUE_WITHIN,
   formatDiagnostic,
   formatsOf,
+  galleryCover,
   hasErrors,
   LANGUAGES,
   modelAccess,
@@ -520,6 +521,13 @@ export function explainSpec(ir: SpecIR, auth: AuthIR, ux?: UxIR, language?: stri
   // How a list page's filter on a reference is picked (A 208): the ux file's word, else the count.
   for (const page of ir.pages) {
     const model = ir.models.find((m) => m.name === pageModel(page));
+    // A gallery's cover: the ux file's, else the model's first picture field.
+    const look = ux?.pages[page.id];
+    const cover = look?.view === "gallery" && model ? galleryCover(model, look) : undefined;
+    if (cover)
+      lines.push(
+        `${page.id} gallery: cover ${cover.field.name} (${cover.byRule ? "by rule: the model's first picture field; say it with cover" : "cover"})`,
+      );
     for (const name of page.filters ?? []) {
       const field = model?.fields.find((x) => x.name === name);
       if (field?.type.kind !== "relation" || field.type.many || field.type.model === "User")

@@ -403,6 +403,29 @@ const ux: Companion = {
         if (next.length) editor.set(path, next);
         else editor.removeAndPrune(path, 0);
       }
+      // A gallery's cover follows a rename; removed, the rule picks the next picture field, and
+      // without one left the list is a table again (a gallery needs a cover).
+      const cover = ["pages", page.id, "table", "cover"];
+      if (editor.has(cover) && editor.get(cover) === from) {
+        if (to) editor.set(cover, to);
+        else editor.removeAndPrune(cover, 0);
+      }
+      const view = ["pages", page.id, "table", "view"];
+      if (
+        !to &&
+        editor.has(view) &&
+        editor.get(view) === "gallery" &&
+        !ir.models
+          .find((x) => x.name === m)
+          ?.fields.some(
+            (f) =>
+              f.name !== from &&
+              !f.formula &&
+              f.type.kind === "scalar" &&
+              (f.type.name === "picture" || f.type.name === "pictures"),
+          )
+      )
+        editor.removeAndPrune(view, 0);
       // The list's order, a field's control, and the form's sections follow the field too.
       const sort = ["pages", page.id, "table", "sort"];
       const sorted = editor.has(sort) ? (editor.get(sort) as string) : undefined;

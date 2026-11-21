@@ -167,6 +167,7 @@ exports[`every kit component's hooks, as they are 1`] = `
     "data-part="record-open"",
     "data-part="select"",
     "data-part="row"",
+    "data-part="cover"",
     "data-part="description"",
     "data-part="row-actions"",
     "data-part="header"",

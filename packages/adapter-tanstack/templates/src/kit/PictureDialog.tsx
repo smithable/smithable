@@ -14,7 +14,12 @@ export function PictureDialog({
   show,
 }: {
   dialog: React.RefObject<HTMLDialogElement | null>;
-  pictures: { image: { src: string; alt: string; generated?: boolean }; caption?: string }[];
+  /** Each picture, with a caption and, under it, something to do (a record's Open). */
+  pictures: {
+    image: { src: string; alt: string; generated?: boolean };
+    caption?: string;
+    action?: React.ReactNode;
+  }[];
   open: number;
   show: (index: number) => void;
 }) {
@@ -40,8 +45,11 @@ export function PictureDialog({
               className="mx-auto block max-h-[80vh] max-w-full rounded-lg object-contain"
             />
           </AiMarked>
-          {current.caption && (
-            <figcaption className="mt-3 text-center text-white">{current.caption}</figcaption>
+          {(current.caption || current.action) && (
+            <figcaption className="mt-3 flex justify-center gap-3 text-center text-white">
+              {current.caption}
+              {current.action}
+            </figcaption>
           )}
           <div className="mt-3 flex justify-center gap-2">
             {pictures.length > 1 && (

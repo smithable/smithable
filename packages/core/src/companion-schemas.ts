@@ -318,9 +318,13 @@ export const UX_SCHEMA: JsonSchema = {
                 'The field the list is sorted by, with "-" in front for the highest first, e.g. -createdAt.',
               ),
               view: {
-                enum: ["table", "cards"],
-                description: "On a wide screen: a table, or cards (a phone shows cards anyway).",
+                enum: ["table", "cards", "gallery"],
+                description:
+                  "On a wide screen: a table, cards, or a gallery of big covers that open one after another (a phone shows cards anyway).",
               },
+              cover: text(
+                "A gallery's cover: a picture field of the model. Unsaid, the model's first picture field.",
+              ),
               mark: {
                 enum: UX_CAPABILITIES.mark.values,
                 description:

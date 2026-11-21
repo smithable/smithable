@@ -150,9 +150,14 @@
               "view": {
                 "enum": [
                   "table",
-                  "cards"
+                  "cards",
+                  "gallery"
                 ],
-                "description": "On a wide screen: a table, or cards (a phone shows cards anyway)."
+                "description": "On a wide screen: a table, cards, or a gallery of big covers that open one after another (a phone shows cards anyway)."
+              },
+              "cover": {
+                "type": "string",
+                "description": "A gallery's cover: a picture field of the model. Unsaid, the model's first picture field."
               },
               "mark": {
                 "enum": [

@@ -1055,27 +1055,35 @@ const setFormColumns: Operation<{ page: string; columns: number }> = {
   },
 };
 
-const setView: Operation<{ page: string; view: "table" | "cards" }> = {
+const setView: Operation<{
+  page: string;
+  view: "table" | "cards" | "gallery";
+  cover?: string;
+}> = {
   name: "setView",
-  sets: ["smithable.ux.yml:pages.*.table.view"],
+  sets: ["smithable.ux.yml:pages.*.table.view", "smithable.ux.yml:pages.*.table.cover"],
   summary:
-    "Show a page's list as a table or as cards on wide screens (a phone shows cards anyway).",
+    "Show a page's list as a table, as cards, or as a gallery of big covers on wide screens (a phone shows cards anyway). A gallery's cover is the model's first picture field unless named.",
   schema: {
     type: "object",
     required: ["page", "view"],
     additionalProperties: false,
     properties: {
       page: refTo({ ref: "page", label: "Page" }),
-      view: { type: "string", enum: ["table", "cards"] },
+      view: { type: "string", enum: ["table", "cards", "gallery"] },
+      cover: refTo({ ref: "field", page: "page", label: "Cover" }),
     },
   },
-  positional: ["page", "view"],
-  describe: ({ page, view }) =>
-    `Show the ${page} list as ${view === "cards" ? "cards" : "a table"}`,
+  positional: ["page", "view", "cover"],
+  describe: ({ page, view, cover }) =>
+    `Show the ${page} list as ${view === "table" ? "a table" : view === "cards" ? "cards" : `a gallery${cover ? ` of ${cover}` : ""}`}`,
   destructive: () => false,
-  apply(editors, { page, view }, ir) {
+  apply(editors, { page, view, cover }, ir) {
     pageNamed(ir, page);
-    put(editors.ux, ["pages", page, "table", "view"], view === "cards" ? "cards" : undefined);
+    if (cover && view !== "gallery")
+      throw new OperationError("A cover is a gallery's: name it with the view gallery.");
+    put(editors.ux, ["pages", page, "table", "view"], view === "table" ? undefined : view);
+    put(editors.ux, ["pages", page, "table", "cover"], view === "gallery" ? cover : undefined);
     return [];
   },
 };

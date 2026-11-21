@@ -2,7 +2,7 @@ import { expect, test } from "vitest";
 import { applyOperation } from "./apply.js";
 import type { SpecIR } from "./ir.js";
 import { validateSpec } from "./spec.js";
-import { validateUx } from "./ux.js";
+import { galleryCover, validateUx } from "./ux.js";
 
 const spec = `smithable: 0.1
 app: { name: CRM }
@@ -133,4 +133,103 @@ pages:
   ).toBe(false);
   const removed = applyOperation(withAll, "removeField", { model: "Customer", field: "segment" });
   expect(removed.ok && removed.files.ux).toContain("fields: [creditLimit]");
+});
+
+// A gallery (T1117): big covers, from a picture field the ux file names or the model's first.
+const pictured = `smithable: 0.1
+app: { name: Builder }
+models:
+  Project:
+    fields:
+      name: string!
+      plan: file
+      before: picture
+      photos: pictures
+      budget: money
+  Customer:
+    fields: { name: string! }
+pages:
+  projects: { crud: Project }
+  customers: { crud: Customer }
+`;
+const galleryIr = validateSpec({ path: "smithable.yml", text: pictured }).ir as SpecIR;
+const galleryUx = (table: string) =>
+  validateUx(
+    {
+      path: "smithable.ux.yml",
+      text: `smithableUx: 0.1\npages:\n  projects:\n    table: ${table}\n`,
+    },
+    galleryIr,
+  );
+
+test("a gallery's cover is the field named, else the model's first picture field by the spec's order", () => {
+  const project = galleryIr.models.find((m) => m.name === "Project");
+  const byRule = galleryUx("{ view: gallery }");
+  expect(byRule.diagnostics).toEqual([]);
+  expect(byRule.ux?.pages.projects).toEqual({ view: "gallery" });
+  expect(project && galleryCover(project, byRule.ux?.pages.projects)).toMatchObject({
+    field: { name: "before" },
+    byRule: true,
+  });
+  const named = galleryUx("{ view: gallery, cover: photos }");
+  expect(named.diagnostics).toEqual([]);
+  expect(named.ux?.pages.projects).toEqual({ view: "gallery", cover: "photos" });
+  expect(project && galleryCover(project, named.ux?.pages.projects)).toMatchObject({
+    field: { name: "photos" },
+    byRule: false,
+  });
+});
+
+test("a gallery needs a picture field, and a cover is a picture field of a gallery", () => {
+  const messages = (table: string) =>
+    galleryUx(table).diagnostics.map((d) => `${d.code}: ${d.message}`);
+  expect(check("    table: { view: gallery }").diagnostics.map((d) => d.message)).toEqual([
+    'Customer has no picture field for a gallery\'s covers; "cards" works for any model.',
+  ]);
+  expect(messages("{ view: gallery, cover: plan }")).toEqual([
+    'invalid-value: A gallery\'s cover is a picture field; "plan" is not one.',
+  ]);
+  expect(messages("{ view: gallery, cover: fotos }")[0]).toMatch(
+    /^unknown-field: Project has no field named "fotos"/,
+  );
+  expect(messages("{ view: cards, cover: photos }")).toEqual([
+    'invalid-key: "cover" is a gallery\'s; page "projects" shows no gallery (view: gallery).',
+  ]);
+});
+
+test("setView makes a gallery with its cover, and leaving it takes the cover too", () => {
+  const files = { spec: pictured, ux: "smithableUx: 0.1\n" };
+  const gallery = applyOperation(files, "setView", {
+    page: "projects",
+    view: "gallery",
+    cover: "photos",
+  });
+  expect(gallery.ok && gallery.files.ux).toMatch(/view: gallery\n\s+cover: photos/);
+  if (!gallery.ok) return;
+  const table = applyOperation(gallery.files, "setView", { page: "projects", view: "table" });
+  expect(table.ok && table.files.ux).not.toMatch(/view|cover/);
+  const cardsWithCover = applyOperation(files, "setView", {
+    page: "projects",
+    view: "cards",
+    cover: "photos",
+  });
+  expect(cardsWithCover.ok).toBe(false);
+  // A model without pictures has no gallery: refused by the ux file's check.
+  expect(applyOperation(files, "setView", { page: "customers", view: "gallery" }).ok).toBe(false);
+  // The cover follows a rename; removed, the rule picks the next; with no picture left, a table.
+  const renamed = applyOperation(gallery.files, "renameField", {
+    model: "Project",
+    from: "photos",
+    to: "pictures",
+  });
+  expect(renamed.ok && renamed.files.ux).toContain("cover: pictures");
+  const removed = applyOperation(gallery.files, "removeField", {
+    model: "Project",
+    field: "photos",
+  });
+  expect(removed.ok && removed.files.ux).toContain("view: gallery");
+  expect(removed.ok && removed.files.ux).not.toContain("cover");
+  if (!removed.ok) return;
+  const last = applyOperation(removed.files, "removeField", { model: "Project", field: "before" });
+  expect(last.ok && last.files.ux).not.toMatch(/view|cover/);
 });

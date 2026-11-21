@@ -408,7 +408,8 @@ function companionNames(
     if (section === "pages" && depth === 3 && part === "theme" && key === "preset") return presets;
     if (section === "pages" && depth === 3) {
       const fields = pageFields(entry);
-      if (part === "table" && ["columns", "sort", "below"].includes(key ?? "")) return fields;
+      if (part === "table" && ["columns", "sort", "below", "cover"].includes(key ?? ""))
+        return fields;
       if (part === "form" && key === "fieldOrder") return fields;
     }
     // A form section's fields: "- { name: contact, fields: [name, email] }".
