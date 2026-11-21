@@ -4,19 +4,62 @@ export const services = ["lunch", "dinner"] as const;
 export const serviceLabel = { lunch: "Lunch", dinner: "Dinner" };
 
 const weekdays = [
-  "sunday",
   "monday",
   "tuesday",
   "wednesday",
   "thursday",
   "friday",
   "saturday",
+  "sunday",
 ] as const;
 
 export function localServiceDay(instant: Date, zone?: string) {
   const date = wallTime(instant, zone).slice(0, 10);
-  const weekday = weekdays[new Date(`${date}T00:00:00Z`).getUTCDay()];
+  const day = new Date(`${date}T00:00:00Z`).getUTCDay();
+  const weekday = weekdays[(day + 6) % 7];
   return { date, weekday };
+}
+
+type ServingWindow = {
+  weekday: (typeof weekdays)[number];
+  service: (typeof services)[number];
+  hours: string;
+};
+
+/** Keep written hours as entered, with recognizable start times in chronological order. */
+function startsAt(hours: string): number {
+  const time = /^(\d{1,2}):(\d{2})\b/.exec(hours.trim());
+  if (!time) return Infinity;
+  const hour = Number(time[1]);
+  const minute = Number(time[2]);
+  return hour < 24 && minute < 60 ? hour * 60 + minute : Infinity;
+}
+
+export function servingWeek(windows: readonly ServingWindow[]) {
+  return weekdays.map((weekday) => ({
+    weekday,
+    hours: services.map((service) => ({
+      service,
+      times: windows
+        .filter((row) => row.weekday === weekday && row.service === service)
+        .map((row) => row.hours)
+        .sort((a, b) => startsAt(a) - startsAt(b) || a.localeCompare(b)),
+    })),
+  }));
+}
+
+export function dishSections<Dish extends { section: string | null }>(dishes: readonly Dish[]) {
+  const groups = new Map<string, { title: string | null; items: Dish[] }>();
+  for (const dish of dishes) {
+    const title = dish.section?.trim() || null;
+    const key = title?.toLowerCase() ?? "";
+    const group = groups.get(key) ?? { title, items: [] };
+    group.items.push(dish);
+    groups.set(key, group);
+  }
+  const other = groups.get("");
+  groups.delete("");
+  return other ? [...groups.values(), other] : [...groups.values()];
 }
 
 type MenuPeriod = {
