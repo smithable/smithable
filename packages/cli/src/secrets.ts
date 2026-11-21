@@ -178,9 +178,14 @@ function openOwn(path: string): [number, import("node:fs").Stats] {
     path,
     constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0) | (constants.O_NONBLOCK ?? 0),
   );
-  const stat = fstatSync(fd);
-  const owner = projectUser()?.uid ?? process.getuid?.() ?? stat.uid;
-  if (stat.isFile() && stat.nlink === 1 && stat.uid === owner) return [fd, stat];
+  try {
+    const stat = fstatSync(fd);
+    const owner = projectUser()?.uid ?? process.getuid?.() ?? stat.uid;
+    if (stat.isFile() && stat.nlink === 1 && stat.uid === owner) return [fd, stat];
+  } catch (error) {
+    closeSync(fd);
+    throw error;
+  }
   closeSync(fd);
   throw new Error(`${path} is not a file the child made.`);
 }
@@ -190,7 +195,7 @@ function openOwn(path: string): [number, import("node:fs").Stats] {
  * plain file with one name of the project user's (this process's where none is configured), so a
  * link the project put there cannot show this process's own files. Undefined when it is not there.
  */
-export function readOwn(path: string): string | undefined {
+export function readOwn(path: string, max = 64 * 1024): string | undefined {
   let opened: [number, import("node:fs").Stats];
   try {
     opened = openOwn(path);
@@ -199,7 +204,10 @@ export function readOwn(path: string): string | undefined {
     throw error;
   }
   try {
-    return readFileSync(opened[0], "utf8");
+    if (opened[1].size > max) throw new Error(`${path} is larger than ${max} bytes.`);
+    const buffer = Buffer.alloc(opened[1].size);
+    const read = readSync(opened[0], buffer, 0, buffer.length, 0);
+    return buffer.subarray(0, read).toString("utf8");
   } finally {
     closeSync(opened[0]);
   }

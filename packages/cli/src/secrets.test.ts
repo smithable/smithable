@@ -299,4 +299,5 @@ test("a file of the tree read by this process is not read through a link the pro
   expect(() => readOwn(join(tree, "notice.txt"))).toThrow();
   writeFileSync(join(tree, "plain.txt"), "a notice");
   expect(readOwn(join(tree, "plain.txt"))).toBe("a notice");
+  expect(() => readOwn(join(tree, "plain.txt"), 4)).toThrow("larger than");
 });
