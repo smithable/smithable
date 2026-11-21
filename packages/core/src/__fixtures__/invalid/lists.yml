@@ -14,6 +14,13 @@ models:
     fields:
       name: string!
       item: Item
+      parent: Tag
+  Ask:
+    fields:
+      item: Item
+      name: string!
+      email: email!
+      budget: money
 pages:
   catalog:
     crud: Item
@@ -25,6 +32,9 @@ pages:
   kept:
     crud: Item
     contact: { to: owner, keep: Tag }         # expect: invalid-value
+  asked:
+    crud: Item
+    contact: { to: owner, keep: Ask }         # expect: invalid-value
   nobody:
     crud: Item
     contact: { keep: Tag }                    # expect: missing-key

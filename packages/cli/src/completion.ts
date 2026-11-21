@@ -42,6 +42,7 @@ export function complete(words: string[], current: string, dir = "."): string[] 
       "kiosk",
       "barbers",
       "restaurant",
+      "builder",
     ];
   if (command === "security" && words.at(-1) === "--level") return ["fast", "normal", "release"];
   if (command === "deploy" && words.at(-1) === "--target") return ["docker", "compose"];

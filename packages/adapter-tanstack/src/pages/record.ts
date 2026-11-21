@@ -1065,8 +1065,9 @@ function changeTells(model: ModelIR, t: Texts, ir: SpecIR) {
 }
 
 function contactParts(page: PageIR, model: ModelIR, t: Texts, ir: SpecIR) {
-  const contact = page.contact as { to: string; keep?: string };
+  const contact = page.contact as { to: string; keep?: string; link?: string };
   const n = names(model, t);
+  const own = t.section(page.id, "contact");
   const field = model.fields.find((f) => f.name === contact.to);
   const key = contact.to === "owner" ? ownerKey(model) : `${contact.to}Id`;
   const recipient = field
@@ -1075,12 +1076,32 @@ function contactParts(page: PageIR, model: ModelIR, t: Texts, ir: SpecIR) {
   const title = titleField(model);
   const keep = contact.keep ? modelNamed(ir, contact.keep) : undefined;
   const kn = keep ? names(keep, t) : undefined;
-  // A kept copy: the keep model's name, email and message fields (it links to no other record).
+  // A kept copy: the keep model's name, email and message fields, and its one reference to this
+  // page's model, which the server fills with the record (never from the request).
+  const linkKey = contact.link ? `${contact.link}Id` : undefined;
+  const sent = ["name", "email", "message"];
+  // Fields of its own the sender fills: then the block asks the kept model's form, the landing
+  // contact form's (ModelForm, by its rule), with the reference left out.
+  const asks = keep ? keepAsks(keep, contact.link) : false;
   const kept = keep
-    ? ["name", "email", "message"]
-        .filter((f) => keep.fields.some((k) => k.name === f))
-        .map((f) => `${f}: sender.${f}`)
+    ? [
+        ...(asks ? ["...fields"] : []),
+        ...sent
+          .filter((f) => keep.fields.some((k) => k.name === f))
+          .map((f) => `${f}: sender.${f}`),
+        ...(linkKey ? [`${linkKey}: row.id`] : []),
+      ]
     : [];
+  const limits =
+    "name: z.string().trim().min(1).max(200), email: z.email().max(200), message: z.string().trim().min(1).max(2000)";
+  const validator =
+    asks && kn
+      ? `keptSchema${linkKey ? `.omit({ ${linkKey}: true })` : ""}.extend({ id: z.int(), ${limits} })`
+      : `z.object({ id: z.int(), ${limits} })`;
+  const texts = (["title", "text", "button", "thanks"] as const)
+    .filter((k) => own[k])
+    .map((k) => `\n        ${k}=${attr(own[k] as string)}`)
+    .join("");
   return {
     imports: `import { createServerFn } from "@tanstack/react-start";
 import { getRequestHeaders } from "@tanstack/react-start/server";
@@ -1089,7 +1110,7 @@ import { z } from "zod";
 import { db } from "#/db";
 import { user } from "#/db/schema";
 import { ${n.data} } from "#/generated/${kebab(model.name)}.server";
-${kn && keep ? `import { ${kn.data} } from "#/generated/${kebab(keep.name)}.server";\n` : ""}import { ContactOwner } from "#/kit/ContactOwner";
+${kn && keep ? `import { ${kn.data} } from "#/generated/${kebab(keep.name)}.server";\n` : ""}${asks && kn ? `import { ${kn.ui} as keptUi } from "${kn.module}";\nimport { ${kn.schema} as keptSchema } from "${kn.module}.schema";\n` : ""}import { ContactOwner } from "#/kit/ContactOwner";
 import { writeAllowed } from "#/kit/limit";
 import { mailConfigured, sendMail } from "#/kit/mail";
 import { currentViewer } from "#/lib/viewer.server";
@@ -1097,7 +1118,7 @@ import { currentViewer } from "#/lib/viewer.server";
     fn: `
 /** A message about this ${inert(n.label.toLowerCase())} to its ${inert(recipient)}, by mail; their address stays here. */
 const contact${model.name} = createServerFn({ method: "POST" })
-  .validator(z.object({ id: z.int(), name: z.string().trim().min(1).max(200), email: z.email().max(200), message: z.string().trim().min(1).max(2000) }))
+  .validator(${validator})
   .handler(async ({ data }) => {
     const viewer = await currentViewer();
     writeAllowed(viewer, getRequestHeaders());
@@ -1111,7 +1132,7 @@ ${
     const to = recipient ? db.select({ email: user.email }).from(user).where(eq(user.id, recipient)).get() : undefined;`
 }
     if (!to?.email) throw new Error("The ${quotedText(recipient)} cannot be reached.");
-    const sender = viewer ? { name: viewer.name, email: viewer.email, message: data.message } : data;
+${asks ? "    const { id: _id, ...fields } = data;\n" : ""}    const sender = viewer ? { name: viewer.name, email: viewer.email, message: data.message } : data;
     const name = ${title === "id" ? `\`${templateText(n.label)} #\${row.id}\`` : `String(row.${title})`};
     const link = \`\${process.env.BETTER_AUTH_URL ?? ""}${page.route === "/" ? "" : page.route}/\${row.id}\`;
     await sendMail({
@@ -1126,10 +1147,41 @@ ${
 `,
     element: `<ContactOwner
         recipient=${JSON.stringify(recipient)}
-        viewer={viewer}
-        onSend={(values) => contact${model.name}({ data: { id: row.id, ...values } })}
+        viewer={viewer}${texts}${
+          asks
+            ? `
+        form={(sent, button) => (
+          <ModelForm
+            ui={keptUi}
+            app={app}
+            schema={keptSchema${linkKey ? `.omit({ ${linkKey}: true })` : ""}}${linkKey ? `\n            options={{ ${linkKey}: null }}` : ""}
+            preset={viewer ? { name: viewer.name, email: viewer.email } : undefined}
+            stickyActions={false}
+            submitLabel={button}
+            onSubmit={async (values) => sent((await contact${model.name}({ data: { ...values, id: row.id } })).kept)}
+          />
+        )}`
+            : `
+        onSend={(values) => contact${model.name}({ data: { id: row.id, ...values } })}`
+        }
       />`,
   };
+}
+
+/**
+ * Whether a contact block's kept model has fields of its own the sender fills (beyond name, email,
+ * message and its reference to the record): the ones its form asks (not filled by the app).
+ */
+function keepAsks(keep: ModelIR, link: string | undefined): boolean {
+  return keep.fields.some(
+    (f) =>
+      !f.formula &&
+      !f.byApp &&
+      f.name !== link &&
+      f.name !== keep.ownedBy &&
+      !(f.type.kind === "relation" && f.type.many) &&
+      !["name", "email", "message"].includes(f.name),
+  );
 }
 
 /** A standard action's button on a record: it acts at once, or asks first in a dialog. */

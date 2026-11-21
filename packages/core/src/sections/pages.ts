@@ -633,6 +633,9 @@ function checkSearch(
   return fields.map((f) => f.name);
 }
 
+/** What a contact block's mail is made of: the sender's name and address, and the text. */
+const SENT = ["name", "email", "message"];
+
 /** A page's contact block: who it mails (the owner, or a user field of the model) and where a copy may be kept. */
 function checkContact(
   ctx: ParseContext,
@@ -659,23 +662,70 @@ function checkContact(
     }
   }
   if (contact.keep !== undefined) {
+    // Recorded whether or not it is there: a rename of the model follows it.
+    ctx.reference("model", contact.keep, contact.keepAt ?? contact.toAt);
     const kept = parsed.models?.find((m) => m.name === contact.keep);
-    if (!kept) {
-      ctx.reference("model", contact.keep, contact.keepAt ?? contact.toAt);
-      return {};
-    }
-    const links = kept.fields.filter(
-      (f) => f.type.kind === "relation" && !f.type.many && !f.formula,
-    );
+    if (!kept) return {};
+    const all = kept.fields.filter((f) => f.type.kind === "relation" && !f.type.many && !f.formula);
+    // One reference to the page's own model is filled by the server from the record the block is
+    // on (docs/design/marketplace.md §2.4); any other the sender would have to choose.
+    const link = all.filter((f) => f.type.kind === "relation" && f.type.model === model);
+    const links = link.length === 1 ? all.filter((f) => f !== link[0]) : all;
     if (links.length) {
       ctx.error(
         contact.keepAt ?? contact.toAt,
         "invalid-value",
         `A kept message's model cannot link to other records (${contact.keep} has ${links.map((f) => f.name).join(", ")}): the sender fills it in alone.`,
-        "Use a model of its own for messages, e.g. Message with name, email and message.",
+        `Use a model of its own for messages, e.g. Message with name, email and message; it may have one reference to ${model}, which is filled from the record.`,
       );
       return {};
     }
+    // Fields of its own make the block ask the kept model's form; the mail still needs these.
+    const own = kept.fields.some(
+      (f) =>
+        !f.formula &&
+        !f.byApp &&
+        f !== link[0] &&
+        f.name !== kept.ownedBy &&
+        !(f.type.kind === "relation" && f.type.many) &&
+        !SENT.includes(f.name),
+    );
+    const missing = SENT.filter((name) => !kept.fields.some((f) => f.name === name));
+    if (own && missing.length) {
+      ctx.error(
+        contact.keepAt ?? contact.toAt,
+        "invalid-value",
+        `${contact.keep} asks more than a message, so the block asks its own form, which also needs ${missing.join(", ")} (the mail's sender and text).`,
+        `Add ${missing.map((m) => `"${m}"`).join(", ")} to ${contact.keep}.`,
+      );
+      return {};
+    }
+    // The server writes the sender's name, email and message into these as text: plain text
+    // fields the sender may fill, never computed or the app's own.
+    const unfit = kept.fields.filter(
+      (f) =>
+        SENT.includes(f.name) &&
+        (f.formula ||
+          f.byApp ||
+          f.type.kind !== "scalar" ||
+          !["string", "text", "email"].includes(f.type.name)),
+    );
+    if (unfit.length) {
+      ctx.error(
+        contact.keepAt ?? contact.toAt,
+        "invalid-value",
+        `${contact.keep}'s ${unfit.map((f) => f.name).join(", ")} cannot hold what the sender writes: the kept copy stores the sender's name, email and message as text.`,
+        `Make them plain fields of type string, text or email.`,
+      );
+      return {};
+    }
+    return {
+      contact: {
+        to: contact.to,
+        keep: contact.keep,
+        ...(link.length === 1 && link[0] ? { link: link[0].name } : {}),
+      },
+    };
   }
-  return { contact: { to: contact.to, ...(contact.keep ? { keep: contact.keep } : {}) } };
+  return { contact: { to: contact.to } };
 }

@@ -1,6 +1,6 @@
 # Starters
 
-A starter is a complete app to begin from: its spec, real sample records and pictures, and the generated code. Make one with `smithable new <folder> --starter <name>`, change it with [operations](change.md) or in your own words, or start it without the sample records with `--no-sample-data`. The pictures below are the starters as `smithable new` makes them, at desktop width. Seven of the ten also have a page of their own on smithable.ai, all at [smithable.ai/starters](https://smithable.ai/starters); the support desk, the food truck and the barbershop are made with `smithable new` on your own machine.
+A starter is a complete app to begin from: its spec, real sample records and pictures, and the generated code. Make one with `smithable new <folder> --starter <name>`, change it with [operations](change.md) or in your own words, or start it without the sample records with `--no-sample-data`. The pictures below are the starters as `smithable new` makes them, at desktop width. Seven of the twelve also have a page of their own on smithable.ai, all at [smithable.ai/starters](https://smithable.ai/starters); the support desk, the food truck, the barbershop, the builder and the restaurant are made with `smithable new` on your own machine.
 
 ## CRM
 
@@ -118,6 +118,21 @@ For a barber, a hairdresser, a physiotherapist or anyone whose time is booked by
 
 ```sh
 smithable new my-shop --starter barbers
+```
+
+See it live: coming soon.
+
+## Builder
+
+*A builder's past work on show, and an estimate asked for from any of it.*
+
+![A past project with its estimate request, as a visitor sees it, with the builder starter, Northshore Joinery](starters/builder-1.webp)
+![The enquiries to follow up, with their status and the next date](starters/builder-2.webp)
+
+For a joiner, a builder, a painter or any trade whose work is shown by what it has done. Visitors see the services and the past projects (the builder adds their own photos), and ask for an estimate from the project nearest what they want: their name, email, phone and a message. The enquiry is kept with the project it came from, filled in by the app and never by the visitor, and the builder is mailed. The builder follows each enquiry up, from contacted to a site visit, a quote, and won or lost, with the date of the next step.
+
+```sh
+smithable new my-firm --starter builder
 ```
 
 See it live: coming soon.

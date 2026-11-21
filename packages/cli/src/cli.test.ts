@@ -77,7 +77,7 @@ test("new requires a directory and a known starter", async () => {
   expect(await run(["new"], io)).toBe(2);
   expect(await run(["new", "x", "--starter", "nope"], io)).toBe(2);
   expect(io.stderr).toContain(
-    'Unknown starter "nope". Available: api, barbers, booking, crm, invoicing, kiosk, marketplace, records, restaurant, status, support.',
+    'Unknown starter "nope". Available: api, barbers, booking, builder, crm, invoicing, kiosk, marketplace, records, restaurant, status, support.',
   );
 });
 

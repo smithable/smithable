@@ -1251,14 +1251,18 @@ export function patternInfo(page: PageIR) {
     inMenu: info.inMenu,
     access: info.access,
     routes: (route: string) => info.routes?.(route, pattern) ?? [],
-    parts: () => ({
+    parts: (): Record<string, string> => ({
       ...info.parts?.(pattern),
       ...Object.fromEntries(parts.map((s) => [s.name, s.kind])),
+      // A record page's contact block: its heading, text, button and thanks (marketplace.md §2.4).
+      ...(page.contact ? { contact: "contactBlock" } : {}),
     }),
     queries: () => info.queries?.(pattern) ?? [],
     forms: () => [
       ...(info.forms?.(pattern) ?? []),
       ...parts.flatMap((s) => (s.form ? [s.form] : [])),
+      // A record page's contact block keeps a copy of what a visitor sends.
+      ...(page.contact?.keep ? [page.contact.keep] : []),
     ],
     follow: (spec: YamlEditor, effect: Effect, ir: SpecIR) => {
       const own = info.follow?.(spec, page as PageIR & { pattern: PatternOf<"crud"> }, effect, ir);

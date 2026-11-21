@@ -1,0 +1,28 @@
+# Who signs in, the roles and the default access. Technology-neutral.
+smithableAuth: 0.1
+
+signIn:
+  providers: [email]
+  selfSignUp: false                  # the builder and whoever they invite; visitors need no account
+
+defaultAccess: shared                # a small team: everyone sees every enquiry
+
+roles:
+  admin:
+    description: The builder. Runs the team and the settings.
+  crew:
+    description: A carpenter. Follows up enquiries and keeps the projects and services current.
+    pages: all
+    create: all
+    write: all
+
+defaultRole: crew
+
+admins: [owner@northshore.example]
+
+# ⚠ PUBLIC: everything listed here is visible to anyone on the internet, without
+# signing in. Never add models that contain personal or business data.
+public:
+  pages: [home, projects, privacy]
+  read: [Service, Project]
+  create: [Enquiry]                  # a visitor's request for an estimate; only the builder reads it

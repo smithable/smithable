@@ -236,6 +236,62 @@ pages:
   expect(item).toContain("const row = found && shownTo(viewer, found);");
 });
 
+test("contact with a kept model that links the record: the server fills the link, never the request", () => {
+  const joinery = validateSpec({
+    path: "smithable.yml",
+    text: `smithable: 0.1
+app: { name: Joinery }
+models:
+  Project:
+    fields: { title: string! }
+  Ask:
+    fields: { project: Project, name: string!, email: email!, budget: money, message: text! }
+pages:
+  projects:
+    crud: Project
+    contact: { to: owner, keep: Ask }
+`,
+  }).ir as SpecIR;
+  const gen = generateApp(joinery, { smithableVersion: "0.0.0", auth, content: emptyContent() });
+  const page = gen.find((f) => f.path === "src/routes/projects/$id.tsx")?.content ?? "";
+  // The link is left out of what the request may say: zod drops a planted projectId...
+  expect(page).toContain(".validator(keptSchema.omit({ projectId: true }).extend({ id: z.int(),");
+  // ...the record is one this viewer may read (a hidden, trashed or other-scope one is not found)...
+  expect(page).toContain("const row = await projectData.get(viewer, data.id);");
+  expect(page).toContain("if (!row) throw new Error(");
+  // ...and the link is set last, from that record.
+  expect(page).toContain(
+    "await askData.create(viewer, { ...fields, name: sender.name, email: sender.email, message: sender.message, projectId: row.id });",
+  );
+  // The form asks the other plain fields with the landing's form, the link hidden.
+  expect(page).toContain("schema={keptSchema.omit({ projectId: true })}");
+  expect(page).toContain("options={{ projectId: null }}");
+  // get leaves out what is in the trash, for every reader.
+  const trashed = validateSpec({
+    path: "smithable.yml",
+    text: `smithable: 0.1
+app: { name: Joinery }
+models:
+  Project:
+    fields: { title: string! }
+    trash: true
+  Ask:
+    fields: { project: Project, name: string!, email: email!, message: text! }
+pages:
+  projects:
+    crud: Project
+    contact: { to: owner, keep: Ask }
+`,
+  }).ir as SpecIR;
+  const data =
+    generateApp(trashed, { smithableVersion: "0.0.0", auth, content: emptyContent() }).find(
+      (f) => f.path === "src/generated/project.server.ts",
+    )?.content ?? "";
+  expect(data).toContain(
+    "return and(isNull(schema.projects.deletedAt), projectData.scoped(viewer));",
+  );
+});
+
 test("the catalog as the start page: the site's frame at / and its records; a records section opens it", () => {
   const spec = validateSpec({
     path: "smithable.yml",

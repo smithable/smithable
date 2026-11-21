@@ -136,6 +136,11 @@ const SHOTS = {
       },
     ],
   ],
+  // A past project with its estimate request as a visitor sees it, and the enquiries to follow up.
+  builder: [
+    ["projects", 1, "visitor", true],
+    ["enquiries", "list", "admin"],
+  ],
   api: [
     ["admin", "tasks", "admin"],
     // A key just made: the card with the call to copy and an assistant's lines.

@@ -1,0 +1,16 @@
+# The joinery's services, as the starter shows them (docs/spec/v0.1.md, Sample data).
+- name: Renovation
+  summary: Old houses brought up to date without losing what makes them old. New floors, windows put right, walls insulated and boarded, kitchens and bathrooms rebuilt.
+  pricing: By the job, after a visit. The estimate lists the work, the materials and the weeks.
+- name: Extension
+  summary: A new room, a porch or a glazed veranda, built on proper foundations and joined to the house so it looks as if it was always there.
+  pricing: By the job, after a visit and the drawings. The building permit is part of the estimate when one is needed.
+- name: Sauna
+  summary: Saunas by the shore or in the garden, from the foundation to the benches, with a wood-burning or electric stove fitted by a licensed electrician.
+  pricing: By the job. A standard six-square-metre sauna has a fixed price; anything bigger after a visit.
+- name: Deck and jetty
+  summary: Decks, steps and jetties in pressure-treated pine or larch, built for salt water, ice and winter storms.
+  pricing: By the square metre for decks, by the job for jetties.
+- name: Repairs
+  summary: A sticking door, a rotten sill, a leaking window or storm damage. Small jobs between the larger ones.
+  pricing: By the hour, with the travel time. We say before we start how long we think it takes.

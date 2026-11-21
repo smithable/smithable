@@ -175,6 +175,8 @@ const SECTION_TEXTS: Record<
   contact: {
     texts: ["eyebrow", "title", "text", "address", "phone", "email", "hours", "button", "thanks"],
   },
+  // A record page's contact block; the kit's words where a text is not given.
+  contactBlock: { texts: ["title", "text", "button", "thanks"] },
   gallery: { texts: ["eyebrow", "title", "text"], items: ["image", "caption"] },
   // A calculator section: its heading, the results' heading, and its fields' labels and help.
   calculator: { texts: ["title", "text", "results"], fields: true },

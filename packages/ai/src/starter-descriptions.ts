@@ -64,6 +64,10 @@ export const STARTER_TEXTS: Record<string, StarterText> = {
     text: "A public restaurant website with lunch and dinner menu and dishes with prices, with staff we invite.",
     pages: { dish: "dishes", menu: "menu" },
   },
+  builder: {
+    text: "A builder's site where people browse our services and projects, with free estimates on enquiry, answered by staff we invite.",
+    pages: { project: "projects", enquiry: "enquiries", service: "services" },
+  },
 };
 
 export type Edit =

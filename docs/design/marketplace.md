@@ -64,6 +64,25 @@ pages:
 - Who may send follows the page: public pages let visitors send; others, signed-in viewers. Limited like other writes (the existing per-address limits), and refused when the owner is gone or has no email.
 - Differs from a landing page's `contact: { form: Message }`, which is a message to the site stored as a record; this one goes to the record's owner.
 
+**A kept copy that names the record (2026-11-21).** A request about a record (an estimate asked from a builder's past project, a question about an item) is worth keeping with the record it came from. So the kept model may have exactly one reference to the page's own model:
+
+```yaml
+models:
+  Enquiry:
+    fields: { project: Project, name: string!, email: email!, phone: phone, message: text! }
+pages:
+  projects:
+    crud: Project
+    contact: { to: owner, keep: Enquiry }
+```
+
+- The server fills `project` from the route's record, after reading it as the sender (`get(viewer, id)`): a record the sender may not read on that page, hidden, in the trash or in another scope, is refused like one that is not there. The reference is left out of what the request may carry, so a planted id is dropped, and it is set last, after the form's values.
+- No copying of the record's own references into the kept model: the link already gives them (`enquiry.project.service`), and choosing which of two references to copy would be a guess. Any other reference stays refused, as before, and so do two references to the page's model.
+- The block's form asks the kept model's other plain fields (not `by: app`) by the landing contact form's code, with name, email and message as before; a kept model that asks more than a message must still have those three.
+- Its texts are content: `pages.<page>.contact { title, text, button, thanks }`, the kit's words where unsaid.
+- The kept model stays under `public.create` for visitors, with the block's limits unchanged. Its generic create is unchanged too: a reference written there must already name a record the writer may read (its reference check), so the block adds no new way to reach a hidden record.
+- `smithable validate --explain` says which reference the block fills.
+
 ### 2.5 The catalogue as the start page; a searchable records section
 
 - A crud page may take `route: /`. The app then starts on the list, in the site frame, with the landing page optional. Validation refuses two pages at `/`.

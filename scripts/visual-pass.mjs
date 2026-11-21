@@ -22,6 +22,7 @@ const STARTERS = [
   "support",
   "kiosk",
   "barbers",
+  "builder",
   "api",
 ];
 const { values: opts, positionals } = parseArgs({
