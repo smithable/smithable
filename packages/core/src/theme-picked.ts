@@ -10,7 +10,6 @@ fonts: { body: Chivo, heading: Bungee }
 headings: { weight: 400, tracking: normal, case: upper }
 surfaces: { cards: bordered }
 buttons: { shape: square }
-pictures: { treatment: duotone }
 tables: { numbers: tabular }
 radius: 4px
 shadow: none
@@ -239,7 +238,7 @@ fonts: { body: Hanken Grotesk, heading: Mona Sans }
 headings: { weight: 300, tracking: tight }
 surfaces: { cards: glass }
 buttons: { shape: square }
-pictures: { treatment: duotone }
+pictures: { treatment: muted }
 tables: { numbers: tabular }
 radius: 0px
 shadow: raised
@@ -276,7 +275,6 @@ fonts: { body: Hanken Grotesk, heading: Outfit }
 headings: { weight: 500, tracking: tight }
 surfaces: { cards: raised, dividers: light }
 buttons: { shape: pill }
-pictures: { treatment: duotone }
 tables: { numbers: tabular }
 radius: 16px
 shadow: small
@@ -425,7 +423,6 @@ fonts: { body: Inter, heading: Bodoni Moda }
 headings: { weight: 400, tracking: tight, scale: large }
 surfaces: { cards: bordered, dividers: light }
 buttons: { shape: square }
-pictures: { treatment: duotone }
 tables: { numbers: tabular }
 radius: 0px
 shadow: none
@@ -534,7 +531,6 @@ fonts: { body: Hanken Grotesk, heading: Oswald }
 headings: { weight: 400, tracking: wide, scale: large, case: upper }
 surfaces: { cards: bordered }
 buttons: { shape: square }
-pictures: { treatment: duotone }
 tables: { numbers: tabular }
 radius: 0px
 shadow: none
@@ -990,7 +986,6 @@ fonts: { body: Source Serif 4, heading: Mona Sans }
 headings: { weight: 800, tracking: tight }
 surfaces: { cards: bordered, dividers: light }
 buttons: { shape: rounded }
-pictures: { treatment: duotone }
 tables: { numbers: tabular }
 radius: 2px
 shadow: none
@@ -1102,7 +1097,6 @@ fonts: { body: Hanken Grotesk, heading: JetBrains Mono }
 headings: { weight: 500, tracking: tight }
 surfaces: { cards: bordered }
 buttons: { shape: square }
-pictures: { treatment: duotone }
 tables: { numbers: tabular }
 radius: 0px
 shadow: none
@@ -1178,7 +1172,6 @@ fonts: { body: Hanken Grotesk, heading: Oswald }
 headings: { weight: 700, tracking: normal, scale: large, case: upper }
 surfaces: { cards: bordered, dividers: light }
 buttons: { shape: rounded }
-pictures: { treatment: duotone }
 tables: { numbers: tabular }
 radius: 4px
 shadow: none
@@ -1643,7 +1636,6 @@ fonts: { body: Hanken Grotesk, heading: Oswald }
 headings: { weight: 400, tracking: normal, scale: large, case: upper }
 surfaces: { cards: bordered, dividers: light }
 buttons: { shape: square }
-pictures: { treatment: duotone }
 radius: 0px
 shadow: none
 density: comfortable
@@ -1760,7 +1752,6 @@ fonts: { body: Hanken Grotesk }
 headings: { weight: 700, tracking: tight }
 surfaces: { cards: bordered, dividers: light }
 buttons: { shape: square }
-pictures: { treatment: duotone }
 radius: 0px
 shadow: none
 density: comfortable
