@@ -431,6 +431,14 @@ export class TooLarge extends Error {
 }
 
 /** A request's JSON body, refused past `max` bytes: by its stated length before anything is read, and while it is read. */
+/** A picture of the project's as Studio serves it: the project's own file, or none. */
+export const projectImage = (dir: string, path: string): Buffer | undefined =>
+  readTreeOrNone(join(dir, "public", "images", path), 32 << 20);
+
+/** A declared plugin's code as Studio serves it to the tab: the project's own file, or none. */
+export const projectPlugin = (dir: string, name: string): Buffer | undefined =>
+  declaredPlugins(dir).includes(name) ? readTreeOrNone(pluginPath(dir, name)) : undefined;
+
 export async function readJson(
   chunks: AsyncIterable<Buffer | string>,
   length: string | undefined,
@@ -1267,7 +1275,7 @@ export async function studio(
           url.pathname,
         );
       if (image) {
-        const bytes = readTreeOrNone(join(dir, "public", "images", image[1] as string), 32 << 20);
+        const bytes = projectImage(dir, image[1] as string);
         if (!bytes) return json({ ok: false }, 404);
         res.writeHead(200, {
           "Content-Type":
@@ -1280,8 +1288,7 @@ export async function studio(
         return res.end(bytes);
       }
       const plugin = /^\/api\/plugins\/([\w-]+)\.mjs$/.exec(url.pathname)?.[1];
-      const code =
-        plugin && declaredPlugins(dir).includes(plugin) && readTreeOrNone(pluginPath(dir, plugin));
+      const code = plugin && projectPlugin(dir, plugin);
       if (code) {
         res.writeHead(200, { "Content-Type": "text/javascript", "Cache-Control": "no-cache" });
         return res.end(code);
