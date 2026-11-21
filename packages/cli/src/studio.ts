@@ -101,7 +101,7 @@ import { restore } from "./restore.js";
 import { projectIndex } from "./rules.js";
 import { doorAt, projectPeople } from "./sample-people.js";
 import { sampleRunner } from "./sample-run.js";
-import { childOptions, studioToken } from "./secrets.js";
+import { childOptions, readOwn, studioToken } from "./secrets.js";
 import {
   pictureHashes,
   pictureStyleCards,
@@ -952,7 +952,11 @@ export async function studio(
     if (!result.ok) replaceable = true;
     writePreviewConfig();
     pending = undefined;
-    notice = existsSync(noticeFile) ? readFileSync(noticeFile, "utf8").trim() : undefined;
+    try {
+      notice = readOwn(noticeFile)?.trim();
+    } catch {
+      notice = undefined;
+    }
     changeTree([{ path: noticeFile, data: null }]);
     await settled();
     // The log starts with the person's app: nothing of the app that was here, and nothing

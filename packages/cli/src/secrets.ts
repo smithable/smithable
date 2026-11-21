@@ -172,6 +172,39 @@ export function sealScratch(dir: string): void {
   if (projectUser()) chmodSync(dir, 0o2750);
 }
 
+/** A file of the project's opened as `copyBack` and `readOwn` open it, or an error. */
+function openOwn(path: string): [number, import("node:fs").Stats] {
+  const fd = openSync(
+    path,
+    constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0) | (constants.O_NONBLOCK ?? 0),
+  );
+  const stat = fstatSync(fd);
+  const owner = projectUser()?.uid ?? process.getuid?.() ?? stat.uid;
+  if (stat.isFile() && stat.nlink === 1 && stat.uid === owner) return [fd, stat];
+  closeSync(fd);
+  throw new Error(`${path} is not a file the child made.`);
+}
+
+/**
+ * A small file of the project's tree read by this process: not through a link at its end, a
+ * plain file with one name of the project user's (this process's where none is configured), so a
+ * link the project put there cannot show this process's own files. Undefined when it is not there.
+ */
+export function readOwn(path: string): string | undefined {
+  let opened: [number, import("node:fs").Stats];
+  try {
+    opened = openOwn(path);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return undefined;
+    throw error;
+  }
+  try {
+    return readFileSync(opened[0], "utf8");
+  } finally {
+    closeSync(opened[0]);
+  }
+}
+
 /**
  * Copies a file a child made into `to`, a new file in a folder of this process's, so that what
  * is read or opened later is this process's own copy. The child's file is opened without following
@@ -179,15 +212,8 @@ export function sealScratch(dir: string): void {
  * process's where none is configured); anything else is refused.
  */
 export function copyBack(from: string, to: string): void {
-  const fd = openSync(
-    from,
-    constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0) | (constants.O_NONBLOCK ?? 0),
-  );
+  const [fd, stat] = openOwn(from);
   try {
-    const stat = fstatSync(fd);
-    const owner = projectUser()?.uid ?? process.getuid?.() ?? stat.uid;
-    if (!stat.isFile() || stat.nlink !== 1 || stat.uid !== owner)
-      throw new Error(`${from} is not a file the child made.`);
     const out = openSync(to, "wx", 0o600);
     try {
       // The size it had when opened: a project process still holding it open cannot add to it.

@@ -8,15 +8,20 @@ import { asProject } from "./as-project.js";
 
 /**
  * A file to write (making its folders) or append to; with `data: null`, one file to remove; with
- * `from`, a file of the tree renamed to `path`.
+ * `from`, a file of the tree renamed to `path`; with `folder`, a folder made with those above it.
  */
 export type TreeChange =
   | { path: string; data: string | Uint8Array | null; mode?: number; append?: boolean }
-  | { path: string; from: string };
+  | { path: string; from: string }
+  | { path: string; folder: true };
 
 /** Applies the changes in order, all in one child where there is a project user. */
 export const changeTree = asProject("changeTree", (changes: TreeChange[]): void => {
   for (const change of changes) {
+    if ("folder" in change) {
+      mkdirSync(change.path, { recursive: true });
+      continue;
+    }
     if ("from" in change) {
       renameSync(change.from, change.path);
       continue;

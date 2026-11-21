@@ -35,6 +35,7 @@ import { loadPlugins } from "./plugins.js";
 import { privacyStates } from "./privacy-review.js";
 import { childOptions } from "./secrets.js";
 import type { Level, Result } from "./security.js";
+import { changeTree } from "./tree-files.js";
 import { loadSpec } from "./validate.js";
 import { assetReview } from "./website-assets.js";
 
@@ -143,7 +144,14 @@ function deploymentRecord(dir: string): Deployment | undefined {
 /** Short synchronous metadata writes are serialized; interrupted locks fail closed. */
 function locked<T>(dir: string, write: () => T): T {
   const root = join(dir, STATE);
-  mkdirSync(root, { recursive: true });
+  // Not through a link the project put on the way: the lock is this process's own file.
+  let on = dir;
+  for (const part of STATE.split("/")) {
+    on = join(on, part);
+    if (lstatSync(on, { throwIfNoEntry: false })?.isSymbolicLink())
+      throw new Error(`${on} is a link; release evidence is not written through it.`);
+  }
+  changeTree([{ path: root, folder: true }]);
   const path = join(root, "writer.lock");
   let fd: number;
   try {
@@ -169,8 +177,10 @@ function save(
 ): void {
   const path = join(dir, STATE, name),
     staging = `${path}.${randomUUID()}`;
-  writeFileSync(staging, JSON.stringify(value), { mode: 0o600 });
-  renameSync(staging, path);
+  changeTree([
+    { path: staging, data: JSON.stringify(value), mode: 0o600 },
+    { path, from: staging },
+  ]);
 }
 /** Git-visible project files only; configuration, live data and ignored files are separate. */
 export function projectRevision(dir: string): string | undefined {

@@ -24,6 +24,7 @@ import {
   holdSecretsFromJson,
   loadsNoProjectCode,
   modelKey,
+  readOwn,
   releaseSecretsForTests,
   scratchDir,
   sealScratch,
@@ -286,4 +287,16 @@ test("a process whose children run as the project's user loads none of the proje
     .filter((f) => f.endsWith(".ts") && !f.endsWith(".test.ts") && f !== "secrets.ts")
     .filter((f) => readFileSync(join(here, f), "utf8").includes("holdsSecret("));
   expect(bySecret).toEqual([]);
+});
+
+test("a file of the tree read by this process is not read through a link the project put there", () => {
+  const mine = mkdtempSync(join(tmpdir(), "smithable-own-"));
+  const tree = mkdtempSync(join(tmpdir(), "smithable-tree-"));
+  dirs.push(mine, tree);
+  writeFileSync(join(mine, "secret"), "this process's own");
+  expect(readOwn(join(tree, "notice.txt"))).toBeUndefined();
+  symlinkSync(join(mine, "secret"), join(tree, "notice.txt"));
+  expect(() => readOwn(join(tree, "notice.txt"))).toThrow();
+  writeFileSync(join(tree, "plain.txt"), "a notice");
+  expect(readOwn(join(tree, "plain.txt"))).toBe("a notice");
 });
