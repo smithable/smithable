@@ -157,9 +157,10 @@ rebase_generated() {
   branch=$(gh pr view "$pr" --json headRefName -q .headRefName)
   [ "$(git rev-parse --abbrev-ref HEAD)" = "$branch" ] || { echo "#$pr: run this in its own worktree, on $branch, to rebase it."; return 1; }
   [ -z "$(git status --porcelain)" ] || { echo "#$pr: its worktree has changes: commit or drop them first."; return 1; }
-  git fetch -q origin main "$branch"
-  # FETCH_HEAD names main here (the first ref fetched), never the branch: compare with origin's
-  # branch, and go back to this commit on a failure, not to main.
+  # Both remote-tracking refs by name (FETCH_HEAD would name main, the first ref fetched): the
+  # head check compares with origin's branch, and a failure goes back to this commit, not to main.
+  git fetch -q origin "refs/heads/main:refs/remotes/origin/main" "refs/heads/$branch:refs/remotes/origin/$branch" ||
+    { echo "#$pr: could not fetch main and $branch from origin."; return 1; }
   start=$(git rev-parse HEAD)
   [ "$start" = "$(git rev-parse "refs/remotes/origin/$branch")" ] || { echo "#$pr: the worktree is not at the branch's head on GitHub."; return 1; }
   echo "#$pr has conflicts: rebasing on main, where only generated files may clash."
