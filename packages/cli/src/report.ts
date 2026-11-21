@@ -9,6 +9,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import type { Io } from "./io.js";
+import { readTreeOrNone } from "./secrets.js";
 import { writeTreeFile } from "./tree-files.js";
 import { VERSION } from "./version.js";
 
@@ -135,19 +136,12 @@ function redactArgs(args: Record<string, unknown>): Record<string, unknown> {
 
 /** The report for the last failure, or undefined when nothing has failed. */
 export function buildReport(dir: string, log: string[] = []): Report | undefined {
-  const path = join(dir, FAILURE);
-  if (!existsSync(path)) return undefined;
-  const failure = JSON.parse(readFileSync(path, "utf8")) as Failure;
-  const files: Record<string, string> = {};
-  for (const name of SPEC_FILES)
-    if (existsSync(join(dir, name))) files[name] = readFileSync(join(dir, name), "utf8");
-  const themes = join(dir, "themes");
-  if (existsSync(themes))
-    for (const name of readdirSync(themes).filter((f) => f.endsWith(".yml")))
-      files[`themes/${name}`] = readFileSync(join(themes, name), "utf8");
+  const raw = readTreeOrNone(join(dir, FAILURE));
+  if (!raw) return undefined;
+  const failure = JSON.parse(raw.toString("utf8")) as Failure;
   // Addresses are people's, not the app's: left out of every file (the admins' in the auth
   // file, a sender's in the spec or the texts), the error, the log and the arguments.
-  for (const name of Object.keys(files)) files[name] = redact(files[name] as string);
+  const files = specFilesOf(dir);
   return {
     smithable: VERSION,
     node: process.version,
@@ -233,12 +227,15 @@ export interface Feedback {
 /** The spec files as a report sends them: the five files and the themes, addresses left out. */
 export function specFilesOf(dir: string): Record<string, string> {
   const files: Record<string, string> = {};
-  for (const name of SPEC_FILES)
-    if (existsSync(join(dir, name))) files[name] = redact(readFileSync(join(dir, name), "utf8"));
+  // Each as the project's own file: one that is not (a link put in the tree) is left out.
+  const add = (name: string) => {
+    const text = readTreeOrNone(join(dir, name))?.toString("utf8");
+    if (text !== undefined) files[name] = redact(text);
+  };
+  for (const name of SPEC_FILES) add(name);
   const themes = join(dir, "themes");
   if (existsSync(themes))
-    for (const name of readdirSync(themes).filter((f) => f.endsWith(".yml")))
-      files[`themes/${name}`] = redact(readFileSync(join(themes, name), "utf8"));
+    for (const name of readdirSync(themes).filter((f) => f.endsWith(".yml"))) add(`themes/${name}`);
   return files;
 }
 

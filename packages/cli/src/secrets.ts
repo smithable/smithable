@@ -9,6 +9,7 @@ import {
   chownSync,
   closeSync,
   constants,
+  existsSync,
   fstatSync,
   lstatSync,
   mkdirSync,
@@ -198,6 +199,10 @@ function openOwn(path: string): [number, Stats] {
  * link the project put there cannot show this process's own files. Undefined when it is not there.
  */
 export function readOwn(path: string, max = 64 * 1024): string | undefined {
+  return readOwnBytes(path, max)?.toString("utf8");
+}
+
+function readOwnBytes(path: string, max: number): Buffer | undefined {
   let opened: [number, Stats];
   try {
     opened = openOwn(path);
@@ -209,9 +214,33 @@ export function readOwn(path: string, max = 64 * 1024): string | undefined {
     if (opened[1].size > max) throw new Error(`${path} is larger than ${max} bytes.`);
     const buffer = Buffer.alloc(opened[1].size);
     const read = readSync(opened[0], buffer, 0, buffer.length, 0);
-    return buffer.subarray(0, read).toString("utf8");
+    return buffer.subarray(0, read);
   } finally {
     closeSync(opened[0]);
+  }
+}
+
+/**
+ * A file of the project's tree whose content this process shows or sends on (Studio's pages, a
+ * report). Where children run under a configured uid it is read as `readOwn` reads it, so a link
+ * the project put on its path cannot show this process's own files; otherwise as before.
+ * Undefined when it is not there; an error when it is there but not a plain file of the project's.
+ */
+export function readTree(path: string, max = 8 * 1024 * 1024): Buffer | undefined {
+  if (projectUser()) return readOwnBytes(path, max);
+  return existsSync(path) ? readFileSync(path) : undefined;
+}
+
+/** `readTree` as text. */
+export const readTreeText = (path: string, max?: number): string | undefined =>
+  readTree(path, max)?.toString("utf8");
+
+/** `readTree` where a file it refuses is left out, as if it were not there (a picture, a mail). */
+export function readTreeOrNone(path: string, max?: number): Buffer | undefined {
+  try {
+    return readTree(path, max);
+  } catch {
+    return undefined;
   }
 }
 

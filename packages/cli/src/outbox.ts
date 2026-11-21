@@ -1,8 +1,9 @@
 // The preview's outbox for Studio: the mails an app kept instead of sending (a preview has no
 // mail settings), so a creator can open an invitation's link or read a sign-in code there. Only
 // Studio reads it, behind its own token; the app itself never serves data/.
-import { readdirSync, readFileSync } from "node:fs";
+import { readdirSync } from "node:fs";
 import { join } from "node:path";
+import { readTreeOrNone } from "./secrets.js";
 
 export interface KeptMail {
   file: string;
@@ -25,7 +26,11 @@ export function readOutbox(dir: string, limit = 50): KeptMail[] {
   } catch {
     return [];
   }
-  return files.map((file) => parseMail(file, readFileSync(join(outbox, file), "utf8")));
+  // Each as the project's own file: one that is not (a link the app put there) is left out.
+  return files.flatMap((file) => {
+    const raw = readTreeOrNone(join(outbox, file));
+    return raw ? [parseMail(file, raw.toString("utf8"))] : [];
+  });
 }
 
 /** One mail as the kit's mailer writes it: headers, a blank line, a text body. */

@@ -101,7 +101,7 @@ import { restore } from "./restore.js";
 import { projectIndex } from "./rules.js";
 import { doorAt, projectPeople } from "./sample-people.js";
 import { sampleRunner } from "./sample-run.js";
-import { childOptions, readOwn, studioToken } from "./secrets.js";
+import { childOptions, readOwn, readTreeOrNone, readTreeText, studioToken } from "./secrets.js";
 import {
   pictureHashes,
   pictureStyleCards,
@@ -833,7 +833,9 @@ export async function studio(
   // A message for the first to open Studio, left by whoever made the project (a hosted
   // workspace says why a description could not be used), shown once.
   const noticeFile = join(dir, NOTICE);
-  let notice = existsSync(noticeFile) ? readFileSync(noticeFile, "utf8").trim() : undefined;
+  let notice = readTreeOrNone(noticeFile, 64 * 1024)
+    ?.toString("utf8")
+    .trim();
   // A leftover server Studio could not stop: if its port still answers, the person is told.
   if (leftover)
     void fetch(`http://${OLD_HOST}:${leftover.port}/`, { signal: AbortSignal.timeout(3000) }).then(
@@ -847,8 +849,7 @@ export async function studio(
   const state = () => {
     const quiet = { out: () => {}, err: () => {} };
     const { ir, auth, themes } = loadSpec(dir, quiet);
-    const read = (f: string) =>
-      existsSync(join(dir, f)) ? readFileSync(join(dir, f), "utf8") : undefined;
+    const read = (f: string) => readTreeText(join(dir, f));
     return {
       name: ir?.app.name ?? "",
       // The themes the ux file may name, each with its picture, for the Look tab's cards.
@@ -1266,8 +1267,8 @@ export async function studio(
           url.pathname,
         );
       if (image) {
-        const file = join(dir, "public", "images", image[1] as string);
-        if (!existsSync(file)) return json({ ok: false }, 404);
+        const bytes = readTreeOrNone(join(dir, "public", "images", image[1] as string), 32 << 20);
+        if (!bytes) return json({ ok: false }, 404);
         res.writeHead(200, {
           "Content-Type":
             image[2] === "svg"
@@ -1276,12 +1277,14 @@ export async function studio(
           "Content-Security-Policy": "sandbox; default-src 'none'; style-src 'unsafe-inline'",
           "Cache-Control": "no-cache",
         });
-        return res.end(readFileSync(file));
+        return res.end(bytes);
       }
       const plugin = /^\/api\/plugins\/([\w-]+)\.mjs$/.exec(url.pathname)?.[1];
-      if (plugin && declaredPlugins(dir).includes(plugin)) {
+      const code =
+        plugin && declaredPlugins(dir).includes(plugin) && readTreeOrNone(pluginPath(dir, plugin));
+      if (code) {
         res.writeHead(200, { "Content-Type": "text/javascript", "Cache-Control": "no-cache" });
-        return res.end(readFileSync(pluginPath(dir, plugin)));
+        return res.end(code);
       }
       const change = /^\/api\/change\/([0-9a-f]{40})$/.exec(url.pathname)?.[1];
       if (change && ownRepository(dir)) {

@@ -51,6 +51,7 @@ import type { Io } from "./io.js";
 import { readRecords, sha256 } from "./picture-style.js";
 import { loadPlugins } from "./plugins.js";
 import { contextFacts, reviewsFor } from "./privacy-review.js";
+import { readTreeText } from "./secrets.js";
 
 /**
  * Reads and validates the spec with its companions: smithable.auth.yml (required) and,
@@ -259,7 +260,9 @@ export function projectTranslations(dir: string): Record<string, string> {
   return Object.fromEntries(
     LANGUAGES.flatMap((language) => {
       const file = join(dir, translationPath(language));
-      return existsSync(file) ? [[language, readFileSync(file, "utf8")]] : [];
+      // Shown whole in Studio: read as the project's own file (secrets.ts readTreeText).
+      const text = readTreeText(file);
+      return text === undefined ? [] : [[language, text]];
     }),
   );
 }
