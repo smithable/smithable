@@ -390,9 +390,19 @@ try {
     await outbox.waitFor({ state: "hidden" });
   });
   await step("Edit look shares the current preview and keeps drafts read-only", async () => {
-    // The main preview's legacy sign-in can still be completing after its sign-in HTML hydrates.
-    // Establish its actual app session before taking the editor's no-write baseline.
-    await openPreview("/customers");
+    // Start on the signed-in overview, then navigate the app while a different address is typed.
+    await preview
+      .locator('body[data-page="start"][data-hydrated=true]')
+      .waitFor({ timeout: 90000 * P });
+    const address = await openPreviewAddress(page);
+    await address.fill("/customers");
+    const iframe = await page.locator('iframe[title="App preview"]').elementHandle();
+    const frame = await iframe.contentFrame();
+    await frame.goto(new URL("/orders", frame.url()).href);
+    await page.locator('[data-preview-page][data-preview-current="/orders"]').waitFor();
+    if ((await address.inputValue()) !== "/customers")
+      throw new Error("the preview's navigation replaced the typed address");
+    await address.press("Enter");
     await preview
       .locator('body[data-page="customers"][data-hydrated=true]')
       .waitFor({ timeout: 90000 * P });
