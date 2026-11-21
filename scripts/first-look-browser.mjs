@@ -65,7 +65,14 @@ try {
   }
   if (!ready) throw new Error(`Studio startup timeout: ${log}`);
   browser = await chromium.launch();
-  if (smoke) await checkStudioSmoke(browser, base, root);
+  // The picker opens only for an app as made (T1163): each smoke run after the first starts from
+  // the app's history as it was when Studio was ready.
+  const made = execFileSync("git", ["-C", dir, "rev-parse", "HEAD"], { encoding: "utf8" }).trim();
+  const asMade = () => {
+    execFileSync("git", ["-C", dir, "reset", "-q", "--hard", made]);
+    execFileSync("git", ["-C", dir, "clean", "-fdq"]);
+  };
+  if (smoke) await checkStudioSmoke(browser, base, root, asMade);
   else if (selection) await checkStudioSelection(browser, base);
   else await checkFirstLook(browser, base);
 } catch (error) {

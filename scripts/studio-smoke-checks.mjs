@@ -112,11 +112,13 @@ async function checkPreviewRange(page) {
   assert.ok(passedArrow, "Shift+Arrow is available to the app outside explicit Select mode");
 }
 
-export async function checkStudioSmoke(browser, base, evidence) {
+export async function checkStudioSmoke(browser, base, evidence, asMade) {
   for (const [phone, choice] of [
     [false, "Keep this look"],
     [true, "Cancel"],
   ]) {
+    // The wide run's Keep changed the app, so the phone run needs it as made again.
+    if (phone) asMade();
     const context = await browser.newContext({
       viewport: phone ? { width: 390, height: 844 } : { width: 1440, height: 900 },
     });

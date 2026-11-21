@@ -53,10 +53,18 @@ async function checkPickerAlone(browser, base) {
     await page.goto(base);
     const picker = page.getByRole("dialog", { name: "Choose a look", exact: true });
     await picker.waitFor();
-    assert.deepEqual(await windows(), ["preview"], "windows beside the open picker");
+    // The preview is its own box, not a [data-window]: beside the picker it is all that shows.
+    await page.locator("[data-guide-view]").waitFor();
+    assert.deepEqual(await windows(), [], "windows beside the open picker");
     const sent = operations(page);
     const tried = page.frameLocator('iframe[title="App preview"]').locator("#sm-theme");
-    const other = picker.locator('button[aria-pressed="false"]').first();
+    // By its name: a locator on aria-pressed="false" would move to another card after the click.
+    const name = await picker
+      .locator('button[aria-pressed="false"]')
+      .first()
+      .getAttribute("aria-label");
+    assert.ok(name, "a theme card needs an accessible name");
+    const other = picker.getByRole("button", { name, exact: true });
     await other.click();
     assert.equal(await other.getAttribute("aria-pressed"), "true", "the card shows chosen at once");
     await tried.waitFor({ state: "attached" });
@@ -65,11 +73,7 @@ async function checkPickerAlone(browser, base) {
     await tried.waitFor({ state: "detached" });
     assert.deepEqual(sent, [], "a tried or cancelled theme wrote something");
     await page.locator("[data-window='manual']").waitFor();
-    assert.deepEqual(
-      (await windows()).sort(),
-      ["manual", "preview", "smith"],
-      "windows after the picker",
-    );
+    assert.deepEqual((await windows()).sort(), ["manual", "smith"], "windows after the picker");
   } finally {
     await context.close();
   }
@@ -150,7 +154,7 @@ export async function checkFirstLook(browser, base) {
     assert.equal(await look.getAttribute("aria-pressed"), "true");
     await panel.getByRole("button", { name: alternativeName, pressed: true }).waitFor();
     const opened = await panel.boundingBox();
-    const preview = await page.locator("[data-window='preview']").boundingBox();
+    const preview = await page.locator("[data-guide-view]").boundingBox();
     assert.ok(
       opened &&
         preview &&
