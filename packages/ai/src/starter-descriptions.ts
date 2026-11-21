@@ -60,6 +60,10 @@ export const STARTER_TEXTS: Record<string, StarterText> = {
     text: "A barbershop where people browse our services and barbers and book an appointment with a barber for a service, at a time that is free.",
     pages: { appointment: "appointments", service: "services", barber: "barbers" },
   },
+  builder: {
+    text: "A builder's site where people browse our services and projects, with free estimates on enquiry, answered by staff we invite.",
+    pages: { project: "projects", enquiry: "enquiries", service: "services" },
+  },
 };
 
 export type Edit =

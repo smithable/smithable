@@ -43,11 +43,11 @@ actions:
   contacted:
     on: Enquiry
     when: { status: new }
-    set: { status: contacted, followUpOn: }
+    set: { status: contacted, followUpOn: 'DATEADD(TODAY(), 3, "day")' }
   visited:
     on: Enquiry
     when: { status: contacted }
-    set: { status: visited, followUpOn: }
+    set: { status: visited, followUpOn: 'DATEADD(TODAY(), 2, "day")' }
   quoted:
     on: Enquiry
     when: { status: [contacted, visited] }

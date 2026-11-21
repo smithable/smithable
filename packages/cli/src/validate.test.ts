@@ -74,6 +74,14 @@ test("validate --explain says what a hero's buttons open, by rule or as written"
   expect(invoicing.stdout).toContain("home hero: button opens overview; no second button");
 });
 
+test("validate --explain says which reference the contact block fills from the record", async () => {
+  const io = captureIo();
+  expect(await run(["validate", join(examples, "builder"), "--explain"], io)).toBe(0);
+  expect(io.stdout).toContain(
+    "projects contact: mails the record's owner, keeps a copy in Enquiry, its project filled with the record by the server (never from the message)",
+  );
+});
+
 test("Explain says which theme defaults apply, which explicit UX masks, and why others skip", async () => {
   const dir = tempDir("smithable-look-defaults-explain-");
   writeFileSync(

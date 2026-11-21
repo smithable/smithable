@@ -279,6 +279,68 @@ pages:
   expect(linked.diagnostics.map((d) => d.message).join()).toContain("cannot link to other records");
 });
 
+// The contact block on a record (marketplace.md §2.4): its kept model may have one reference to
+// the page's own model, which the server fills from the record; any other is refused.
+test("the contact block's kept model: one reference to the page's model, and its texts", () => {
+  const spec = (ask: string) =>
+    validateSpec({
+      path: "smithable.yml",
+      text: `smithable: 0.1
+app: { name: Joinery }
+models:
+  Tag:
+    fields: { name: string! }
+  Project:
+    fields: { title: string! }
+  Ask:
+    fields: { ${ask} }
+pages:
+  projects:
+    crud: Project
+    contact: { to: owner, keep: Ask }
+`,
+    });
+  const kept = spec(
+    "project: Project, name: string!, email: email!, budget: money, message: text!",
+  );
+  expect(kept.diagnostics.filter((d) => d.severity === "error")).toEqual([]);
+  expect(kept.ir?.pages[0]?.contact).toEqual({ to: "owner", keep: "Ask", link: "project" });
+  const errors = (ask: string) =>
+    spec(ask)
+      .diagnostics.filter((d) => d.severity === "error")
+      .map((d) => d.message)
+      .join();
+  // Two references to the page's model: which one the record fills would be a guess.
+  expect(
+    errors("project: Project, also: Project, name: string!, email: email!, message: text!"),
+  ).toContain("cannot link to other records");
+  // A reference to anything else: visitors would pick among records.
+  expect(
+    errors("project: Project, tag: Tag, name: string!, email: email!, message: text!"),
+  ).toContain("cannot link to other records");
+  // A model asking more than a message keeps the sender's name, email and message too.
+  expect(errors("project: Project, budget: money")).toContain("asks more than a message");
+  const ir = kept.ir as SpecIR;
+  const read = (text: string) => validateContent({ path: "smithable.content.yml", text }, ir);
+  const { content, diagnostics } = read(`smithableContent: 0.1
+pages:
+  projects:
+    contact: { title: Ask for an estimate, text: We answer within a day., button: Send, thanks: Thank you. }
+`);
+  expect(diagnostics).toEqual([]);
+  expect(content?.pages.projects?.sections?.contact).toEqual({
+    title: "Ask for an estimate",
+    text: "We answer within a day.",
+    button: "Send",
+    thanks: "Thank you.",
+  });
+  expect(
+    read(
+      "smithableContent: 0.1\npages:\n  projects:\n    contact: { hours: 9-17 }\n",
+    ).diagnostics.map((d) => d.code),
+  ).toEqual(["unknown-key"]);
+});
+
 test("the reservation block's texts belong to a model with a capacity", () => {
   const booking = validateSpec({
     path: "smithable.yml",

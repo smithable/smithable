@@ -38187,8 +38187,8 @@ describe("the contacted action", () => {
     const others = insertEnquiry(stranger.id, {"status":"new"});
     const own = insertEnquiry(viewer.id, {"status":"new"});
     expect({
-      others: await can(() => runContacted(viewer, others.id, { "followUpOn": "2099-01-15" })),
-      own: await can(() => runContacted(viewer, own.id, { "followUpOn": "2099-01-15" })),
+      others: await can(() => runContacted(viewer, others.id)),
+      own: await can(() => runContacted(viewer, own.id)),
     }).toEqual({ others: true, own: true });
   });
 
@@ -38197,8 +38197,8 @@ describe("the contacted action", () => {
     const others = insertEnquiry(stranger.id, {"status":"new"});
     const own = insertEnquiry(viewer.id, {"status":"new"});
     expect({
-      others: await can(() => runContacted(viewer, others.id, { "followUpOn": "2099-01-15" })),
-      own: await can(() => runContacted(viewer, own.id, { "followUpOn": "2099-01-15" })),
+      others: await can(() => runContacted(viewer, others.id)),
+      own: await can(() => runContacted(viewer, own.id)),
     }).toEqual({ others: true, own: true });
   });
 
@@ -38207,7 +38207,7 @@ describe("the contacted action", () => {
     const others = insertEnquiry(stranger.id, {"status":"new"});
     const othersBefore = JSON.stringify(db.select().from(schema.enquiries).where(eq(schema.enquiries.id, others.id)).get());
     expect({
-      others: await can(() => runContacted(viewer, others.id, { "followUpOn": "2099-01-15" })),
+      others: await can(() => runContacted(viewer, others.id)),
       own: false,
     }).toEqual({ others: false, own: false });
     expect(JSON.stringify(db.select().from(schema.enquiries).where(eq(schema.enquiries.id, others.id)).get())).toBe(othersBefore);
@@ -38216,7 +38216,7 @@ describe("the contacted action", () => {
   test("refused on a record where status is not new", async () => {
     const viewer = signedIn("admin");
     const record = insertEnquiry(viewer.id, {"status":"contacted"});
-    await expect(runContacted(viewer, record.id, { "followUpOn": "2099-01-15" })).rejects.toThrow("This cannot be done now.");
+    await expect(runContacted(viewer, record.id)).rejects.toThrow("This cannot be done now.");
   });
 
   test("over chosen records, only those it fits and may run on change", async () => {
@@ -38224,11 +38224,11 @@ describe("the contacted action", () => {
     const fitting = insertEnquiry(viewer.id, {"status":"new"});
     const notFitting = insertEnquiry(viewer.id, {"status":"contacted"});
     const notFittingBefore = JSON.stringify(db.select().from(schema.enquiries).where(eq(schema.enquiries.id, notFitting.id)).get());
-    expect(await runContactedMany(viewer, [fitting.id, fitting.id, notFitting.id], { "followUpOn": "2099-01-15" })).toEqual({ changed: 1, skipped: 1 });
+    expect(await runContactedMany(viewer, [fitting.id, fitting.id, notFitting.id])).toEqual({ changed: 1, skipped: 1 });
     expect(JSON.stringify(db.select().from(schema.enquiries).where(eq(schema.enquiries.id, notFitting.id)).get())).toBe(notFittingBefore);
     const again = insertEnquiry(viewer.id, {"status":"new"});
     const againBefore = JSON.stringify(db.select().from(schema.enquiries).where(eq(schema.enquiries.id, again.id)).get());
-    await runContactedMany(null, [again.id], { "followUpOn": "2099-01-15" }).catch(() => undefined);
+    await runContactedMany(null, [again.id]).catch(() => undefined);
     expect(JSON.stringify(db.select().from(schema.enquiries).where(eq(schema.enquiries.id, again.id)).get())).toBe(againBefore);
   });
 });
@@ -38239,8 +38239,8 @@ describe("the visited action", () => {
     const others = insertEnquiry(stranger.id, {"status":"contacted"});
     const own = insertEnquiry(viewer.id, {"status":"contacted"});
     expect({
-      others: await can(() => runVisited(viewer, others.id, { "followUpOn": "2099-01-15" })),
-      own: await can(() => runVisited(viewer, own.id, { "followUpOn": "2099-01-15" })),
+      others: await can(() => runVisited(viewer, others.id)),
+      own: await can(() => runVisited(viewer, own.id)),
     }).toEqual({ others: true, own: true });
   });
 
@@ -38249,8 +38249,8 @@ describe("the visited action", () => {
     const others = insertEnquiry(stranger.id, {"status":"contacted"});
     const own = insertEnquiry(viewer.id, {"status":"contacted"});
     expect({
-      others: await can(() => runVisited(viewer, others.id, { "followUpOn": "2099-01-15" })),
-      own: await can(() => runVisited(viewer, own.id, { "followUpOn": "2099-01-15" })),
+      others: await can(() => runVisited(viewer, others.id)),
+      own: await can(() => runVisited(viewer, own.id)),
     }).toEqual({ others: true, own: true });
   });
 
@@ -38259,7 +38259,7 @@ describe("the visited action", () => {
     const others = insertEnquiry(stranger.id, {"status":"contacted"});
     const othersBefore = JSON.stringify(db.select().from(schema.enquiries).where(eq(schema.enquiries.id, others.id)).get());
     expect({
-      others: await can(() => runVisited(viewer, others.id, { "followUpOn": "2099-01-15" })),
+      others: await can(() => runVisited(viewer, others.id)),
       own: false,
     }).toEqual({ others: false, own: false });
     expect(JSON.stringify(db.select().from(schema.enquiries).where(eq(schema.enquiries.id, others.id)).get())).toBe(othersBefore);
@@ -38268,7 +38268,7 @@ describe("the visited action", () => {
   test("refused on a record where status is not contacted", async () => {
     const viewer = signedIn("admin");
     const record = insertEnquiry(viewer.id, {"status":"new"});
-    await expect(runVisited(viewer, record.id, { "followUpOn": "2099-01-15" })).rejects.toThrow("This cannot be done now.");
+    await expect(runVisited(viewer, record.id)).rejects.toThrow("This cannot be done now.");
   });
 
   test("over chosen records, only those it fits and may run on change", async () => {
@@ -38276,11 +38276,11 @@ describe("the visited action", () => {
     const fitting = insertEnquiry(viewer.id, {"status":"contacted"});
     const notFitting = insertEnquiry(viewer.id, {"status":"new"});
     const notFittingBefore = JSON.stringify(db.select().from(schema.enquiries).where(eq(schema.enquiries.id, notFitting.id)).get());
-    expect(await runVisitedMany(viewer, [fitting.id, fitting.id, notFitting.id], { "followUpOn": "2099-01-15" })).toEqual({ changed: 1, skipped: 1 });
+    expect(await runVisitedMany(viewer, [fitting.id, fitting.id, notFitting.id])).toEqual({ changed: 1, skipped: 1 });
     expect(JSON.stringify(db.select().from(schema.enquiries).where(eq(schema.enquiries.id, notFitting.id)).get())).toBe(notFittingBefore);
     const again = insertEnquiry(viewer.id, {"status":"contacted"});
     const againBefore = JSON.stringify(db.select().from(schema.enquiries).where(eq(schema.enquiries.id, again.id)).get());
-    await runVisitedMany(null, [again.id], { "followUpOn": "2099-01-15" }).catch(() => undefined);
+    await runVisitedMany(null, [again.id]).catch(() => undefined);
     expect(JSON.stringify(db.select().from(schema.enquiries).where(eq(schema.enquiries.id, again.id)).get())).toBe(againBefore);
   });
 });
@@ -38499,34 +38499,34 @@ import { db } from "#/db";
 import * as schema from "#/db/schema";
 import { AccessDenied, allows, check, type Viewer } from "#/kit/access";
 import { audit } from "#/kit/audit.server";
+import { F } from "#/kit/formula";
 import { afterChange } from "#/generated/hooks";
 import { enquirySettable } from "#/generated/enquiry.schema";
 import { enquiryData } from "#/generated/enquiry.server";
-import { contactedAccess, contactedFits, type contactedAsks } from "./contacted";
-import type { z } from "zod";
+import { contactedAccess, contactedFits } from "./contacted";
 
 type Row = NonNullable<Awaited<ReturnType<typeof enquiryData.get>>>;
 
-/** The enquiry's new values (only the fields the action sets and asks for), worked out on it as it was. */
-function plan(_viewer: Viewer | null, row: Row, asked: z.output<typeof contactedAsks>) {
+/** The enquiry's new values (only the fields the action sets), worked out on it as it was. */
+function plan(_viewer: Viewer | null, row: Row) {
   return {
     id: row.id,
     values: enquirySettable.partial().parse({
       status: "contacted",
-      followUpOn: asked["followUpOn"],
+      followUpOn: F.DATEADD(F.TODAY(), 3, "day"),
     }),
 
   };
 }
 
-/** Runs the "contacted" action on the enquiry as the viewer, with what was asked. */
-export async function runContacted(viewer: Viewer | null, id: number, asked: z.output<typeof contactedAsks>) {
+/** Runs the "contacted" action on the enquiry as the viewer. */
+export async function runContacted(viewer: Viewer | null, id: number) {
   const row = await enquiryData.get(viewer, id);
   if (!row) throw new AccessDenied(viewer !== null);
   check(contactedAccess, viewer, row.ownerId);
   if (!contactedFits(row, viewer)) throw new Error("This cannot be done now.");
-  const one = plan(viewer, row, asked);
-  return enquiryData.update(viewer, id, one.values, "contacted", ["status"]);
+  const one = plan(viewer, row);
+  return enquiryData.update(viewer, id, one.values, "contacted", ["status","followUpOn"]);
 }
 
 /**
@@ -38534,7 +38534,7 @@ export async function runContacted(viewer: Viewer | null, id: number, asked: z.o
  * (docs/design/actions.md §9); the others are skipped. All or none: one that is refused stops
  * them all, and is named.
  */
-export async function runContactedMany(viewer: Viewer | null, ids: number[], asked: z.output<typeof contactedAsks>) {
+export async function runContactedMany(viewer: Viewer | null, ids: number[]) {
   const plans: ReturnType<typeof plan>[] = [];
   // An id given twice is one record, run once.
   const unique = [...new Set(ids)];
@@ -38542,7 +38542,7 @@ export async function runContactedMany(viewer: Viewer | null, ids: number[], ask
     const row = await enquiryData.get(viewer, id);
     if (!row || !allows(contactedAccess, viewer, row.ownerId) || !contactedFits(row, viewer)) continue;
     try {
-      plans.push(plan(viewer, row, asked));
+      plans.push(plan(viewer, row));
     } catch (error) {
       const why = error instanceof Error ? error.message : String(error);
       throw new Error(\`Enquiry "\${String(row.name ?? row.id)}": \${why}\`);
@@ -38573,11 +38573,8 @@ exports[`../../../examples/builder/smithable.yml > file list and generated code 
 "// Generated by Smithable from smithable.yml. Do not edit: this file is overwritten on every change.
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { enquiryUi } from "#/generated/enquiry";
-import { enquirySchema } from "#/generated/enquiry.schema";
 import type { Rule } from "#/kit/access";
 import { getRequestHeaders } from "@tanstack/react-start/server";
-import type { ModelUi } from "#/kit/model";
 import { writeAllowed } from "#/kit/limit";
 import { currentViewer } from "#/lib/viewer.server";
 import { runContacted, runContactedMany } from "./contacted.server";
@@ -38590,23 +38587,6 @@ export function contactedFits(row: { status?: unknown }, _viewer: { id: string }
   return row.status === "new";
 }
 
-/** What the "contacted" action asks for when its button is pressed. */
-export const contactedAsks = z.object({
-  "followUpOn": enquirySchema.shape.followUpOn,
-});
-
-/** The dialog's fields: the enquiry's own, then each added record's under its heading. */
-export const contactedAskUi: ModelUi = {
-  label: "Contacted",
-  pluralLabel: "Contacted",
-  titleField: "id",
-  columns: [],
-  fields: [
-    ...enquiryUi.fields.filter((f) => f.name === "followUpOn").map((f) => ({ ...f, text: "models.Enquiry.fields.followUpOn.label" })),
-  ],
-  sections: [],
-};
-
 /** The viewer about to run it, counted against how often one may write (see src/kit/limit.ts). */
 async function writer() {
   const viewer = await currentViewer();
@@ -38615,13 +38595,13 @@ async function writer() {
 }
 
 export const contacted = createServerFn({ method: "POST" })
-  .validator(z.object({ id: z.number().int(), values: contactedAsks }))
-  .handler(async ({ data }) => runContacted(await writer(), data.id, data.values));
+  .validator(z.number().int())
+  .handler(async ({ data }) => runContacted(await writer(), data));
 
 /** The "contacted" action on the chosen enquiries (at most 1,000 at once). */
 export const contactedMany = createServerFn({ method: "POST" })
-  .validator(z.object({ ids: z.array(z.number().int()).max(1000), values: contactedAsks }))
-  .handler(async ({ data }) => runContactedMany(await writer(), data.ids, data.values));
+  .validator(z.object({ ids: z.array(z.number().int()).max(1000) }))
+  .handler(async ({ data }) => runContactedMany(await writer(), data.ids));
 "
 `;
 
@@ -38856,34 +38836,34 @@ import { db } from "#/db";
 import * as schema from "#/db/schema";
 import { AccessDenied, allows, check, type Viewer } from "#/kit/access";
 import { audit } from "#/kit/audit.server";
+import { F } from "#/kit/formula";
 import { afterChange } from "#/generated/hooks";
 import { enquirySettable } from "#/generated/enquiry.schema";
 import { enquiryData } from "#/generated/enquiry.server";
-import { visitedAccess, visitedFits, type visitedAsks } from "./visited";
-import type { z } from "zod";
+import { visitedAccess, visitedFits } from "./visited";
 
 type Row = NonNullable<Awaited<ReturnType<typeof enquiryData.get>>>;
 
-/** The enquiry's new values (only the fields the action sets and asks for), worked out on it as it was. */
-function plan(_viewer: Viewer | null, row: Row, asked: z.output<typeof visitedAsks>) {
+/** The enquiry's new values (only the fields the action sets), worked out on it as it was. */
+function plan(_viewer: Viewer | null, row: Row) {
   return {
     id: row.id,
     values: enquirySettable.partial().parse({
       status: "visited",
-      followUpOn: asked["followUpOn"],
+      followUpOn: F.DATEADD(F.TODAY(), 2, "day"),
     }),
 
   };
 }
 
-/** Runs the "visited" action on the enquiry as the viewer, with what was asked. */
-export async function runVisited(viewer: Viewer | null, id: number, asked: z.output<typeof visitedAsks>) {
+/** Runs the "visited" action on the enquiry as the viewer. */
+export async function runVisited(viewer: Viewer | null, id: number) {
   const row = await enquiryData.get(viewer, id);
   if (!row) throw new AccessDenied(viewer !== null);
   check(visitedAccess, viewer, row.ownerId);
   if (!visitedFits(row, viewer)) throw new Error("This cannot be done now.");
-  const one = plan(viewer, row, asked);
-  return enquiryData.update(viewer, id, one.values, "visited", ["status"]);
+  const one = plan(viewer, row);
+  return enquiryData.update(viewer, id, one.values, "visited", ["status","followUpOn"]);
 }
 
 /**
@@ -38891,7 +38871,7 @@ export async function runVisited(viewer: Viewer | null, id: number, asked: z.out
  * (docs/design/actions.md §9); the others are skipped. All or none: one that is refused stops
  * them all, and is named.
  */
-export async function runVisitedMany(viewer: Viewer | null, ids: number[], asked: z.output<typeof visitedAsks>) {
+export async function runVisitedMany(viewer: Viewer | null, ids: number[]) {
   const plans: ReturnType<typeof plan>[] = [];
   // An id given twice is one record, run once.
   const unique = [...new Set(ids)];
@@ -38899,7 +38879,7 @@ export async function runVisitedMany(viewer: Viewer | null, ids: number[], asked
     const row = await enquiryData.get(viewer, id);
     if (!row || !allows(visitedAccess, viewer, row.ownerId) || !visitedFits(row, viewer)) continue;
     try {
-      plans.push(plan(viewer, row, asked));
+      plans.push(plan(viewer, row));
     } catch (error) {
       const why = error instanceof Error ? error.message : String(error);
       throw new Error(\`Enquiry "\${String(row.name ?? row.id)}": \${why}\`);
@@ -38930,11 +38910,8 @@ exports[`../../../examples/builder/smithable.yml > file list and generated code 
 "// Generated by Smithable from smithable.yml. Do not edit: this file is overwritten on every change.
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { enquiryUi } from "#/generated/enquiry";
-import { enquirySchema } from "#/generated/enquiry.schema";
 import type { Rule } from "#/kit/access";
 import { getRequestHeaders } from "@tanstack/react-start/server";
-import type { ModelUi } from "#/kit/model";
 import { writeAllowed } from "#/kit/limit";
 import { currentViewer } from "#/lib/viewer.server";
 import { runVisited, runVisitedMany } from "./visited.server";
@@ -38947,23 +38924,6 @@ export function visitedFits(row: { status?: unknown }, _viewer: { id: string } |
   return row.status === "contacted";
 }
 
-/** What the "visited" action asks for when its button is pressed. */
-export const visitedAsks = z.object({
-  "followUpOn": enquirySchema.shape.followUpOn,
-});
-
-/** The dialog's fields: the enquiry's own, then each added record's under its heading. */
-export const visitedAskUi: ModelUi = {
-  label: "Visited",
-  pluralLabel: "Visited",
-  titleField: "id",
-  columns: [],
-  fields: [
-    ...enquiryUi.fields.filter((f) => f.name === "followUpOn").map((f) => ({ ...f, text: "models.Enquiry.fields.followUpOn.label" })),
-  ],
-  sections: [],
-};
-
 /** The viewer about to run it, counted against how often one may write (see src/kit/limit.ts). */
 async function writer() {
   const viewer = await currentViewer();
@@ -38972,13 +38932,13 @@ async function writer() {
 }
 
 export const visited = createServerFn({ method: "POST" })
-  .validator(z.object({ id: z.number().int(), values: visitedAsks }))
-  .handler(async ({ data }) => runVisited(await writer(), data.id, data.values));
+  .validator(z.number().int())
+  .handler(async ({ data }) => runVisited(await writer(), data));
 
 /** The "visited" action on the chosen enquiries (at most 1,000 at once). */
 export const visitedMany = createServerFn({ method: "POST" })
-  .validator(z.object({ ids: z.array(z.number().int()).max(1000), values: visitedAsks }))
-  .handler(async ({ data }) => runVisitedMany(await writer(), data.ids, data.values));
+  .validator(z.object({ ids: z.array(z.number().int()).max(1000) }))
+  .handler(async ({ data }) => runVisitedMany(await writer(), data.ids));
 "
 `;
 
@@ -39592,9 +39552,9 @@ import { projectSchema, projectSettable } from "#/generated/project.schema";
 import { enquiryAccess, enquiryData } from "#/generated/enquiry.server";
 import { enquirySchema, enquirySettable } from "#/generated/enquiry.schema";
 import { runContacted } from "./actions/contacted.server";
-import { contactedAccess, contactedFits, contactedAsks } from "./actions/contacted";
+import { contactedAccess, contactedFits } from "./actions/contacted";
 import { runVisited } from "./actions/visited.server";
-import { visitedAccess, visitedFits, visitedAsks } from "./actions/visited";
+import { visitedAccess, visitedFits } from "./actions/visited";
 import { runQuoted } from "./actions/quoted.server";
 import { quotedAccess, quotedFits } from "./actions/quoted";
 import { runWon } from "./actions/won.server";
@@ -39689,7 +39649,7 @@ const MOVES: Record<string, DoorMove[]> = {
       action: "contacted",
       model: "Enquiry",
       when: { status: "new" },
-      slots: [{ field: "followUpOn", required: false, kind: "date" }],
+      slots: [],
     },
     {
       id: "run:visited",
@@ -39697,7 +39657,7 @@ const MOVES: Record<string, DoorMove[]> = {
       action: "visited",
       model: "Enquiry",
       when: { status: "contacted" },
-      slots: [{ field: "followUpOn", required: false, kind: "date" }],
+      slots: [],
     },
     {
       id: "run:quoted",
@@ -39808,7 +39768,7 @@ const MOVES: Record<string, DoorMove[]> = {
       action: "contacted",
       model: "Enquiry",
       when: { status: "new" },
-      slots: [{ field: "followUpOn", required: false, kind: "date" }],
+      slots: [],
     },
     {
       id: "run:visited",
@@ -39816,7 +39776,7 @@ const MOVES: Record<string, DoorMove[]> = {
       action: "visited",
       model: "Enquiry",
       when: { status: "contacted" },
-      slots: [{ field: "followUpOn", required: false, kind: "date" }],
+      slots: [],
     },
     {
       id: "run:quoted",
@@ -40036,24 +39996,8 @@ const ACTS: Record<string, (viewer: Viewer | null, move: DoorMove, body: DoorBod
   followUpOn: "followUpOn",
 }))),
   "delete:Enquiry": async (viewer, _move, body) => enquiryData.remove(viewer, record(body)),
-  "run:contacted": async (viewer, move, body) => runContacted(viewer, record(body), contactedAsks.parse(stored(move.slots ?? [], body.values, {
-  project: "projectId",
-  name: "name",
-  email: "email",
-  phone: "phone",
-  message: "message",
-  status: "status",
-  followUpOn: "followUpOn",
-}))),
-  "run:visited": async (viewer, move, body) => runVisited(viewer, record(body), visitedAsks.parse(stored(move.slots ?? [], body.values, {
-  project: "projectId",
-  name: "name",
-  email: "email",
-  phone: "phone",
-  message: "message",
-  status: "status",
-  followUpOn: "followUpOn",
-}))),
+  "run:contacted": async (viewer, _move, body) => runContacted(viewer, record(body)),
+  "run:visited": async (viewer, _move, body) => runVisited(viewer, record(body)),
   "run:quoted": async (viewer, _move, body) => runQuoted(viewer, record(body)),
   "run:won": async (viewer, _move, body) => runWon(viewer, record(body)),
   "run:lost": async (viewer, _move, body) => runLost(viewer, record(body)),
@@ -43059,7 +43003,7 @@ import { app } from "#/generated/app";
 import { pageAccess, pageUi, pageHead } from "#/generated/pages";
 import { deleteEnquiry, enquiryUi, getEnquiry, updateEnquiry } from "#/generated/enquiry";
 import { enquirySchema } from "#/generated/enquiry.schema";
-import { contacted, contactedAccess, contactedAskUi, contactedAsks, contactedFits } from "#/generated/actions/contacted";
+import { contacted, contactedAccess, contactedFits } from "#/generated/actions/contacted";
 import { quoted, quotedAccess, quotedFits } from "#/generated/actions/quoted";
 import { won, wonAccess, wonFits } from "#/generated/actions/won";
 import { lost, lostAccess, lostFits } from "#/generated/actions/lost";
@@ -43129,9 +43073,8 @@ function EnquiryPage() {
               <ActionButton
                 label="Contacted"
                 concept="action:contacted"
-                ask={{ ui: contactedAskUi, schema: contactedAsks, initial: row, app }}
-                onRun={async (values) => {
-                  await contacted({ data: { id: row.id, values: values as never } });
+                onRun={async () => {
+                  await contacted({ data: row.id });
                   await router.invalidate();
                 }}
               />
@@ -43221,7 +43164,7 @@ import { orderOf } from "#/kit/filter";
 import { currentViewer } from "#/lib/viewer.server";
 import { type Search, count, listQuery, optional, text } from "#/kit/params";
 import { buttonVariants } from "#/components/ui/button";
-import { contacted, contactedAccess, contactedFits, contactedAskUi, contactedAsks, contactedMany } from "#/generated/actions/contacted";
+import { contacted, contactedAccess, contactedFits, contactedMany } from "#/generated/actions/contacted";
 import { quoted, quotedAccess, quotedFits, quotedMany } from "#/generated/actions/quoted";
 import { won, wonAccess, wonFits, wonMany } from "#/generated/actions/won";
 import { lost, lostAccess, lostFits, lostMany } from "#/generated/actions/lost";
@@ -43330,8 +43273,7 @@ function EnquiriesPage() {
               label: "Contacted",
               concept: "action:contacted",
               applies: chosen.filter((row) => allows(contactedAccess, viewer, row.ownerId) && contactedFits(row, viewer)).length,
-              ask: { ui: contactedAskUi, schema: contactedAsks },
-              run: (values) => contactedMany({ data: { ids: chosen.map((row) => row.id), values: values as never } }),
+              run: () => contactedMany({ data: { ids: chosen.map((row) => row.id) } }),
             },
             {
               label: "Quoted",
@@ -43376,9 +43318,8 @@ function EnquiriesPage() {
               <ActionButton
                 label="Contacted"
                 concept="action:contacted"
-                ask={{ ui: contactedAskUi, schema: contactedAsks, initial: row, app }}
-                onRun={async (values) => {
-                  await contacted({ data: { id: row.id, values: values as never } });
+                onRun={async () => {
+                  await contacted({ data: row.id });
                   await router.invalidate();
                 }}
               />
@@ -43717,7 +43658,6 @@ function ProjectPage() {
       <ContactOwner
         recipient="owner"
         viewer={viewer}
-        onSend={(values) => contactProject({ data: { id: row.id, ...values } })}
         form={(sent, button) => (
           <ModelForm
             ui={keptUi}
@@ -45226,15 +45166,15 @@ exports[`../../../examples/builder/smithable.yml > the generated files are as re
   "src/db/index.ts": "ba378d34 kit",
   "src/db/schema.ts": "48d614a6 generated",
   "src/db/seed.ts": "f7272276 generated",
-  "src/generated/access.test.ts": "8150eefb generated",
-  "src/generated/actions/contacted.server.ts": "defaba41 generated",
-  "src/generated/actions/contacted.ts": "a24b074f generated",
+  "src/generated/access.test.ts": "fd4c9cdb generated",
+  "src/generated/actions/contacted.server.ts": "4ffd9ce3 generated",
+  "src/generated/actions/contacted.ts": "3291067e generated",
   "src/generated/actions/lost.server.ts": "08ddfb16 generated",
   "src/generated/actions/lost.ts": "130b807e generated",
   "src/generated/actions/quoted.server.ts": "944d46a9 generated",
   "src/generated/actions/quoted.ts": "46dd9fb0 generated",
-  "src/generated/actions/visited.server.ts": "27b15fbf generated",
-  "src/generated/actions/visited.ts": "056cfdef generated",
+  "src/generated/actions/visited.server.ts": "330d526c generated",
+  "src/generated/actions/visited.ts": "15b11a8d generated",
   "src/generated/actions/won.server.ts": "6482ede2 generated",
   "src/generated/actions/won.ts": "27ec39e2 generated",
   "src/generated/activity.server.ts": "bd104751 generated",
@@ -45242,7 +45182,7 @@ exports[`../../../examples/builder/smithable.yml > the generated files are as re
   "src/generated/card.server.ts": "b01c3797 generated",
   "src/generated/card.ts": "5cab12e4 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
-  "src/generated/dev-door.server.ts": "b1d42117 generated",
+  "src/generated/dev-door.server.ts": "89175b6f generated",
   "src/generated/enquiry.formulas.ts": "247b77b2 generated",
   "src/generated/enquiry.import.server.ts": "a633861c generated",
   "src/generated/enquiry.import.ts": "913f16b7 generated",
@@ -45276,7 +45216,7 @@ exports[`../../../examples/builder/smithable.yml > the generated files are as re
   "src/kit/AppearancePicker.tsx": "0cd564d2 kit",
   "src/kit/Combobox.tsx": "c3a18c75 kit",
   "src/kit/Consent.tsx": "c5ee7e50 kit",
-  "src/kit/ContactOwner.tsx": "11331fc0 kit",
+  "src/kit/ContactOwner.tsx": "31245ae4 kit",
   "src/kit/Dashboard.tsx": "98bcd927 kit",
   "src/kit/FieldInput.tsx": "39e40fcb kit",
   "src/kit/FileInput.tsx": "5d567f82 kit",
@@ -45348,8 +45288,8 @@ exports[`../../../examples/builder/smithable.yml > the generated files are as re
   "src/routes/__root.tsx": "32afe8ed generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/app-card.tsx": "48827720 generated",
-  "src/routes/enquiries/$id.tsx": "33cf06de generated",
-  "src/routes/enquiries/index.tsx": "55ca4f2e generated",
+  "src/routes/enquiries/$id.tsx": "ecddb05b generated",
+  "src/routes/enquiries/index.tsx": "ac5f6ba6 generated",
   "src/routes/enquiries/new.tsx": "7b10a21d generated",
   "src/routes/files/$model.$field.ts": "37c1c781 kit",
   "src/routes/files/$model.$id.$field.$n.ts": "5288014d kit",
@@ -45357,7 +45297,7 @@ exports[`../../../examples/builder/smithable.yml > the generated files are as re
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/index.tsx": "574963c9 generated",
   "src/routes/privacy/index.tsx": "66a357d1 generated",
-  "src/routes/projects/$id.tsx": "6c084c89 generated",
+  "src/routes/projects/$id.tsx": "f6b9928f generated",
   "src/routes/projects/index.tsx": "ecfceea0 generated",
   "src/routes/projects/new.tsx": "747fcb9b generated",
   "src/routes/robots[.]txt.ts": "3992ada2 generated",
@@ -80211,7 +80151,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/Ask.tsx": "e5277427 kit",
   "src/kit/Combobox.tsx": "c3a18c75 kit",
   "src/kit/Consent.tsx": "c5ee7e50 kit",
-  "src/kit/ContactOwner.tsx": "11331fc0 kit",
+  "src/kit/ContactOwner.tsx": "31245ae4 kit",
   "src/kit/FieldInput.tsx": "39e40fcb kit",
   "src/kit/FileInput.tsx": "5d567f82 kit",
   "src/kit/Filters.tsx": "ceea52dc kit",

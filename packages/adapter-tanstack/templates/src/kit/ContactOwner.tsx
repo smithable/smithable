@@ -38,8 +38,8 @@ export function ContactOwner({
   form?: (sent: (kept?: boolean) => void, button: string) => React.ReactNode;
   /** The signed-in viewer: their name and email are filled in and locked. */
   viewer?: { name: string; email: string } | null;
-  /** Resolves to whether the message stayed in the outbox (the preview sends no mail). */
-  onSend: (values: ContactValues) => Promise<{ kept?: boolean } | undefined>;
+  /** Without `form`: resolves to whether the message stayed in the outbox (the preview sends no mail). */
+  onSend?: (values: ContactValues) => Promise<{ kept?: boolean } | undefined>;
 }) {
   const id = useId();
   const [values, setValues] = useState<ContactValues>({
@@ -54,7 +54,7 @@ export function ContactOwner({
     setState("sending");
     setFailure(undefined);
     try {
-      setState((await onSend(values))?.kept ? "kept" : "sent");
+      setState((await onSend?.(values))?.kept ? "kept" : "sent");
     } catch (error) {
       setFailure(refusalText(error, w.messageNotSent));
       setState("idle");
@@ -119,7 +119,8 @@ export function ContactOwner({
             </p>
           )}
           <Button type="submit" disabled={state === "sending"}>
-            <Send aria-hidden className="size-4" /> {state === "sending" ? w.sending : (button ?? w.send)}
+            <Send aria-hidden className="size-4" />{" "}
+            {state === "sending" ? w.sending : (button ?? w.send)}
           </Button>
         </form>
       )}

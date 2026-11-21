@@ -666,9 +666,7 @@ function checkContact(
     ctx.reference("model", contact.keep, contact.keepAt ?? contact.toAt);
     const kept = parsed.models?.find((m) => m.name === contact.keep);
     if (!kept) return {};
-    const all = kept.fields.filter(
-      (f) => f.type.kind === "relation" && !f.type.many && !f.formula,
-    );
+    const all = kept.fields.filter((f) => f.type.kind === "relation" && !f.type.many && !f.formula);
     // One reference to the page's own model is filled by the server from the record the block is
     // on (docs/design/marketplace.md §2.4); any other the sender would have to choose.
     const link = all.filter((f) => f.type.kind === "relation" && f.type.model === model);

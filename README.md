@@ -32,7 +32,7 @@ npx smithable@latest studio
 
 Built by Åland IT AB, in the Åland Islands, Finland.
 
-**Documentation:** [docs.smithable.ai](https://docs.smithable.ai): [getting started](https://docs.smithable.ai/start.html), [the ten starters](https://docs.smithable.ai/starters.html) (seven of them shown on smithable.ai), [changing an app without code](https://docs.smithable.ai/change.html), [running an app on your own machine](https://docs.smithable.ai/self-host.html) and the [spec reference](https://docs.smithable.ai/spec.html).
+**Documentation:** [docs.smithable.ai](https://docs.smithable.ai): [getting started](https://docs.smithable.ai/start.html), [the eleven starters](https://docs.smithable.ai/starters.html) (seven of them shown on smithable.ai), [changing an app without code](https://docs.smithable.ai/change.html), [running an app on your own machine](https://docs.smithable.ai/self-host.html) and the [spec reference](https://docs.smithable.ai/spec.html).
 
 ![The marketplace starter, Torget: a catalog with search, filters and photos](docs/site/starters/marketplace-1.webp)
 
@@ -66,7 +66,7 @@ smithable deploy --target docker                # release checks, then the conta
 
 To work on Smithable itself, from a clone: `pnpm install`, `pnpm build`, then `node packages/cli/dist/bin.js` in place of `smithable` ([CONTRIBUTING.md](.github/CONTRIBUTING.md)).
 
-The ten starters, with pictures: [docs.smithable.ai/starters](https://docs.smithable.ai/starters.html). `smithable --help` lists everything. Models for `ask`, `code` and `teach` are set up with environment variables: [docs/ai.md](docs/ai.md). `deploy`, `security --level release` and the container tests need Docker; [running an app on your own machine](https://docs.smithable.ai/self-host.html) covers deploying, backups and updates.
+The eleven starters, with pictures: [docs.smithable.ai/starters](https://docs.smithable.ai/starters.html). `smithable --help` lists everything. Models for `ask`, `code` and `teach` are set up with environment variables: [docs/ai.md](docs/ai.md). `deploy`, `security --level release` and the container tests need Docker; [running an app on your own machine](https://docs.smithable.ai/self-host.html) covers deploying, backups and updates.
 
 ## The repository
 

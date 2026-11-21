@@ -1086,7 +1086,9 @@ function contactParts(page: PageIR, model: ModelIR, t: Texts, ir: SpecIR) {
   const kept = keep
     ? [
         ...(asks ? ["...fields"] : []),
-        ...sent.filter((f) => keep.fields.some((k) => k.name === f)).map((f) => `${f}: sender.${f}`),
+        ...sent
+          .filter((f) => keep.fields.some((k) => k.name === f))
+          .map((f) => `${f}: sender.${f}`),
         ...(linkKey ? [`${linkKey}: row.id`] : []),
       ]
     : [];
@@ -1145,8 +1147,7 @@ ${asks ? "    const { id: _id, ...fields } = data;\n" : ""}    const sender = vi
 `,
     element: `<ContactOwner
         recipient=${JSON.stringify(recipient)}
-        viewer={viewer}${texts}
-        onSend={(values) => contact${model.name}({ data: { id: row.id, ...values } })}${
+        viewer={viewer}${texts}${
           asks
             ? `
         form={(sent, button) => (
@@ -1160,7 +1161,8 @@ ${asks ? "    const { id: _id, ...fields } = data;\n" : ""}    const sender = vi
             onSubmit={async (values) => sent((await contact${model.name}({ data: { ...values, id: row.id } })).kept)}
           />
         )}`
-            : ""
+            : `
+        onSend={(values) => contact${model.name}({ data: { id: row.id, ...values } })}`
         }
       />`,
   };

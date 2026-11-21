@@ -1921,8 +1921,27 @@ exports[`valid specs > ../../../examples/builder/smithable.yml 1`] = `
           "value": "contacted",
         },
         {
-          "asked": true,
           "field": "followUpOn",
+          "formula": {
+            "args": [
+              {
+                "args": [],
+                "kind": "call",
+                "name": "TODAY",
+              },
+              {
+                "kind": "number",
+                "value": 3,
+              },
+              {
+                "kind": "text",
+                "value": "day",
+              },
+            ],
+            "kind": "call",
+            "name": "DATEADD",
+          },
+          "text": "DATEADD(TODAY(), 3, "day")",
         },
       ],
       "when": {
@@ -1940,8 +1959,27 @@ exports[`valid specs > ../../../examples/builder/smithable.yml 1`] = `
           "value": "visited",
         },
         {
-          "asked": true,
           "field": "followUpOn",
+          "formula": {
+            "args": [
+              {
+                "args": [],
+                "kind": "call",
+                "name": "TODAY",
+              },
+              {
+                "kind": "number",
+                "value": 2,
+              },
+              {
+                "kind": "text",
+                "value": "day",
+              },
+            ],
+            "kind": "call",
+            "name": "DATEADD",
+          },
+          "text": "DATEADD(TODAY(), 2, "day")",
         },
       ],
       "when": {
