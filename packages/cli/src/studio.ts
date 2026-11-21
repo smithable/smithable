@@ -109,6 +109,7 @@ import {
   stylePreview,
 } from "./studio-picture-styles.js";
 import { translate } from "./translate.js";
+import { changeTree } from "./tree-files.js";
 import { undo, undoChange, undoLatest } from "./undo.js";
 import { loadSpec, projectTranslations } from "./validate.js";
 import { countConsequences, customUsers, environment, readKept, verify } from "./verify.js";
@@ -841,7 +842,7 @@ export async function studio(
       },
       () => {},
     );
-  rmSync(noticeFile, { force: true });
+  changeTree([{ path: noticeFile, data: null }]);
 
   const state = () => {
     const quiet = { out: () => {}, err: () => {} };
@@ -952,7 +953,7 @@ export async function studio(
     writePreviewConfig();
     pending = undefined;
     notice = existsSync(noticeFile) ? readFileSync(noticeFile, "utf8").trim() : undefined;
-    rmSync(noticeFile, { force: true });
+    changeTree([{ path: noticeFile, data: null }]);
     await settled();
     // The log starts with the person's app: nothing of the app that was here, and nothing
     // of what the dev server said while the files under it were being exchanged.

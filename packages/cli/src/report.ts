@@ -9,6 +9,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import type { Io } from "./io.js";
+import { writeTreeFile } from "./tree-files.js";
 import { VERSION } from "./version.js";
 
 const FAILURE = join("data", ".smithable", "last-failure.json");
@@ -73,8 +74,7 @@ export function recordFailure(
     error: output.trim().split("\n").slice(-40).join("\n"),
     ...(trace ? { trace } : {}),
   };
-  mkdirSync(dirname(join(dir, FAILURE)), { recursive: true });
-  writeFileSync(join(dir, FAILURE), `${JSON.stringify(failure, null, 2)}\n`);
+  writeTreeFile(join(dir, FAILURE), `${JSON.stringify(failure, null, 2)}\n`);
   void sendFailure(failure);
 }
 
