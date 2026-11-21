@@ -510,8 +510,8 @@ export const Route = createFileRoute("/_dev/clock")({
         const body = (received && typeof received === "object" && !Array.isArray(received) ? received : {}) as { offset?: unknown; at?: unknown };
         if (body.at !== undefined) {
           const at = typeof body.at === "string" ? Date.parse(body.at) : Number.NaN;
-          if (!Number.isFinite(at) || new Date(at).toISOString() !== body.at || Math.abs(at - Date.now()) > MOST)
-            return Response.json({ refused: true, status: 400, message: "at: a canonical ISO time, within a year." }, { status: 400 });
+          if (!Number.isFinite(at) || new Date(at).toISOString() !== body.at)
+            return Response.json({ refused: true, status: 400, message: "at: a canonical ISO time." }, { status: 400 });
         } else {
           const { offset } = body;
           if (typeof offset !== "number" || !Number.isFinite(offset) || Math.abs(offset) > MOST)

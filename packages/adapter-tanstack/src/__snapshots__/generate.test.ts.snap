@@ -11346,8 +11346,8 @@ export const Route = createFileRoute("/_dev/clock")({
         const body = (received && typeof received === "object" && !Array.isArray(received) ? received : {}) as { offset?: unknown; at?: unknown };
         if (body.at !== undefined) {
           const at = typeof body.at === "string" ? Date.parse(body.at) : Number.NaN;
-          if (!Number.isFinite(at) || new Date(at).toISOString() !== body.at || Math.abs(at - Date.now()) > MOST)
-            return Response.json({ refused: true, status: 400, message: "at: a canonical ISO time, within a year." }, { status: 400 });
+          if (!Number.isFinite(at) || new Date(at).toISOString() !== body.at)
+            return Response.json({ refused: true, status: 400, message: "at: a canonical ISO time." }, { status: 400 });
         } else {
           const { offset } = body;
           if (typeof offset !== "number" || !Number.isFinite(offset) || Math.abs(offset) > MOST)
@@ -14198,7 +14198,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/router.tsx": "1da2e059 kit",
   "src/routes/[_dev]/act.ts": "c57e01e2 generated",
   "src/routes/[_dev]/ask.ts": "bf4a5d88 generated",
-  "src/routes/[_dev]/clock.ts": "c5479ce7 generated",
+  "src/routes/[_dev]/clock.ts": "a1ccbe93 generated",
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
   "src/routes/__root.tsx": "72e51f25 generated",
   "src/routes/admin/activity.tsx": "225b605d generated",
@@ -19582,8 +19582,8 @@ export const Route = createFileRoute("/_dev/clock")({
         const body = (received && typeof received === "object" && !Array.isArray(received) ? received : {}) as { offset?: unknown; at?: unknown };
         if (body.at !== undefined) {
           const at = typeof body.at === "string" ? Date.parse(body.at) : Number.NaN;
-          if (!Number.isFinite(at) || new Date(at).toISOString() !== body.at || Math.abs(at - Date.now()) > MOST)
-            return Response.json({ refused: true, status: 400, message: "at: a canonical ISO time, within a year." }, { status: 400 });
+          if (!Number.isFinite(at) || new Date(at).toISOString() !== body.at)
+            return Response.json({ refused: true, status: 400, message: "at: a canonical ISO time." }, { status: 400 });
         } else {
           const { offset } = body;
           if (typeof offset !== "number" || !Number.isFinite(offset) || Math.abs(offset) > MOST)
@@ -22000,7 +22000,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/lib/viewer.server.ts": "61bef2b7 generated",
   "src/router.tsx": "1da2e059 kit",
   "src/routes/[_dev]/act.ts": "c57e01e2 generated",
-  "src/routes/[_dev]/clock.ts": "c5479ce7 generated",
+  "src/routes/[_dev]/clock.ts": "a1ccbe93 generated",
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
   "src/routes/__root.tsx": "f40e387f generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
@@ -32094,8 +32094,8 @@ export const Route = createFileRoute("/_dev/clock")({
         const body = (received && typeof received === "object" && !Array.isArray(received) ? received : {}) as { offset?: unknown; at?: unknown };
         if (body.at !== undefined) {
           const at = typeof body.at === "string" ? Date.parse(body.at) : Number.NaN;
-          if (!Number.isFinite(at) || new Date(at).toISOString() !== body.at || Math.abs(at - Date.now()) > MOST)
-            return Response.json({ refused: true, status: 400, message: "at: a canonical ISO time, within a year." }, { status: 400 });
+          if (!Number.isFinite(at) || new Date(at).toISOString() !== body.at)
+            return Response.json({ refused: true, status: 400, message: "at: a canonical ISO time." }, { status: 400 });
         } else {
           const { offset } = body;
           if (typeof offset !== "number" || !Number.isFinite(offset) || Math.abs(offset) > MOST)
@@ -37354,7 +37354,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/router.tsx": "1da2e059 kit",
   "src/routes/[_dev]/act.ts": "c57e01e2 generated",
   "src/routes/[_dev]/ask.ts": "66ce855e generated",
-  "src/routes/[_dev]/clock.ts": "7f1dc78c generated",
+  "src/routes/[_dev]/clock.ts": "72446040 generated",
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
   "src/routes/__root.tsx": "9d801633 generated",
   "src/routes/about/index.tsx": "88b46859 generated",
@@ -44592,8 +44592,8 @@ export const Route = createFileRoute("/_dev/clock")({
         const body = (received && typeof received === "object" && !Array.isArray(received) ? received : {}) as { offset?: unknown; at?: unknown };
         if (body.at !== undefined) {
           const at = typeof body.at === "string" ? Date.parse(body.at) : Number.NaN;
-          if (!Number.isFinite(at) || new Date(at).toISOString() !== body.at || Math.abs(at - Date.now()) > MOST)
-            return Response.json({ refused: true, status: 400, message: "at: a canonical ISO time, within a year." }, { status: 400 });
+          if (!Number.isFinite(at) || new Date(at).toISOString() !== body.at)
+            return Response.json({ refused: true, status: 400, message: "at: a canonical ISO time." }, { status: 400 });
         } else {
           const { offset } = body;
           if (typeof offset !== "number" || !Number.isFinite(offset) || Math.abs(offset) > MOST)
@@ -47305,7 +47305,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/routes/-start-parts.tsx": "c178be52 generated",
   "src/routes/[_dev]/act.ts": "c57e01e2 generated",
   "src/routes/[_dev]/ask.ts": "3e066e2e generated",
-  "src/routes/[_dev]/clock.ts": "c5479ce7 generated",
+  "src/routes/[_dev]/clock.ts": "a1ccbe93 generated",
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
   "src/routes/__root.tsx": "3a1f8636 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
@@ -55256,8 +55256,8 @@ export const Route = createFileRoute("/_dev/clock")({
         const body = (received && typeof received === "object" && !Array.isArray(received) ? received : {}) as { offset?: unknown; at?: unknown };
         if (body.at !== undefined) {
           const at = typeof body.at === "string" ? Date.parse(body.at) : Number.NaN;
-          if (!Number.isFinite(at) || new Date(at).toISOString() !== body.at || Math.abs(at - Date.now()) > MOST)
-            return Response.json({ refused: true, status: 400, message: "at: a canonical ISO time, within a year." }, { status: 400 });
+          if (!Number.isFinite(at) || new Date(at).toISOString() !== body.at)
+            return Response.json({ refused: true, status: 400, message: "at: a canonical ISO time." }, { status: 400 });
         } else {
           const { offset } = body;
           if (typeof offset !== "number" || !Number.isFinite(offset) || Math.abs(offset) > MOST)
@@ -57538,7 +57538,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/router.tsx": "1da2e059 kit",
   "src/routes/[_dev]/act.ts": "c57e01e2 generated",
   "src/routes/[_dev]/ask.ts": "7678e5fc generated",
-  "src/routes/[_dev]/clock.ts": "7f1dc78c generated",
+  "src/routes/[_dev]/clock.ts": "72446040 generated",
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
   "src/routes/__root.tsx": "48718742 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
@@ -64325,8 +64325,8 @@ export const Route = createFileRoute("/_dev/clock")({
         const body = (received && typeof received === "object" && !Array.isArray(received) ? received : {}) as { offset?: unknown; at?: unknown };
         if (body.at !== undefined) {
           const at = typeof body.at === "string" ? Date.parse(body.at) : Number.NaN;
-          if (!Number.isFinite(at) || new Date(at).toISOString() !== body.at || Math.abs(at - Date.now()) > MOST)
-            return Response.json({ refused: true, status: 400, message: "at: a canonical ISO time, within a year." }, { status: 400 });
+          if (!Number.isFinite(at) || new Date(at).toISOString() !== body.at)
+            return Response.json({ refused: true, status: 400, message: "at: a canonical ISO time." }, { status: 400 });
         } else {
           const { offset } = body;
           if (typeof offset !== "number" || !Number.isFinite(offset) || Math.abs(offset) > MOST)
@@ -66892,7 +66892,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/lib/viewer.server.ts": "61bef2b7 generated",
   "src/router.tsx": "1da2e059 kit",
   "src/routes/[_dev]/act.ts": "c57e01e2 generated",
-  "src/routes/[_dev]/clock.ts": "c5479ce7 generated",
+  "src/routes/[_dev]/clock.ts": "a1ccbe93 generated",
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
   "src/routes/__root.tsx": "3cfd0626 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
@@ -70400,8 +70400,8 @@ export const Route = createFileRoute("/_dev/clock")({
         const body = (received && typeof received === "object" && !Array.isArray(received) ? received : {}) as { offset?: unknown; at?: unknown };
         if (body.at !== undefined) {
           const at = typeof body.at === "string" ? Date.parse(body.at) : Number.NaN;
-          if (!Number.isFinite(at) || new Date(at).toISOString() !== body.at || Math.abs(at - Date.now()) > MOST)
-            return Response.json({ refused: true, status: 400, message: "at: a canonical ISO time, within a year." }, { status: 400 });
+          if (!Number.isFinite(at) || new Date(at).toISOString() !== body.at)
+            return Response.json({ refused: true, status: 400, message: "at: a canonical ISO time." }, { status: 400 });
         } else {
           const { offset } = body;
           if (typeof offset !== "number" || !Number.isFinite(offset) || Math.abs(offset) > MOST)
@@ -72334,7 +72334,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/routes/$id.tsx": "d8498e96 generated",
   "src/routes/[_dev]/act.ts": "c57e01e2 generated",
   "src/routes/[_dev]/ask.ts": "7678e5fc generated",
-  "src/routes/[_dev]/clock.ts": "c5479ce7 generated",
+  "src/routes/[_dev]/clock.ts": "a1ccbe93 generated",
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
   "src/routes/__root.tsx": "0929eb69 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
@@ -75150,8 +75150,8 @@ export const Route = createFileRoute("/_dev/clock")({
         const body = (received && typeof received === "object" && !Array.isArray(received) ? received : {}) as { offset?: unknown; at?: unknown };
         if (body.at !== undefined) {
           const at = typeof body.at === "string" ? Date.parse(body.at) : Number.NaN;
-          if (!Number.isFinite(at) || new Date(at).toISOString() !== body.at || Math.abs(at - Date.now()) > MOST)
-            return Response.json({ refused: true, status: 400, message: "at: a canonical ISO time, within a year." }, { status: 400 });
+          if (!Number.isFinite(at) || new Date(at).toISOString() !== body.at)
+            return Response.json({ refused: true, status: 400, message: "at: a canonical ISO time." }, { status: 400 });
         } else {
           const { offset } = body;
           if (typeof offset !== "number" || !Number.isFinite(offset) || Math.abs(offset) > MOST)
@@ -76427,7 +76427,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/router.tsx": "1da2e059 kit",
   "src/routes/[_dev]/act.ts": "c57e01e2 generated",
   "src/routes/[_dev]/ask.ts": "7678e5fc generated",
-  "src/routes/[_dev]/clock.ts": "c5479ce7 generated",
+  "src/routes/[_dev]/clock.ts": "a1ccbe93 generated",
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
   "src/routes/__root.tsx": "1d2deb00 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
@@ -87394,8 +87394,8 @@ export const Route = createFileRoute("/_dev/clock")({
         const body = (received && typeof received === "object" && !Array.isArray(received) ? received : {}) as { offset?: unknown; at?: unknown };
         if (body.at !== undefined) {
           const at = typeof body.at === "string" ? Date.parse(body.at) : Number.NaN;
-          if (!Number.isFinite(at) || new Date(at).toISOString() !== body.at || Math.abs(at - Date.now()) > MOST)
-            return Response.json({ refused: true, status: 400, message: "at: a canonical ISO time, within a year." }, { status: 400 });
+          if (!Number.isFinite(at) || new Date(at).toISOString() !== body.at)
+            return Response.json({ refused: true, status: 400, message: "at: a canonical ISO time." }, { status: 400 });
         } else {
           const { offset } = body;
           if (typeof offset !== "number" || !Number.isFinite(offset) || Math.abs(offset) > MOST)
@@ -90921,7 +90921,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/router.tsx": "1da2e059 kit",
   "src/routes/[_dev]/act.ts": "c57e01e2 generated",
   "src/routes/[_dev]/ask.ts": "df6443c8 generated",
-  "src/routes/[_dev]/clock.ts": "c5479ce7 generated",
+  "src/routes/[_dev]/clock.ts": "a1ccbe93 generated",
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
   "src/routes/__root.tsx": "c0360f5c generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
@@ -96957,8 +96957,8 @@ export const Route = createFileRoute("/_dev/clock")({
         const body = (received && typeof received === "object" && !Array.isArray(received) ? received : {}) as { offset?: unknown; at?: unknown };
         if (body.at !== undefined) {
           const at = typeof body.at === "string" ? Date.parse(body.at) : Number.NaN;
-          if (!Number.isFinite(at) || new Date(at).toISOString() !== body.at || Math.abs(at - Date.now()) > MOST)
-            return Response.json({ refused: true, status: 400, message: "at: a canonical ISO time, within a year." }, { status: 400 });
+          if (!Number.isFinite(at) || new Date(at).toISOString() !== body.at)
+            return Response.json({ refused: true, status: 400, message: "at: a canonical ISO time." }, { status: 400 });
         } else {
           const { offset } = body;
           if (typeof offset !== "number" || !Number.isFinite(offset) || Math.abs(offset) > MOST)
@@ -99004,7 +99004,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/router.tsx": "1da2e059 kit",
   "src/routes/[_dev]/act.ts": "c57e01e2 generated",
   "src/routes/[_dev]/ask.ts": "f3d7d06d generated",
-  "src/routes/[_dev]/clock.ts": "c5479ce7 generated",
+  "src/routes/[_dev]/clock.ts": "a1ccbe93 generated",
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
   "src/routes/__root.tsx": "05dab5c3 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",

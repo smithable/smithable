@@ -134,7 +134,8 @@ test("the door merges and splits only what the action and each record allow, and
   // A removed sample user stays removed.
   expect(door).toContain('eq(auditLog.action, "user removed")');
   const clock = files.find((f) => f.path === "src/routes/[_dev]/clock.ts")?.content ?? "";
-  expect(clock).toContain("Math.abs(at - Date.now()) > MOST");
+  // An exact time may be any canonical one (a scenario replays history); an offset stays within a year.
+  expect(clock).not.toContain("Math.abs(at - Date.now()) > MOST");
   expect(clock).toContain("const move = moving.then(async () => {");
   expect(clock).toContain("return refused(error);");
 });
