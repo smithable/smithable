@@ -72,7 +72,11 @@ test("each move is the app's own function, as the viewer; the moves are data, ne
     '"delete:Session": async (viewer, _move, body) => sessionData.remove(viewer, record(body)),',
   );
   expect(door).toContain(
-    "runTag(viewer, tagInput.parse({ ...stored(move.slots ?? [], body.values), sessions: body.records ?? [] }))",
+    "runTag(viewer, tagInput.parse({ ...stored(move.slots ?? [], body.values), sessions: rows }))",
+  );
+  // Only rows the move is open to: any other id is refused before the action runs (T845).
+  expect(door).toContain(
+    "if (!rows.every((row) => open.has(row))) throw new AccessDenied(viewer !== null);",
   );
   // A reference is stored under its key.
   expect(door).toContain('{ session: "sessionId", note: "note" }');
@@ -83,4 +87,54 @@ test("each move is the app's own function, as the viewer; the moves are data, ne
 test("a custom action runs through its own server module", () => {
   expect(of("src/generated/actions/tag.server.ts")).toContain("export async function runTag(");
   expect(of("src/generated/actions/tag.ts")).toContain("return runTag(viewer, data);");
+});
+
+// T845: the door offers and makes merges and splits by the action's own rule and each record's.
+test("the door merges and splits only what the action and each record allow, and moves the clock one at a time", () => {
+  const raw = import.meta.glob("../../../examples/invoicing/smithable*.yml", {
+    query: "?raw",
+    import: "default",
+    eager: true,
+  }) as Record<string, string>;
+  const at = (file: string) => raw[`../../../examples/invoicing/${file}`] as string;
+  const ir = validateSpec({
+    path: "smithable.yml",
+    text: at("smithable.yml")
+      .replace("number: { type: string!, unique: true", "number: { type: string, unique: true")
+      .replace(
+        "actions:\n",
+        "actions:\n  mergeInvoices:\n    merge: Invoice\n  splitInvoice:\n    split: Invoice\n    move: lines\n",
+      ),
+  }).ir as SpecIR;
+  const invoicingAuth = validateAuth(
+    { path: "smithable.auth.yml", text: at("smithable.auth.yml") },
+    ir,
+  ).auth as AuthIR;
+  const admins = validatePeople(
+    {
+      path: "samples/people.yml",
+      text: "- name: Office\n  role: admin\n  persona: Keeps the books.\n",
+    },
+    invoicingAuth,
+  ).people;
+  const files = generateApp(ir, {
+    smithableVersion: "0.0.0",
+    auth: invoicingAuth,
+    content: emptyContent(),
+    ...(admins ? { people: admins } : {}),
+  });
+  const door = files.find((f) => f.path === "src/generated/dev-door.server.ts")?.content ?? "";
+  // A merge is offered only to whom its own rule allows.
+  expect(door).toContain("if (!allows(mergeInvoicesAccess, viewer)) return undefined;");
+  // A split is offered for a record with two or more lines, one of which the person may change,
+  // and moves only lines the person may change.
+  expect(door).toContain("&& movable.has(row.id as number));");
+  expect(door).toContain("allows(invoiceLineAccess.write, viewer, row.ownerId as string | null)");
+  expect(door).toContain("const movable = on.filter((id) => mine.has(id));");
+  // A removed sample user stays removed.
+  expect(door).toContain('eq(auditLog.action, "user removed")');
+  const clock = files.find((f) => f.path === "src/routes/[_dev]/clock.ts")?.content ?? "";
+  expect(clock).toContain("Math.abs(at - Date.now()) > MOST");
+  expect(clock).toContain("const move = moving.then(async () => {");
+  expect(clock).toContain("return refused(error);");
 });

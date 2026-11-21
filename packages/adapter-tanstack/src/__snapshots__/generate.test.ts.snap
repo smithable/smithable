@@ -11327,11 +11327,14 @@ exports[`../../../examples/api/smithable.yml > file list and generated code > sr
 // The development door (docs/design/sample-users.md §3–§4): the development build's clock, moved
 // so "a week later" is a call; a demo has no such call.
 import { createFileRoute } from "@tanstack/react-router";
-import { doorShut } from "#/kit/dev-door.server";
+import { doorShut, refused } from "#/kit/dev-door.server";
 import { now, setClockAt, setClockOffset } from "#/kit/now";
 
 /** At most a year either way. */
 const MOST = 366 * 86_400_000;
+
+/** One move of the clock at a time: a second waits until the first's due work has run. */
+let moving: Promise<unknown> = Promise.resolve();
 
 export const Route = createFileRoute("/_dev/clock")({
   server: {
@@ -11343,16 +11346,24 @@ export const Route = createFileRoute("/_dev/clock")({
         const body = (received && typeof received === "object" && !Array.isArray(received) ? received : {}) as { offset?: unknown; at?: unknown };
         if (body.at !== undefined) {
           const at = typeof body.at === "string" ? Date.parse(body.at) : Number.NaN;
-          if (!Number.isFinite(at) || new Date(at).toISOString() !== body.at)
-            return Response.json({ refused: true, status: 400, message: "at: a canonical ISO time." }, { status: 400 });
-          setClockAt(at);
+          if (!Number.isFinite(at) || new Date(at).toISOString() !== body.at || Math.abs(at - Date.now()) > MOST)
+            return Response.json({ refused: true, status: 400, message: "at: a canonical ISO time, within a year." }, { status: 400 });
         } else {
           const { offset } = body;
           if (typeof offset !== "number" || !Number.isFinite(offset) || Math.abs(offset) > MOST)
             return Response.json({ refused: true, status: 400, message: "offset: milliseconds from now, within a year." }, { status: 400 });
-          setClockOffset(offset);
         }
-        return Response.json({ now: now().toISOString() });
+        const move = moving.then(async () => {
+          if (body.at !== undefined) setClockAt(Date.parse(body.at as string));
+          else setClockOffset(body.offset as number);
+          return now().toISOString();
+        });
+        moving = move.catch(() => undefined);
+        try {
+          return Response.json({ now: await move });
+        } catch (error) {
+          return refused(error);
+        }
       },
     },
   },
@@ -14187,7 +14198,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/router.tsx": "1da2e059 kit",
   "src/routes/[_dev]/act.ts": "c57e01e2 generated",
   "src/routes/[_dev]/ask.ts": "bf4a5d88 generated",
-  "src/routes/[_dev]/clock.ts": "a02ee4a6 generated",
+  "src/routes/[_dev]/clock.ts": "c5479ce7 generated",
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
   "src/routes/__root.tsx": "72e51f25 generated",
   "src/routes/admin/activity.tsx": "225b605d generated",
@@ -19552,11 +19563,14 @@ exports[`../../../examples/barbers/smithable.yml > file list and generated code 
 // The development door (docs/design/sample-users.md §3–§4): the development build's clock, moved
 // so "a week later" is a call; a demo has no such call.
 import { createFileRoute } from "@tanstack/react-router";
-import { doorShut } from "#/kit/dev-door.server";
+import { doorShut, refused } from "#/kit/dev-door.server";
 import { now, setClockAt, setClockOffset } from "#/kit/now";
 
 /** At most a year either way. */
 const MOST = 366 * 86_400_000;
+
+/** One move of the clock at a time: a second waits until the first's due work has run. */
+let moving: Promise<unknown> = Promise.resolve();
 
 export const Route = createFileRoute("/_dev/clock")({
   server: {
@@ -19568,16 +19582,24 @@ export const Route = createFileRoute("/_dev/clock")({
         const body = (received && typeof received === "object" && !Array.isArray(received) ? received : {}) as { offset?: unknown; at?: unknown };
         if (body.at !== undefined) {
           const at = typeof body.at === "string" ? Date.parse(body.at) : Number.NaN;
-          if (!Number.isFinite(at) || new Date(at).toISOString() !== body.at)
-            return Response.json({ refused: true, status: 400, message: "at: a canonical ISO time." }, { status: 400 });
-          setClockAt(at);
+          if (!Number.isFinite(at) || new Date(at).toISOString() !== body.at || Math.abs(at - Date.now()) > MOST)
+            return Response.json({ refused: true, status: 400, message: "at: a canonical ISO time, within a year." }, { status: 400 });
         } else {
           const { offset } = body;
           if (typeof offset !== "number" || !Number.isFinite(offset) || Math.abs(offset) > MOST)
             return Response.json({ refused: true, status: 400, message: "offset: milliseconds from now, within a year." }, { status: 400 });
-          setClockOffset(offset);
         }
-        return Response.json({ now: now().toISOString() });
+        const move = moving.then(async () => {
+          if (body.at !== undefined) setClockAt(Date.parse(body.at as string));
+          else setClockOffset(body.offset as number);
+          return now().toISOString();
+        });
+        moving = move.catch(() => undefined);
+        try {
+          return Response.json({ now: await move });
+        } catch (error) {
+          return refused(error);
+        }
       },
     },
   },
@@ -21978,7 +22000,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/lib/viewer.server.ts": "61bef2b7 generated",
   "src/router.tsx": "1da2e059 kit",
   "src/routes/[_dev]/act.ts": "c57e01e2 generated",
-  "src/routes/[_dev]/clock.ts": "a02ee4a6 generated",
+  "src/routes/[_dev]/clock.ts": "c5479ce7 generated",
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
   "src/routes/__root.tsx": "f40e387f generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
@@ -32052,12 +32074,15 @@ exports[`../../../examples/booking/smithable.yml > file list and generated code 
 // The development door (docs/design/sample-users.md §3–§4): the development build's clock, moved
 // so "a week later" is a call; a demo has no such call.
 import { createFileRoute } from "@tanstack/react-router";
-import { doorShut } from "#/kit/dev-door.server";
+import { doorShut, refused } from "#/kit/dev-door.server";
 import { now, setClockAt, setClockOffset } from "#/kit/now";
 import { tick } from "#/generated/timers.server";
 
 /** At most a year either way. */
 const MOST = 366 * 86_400_000;
+
+/** One move of the clock at a time: a second waits until the first's due work has run. */
+let moving: Promise<unknown> = Promise.resolve();
 
 export const Route = createFileRoute("/_dev/clock")({
   server: {
@@ -32069,18 +32094,26 @@ export const Route = createFileRoute("/_dev/clock")({
         const body = (received && typeof received === "object" && !Array.isArray(received) ? received : {}) as { offset?: unknown; at?: unknown };
         if (body.at !== undefined) {
           const at = typeof body.at === "string" ? Date.parse(body.at) : Number.NaN;
-          if (!Number.isFinite(at) || new Date(at).toISOString() !== body.at)
-            return Response.json({ refused: true, status: 400, message: "at: a canonical ISO time." }, { status: 400 });
-          setClockAt(at);
+          if (!Number.isFinite(at) || new Date(at).toISOString() !== body.at || Math.abs(at - Date.now()) > MOST)
+            return Response.json({ refused: true, status: 400, message: "at: a canonical ISO time, within a year." }, { status: 400 });
         } else {
           const { offset } = body;
           if (typeof offset !== "number" || !Number.isFinite(offset) || Math.abs(offset) > MOST)
             return Response.json({ refused: true, status: 400, message: "offset: milliseconds from now, within a year." }, { status: 400 });
-          setClockOffset(offset);
         }
-        // A development build has no tick of its own: what came due by the new "now" runs here.
-        await tick(now());
-        return Response.json({ now: now().toISOString() });
+        const move = moving.then(async () => {
+          if (body.at !== undefined) setClockAt(Date.parse(body.at as string));
+          else setClockOffset(body.offset as number);
+          // A development build has no tick of its own: what came due by the new "now" runs here.
+          await tick(now());
+          return now().toISOString();
+        });
+        moving = move.catch(() => undefined);
+        try {
+          return Response.json({ now: await move });
+        } catch (error) {
+          return refused(error);
+        }
       },
     },
   },
@@ -37321,7 +37354,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/router.tsx": "1da2e059 kit",
   "src/routes/[_dev]/act.ts": "c57e01e2 generated",
   "src/routes/[_dev]/ask.ts": "66ce855e generated",
-  "src/routes/[_dev]/clock.ts": "a43168cd generated",
+  "src/routes/[_dev]/clock.ts": "7f1dc78c generated",
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
   "src/routes/__root.tsx": "9d801633 generated",
   "src/routes/about/index.tsx": "88b46859 generated",
@@ -41046,6 +41079,7 @@ import { orderUi } from "#/generated/order";
 import { runScheduleFollowUps } from "./actions/schedule-follow-ups.server";
 import { scheduleFollowUpsInput } from "./actions/schedule-follow-ups.input";
 import { previewMergeCustomers, runMergeCustomers } from "./actions/merge-customers.server";
+import { mergeCustomersAccess } from "./actions/merge-customers";
 
 /** The moves of each role, and of a visitor without a session. */
 const MOVES: Record<string, DoorMove[]> = {
@@ -41366,6 +41400,7 @@ const OPEN: Record<string, (viewer: Viewer | null, move: DoorMove) => Promise<Op
       records: await followUpData.candidateIds(viewer, (row) => allows(followUpAccess.delete, viewer, row.ownerId as string | null)),
     }),
   "merge:mergeCustomers": async (viewer, move) => {
+    if (!allows(mergeCustomersAccess, viewer)) return undefined;
     const records = await customerData.candidateIds(viewer, (row) => allows(customerAccess.write, viewer, row.accountManagerId as string | null));
     return records.length > 1 ? { ...move, records } : undefined;
   },
@@ -44538,11 +44573,14 @@ exports[`../../../examples/crm/smithable.yml > file list and generated code > sr
 // The development door (docs/design/sample-users.md §3–§4): the development build's clock, moved
 // so "a week later" is a call; a demo has no such call.
 import { createFileRoute } from "@tanstack/react-router";
-import { doorShut } from "#/kit/dev-door.server";
+import { doorShut, refused } from "#/kit/dev-door.server";
 import { now, setClockAt, setClockOffset } from "#/kit/now";
 
 /** At most a year either way. */
 const MOST = 366 * 86_400_000;
+
+/** One move of the clock at a time: a second waits until the first's due work has run. */
+let moving: Promise<unknown> = Promise.resolve();
 
 export const Route = createFileRoute("/_dev/clock")({
   server: {
@@ -44554,16 +44592,24 @@ export const Route = createFileRoute("/_dev/clock")({
         const body = (received && typeof received === "object" && !Array.isArray(received) ? received : {}) as { offset?: unknown; at?: unknown };
         if (body.at !== undefined) {
           const at = typeof body.at === "string" ? Date.parse(body.at) : Number.NaN;
-          if (!Number.isFinite(at) || new Date(at).toISOString() !== body.at)
-            return Response.json({ refused: true, status: 400, message: "at: a canonical ISO time." }, { status: 400 });
-          setClockAt(at);
+          if (!Number.isFinite(at) || new Date(at).toISOString() !== body.at || Math.abs(at - Date.now()) > MOST)
+            return Response.json({ refused: true, status: 400, message: "at: a canonical ISO time, within a year." }, { status: 400 });
         } else {
           const { offset } = body;
           if (typeof offset !== "number" || !Number.isFinite(offset) || Math.abs(offset) > MOST)
             return Response.json({ refused: true, status: 400, message: "offset: milliseconds from now, within a year." }, { status: 400 });
-          setClockOffset(offset);
         }
-        return Response.json({ now: now().toISOString() });
+        const move = moving.then(async () => {
+          if (body.at !== undefined) setClockAt(Date.parse(body.at as string));
+          else setClockOffset(body.offset as number);
+          return now().toISOString();
+        });
+        moving = move.catch(() => undefined);
+        try {
+          return Response.json({ now: await move });
+        } catch (error) {
+          return refused(error);
+        }
       },
     },
   },
@@ -47151,7 +47197,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/generated/customer.schema.ts": "e6ad7cbe generated",
   "src/generated/customer.server.ts": "0670ff0a generated",
   "src/generated/customer.ts": "8c21bca9 generated",
-  "src/generated/dev-door.server.ts": "c6582e43 generated",
+  "src/generated/dev-door.server.ts": "2011c475 generated",
   "src/generated/follow-up.formulas.ts": "464cc51b generated",
   "src/generated/follow-up.import.server.ts": "747d6cf1 generated",
   "src/generated/follow-up.import.ts": "39b736bf generated",
@@ -47259,7 +47305,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/routes/-start-parts.tsx": "c178be52 generated",
   "src/routes/[_dev]/act.ts": "c57e01e2 generated",
   "src/routes/[_dev]/ask.ts": "3e066e2e generated",
-  "src/routes/[_dev]/clock.ts": "a02ee4a6 generated",
+  "src/routes/[_dev]/clock.ts": "c5479ce7 generated",
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
   "src/routes/__root.tsx": "3a1f8636 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
@@ -55190,12 +55236,15 @@ exports[`../../../examples/invoicing/smithable.yml > file list and generated cod
 // The development door (docs/design/sample-users.md §3–§4): the development build's clock, moved
 // so "a week later" is a call; a demo has no such call.
 import { createFileRoute } from "@tanstack/react-router";
-import { doorShut } from "#/kit/dev-door.server";
+import { doorShut, refused } from "#/kit/dev-door.server";
 import { now, setClockAt, setClockOffset } from "#/kit/now";
 import { tick } from "#/generated/timers.server";
 
 /** At most a year either way. */
 const MOST = 366 * 86_400_000;
+
+/** One move of the clock at a time: a second waits until the first's due work has run. */
+let moving: Promise<unknown> = Promise.resolve();
 
 export const Route = createFileRoute("/_dev/clock")({
   server: {
@@ -55207,18 +55256,26 @@ export const Route = createFileRoute("/_dev/clock")({
         const body = (received && typeof received === "object" && !Array.isArray(received) ? received : {}) as { offset?: unknown; at?: unknown };
         if (body.at !== undefined) {
           const at = typeof body.at === "string" ? Date.parse(body.at) : Number.NaN;
-          if (!Number.isFinite(at) || new Date(at).toISOString() !== body.at)
-            return Response.json({ refused: true, status: 400, message: "at: a canonical ISO time." }, { status: 400 });
-          setClockAt(at);
+          if (!Number.isFinite(at) || new Date(at).toISOString() !== body.at || Math.abs(at - Date.now()) > MOST)
+            return Response.json({ refused: true, status: 400, message: "at: a canonical ISO time, within a year." }, { status: 400 });
         } else {
           const { offset } = body;
           if (typeof offset !== "number" || !Number.isFinite(offset) || Math.abs(offset) > MOST)
             return Response.json({ refused: true, status: 400, message: "offset: milliseconds from now, within a year." }, { status: 400 });
-          setClockOffset(offset);
         }
-        // A development build has no tick of its own: what came due by the new "now" runs here.
-        await tick(now());
-        return Response.json({ now: now().toISOString() });
+        const move = moving.then(async () => {
+          if (body.at !== undefined) setClockAt(Date.parse(body.at as string));
+          else setClockOffset(body.offset as number);
+          // A development build has no tick of its own: what came due by the new "now" runs here.
+          await tick(now());
+          return now().toISOString();
+        });
+        moving = move.catch(() => undefined);
+        try {
+          return Response.json({ now: await move });
+        } catch (error) {
+          return refused(error);
+        }
       },
     },
   },
@@ -57481,7 +57538,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/router.tsx": "1da2e059 kit",
   "src/routes/[_dev]/act.ts": "c57e01e2 generated",
   "src/routes/[_dev]/ask.ts": "7678e5fc generated",
-  "src/routes/[_dev]/clock.ts": "a43168cd generated",
+  "src/routes/[_dev]/clock.ts": "7f1dc78c generated",
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
   "src/routes/__root.tsx": "48718742 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
@@ -64249,11 +64306,14 @@ exports[`../../../examples/kiosk/smithable.yml > file list and generated code > 
 // The development door (docs/design/sample-users.md §3–§4): the development build's clock, moved
 // so "a week later" is a call; a demo has no such call.
 import { createFileRoute } from "@tanstack/react-router";
-import { doorShut } from "#/kit/dev-door.server";
+import { doorShut, refused } from "#/kit/dev-door.server";
 import { now, setClockAt, setClockOffset } from "#/kit/now";
 
 /** At most a year either way. */
 const MOST = 366 * 86_400_000;
+
+/** One move of the clock at a time: a second waits until the first's due work has run. */
+let moving: Promise<unknown> = Promise.resolve();
 
 export const Route = createFileRoute("/_dev/clock")({
   server: {
@@ -64265,16 +64325,24 @@ export const Route = createFileRoute("/_dev/clock")({
         const body = (received && typeof received === "object" && !Array.isArray(received) ? received : {}) as { offset?: unknown; at?: unknown };
         if (body.at !== undefined) {
           const at = typeof body.at === "string" ? Date.parse(body.at) : Number.NaN;
-          if (!Number.isFinite(at) || new Date(at).toISOString() !== body.at)
-            return Response.json({ refused: true, status: 400, message: "at: a canonical ISO time." }, { status: 400 });
-          setClockAt(at);
+          if (!Number.isFinite(at) || new Date(at).toISOString() !== body.at || Math.abs(at - Date.now()) > MOST)
+            return Response.json({ refused: true, status: 400, message: "at: a canonical ISO time, within a year." }, { status: 400 });
         } else {
           const { offset } = body;
           if (typeof offset !== "number" || !Number.isFinite(offset) || Math.abs(offset) > MOST)
             return Response.json({ refused: true, status: 400, message: "offset: milliseconds from now, within a year." }, { status: 400 });
-          setClockOffset(offset);
         }
-        return Response.json({ now: now().toISOString() });
+        const move = moving.then(async () => {
+          if (body.at !== undefined) setClockAt(Date.parse(body.at as string));
+          else setClockOffset(body.offset as number);
+          return now().toISOString();
+        });
+        moving = move.catch(() => undefined);
+        try {
+          return Response.json({ now: await move });
+        } catch (error) {
+          return refused(error);
+        }
       },
     },
   },
@@ -66824,7 +66892,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/lib/viewer.server.ts": "61bef2b7 generated",
   "src/router.tsx": "1da2e059 kit",
   "src/routes/[_dev]/act.ts": "c57e01e2 generated",
-  "src/routes/[_dev]/clock.ts": "a02ee4a6 generated",
+  "src/routes/[_dev]/clock.ts": "c5479ce7 generated",
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
   "src/routes/__root.tsx": "3cfd0626 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
@@ -70313,11 +70381,14 @@ exports[`../../../examples/marketplace/smithable.yml > file list and generated c
 // The development door (docs/design/sample-users.md §3–§4): the development build's clock, moved
 // so "a week later" is a call; a demo has no such call.
 import { createFileRoute } from "@tanstack/react-router";
-import { doorShut } from "#/kit/dev-door.server";
+import { doorShut, refused } from "#/kit/dev-door.server";
 import { now, setClockAt, setClockOffset } from "#/kit/now";
 
 /** At most a year either way. */
 const MOST = 366 * 86_400_000;
+
+/** One move of the clock at a time: a second waits until the first's due work has run. */
+let moving: Promise<unknown> = Promise.resolve();
 
 export const Route = createFileRoute("/_dev/clock")({
   server: {
@@ -70329,16 +70400,24 @@ export const Route = createFileRoute("/_dev/clock")({
         const body = (received && typeof received === "object" && !Array.isArray(received) ? received : {}) as { offset?: unknown; at?: unknown };
         if (body.at !== undefined) {
           const at = typeof body.at === "string" ? Date.parse(body.at) : Number.NaN;
-          if (!Number.isFinite(at) || new Date(at).toISOString() !== body.at)
-            return Response.json({ refused: true, status: 400, message: "at: a canonical ISO time." }, { status: 400 });
-          setClockAt(at);
+          if (!Number.isFinite(at) || new Date(at).toISOString() !== body.at || Math.abs(at - Date.now()) > MOST)
+            return Response.json({ refused: true, status: 400, message: "at: a canonical ISO time, within a year." }, { status: 400 });
         } else {
           const { offset } = body;
           if (typeof offset !== "number" || !Number.isFinite(offset) || Math.abs(offset) > MOST)
             return Response.json({ refused: true, status: 400, message: "offset: milliseconds from now, within a year." }, { status: 400 });
-          setClockOffset(offset);
         }
-        return Response.json({ now: now().toISOString() });
+        const move = moving.then(async () => {
+          if (body.at !== undefined) setClockAt(Date.parse(body.at as string));
+          else setClockOffset(body.offset as number);
+          return now().toISOString();
+        });
+        moving = move.catch(() => undefined);
+        try {
+          return Response.json({ now: await move });
+        } catch (error) {
+          return refused(error);
+        }
       },
     },
   },
@@ -72255,7 +72334,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/routes/$id.tsx": "d8498e96 generated",
   "src/routes/[_dev]/act.ts": "c57e01e2 generated",
   "src/routes/[_dev]/ask.ts": "7678e5fc generated",
-  "src/routes/[_dev]/clock.ts": "a02ee4a6 generated",
+  "src/routes/[_dev]/clock.ts": "c5479ce7 generated",
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
   "src/routes/__root.tsx": "0929eb69 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
@@ -75052,11 +75131,14 @@ exports[`../../../examples/records/smithable.yml > file list and generated code 
 // The development door (docs/design/sample-users.md §3–§4): the development build's clock, moved
 // so "a week later" is a call; a demo has no such call.
 import { createFileRoute } from "@tanstack/react-router";
-import { doorShut } from "#/kit/dev-door.server";
+import { doorShut, refused } from "#/kit/dev-door.server";
 import { now, setClockAt, setClockOffset } from "#/kit/now";
 
 /** At most a year either way. */
 const MOST = 366 * 86_400_000;
+
+/** One move of the clock at a time: a second waits until the first's due work has run. */
+let moving: Promise<unknown> = Promise.resolve();
 
 export const Route = createFileRoute("/_dev/clock")({
   server: {
@@ -75068,16 +75150,24 @@ export const Route = createFileRoute("/_dev/clock")({
         const body = (received && typeof received === "object" && !Array.isArray(received) ? received : {}) as { offset?: unknown; at?: unknown };
         if (body.at !== undefined) {
           const at = typeof body.at === "string" ? Date.parse(body.at) : Number.NaN;
-          if (!Number.isFinite(at) || new Date(at).toISOString() !== body.at)
-            return Response.json({ refused: true, status: 400, message: "at: a canonical ISO time." }, { status: 400 });
-          setClockAt(at);
+          if (!Number.isFinite(at) || new Date(at).toISOString() !== body.at || Math.abs(at - Date.now()) > MOST)
+            return Response.json({ refused: true, status: 400, message: "at: a canonical ISO time, within a year." }, { status: 400 });
         } else {
           const { offset } = body;
           if (typeof offset !== "number" || !Number.isFinite(offset) || Math.abs(offset) > MOST)
             return Response.json({ refused: true, status: 400, message: "offset: milliseconds from now, within a year." }, { status: 400 });
-          setClockOffset(offset);
         }
-        return Response.json({ now: now().toISOString() });
+        const move = moving.then(async () => {
+          if (body.at !== undefined) setClockAt(Date.parse(body.at as string));
+          else setClockOffset(body.offset as number);
+          return now().toISOString();
+        });
+        moving = move.catch(() => undefined);
+        try {
+          return Response.json({ now: await move });
+        } catch (error) {
+          return refused(error);
+        }
       },
     },
   },
@@ -76337,7 +76427,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/router.tsx": "1da2e059 kit",
   "src/routes/[_dev]/act.ts": "c57e01e2 generated",
   "src/routes/[_dev]/ask.ts": "7678e5fc generated",
-  "src/routes/[_dev]/clock.ts": "a02ee4a6 generated",
+  "src/routes/[_dev]/clock.ts": "c5479ce7 generated",
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
   "src/routes/__root.tsx": "1d2deb00 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
@@ -87285,11 +87375,14 @@ exports[`../../../examples/status/smithable.yml > file list and generated code >
 // The development door (docs/design/sample-users.md §3–§4): the development build's clock, moved
 // so "a week later" is a call; a demo has no such call.
 import { createFileRoute } from "@tanstack/react-router";
-import { doorShut } from "#/kit/dev-door.server";
+import { doorShut, refused } from "#/kit/dev-door.server";
 import { now, setClockAt, setClockOffset } from "#/kit/now";
 
 /** At most a year either way. */
 const MOST = 366 * 86_400_000;
+
+/** One move of the clock at a time: a second waits until the first's due work has run. */
+let moving: Promise<unknown> = Promise.resolve();
 
 export const Route = createFileRoute("/_dev/clock")({
   server: {
@@ -87301,16 +87394,24 @@ export const Route = createFileRoute("/_dev/clock")({
         const body = (received && typeof received === "object" && !Array.isArray(received) ? received : {}) as { offset?: unknown; at?: unknown };
         if (body.at !== undefined) {
           const at = typeof body.at === "string" ? Date.parse(body.at) : Number.NaN;
-          if (!Number.isFinite(at) || new Date(at).toISOString() !== body.at)
-            return Response.json({ refused: true, status: 400, message: "at: a canonical ISO time." }, { status: 400 });
-          setClockAt(at);
+          if (!Number.isFinite(at) || new Date(at).toISOString() !== body.at || Math.abs(at - Date.now()) > MOST)
+            return Response.json({ refused: true, status: 400, message: "at: a canonical ISO time, within a year." }, { status: 400 });
         } else {
           const { offset } = body;
           if (typeof offset !== "number" || !Number.isFinite(offset) || Math.abs(offset) > MOST)
             return Response.json({ refused: true, status: 400, message: "offset: milliseconds from now, within a year." }, { status: 400 });
-          setClockOffset(offset);
         }
-        return Response.json({ now: now().toISOString() });
+        const move = moving.then(async () => {
+          if (body.at !== undefined) setClockAt(Date.parse(body.at as string));
+          else setClockOffset(body.offset as number);
+          return now().toISOString();
+        });
+        moving = move.catch(() => undefined);
+        try {
+          return Response.json({ now: await move });
+        } catch (error) {
+          return refused(error);
+        }
       },
     },
   },
@@ -90820,7 +90921,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/router.tsx": "1da2e059 kit",
   "src/routes/[_dev]/act.ts": "c57e01e2 generated",
   "src/routes/[_dev]/ask.ts": "df6443c8 generated",
-  "src/routes/[_dev]/clock.ts": "a02ee4a6 generated",
+  "src/routes/[_dev]/clock.ts": "c5479ce7 generated",
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
   "src/routes/__root.tsx": "c0360f5c generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
@@ -96837,11 +96938,14 @@ exports[`../../../examples/support/smithable.yml > file list and generated code 
 // The development door (docs/design/sample-users.md §3–§4): the development build's clock, moved
 // so "a week later" is a call; a demo has no such call.
 import { createFileRoute } from "@tanstack/react-router";
-import { doorShut } from "#/kit/dev-door.server";
+import { doorShut, refused } from "#/kit/dev-door.server";
 import { now, setClockAt, setClockOffset } from "#/kit/now";
 
 /** At most a year either way. */
 const MOST = 366 * 86_400_000;
+
+/** One move of the clock at a time: a second waits until the first's due work has run. */
+let moving: Promise<unknown> = Promise.resolve();
 
 export const Route = createFileRoute("/_dev/clock")({
   server: {
@@ -96853,16 +96957,24 @@ export const Route = createFileRoute("/_dev/clock")({
         const body = (received && typeof received === "object" && !Array.isArray(received) ? received : {}) as { offset?: unknown; at?: unknown };
         if (body.at !== undefined) {
           const at = typeof body.at === "string" ? Date.parse(body.at) : Number.NaN;
-          if (!Number.isFinite(at) || new Date(at).toISOString() !== body.at)
-            return Response.json({ refused: true, status: 400, message: "at: a canonical ISO time." }, { status: 400 });
-          setClockAt(at);
+          if (!Number.isFinite(at) || new Date(at).toISOString() !== body.at || Math.abs(at - Date.now()) > MOST)
+            return Response.json({ refused: true, status: 400, message: "at: a canonical ISO time, within a year." }, { status: 400 });
         } else {
           const { offset } = body;
           if (typeof offset !== "number" || !Number.isFinite(offset) || Math.abs(offset) > MOST)
             return Response.json({ refused: true, status: 400, message: "offset: milliseconds from now, within a year." }, { status: 400 });
-          setClockOffset(offset);
         }
-        return Response.json({ now: now().toISOString() });
+        const move = moving.then(async () => {
+          if (body.at !== undefined) setClockAt(Date.parse(body.at as string));
+          else setClockOffset(body.offset as number);
+          return now().toISOString();
+        });
+        moving = move.catch(() => undefined);
+        try {
+          return Response.json({ now: await move });
+        } catch (error) {
+          return refused(error);
+        }
       },
     },
   },
@@ -98892,7 +99004,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/router.tsx": "1da2e059 kit",
   "src/routes/[_dev]/act.ts": "c57e01e2 generated",
   "src/routes/[_dev]/ask.ts": "f3d7d06d generated",
-  "src/routes/[_dev]/clock.ts": "a02ee4a6 generated",
+  "src/routes/[_dev]/clock.ts": "c5479ce7 generated",
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
   "src/routes/__root.tsx": "05dab5c3 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",

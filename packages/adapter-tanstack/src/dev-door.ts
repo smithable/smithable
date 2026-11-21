@@ -128,6 +128,7 @@ export function doorModule(
     // other when it acts).
     if (m.kind === "merge")
       return `  ${JSON.stringify(m.id)}: async (viewer, move) => {
+    if (!allows(${actionNames(actionOf(m.action)).access}, viewer)) return undefined;
     const records = await ${n(m.model).data}.candidateIds(viewer${m.into === "new" ? "" : `, (row) => allows(${n(m.model).access}.write, viewer, ${ownerOf(modelNamed(ir, m.model), n(m.model))} as string | null)`});
     return records.length > 1 ? { ...move, records } : undefined;
   },`;
@@ -137,8 +138,13 @@ export function doorModule(
       return `  ${JSON.stringify(m.id)}: async (viewer, move) => {
     if (!allows(${actionNames(actionOf(m.action)).access}, viewer)) return undefined;
     const counts = new Map<number, number>();
-    for (const row of await ${n(child.name).data}.list(viewer)) counts.set(row.${backKey} as number, (counts.get(row.${backKey} as number) ?? 0) + 1);
-    const records = await ${n(m.model).data}.candidateIds(viewer, (row) => (counts.get(row.id as number) ?? 0) > 1);
+    const movable = new Set<number>();
+    const mine = new Set(await ${n(child.name).data}.candidateIds(viewer, (row) => allows(${n(child.name).access}.write, viewer, ${ownerOf(child, n(child.name))} as string | null)));
+    for (const row of await ${n(child.name).data}.list(viewer)) {
+      counts.set(row.${backKey} as number, (counts.get(row.${backKey} as number) ?? 0) + 1);
+      if (mine.has(row.id)) movable.add(row.${backKey} as number);
+    }
+    const records = await ${n(m.model).data}.candidateIds(viewer, (row) => (counts.get(row.id as number) ?? 0) > 1 && movable.has(row.id as number));
     return records.length ? { ...move, records } : undefined;
   },`;
     }
@@ -196,14 +202,24 @@ export function doorModule(
       return `  ${id}: async (viewer, _move, body) => {
     // About half of its list goes to the new record; at least one goes and one stays.
     const on = (await ${n(child.name).data}.list(viewer)).filter((row) => row.${backKey} === record(body)).map((row) => row.id);
-    return ${a.run}(viewer, record(body), on.slice(0, Math.max(1, Math.floor(on.length / 2))));
+    const mine = new Set(await ${n(child.name).data}.candidateIds(viewer, (row) => allows(${n(child.name).access}.write, viewer, ${ownerOf(child, n(child.name))} as string | null)));
+    const movable = on.filter((id) => mine.has(id));
+    return ${a.run}(viewer, record(body), movable.slice(0, Math.max(1, Math.min(movable.length, Math.floor(on.length / 2)))));
   },`;
     }
     const action = actionOf(m.action);
     const a = actionNames(action);
+    if (action.custom && action.rows && m.model)
+      return `  ${id}: async (viewer, move, body) => {
+    // Only rows the move is open to, as its list offers them.
+    const open = new Set(await ${n(m.model).data}.candidateIds(viewer));
+    const rows = body.records ?? [];
+    if (!rows.every((row) => open.has(row))) throw new AccessDenied(viewer !== null);
+    return ${a.run}(viewer, ${a.input}.parse({ ...stored(move.slots ?? [], body.values), ${action.rows.field}: rows }));
+  },`;
     if (action.custom)
       return arrow(
-        `${a.run}(viewer, ${a.input}.parse({ ...stored(move.slots ?? [], body.values)${action.rows ? `, ${action.rows.field}: body.records ?? []` : ""} }))`,
+        `${a.run}(viewer, ${a.input}.parse({ ...stored(move.slots ?? [], body.values) }))`,
       );
     const asked = askedFields(action as StandardActionIR).length > 0;
     return arrow(
@@ -232,11 +248,7 @@ export function doorModule(
     const write = moves.some(
       (m) => (m.kind === "add" || m.kind === "change") && m.model === model.name,
     );
-    const ruled = moves.some(
-      (m) =>
-        (m.kind === "change" || m.kind === "delete" || m.kind === "merge") &&
-        m.model === model.name,
-    );
+    const ruled = code.includes(`${mn.access}.`);
     return `import { ${ruled ? `${mn.access}, ` : ""}${mn.data} } from "${mn.module}.server";${write ? `\nimport { ${[...(moves.some((m) => m.kind === "add" && m.model === model.name) ? [mn.schema] : []), ...(moves.some((m) => m.kind === "change" && m.model === model.name) ? [mn.settable] : [])].join(", ")} } from "${mn.module}.schema";` : ""}`;
   });
 
@@ -244,8 +256,6 @@ export function doorModule(
   // column the database names (a reference is stored in <field>_id); the labels are its UI's.
   const taken = Object.fromEntries(
     used.flatMap(({ model }) => {
-      if (!moves.some((m) => (m.kind === "add" || m.kind === "change") && m.model === model.name))
-        return [];
       const fields = model.fields.filter((f) => f.unique || f.sequence);
       if (!fields.length) return [];
       return [
@@ -268,7 +278,7 @@ export function doorModule(
 // make, read from the spec by rule, what each is open to now for a sample user, and each performed
 // as their session through the same functions the pages' server functions call, so grants,
 // validation, Activity and what the app tells hold as for a person at the keyboard.
-${people.length ? 'import { and, eq, sql } from "drizzle-orm";\nimport { db } from "#/db";\nimport { auditLog, user } from "#/db/schema";\n' : ""}import { ${hasOpen ? "AccessDenied, " : ""}${uses("addressOwner") ? "addressOwner, " : ""}${uses("allows") ? "allows, " : ""}${words ? "Conflict, " : ""}type Viewer } from "#/kit/access";
+${people.length ? 'import { and, eq, sql } from "drizzle-orm";\nimport { db } from "#/db";\nimport { auditLog, user } from "#/db/schema";\n' : ""}import { ${hasOpen || uses("AccessDenied") ? "AccessDenied, " : ""}${uses("addressOwner") ? "addressOwner, " : ""}${uses("allows") ? "allows, " : ""}${words ? "Conflict, " : ""}type Viewer } from "#/kit/access";
 import { type DoorMove, type OpenMove${uses("stored") ? ", stored" : ""} } from "#/kit/dev-door.server";
 import { BadInput, NotFound } from "#/kit/refusal";
 ${writes ? 'import { writeAllowed } from "#/kit/limit";\n' : ""}${words ? 'import { w } from "#/kit/words";\n' : ""}${hasOpen ? 'import { pageAccess } from "./pages";\n' : ""}${people.length ? 'import { SAMPLE_PEOPLE } from "./people";\n' : ""}${modelImports.join("\n")}
@@ -283,7 +293,9 @@ ${Object.keys(taken)
     const a = actionNames(actionOf(m.action));
     const file = `./actions/${kebab(m.action)}`;
     return m.kind === "merge"
-      ? [`\nimport { ${a.preview}, ${a.run} } from "${file}.server";`]
+      ? [
+          `\nimport { ${a.preview}, ${a.run} } from "${file}.server";\nimport { ${a.access} } from "${file}";`,
+        ]
       : [`\nimport { ${a.run} } from "${file}.server";\nimport { ${a.access} } from "${file}";`];
   })
   .join("")}
@@ -479,11 +491,14 @@ export const Route = createFileRoute("/_dev/act")({
     "src/routes/[_dev]/clock.ts": `${HEADER}// The development door (docs/design/sample-users.md §3–§4): the development build's clock, moved
 // so "a week later" is a call; a demo has no such call.
 import { createFileRoute } from "@tanstack/react-router";
-import { doorShut } from "#/kit/dev-door.server";
+import { doorShut, refused } from "#/kit/dev-door.server";
 import { now, setClockAt, setClockOffset } from "#/kit/now";${ir.timers.length ? '\nimport { tick } from "#/generated/timers.server";' : ""}
 
 /** At most a year either way. */
 const MOST = 366 * 86_400_000;
+
+/** One move of the clock at a time: a second waits until the first's due work has run. */
+let moving: Promise<unknown> = Promise.resolve();
 
 export const Route = createFileRoute("/_dev/clock")({
   server: {
@@ -495,22 +510,30 @@ export const Route = createFileRoute("/_dev/clock")({
         const body = (received && typeof received === "object" && !Array.isArray(received) ? received : {}) as { offset?: unknown; at?: unknown };
         if (body.at !== undefined) {
           const at = typeof body.at === "string" ? Date.parse(body.at) : Number.NaN;
-          if (!Number.isFinite(at) || new Date(at).toISOString() !== body.at)
-            return Response.json({ refused: true, status: 400, message: "at: a canonical ISO time." }, { status: 400 });
-          setClockAt(at);
+          if (!Number.isFinite(at) || new Date(at).toISOString() !== body.at || Math.abs(at - Date.now()) > MOST)
+            return Response.json({ refused: true, status: 400, message: "at: a canonical ISO time, within a year." }, { status: 400 });
         } else {
           const { offset } = body;
           if (typeof offset !== "number" || !Number.isFinite(offset) || Math.abs(offset) > MOST)
             return Response.json({ refused: true, status: 400, message: "offset: milliseconds from now, within a year." }, { status: 400 });
-          setClockOffset(offset);
-        }${
-          ir.timers.length
-            ? `
-        // A development build has no tick of its own: what came due by the new "now" runs here.
-        await tick(now());`
-            : ""
         }
-        return Response.json({ now: now().toISOString() });
+        const move = moving.then(async () => {
+          if (body.at !== undefined) setClockAt(Date.parse(body.at as string));
+          else setClockOffset(body.offset as number);${
+            ir.timers.length
+              ? `
+          // A development build has no tick of its own: what came due by the new "now" runs here.
+          await tick(now());`
+              : ""
+          }
+          return now().toISOString();
+        });
+        moving = move.catch(() => undefined);
+        try {
+          return Response.json({ now: await move });
+        } catch (error) {
+          return refused(error);
+        }
       },
     },
   },
