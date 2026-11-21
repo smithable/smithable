@@ -268,7 +268,7 @@ export function doorModule(
 // make, read from the spec by rule, what each is open to now for a sample user, and each performed
 // as their session through the same functions the pages' server functions call, so grants,
 // validation, Activity and what the app tells hold as for a person at the keyboard.
-${people.length ? 'import { eq } from "drizzle-orm";\nimport { db } from "#/db";\nimport { user } from "#/db/schema";\n' : ""}import { ${hasOpen ? "AccessDenied, " : ""}${uses("addressOwner") ? "addressOwner, " : ""}${uses("allows") ? "allows, " : ""}${words ? "Conflict, " : ""}type Viewer } from "#/kit/access";
+${people.length ? 'import { and, eq, sql } from "drizzle-orm";\nimport { db } from "#/db";\nimport { auditLog, user } from "#/db/schema";\n' : ""}import { ${hasOpen ? "AccessDenied, " : ""}${uses("addressOwner") ? "addressOwner, " : ""}${uses("allows") ? "allows, " : ""}${words ? "Conflict, " : ""}type Viewer } from "#/kit/access";
 import { type DoorMove, type OpenMove${uses("stored") ? ", stored" : ""} } from "#/kit/dev-door.server";
 import { BadInput, NotFound } from "#/kit/refusal";
 ${writes ? 'import { writeAllowed } from "#/kit/limit";\n' : ""}${words ? 'import { w } from "#/kit/words";\n' : ""}${hasOpen ? 'import { pageAccess } from "./pages";\n' : ""}${people.length ? 'import { SAMPLE_PEOPLE } from "./people";\n' : ""}${modelImports.join("\n")}
@@ -317,6 +317,9 @@ export function viewerFor(who: unknown): Viewer | null | undefined {
   const viewer = () => db.select({ id: user.id, name: user.name, email: user.email, role: user.role, proven: user.emailVerified }).from(user).where(eq(user.id, person.id)).get();
   const found = viewer();
   if (found) return found;
+  // One removed on the users page stays removed: the door brings no one back (T845).
+  const removed = db.select({ id: auditLog.id }).from(auditLog).where(and(eq(auditLog.action, "user removed"), sql\`json_extract(\${auditLog.details}, '$.user') = \${person.id}\`)).get();
+  if (removed) return undefined;
   // One added since the seed (Smith's "add three customers") becomes a user the first time.
   db.insert(user).values({ ...person, emailVerified: true }).onConflictDoNothing().run();
   return viewer();`

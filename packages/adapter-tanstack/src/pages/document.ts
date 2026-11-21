@@ -159,15 +159,21 @@ function documentParts(page: PageIR, model: ModelIR, ir: SpecIR, t: Texts, auth:
     // Whose business details: where they are each person's own, those of the record's owner, read
     // from the row itself, since a reader by another rule sees no owner on the record (a record
     // with no owner, a seeded sample, is from whoever reads or sends it: their own, never another
-    // member's); where they are the app's, the app's.
+    // member's); where they are the app's, the app's. A record owned by an address has no member
+    // as its owner: the reader's own, as for one without an owner (T1013).
     const own =
-      hasSignIn(auth) && !addressOwned(model) && !addressOwned(settings) && creatorOwned(settings)
-        ? `  if (${sn.access}.read.owner) {
+      hasSignIn(auth) && !addressOwned(settings) && creatorOwned(settings)
+        ? `  if (${sn.access}.read.owner) {${
+            addressOwned(model)
+              ? `
+    const owner = viewer?.id;`
+              : `
     const row = q.query.${n.tableKey}
       .findFirst({ where: eq(${n.table}.id, id), columns: { ${ownerKey(model)}: true } })
       .sync();
     if (!row) return null;
-    const owner = row.${ownerKey(model)} ?? viewer?.id;
+    const owner = row.${ownerKey(model)} ?? viewer?.id;`
+          }
     const theirs =
       owner == null
         ? undefined
@@ -310,36 +316,40 @@ export function documentRoute(
       : "row.owner";
   const sent = sends
     ? `
-/** Whether the viewer may withdraw the record's links: whoever may read and change it. */
-async function mayWithdraw(viewer: Viewer | null, id: number): Promise<boolean> {
-  if (!(await ${n.data}.get(viewer, id))) return false;
-  const row = db.select({ owner: ${n.table}.${hasSignIn(auth) ? ownerKey(model) : "id"} }).from(${n.table}).where(eq(${n.table}.id, id)).get();
-  return row !== undefined && allows(${n.access}.write, viewer, ${owner});
+/** The record as the viewer may read it, in the transaction given: whether they may, and may change it. */
+function rights(q: Pick<typeof db, "select">, viewer: Viewer | null, id: number): { read: boolean; write: boolean } {
+  const row = q.select({ owner: ${n.table}.${hasSignIn(auth) ? ownerKey(model) : "id"} }).from(${n.table}).where(and(eq(${n.table}.id, id), ${n.data}.readable(viewer))).get();
+  return { read: row !== undefined, write: row !== undefined && allows(${n.access}.write, viewer, ${owner}) };
 }
 
-/** What was sent of the record (only to whoever may read it), and whether they may withdraw it. */
+/** What was sent of the record (only to whoever may read it), and whether they may withdraw it: read in one transaction. */
 const getSent = createServerFn()
   .validator(z.number().int())
   .handler(async ({ data: id }) => {
     const viewer = await currentViewer();
-    if (!(await ${n.data}.get(viewer, id))) return { sent: [], withdraw: false };
-    const sent = sentOf(${JSON.stringify(model.name)}, id).map(({ id, sentAt, to }) => ({ id, sentAt, to }));
-    return { sent, withdraw: await mayWithdraw(viewer, id) };
+    return db.transaction((tx) => {
+      const may = rights(tx, viewer, id);
+      if (!may.read) return { sent: [], withdraw: false };
+      const sent = sentOf(${JSON.stringify(model.name)}, id, tx).map(({ id, sentAt, to }) => ({ id, sentAt, to }));
+      return { sent, withdraw: may.write };
+    });
   });
 
-/** Ends every open link to the record's sent copies, for good. */
+/** Ends every open link to the record's sent copies, for good: whoever may read and change it, checked in the same transaction. */
 const withdrawSent = createServerFn({ method: "POST" })
   .validator(z.number().int())
   .handler(async ({ data: id }) => {
     const viewer = await currentViewer();
     writeAllowed(viewer, getRequestHeaders());
-    if (!(await mayWithdraw(viewer, id))) throw new AccessDenied(viewer !== null);
-    return db.transaction((tx) => endLinks(tx, viewer, ${JSON.stringify(model.name)}, id, "withdrawn"));
+    return db.transaction((tx) => {
+      if (!rights(tx, viewer, id).write) throw new AccessDenied(viewer !== null);
+      return endLinks(tx, viewer, ${JSON.stringify(model.name)}, id, "withdrawn");
+    });
   });
 `
     : "";
   return `${HEADER}import { createFileRoute, notFound${sends ? ", useRouter" : ""} } from "@tanstack/react-router";
-import { createServerFn } from "@tanstack/react-start";${sends ? '\nimport { getRequestHeaders } from "@tanstack/react-start/server";\nimport { eq } from "drizzle-orm";' : ""}
+import { createServerFn } from "@tanstack/react-start";${sends ? '\nimport { getRequestHeaders } from "@tanstack/react-start/server";\nimport { and, eq } from "drizzle-orm";' : ""}
 import { z } from "zod";
 import { db } from "#/db";${sends ? `\n${SCHEMA_IMPORT}` : ""}
 import { app } from "#/generated/app";

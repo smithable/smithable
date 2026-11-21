@@ -105,6 +105,8 @@ export function splitActionServer(
   ir: SpecIR,
   auth: AuthIR,
   t: Texts,
+  /** The models whose mails send a link to a copy (record-documents.md §5). */
+  sending: string[] = [],
 ): string {
   const a = actionNames(action);
   const { model, child, backKey } = splitList(ir, action);
@@ -123,6 +125,8 @@ export function splitActionServer(
     .map((e) => `, ${e}`)
     .join("");
   const childLive = child.trash ? `, isNull(${cn.table}.deletedAt)` : "";
+  // An undone split's new record goes to the trash, its sent links ended as a delete's are.
+  const links = model.trash && sending.includes(model.name);
   const title = titleField(model);
   // Undo is the trash's (intents.md §4): a model without one has none.
   const undo = `/**
@@ -153,7 +157,7 @@ export async function ${a.undo}(viewer: Viewer | null, id: number) {
   try {
     db.transaction((tx) => {
       if (back.length) tx.update(${cn.table}).set({ ${backKey}: split.from }).where(and(inArray(${cn.table}.id, back), eq(${cn.table}.${backKey}, id))).run();
-      tx.update(${n.table}).set({ deletedAt: new Date()${signedIn ? ", deletedBy: personOf(viewer)" : ""} }).where(eq(${n.table}.id, id)).run();
+      tx.update(${n.table}).set({ deletedAt: new Date()${signedIn ? ", deletedBy: personOf(viewer)" : ""} }).where(eq(${n.table}.id, id)).run();${links ? `\n      endLinks(tx, viewer, ${JSON.stringify(model.name)}, id, "trashed");` : ""}
       audit(tx, viewer, { action: "split undone", model: ${JSON.stringify(model.name)}, record: id, title: row.${title}, details: { into: split.from, back } });
     });
   } catch (error) {
@@ -166,7 +170,7 @@ export async function ${a.undo}(viewer: Viewer | null, id: number) {
 import { db } from "#/db";
 ${SCHEMA_IMPORT}
 import { AccessDenied, addressOf, addressOwner, allows, check, Conflict, personOf, type Viewer } from "#/kit/access";
-import { audit } from "#/kit/audit.server";
+import { audit } from "#/kit/audit.server";${links ? '\nimport { endLinks } from "#/kit/view.server";' : ""}
 import { refusal } from "#/kit/log.server";
 ${numbered ? 'import { nextInSequence } from "#/kit/sequence.server";\n' : ""}import { w } from "#/kit/words";
 import { afterChange } from "#/generated/hooks";

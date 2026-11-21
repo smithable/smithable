@@ -70,6 +70,17 @@ test("the document sends only its named fields, also after a column is added to 
   expect(route(added)).toBe(before);
 });
 
+test("a record owned by an address takes the reader's own business details, never the first (T1013)", () => {
+  const spec = at("smithable.yml").replace(
+    "  Invoice:\n    fields:\n",
+    "  Invoice:\n    ownedBy: clientEmail\n    fields:\n      clientEmail: email\n",
+  );
+  const doc = route(spec);
+  if (!doc) throw new Error("no document route");
+  expect(doc).toContain("if (businessProfileAccess.read.owner) {\n    const owner = viewer?.id;");
+  expect(doc).not.toContain("columns: { ownerId: true }");
+});
+
 test("a page without a document has no document route", () => {
   const spec = at("smithable.yml").replace(/^ {4}document:\n(?: {6}.*\n)+/m, "");
   expect(route(spec)).toBeUndefined();
@@ -128,8 +139,13 @@ test("a mail that says {view} makes the link's page, and the document page lists
   const page = [...app].find(([path]) => path.endsWith("/invoices/$id_.document.tsx"))?.[1];
   expect(page).toContain("<SentDocuments");
   // Only whoever may read the invoice sees what was sent, and withdrawing needs its write rule.
+  // Read and checked in the transaction that lists or ends the links (T1013).
   expect(page).toContain(
-    "if (!(await invoiceData.get(viewer, id))) return { sent: [], withdraw: false };",
+    ".where(and(eq(schema.invoices.id, id), invoiceData.readable(viewer))).get();",
+  );
+  expect(page).toContain("if (!may.read) return { sent: [], withdraw: false };");
+  expect(page).toContain(
+    "if (!rights(tx, viewer, id).write) throw new AccessDenied(viewer !== null);",
   );
   expect(page).toContain("allows(invoiceAccess.write, viewer,");
   expect(page).toContain("writeAllowed(viewer, getRequestHeaders());");
@@ -142,6 +158,43 @@ test("a mail that says {view} makes the link's page, and the document page lists
   );
   const kept = [...trashed].find(([path]) => path.endsWith("/invoice.server.ts"))?.[1];
   expect(kept).toContain('endLinks(tx, viewer, "Invoice", id, "trashed");');
+});
+
+test("a merge or a split that trashes or deletes a record ends its links as a delete does (T1013)", () => {
+  const actions =
+    "actions:\n  mergeInvoices:\n    merge: Invoice\n  splitInvoice:\n    split: Invoice\n    move: lines\n";
+  const spec = (trash: boolean) =>
+    files(
+      at("smithable.yml")
+        .replace("actions:\n", actions)
+        // A split gives the new invoice no number of its own: one it may leave empty.
+        .replace("number: { type: string!, unique: true", "number: { type: string, unique: true")
+        .replace("  Invoice:\n", trash ? "  Invoice:\n    trash: true\n" : "  Invoice:\n"),
+    );
+  const file = (app: Map<string, string>, end: string) =>
+    [...app].find(([path]) => path.endsWith(end))?.[1] ?? "";
+  // With a trash: the merged-away invoice's links end (an unmerge restores it, its links stay
+  // ended), and so do an undone split's.
+  const trashed = spec(true);
+  const merge = file(trashed, "/actions/merge-invoices.server.ts");
+  expect(merge).toContain('import { endLinks } from "#/kit/view.server";');
+  expect(merge).toContain(
+    'if (goes.has(other.id)) endLinks(tx, viewer, "Invoice", other.id, "trashed");',
+  );
+  const split = file(trashed, "/actions/split-invoice.server.ts");
+  expect(split).toContain('import { endLinks } from "#/kit/view.server";');
+  expect(split).toContain('endLinks(tx, viewer, "Invoice", id, "trashed");');
+  // Without one: the merged-away invoice's copies go with it.
+  const deleted = file(spec(false), "/actions/merge-invoices.server.ts");
+  expect(deleted).toContain('import { removeCopies } from "#/kit/view.server";');
+  expect(deleted).toContain('if (goes.has(other.id)) removeCopies(tx, "Invoice", other.id);');
+  // A model that sends no link imports nothing for it.
+  const words = at("smithable.content.yml").split(" See it here: {view}").join("");
+  const plain = files(
+    at("smithable.yml").replace("actions:\n", "actions:\n  mergeInvoices:\n    merge: Invoice\n"),
+    words,
+  );
+  expect(file(plain, "/actions/merge-invoices.server.ts")).not.toContain("view.server");
 });
 
 test("without a {view} mail there is no link page and no Sent list", () => {

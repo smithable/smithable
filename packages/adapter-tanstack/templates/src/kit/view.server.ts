@@ -107,15 +107,15 @@ export function openCopy(
 }
 
 /** A record's sent copies and their links, newest first, for "Sent" on its page. */
-export function sentOf(model: string, record: number) {
-  const copies = db
+export function sentOf(model: string, record: number, q: Pick<typeof db, "select"> = db) {
+  const copies = q
     .select()
     .from(sentDocuments)
     .where(and(eq(sentDocuments.model, model), eq(sentDocuments.recordId, record)))
     .orderBy(desc(sentDocuments.id))
     .all();
   const links = copies.length
-    ? db
+    ? q
         .select({
           documentId: recordLinks.documentId,
           to: recordLinks.to,

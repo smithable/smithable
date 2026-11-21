@@ -1254,9 +1254,11 @@ const SECTION_GENERATORS: SectionGenerator[] = [
   },
   {
     key: "actions",
-    files: ({ ir, t, auth }) =>
+    files: ({ ir, t, auth, options }) => {
+      // The models whose mails send a link to a copy: a merge or split that trashes one ends them.
+      const sending = viewEntries(ir, options.content).map((o) => o.when.model);
       // A standard action is generated whole; a custom one gets a stub to implement, once.
-      ir.actions.flatMap((action) =>
+      return ir.actions.flatMap((action) =>
         action.custom
           ? [
               generated(
@@ -1290,7 +1292,7 @@ const SECTION_GENERATORS: SectionGenerator[] = [
                 ),
                 generated(
                   `src/generated/actions/${kebab(action.name)}.server.ts`,
-                  splitActionServer(action, ir, auth, t),
+                  splitActionServer(action, ir, auth, t, sending),
                 ),
               ]
             : action.merge
@@ -1301,7 +1303,7 @@ const SECTION_GENERATORS: SectionGenerator[] = [
                   ),
                   generated(
                     `src/generated/actions/${kebab(action.name)}.server.ts`,
-                    mergeActionServer(action, ir, auth, t),
+                    mergeActionServer(action, ir, auth, t, sending),
                   ),
                 ]
               : [
@@ -1314,7 +1316,8 @@ const SECTION_GENERATORS: SectionGenerator[] = [
                     standardActionServer(action, ir, auth, t),
                   ),
                 ],
-      ),
+      );
+    },
   },
   {
     key: "incoming",
