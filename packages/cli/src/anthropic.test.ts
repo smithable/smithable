@@ -100,26 +100,29 @@ test("a fenced JSON answer is the JSON alone", async () => {
   expect(unfenced('{"kind":"answer"}')).toBe('{"kind":"answer"}');
 });
 
-test("a cut-off answer is an error", async () => {
-  vi.stubGlobal(
-    "fetch",
-    async () =>
-      new Response(
-        JSON.stringify({
-          stop_reason: "max_tokens",
-          content: [{ type: "text", text: '{"ki' }],
-          usage: { input_tokens: 10, output_tokens: 16000 },
-        }),
-        { status: 200 },
-      ),
-  );
-  await expect(
-    anthropic("claude-haiku-5-5", "k").complete({ system: "", user: "", schema: {} } as never),
-  ).rejects.toMatchObject({
-    message: "The model's answer was cut off.",
-    completion: { inputTokens: 10, outputTokens: 16000 },
-  });
-});
+test.each(["max_tokens", "model_context_window_exceeded"])(
+  "Anthropic reports %s as cut-off output with usage",
+  async (stopReason) => {
+    vi.stubGlobal(
+      "fetch",
+      async () =>
+        new Response(
+          JSON.stringify({
+            stop_reason: stopReason,
+            content: [{ type: "text", text: "{}" }],
+            usage: { input_tokens: 10, output_tokens: 16000 },
+          }),
+          { status: 200 },
+        ),
+    );
+    await expect(
+      anthropic("claude-haiku-5-5", "k").complete({ system: "", user: "", schema: {} } as never),
+    ).rejects.toMatchObject({
+      message: "The model's answer was cut off.",
+      completion: { text: "{}", inputTokens: 10, outputTokens: 16000 },
+    });
+  },
+);
 
 test("closed shuts every object schema, and only schemas: a field named properties, an enum", async () => {
   const { closed } = await import("./anthropic.js");

@@ -1,5 +1,13 @@
 import { afterEach, expect, test, vi } from "vitest";
-import { cached, completeJson, listPrice, openAICompatible, type Usage } from "./provider.js";
+import {
+  CutOffAnswerError,
+  cached,
+  completeJson,
+  listPrice,
+  openAICompatible,
+  type Provider,
+  type Usage,
+} from "./provider.js";
 
 test("an explicit output allowance is forwarded without imposing one on other requests", async () => {
   const bodies: Record<string, unknown>[] = [];
@@ -41,6 +49,40 @@ test("a compatible provider's length limit records usage even when the text pars
   ).rejects.toThrow(/cut off/);
   expect(usage).toHaveLength(1);
   expect(usage[0]).toMatchObject({ inputTokens: 10, outputTokens: 100 });
+});
+
+test("a synchronous provider cutoff records usage and rejects even parseable text", async () => {
+  const error = new CutOffAnswerError({
+    text: "{}",
+    model: "custom-model",
+    inputTokens: 15,
+    outputTokens: 25,
+    cost: { amount: 0.003, currency: "USD" },
+  });
+  const provider: Provider = {
+    name: "custom",
+    tier: "frontier",
+    location: "elsewhere",
+    price: { input: 1, output: 2 },
+    complete() {
+      throw error;
+    },
+  };
+  const usage: Usage[] = [];
+  await expect(completeJson(provider, { system: "s", user: "u", schema: {} }, usage)).rejects.toBe(
+    error,
+  );
+  expect(usage).toEqual([
+    {
+      provider: "custom",
+      tier: "frontier",
+      model: "custom-model",
+      inputTokens: 15,
+      outputTokens: 25,
+      cost: 0.003,
+      currency: "USD",
+    },
+  ]);
 });
 
 afterEach(() => vi.unstubAllGlobals());
