@@ -37759,7 +37759,7 @@ export const projects = sqliteTable(
     title: text().notNull(),
     serviceId: integer().notNull().references(() => services.id, { onDelete: "restrict" }),
     place: text(),
-    year: integer(),
+    year: text(),
     summary: text(),
     photos: text({ mode: "json" }).$type<Picture[]>(),
     ownerId: text().references(() => user.id, { onDelete: "set null" }),
@@ -37797,9 +37797,8 @@ export const servicesRelations = relations(services, ({ many }) => ({
   projects: many(projects),
 }));
 
-export const projectsRelations = relations(projects, ({ one, many }) => ({
+export const projectsRelations = relations(projects, ({ one }) => ({
   service: one(services, { fields: [projects.serviceId], references: [services.id] }),
-  enquiries: many(enquiries),
 }));
 
 export const enquiriesRelations = relations(enquiries, ({ one }) => ({
@@ -37833,14 +37832,14 @@ if (db.select().from(schema.services).limit(1).all().length === 0) {
 if (db.select().from(schema.projects).limit(1).all().length === 0) {
   db.insert(schema.projects)
     .values([
-    { title: "Project 1", serviceId: 1, place: "place 1", year: 1, summary: "A short description of Project 1.", photos: [samplePicture("project", 0, "A picture of Project 1")].filter((p) => p !== null) },
-    { title: "Project 2", serviceId: 2, place: "place 2", year: 8, summary: "A short description of Project 2.", photos: [samplePicture("project", 1, "A picture of Project 2"), samplePicture("project", 2, "A picture of Project 2")].filter((p) => p !== null) },
-    { title: "Project 3", serviceId: 3, place: "place 3", year: 15, summary: "A short description of Project 3.", photos: [samplePicture("project", 2, "A picture of Project 3"), samplePicture("project", 0, "A picture of Project 3"), samplePicture("project", 1, "A picture of Project 3")].filter((p) => p !== null) },
-    { title: "Project 4", serviceId: 4, place: "place 4", year: 2, summary: "A short description of Project 4.", photos: [samplePicture("project", 0, "A picture of Project 4")].filter((p) => p !== null) },
-    { title: "Project 5", serviceId: 5, place: "place 5", year: 9, summary: "A short description of Project 5.", photos: [samplePicture("project", 1, "A picture of Project 5"), samplePicture("project", 2, "A picture of Project 5")].filter((p) => p !== null) },
-    { title: "Project 6", serviceId: 6, place: "place 6", year: 16, summary: "A short description of Project 6.", photos: [samplePicture("project", 2, "A picture of Project 6"), samplePicture("project", 0, "A picture of Project 6"), samplePicture("project", 1, "A picture of Project 6")].filter((p) => p !== null) },
-    { title: "Project 7", serviceId: 7, place: "place 7", year: 3, summary: "A short description of Project 7.", photos: [samplePicture("project", 0, "A picture of Project 7")].filter((p) => p !== null) },
-    { title: "Project 8", serviceId: 8, place: "place 8", year: 10, summary: "A short description of Project 8.", photos: [samplePicture("project", 1, "A picture of Project 8"), samplePicture("project", 2, "A picture of Project 8")].filter((p) => p !== null) },
+    { title: "Project 1", serviceId: 1, place: "place 1", year: "year 1", summary: "A short description of Project 1.", photos: [samplePicture("project", 0, "A picture of Project 1")].filter((p) => p !== null) },
+    { title: "Project 2", serviceId: 2, place: "place 2", year: "year 2", summary: "A short description of Project 2.", photos: [samplePicture("project", 1, "A picture of Project 2"), samplePicture("project", 2, "A picture of Project 2")].filter((p) => p !== null) },
+    { title: "Project 3", serviceId: 3, place: "place 3", year: "year 3", summary: "A short description of Project 3.", photos: [samplePicture("project", 2, "A picture of Project 3"), samplePicture("project", 0, "A picture of Project 3"), samplePicture("project", 1, "A picture of Project 3")].filter((p) => p !== null) },
+    { title: "Project 4", serviceId: 4, place: "place 4", year: "year 4", summary: "A short description of Project 4.", photos: [samplePicture("project", 0, "A picture of Project 4")].filter((p) => p !== null) },
+    { title: "Project 5", serviceId: 5, place: "place 5", year: "year 5", summary: "A short description of Project 5.", photos: [samplePicture("project", 1, "A picture of Project 5"), samplePicture("project", 2, "A picture of Project 5")].filter((p) => p !== null) },
+    { title: "Project 6", serviceId: 6, place: "place 6", year: "year 6", summary: "A short description of Project 6.", photos: [samplePicture("project", 2, "A picture of Project 6"), samplePicture("project", 0, "A picture of Project 6"), samplePicture("project", 1, "A picture of Project 6")].filter((p) => p !== null) },
+    { title: "Project 7", serviceId: 7, place: "place 7", year: "year 7", summary: "A short description of Project 7.", photos: [samplePicture("project", 0, "A picture of Project 7")].filter((p) => p !== null) },
+    { title: "Project 8", serviceId: 8, place: "place 8", year: "year 8", summary: "A short description of Project 8.", photos: [samplePicture("project", 1, "A picture of Project 8"), samplePicture("project", 2, "A picture of Project 8")].filter((p) => p !== null) },
     ])
     .run();
 }
@@ -39213,16 +39212,9 @@ export const CARDS: Record<string, CardFacts> = {
               of: "Service",
             },
             { name: "place", label: "Place", kind: "string", required: false },
-            { name: "year", label: "Year", kind: "int", required: false },
+            { name: "year", label: "Year", kind: "string", required: false },
             { name: "summary", label: "Summary", kind: "text", required: false },
             { name: "photos", label: "Photos", kind: "pictures", required: false },
-            {
-              name: "enquiries",
-              label: "Enquiries",
-              kind: "list",
-              required: false,
-              of: "Enquiries",
-            },
           ],
           unique: [],
         },
@@ -39601,7 +39593,7 @@ const MOVES: Record<string, DoorMove[]> = {
         { field: "title", required: true, kind: "text" },
         { field: "service", required: true, kind: "reference", model: "Service" },
         { field: "place", required: false, kind: "text" },
-        { field: "year", required: false, kind: "number" },
+        { field: "year", required: false, kind: "text" },
         { field: "summary", required: false, kind: "text" },
       ],
     },
@@ -39613,7 +39605,7 @@ const MOVES: Record<string, DoorMove[]> = {
         { field: "title", required: true, kind: "text" },
         { field: "service", required: true, kind: "reference", model: "Service" },
         { field: "place", required: false, kind: "text" },
-        { field: "year", required: false, kind: "number" },
+        { field: "year", required: false, kind: "text" },
         { field: "summary", required: false, kind: "text" },
       ],
     },
@@ -39720,7 +39712,7 @@ const MOVES: Record<string, DoorMove[]> = {
         { field: "title", required: true, kind: "text" },
         { field: "service", required: true, kind: "reference", model: "Service" },
         { field: "place", required: false, kind: "text" },
-        { field: "year", required: false, kind: "number" },
+        { field: "year", required: false, kind: "text" },
         { field: "summary", required: false, kind: "text" },
       ],
     },
@@ -39732,7 +39724,7 @@ const MOVES: Record<string, DoorMove[]> = {
         { field: "title", required: true, kind: "text" },
         { field: "service", required: true, kind: "reference", model: "Service" },
         { field: "place", required: false, kind: "text" },
-        { field: "year", required: false, kind: "number" },
+        { field: "year", required: false, kind: "text" },
         { field: "summary", required: false, kind: "text" },
       ],
     },
@@ -39965,7 +39957,6 @@ const ACTS: Record<string, (viewer: Viewer | null, move: DoorMove, body: DoorBod
   year: "year",
   summary: "summary",
   photos: "photos",
-  enquiries: "enquiriesId",
 }))),
   "change:Project": async (viewer, move, body) => projectData.update(viewer, record(body), projectSettable.partial().parse(stored(move.slots ?? [], body.values, {
   title: "title",
@@ -39974,7 +39965,6 @@ const ACTS: Record<string, (viewer: Viewer | null, move: DoorMove, body: DoorBod
   year: "year",
   summary: "summary",
   photos: "photos",
-  enquiries: "enquiriesId",
 }))),
   "delete:Project": async (viewer, _move, body) => projectData.remove(viewer, record(body)),
   "add:Enquiry": async (viewer, move, body) => enquiryData.create(viewer, enquirySchema.parse(stored(move.slots ?? [], body.values, {
@@ -40901,6 +40891,7 @@ import { w } from "#/kit/words";
 export const projectSettable = createInsertSchema(schema.projects, {
   title: (s) => s.trim().min(1, w.required).max(200, w.atMostCharacters(200)),
   place: (s) => s.max(200, w.atMostCharacters(200)),
+  year: (s) => s.max(200, w.atMostCharacters(200)),
   summary: (s) => s.max(10000, w.atMostCharacters(10000)),
   photos: z.array(z.object({ file: z.string().regex(/^project\\/[a-f0-9]{24}\\.webp$/), alt: z.string().trim().max(200), width: z.int().positive(), height: z.int().positive(), generated: z.literal(true).optional(), smaller: z.array(z.object({ file: z.string().regex(/^project\\/[a-f0-9]{24}\\.webp$/), width: z.union([z.literal(480), z.literal(960)]), height: z.int().positive() })).max(2).optional(), receipt: z.string().max(64).optional() })).max(10).nullish(),
 }).omit({ id: true, ownerId: true, createdAt: true, updatedAt: true });
@@ -40924,7 +40915,6 @@ import { contains } from "#/kit/search";
 import { deletePicture, dropCopies } from "#/kit/uploads";
 import { acceptFiles, cleanUploads, keepsUpload } from "#/kit/receipts.server";
 import { afterChange, afterDelete } from "./hooks";
-import { enquiryData } from "./enquiry.server";
 import { serviceData } from "./service.server";
 import { type ProjectSettable } from "./project";
 
@@ -41093,10 +41083,10 @@ export const projectData = {
   async get(viewer: Viewer | null, id: number) {
     const fetched = await db.query.projects.findFirst({
       where: and(eq(schema.projects.id, id), projectData.readable(viewer)),
-      with: { service: { columns: { id: true, name: true } }, enquiries: { where: enquiryData.readable(viewer) } },
+      with: { service: { columns: { id: true, name: true } } },
     });
     const found = fetched && projectData.shownRefs(viewer, [fetched])[0];
-    const row = found && { ...shownTo(viewer, found), enquiries: found.enquiries.map((r) => enquiryData.shownTo(viewer, r)) };
+    const row = found && shownTo(viewer, found);
     return row ? row : null;
   },
 
@@ -41274,7 +41264,6 @@ import { allows, type Rule } from "#/kit/access";
 import type { RecordUi } from "#/kit/model";
 import { bindPictures } from "#/kit/PictureInput";
 import { projectAccess, projectData } from "./project.server";
-import { enquiryAccess } from "./enquiry.server";
 import { writeAllowed } from "#/kit/limit";
 import { currentViewer } from "#/lib/viewer.server";
 import { asPerson } from "#/kit/person-time.server";
@@ -41327,7 +41316,7 @@ export const projectUi: RecordUi<ProjectRow> = {
     {
       name: "year",
       label: "Year",
-      kind: "int",
+      kind: "string",
       required: false,
       get: (row) => row.year,
     },
@@ -41368,8 +41357,6 @@ export const getProject = createServerFn()
       row,
       canWrite: allows(projectAccess.write, viewer, row.ownerId),
       canDelete: allows(projectAccess.delete, viewer, row.ownerId),
-      // Who may add to its related lists from here ("Add line" on an invoice).
-      canAdd: { enquiries: allows(enquiryAccess.create, viewer) },
     };
   });
 
@@ -43378,21 +43365,18 @@ import { guardPage } from "#/kit/page-guard";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
 import { w } from "#/kit/words";
-import { count, optional, type Search } from "#/kit/params";
 
 export const Route = createFileRoute("/enquiries/new")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["enquiries"], context.viewer, location.href),
   head: () => pageHead("enquiries", w.newOne("enquiry")),
-  validateSearch: (s: Search) => optional({ project: count(s.project) }),
   loader: async () => ({ options: { projectId: await projectOptions() } }),
   component: NewEnquiryPage,
 });
 
 function NewEnquiryPage() {
   const { options } = Route.useLoaderData();
-  const search = Route.useSearch();
   const navigate = useNavigate();
-  const back = () => search.project ? navigate({ to: "/projects/$id", params: { id: String(search.project) } }) : navigate({ to: "/enquiries" });
+  const back = () => navigate({ to: "/enquiries" });
   return (
     <>
       <PageHeader title={w.newOne("enquiry")} />
@@ -43400,8 +43384,6 @@ function NewEnquiryPage() {
         ui={enquiryUi}
         app={app}
         schema={enquirySchema}
-        preset={{ ...(search.project ? { projectId: search.project } : {}) }}
-        fixed={[...(search.project ? ["projectId"] : [])]}
         options={options}
         submitLabel={w.createOne("enquiry")}
         onSubmit={async (values) => {
@@ -43527,22 +43509,19 @@ export const Route = createFileRoute("/privacy/")({
 
 exports[`../../../examples/builder/smithable.yml > file list and generated code > src/routes/projects/$id.tsx 1`] = `
 "// Generated by Smithable from smithable.yml. Do not edit: this file is overwritten on every change.
-import { createFileRoute, Link, notFound, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, notFound, useNavigate } from "@tanstack/react-router";
 import { and, desc } from "drizzle-orm";
 import { auditLog } from "#/db/schema";
 import { app } from "#/generated/app";
 import { pageAccess, pageUi, pageHead } from "#/generated/pages";
 import { deleteProject, getProject, projectUi, updateProject } from "#/generated/project";
 import { projectSchema } from "#/generated/project.schema";
-import { buttonVariants } from "#/components/ui/button";
-import { enquiryUi } from "#/generated/enquiry";
 import { serviceOptions } from "#/generated/service";
 import { guardPage } from "#/kit/page-guard";
 import { ActivityLog } from "#/kit/ActivityLog";
 import { BackTo, LastChange, PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
 import { w } from "#/kit/words";
-import { ModelTable } from "#/kit/ModelTable";
 import { createServerFn } from "@tanstack/react-start";
 import { getRequestHeaders } from "@tanstack/react-start/server";
 import { eq } from "drizzle-orm";
@@ -43623,7 +43602,7 @@ export const Route = createFileRoute("/projects/$id")({
 });
 
 function ProjectPage() {
-  const { row, canWrite, canDelete, canAdd, options, history } = Route.useLoaderData();
+  const { row, canWrite, canDelete, options, history } = Route.useLoaderData();
   const { viewer } = Route.useRouteContext();
   const navigate = useNavigate();
   const back = () => navigate({ to: "/projects" });
@@ -43671,29 +43650,7 @@ function ProjectPage() {
           />
         )}
       />
-      <section className="mt-10">
-        <div className="mb-3 flex items-center justify-between gap-3">
-          <h2 className="text-lg font-semibold">{"Enquiries"}</h2>
-          {row.enquiries.length > 0 && canAdd?.enquiries && (
-              <Link to="/enquiries/new" search={{ project: row.id }} className={buttonVariants({ variant: "outline" })}>
-                {w.addOne("enquiry")}
-              </Link>
-            )}
-        </div>
-        <ModelTable
-          ui={enquiryUi}
-          app={app}
-          rows={row.enquiries}
-          hide={["projectId"]}
-          onOpen={(item) => navigate({ to: "/enquiries/$id", params: { id: String(item.id) } })}
-          emptyAction={canAdd?.enquiries && (
-              <Link to="/enquiries/new" search={{ project: row.id }} className={buttonVariants({ variant: "outline" })}>
-                {w.addOne("enquiry")}
-              </Link>
-            )}
-          emptyMessage={canAdd?.enquiries ? undefined : w.noneYet("enquiries")}
-        />
-      </section>
+
       {history && history.length > 0 && (
         <section className="mt-10 max-w-3xl">
           <h2 className="mb-3 text-lg font-semibold">{w.history}</h2>
@@ -43809,8 +43766,8 @@ function ProjectsPage() {
 ]}
         values={values}
         sorts={[
-  { value: "year", label: "Year, low to high" },
-  { value: "-year", label: "Year, high to low" },
+  { value: "year", label: "Year, A to Z" },
+  { value: "-year", label: "Year, Z to A" },
 ]}
         sort={sort}
         onChange={(next) => navigate({ to: "/projects", search: { q, ...next }, replace: true, resetScroll: false })}
@@ -45164,8 +45121,8 @@ exports[`../../../examples/builder/smithable.yml > the generated files are as re
   "src/custom/hooks.ts": "4247261f custom",
   "src/custom/styles.css": "87d7c518 custom",
   "src/db/index.ts": "ba378d34 kit",
-  "src/db/schema.ts": "48d614a6 generated",
-  "src/db/seed.ts": "f7272276 generated",
+  "src/db/schema.ts": "dcdffe74 generated",
+  "src/db/seed.ts": "263f799f generated",
   "src/generated/access.test.ts": "fd4c9cdb generated",
   "src/generated/actions/contacted.server.ts": "4ffd9ce3 generated",
   "src/generated/actions/contacted.ts": "3291067e generated",
@@ -45179,10 +45136,10 @@ exports[`../../../examples/builder/smithable.yml > the generated files are as re
   "src/generated/actions/won.ts": "27ec39e2 generated",
   "src/generated/activity.server.ts": "bd104751 generated",
   "src/generated/app.ts": "a910cef8 generated",
-  "src/generated/card.server.ts": "b01c3797 generated",
+  "src/generated/card.server.ts": "b498b974 generated",
   "src/generated/card.ts": "5cab12e4 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
-  "src/generated/dev-door.server.ts": "89175b6f generated",
+  "src/generated/dev-door.server.ts": "1fa3e519 generated",
   "src/generated/enquiry.formulas.ts": "247b77b2 generated",
   "src/generated/enquiry.import.server.ts": "a633861c generated",
   "src/generated/enquiry.import.ts": "913f16b7 generated",
@@ -45194,9 +45151,9 @@ exports[`../../../examples/builder/smithable.yml > the generated files are as re
   "src/generated/pages.ts": "d3e2e1f0 generated",
   "src/generated/project.import.server.ts": "36667ca1 generated",
   "src/generated/project.import.ts": "972cb779 generated",
-  "src/generated/project.schema.ts": "4a80fe33 generated",
-  "src/generated/project.server.ts": "8d7977fa generated",
-  "src/generated/project.ts": "af942b72 generated",
+  "src/generated/project.schema.ts": "17205929 generated",
+  "src/generated/project.server.ts": "a4735ae5 generated",
+  "src/generated/project.ts": "6c1b414c generated",
   "src/generated/roles.ts": "2040923c generated",
   "src/generated/service.import.server.ts": "b222252e generated",
   "src/generated/service.import.ts": "647b7017 generated",
@@ -45290,15 +45247,15 @@ exports[`../../../examples/builder/smithable.yml > the generated files are as re
   "src/routes/app-card.tsx": "48827720 generated",
   "src/routes/enquiries/$id.tsx": "ecddb05b generated",
   "src/routes/enquiries/index.tsx": "ac5f6ba6 generated",
-  "src/routes/enquiries/new.tsx": "7b10a21d generated",
+  "src/routes/enquiries/new.tsx": "14abb828 generated",
   "src/routes/files/$model.$field.ts": "37c1c781 kit",
   "src/routes/files/$model.$id.$field.$n.ts": "5288014d kit",
   "src/routes/files/$model.$id.$field.ts": "93378bd7 kit",
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/index.tsx": "574963c9 generated",
   "src/routes/privacy/index.tsx": "66a357d1 generated",
-  "src/routes/projects/$id.tsx": "f6b9928f generated",
-  "src/routes/projects/index.tsx": "ecfceea0 generated",
+  "src/routes/projects/$id.tsx": "b413344a generated",
+  "src/routes/projects/index.tsx": "07e25658 generated",
   "src/routes/projects/new.tsx": "747fcb9b generated",
   "src/routes/robots[.]txt.ts": "3992ada2 generated",
   "src/routes/services/$id.tsx": "a5473589 generated",

@@ -129,7 +129,7 @@ See it live: coming soon.
 ![A past project with its estimate request, as a visitor sees it, with the builder starter, Northshore Joinery](starters/builder-1.webp)
 ![The enquiries to follow up, with their status and the next date](starters/builder-2.webp)
 
-For a joiner, a builder, a painter or any trade whose work is shown by what it has done. Visitors see the services and the past projects with their pictures, and ask for an estimate from the project nearest what they want: their name, email, phone and a message. The enquiry is kept with the project it came from, filled in by the app and never by the visitor, and the builder is mailed. The builder follows each enquiry up, from contacted to a site visit, a quote, and won or lost, with the date of the next step.
+For a joiner, a builder, a painter or any trade whose work is shown by what it has done. Visitors see the services and the past projects (the builder adds their own photos), and ask for an estimate from the project nearest what they want: their name, email, phone and a message. The enquiry is kept with the project it came from, filled in by the app and never by the visitor, and the builder is mailed. The builder follows each enquiry up, from contacted to a site visit, a quote, and won or lost, with the date of the next step.
 
 ```sh
 smithable new my-firm --starter builder

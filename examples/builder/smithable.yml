@@ -22,10 +22,9 @@ models:
       title: string!
       service: Service!
       place: string                     # the village or the island, never the client's address
-      year: int
+      year: string                      # the year it was finished, as written: 2025
       summary: text
       photos: pictures                  # optional: a project reads well without them
-      enquiries: Enquiry[]
 
   Enquiry:
     description: A visitor's request for an estimate, about a project like one shown.
