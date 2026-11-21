@@ -112,6 +112,7 @@ function App(){
  const spec=useMemo(()=>project?readSpec(project.files):{},[project]);
  const run=async(name,args)=>{const result=await api.operation(name,args);if(result.ok)await refresh();return result.ok};
  return <PendingEdits.Provider value={edits.report}><output aria-label="Pending edits">{String(edits.pending())}</output><output aria-label="Creation starts">{started}</output>
+ <output aria-label="Current models">{spec.ir?.models.map(model=>model.name).join(", ")}</output>
  <ReferenceCreationProvider project={project?.lookProject} ir={spec.ir} run={run} onStart={()=>setStarted(n=>n+1)}><Form/></ReferenceCreationProvider>
  <button onClick={()=>setLegacy(true)}>Open ordinary wizard</button><output aria-label="Ordinary wizard closed">{legacyClosed}</output>
  {legacy&&<Wizard kind="model" models={spec.ir?.models??[]} run={run} onClose={()=>{setLegacy(false);setLegacyClosed(n=>n+1)}}/>}</PendingEdits.Provider>
@@ -238,15 +239,12 @@ createRoot(document.getElementById('root')).render(<StrictMode><App/></StrictMod
     const help = dialog.getByRole("region", { name: "Smith help", exact: true });
     const back = help.getByRole("button", { name: "Back to creation", exact: true });
     await modelName.fill("UnappliedSupplier");
-    let helpCalls = 0;
+    const helpRequests = [];
     let sharedReplies = 0;
     const observeHelp = (request) => {
       const path = new URL(request.url()).pathname;
       if (path === "/api/said" && request.method() === "POST") sharedReplies++;
-      if (path === "/api/ask") {
-        helpCalls++;
-        assert.equal(request.postDataJSON().request, "Add a kind of record: edited model for help");
-      }
+      if (path === "/api/ask") helpRequests.push(request.postDataJSON().request);
     };
     page.on("request", observeHelp);
     for (const returnByEscape of [true, false]) {
@@ -280,6 +278,11 @@ createRoot(document.getElementById('root')).render(<StrictMode><App/></StrictMod
         await applied;
         assert.ok(await back.isDisabled(), "help allowed leaving during Apply");
         await page.keyboard.press("Escape");
+        await page.keyboard.press("Escape");
+        await page.evaluate(
+          () =>
+            new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
+        );
         assert.ok(await help.isVisible(), "Escape dismissed help during Apply");
         finishApply();
         await help.getByText("Controlled help apply refusal", { exact: true }).waitFor();
@@ -294,7 +297,11 @@ createRoot(document.getElementById('root')).render(<StrictMode><App/></StrictMod
       );
     }
     page.off("request", observeHelp);
-    assert.equal(helpCalls, 2, "each help handoff should send exactly once");
+    assert.deepEqual(
+      helpRequests,
+      Array(2).fill("Add a kind of record: edited model for help"),
+      "each help handoff should send its description exactly once",
+    );
     assert.equal(sharedReplies, 0, "help wrote to the usual Smith thread");
     assert.equal(
       await page.evaluate(() => sessionStorage.getItem("smithable:ask-draft")),
@@ -527,6 +534,21 @@ createRoot(document.getElementById('root')).render(<StrictMode><App/></StrictMod
     assert.match(project.files.spec, /EditedSupplier:/);
     assert.doesNotMatch(project.files.spec, /ProposedSupplier:/);
     assert.equal(await draft.inputValue(), "original");
+    await propose("model", "edited model for help");
+    await modelName.fill("UnappliedSupplier");
+    await helpButton.click();
+    await help.getByRole("button", { name: "Apply", exact: true }).click();
+    await help.getByText(/^Done: /).waitFor();
+    await page
+      .getByLabel("Current models")
+      .filter({ hasText: /\bProposedSupplier\b/ })
+      .waitFor({ state: "attached" });
+    await back.click();
+    assert.equal(await modelName.inputValue(), "UnappliedSupplier");
+    await page.keyboard.press("Escape");
+    await dialog.waitFor({ state: "detached" });
+    assert.equal(await form.getByLabel("Selected reference").textContent(), "RetrySupplier");
+    console.log("PASS successful help Apply refreshes the project without selecting a reference");
   } catch (error) {
     if (page)
       await page.screenshot({ path: join(root, "failure.png"), fullPage: true }).catch(() => {});

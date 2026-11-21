@@ -149,6 +149,9 @@ function CreationDialog({
         if (help !== undefined) setHelp(undefined);
         else onClose();
       }}
+      onKeyDown={(event) => {
+        if (event.key === "Escape" && committing.current) event.preventDefault();
+      }}
       className="m-auto max-h-[90vh] w-[min(42rem,92vw)] overflow-auto rounded-lg bg-panel text-fg shadow-xl backdrop:bg-black/40"
     >
       {created ? (
