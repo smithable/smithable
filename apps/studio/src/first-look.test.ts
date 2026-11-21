@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { ThemePreview } from "./first-look";
+import { LookSession, ThemePreview } from "./first-look";
 
 function fixture() {
   let revision = "opening";
@@ -115,4 +115,66 @@ test("a failed picture fetch can be followed by Skip of the picker theme alone",
   ).rejects.toThrow("Offline");
   await f.picker.finish(false);
   expect(f.current()).toBe("simple");
+});
+
+describe("the Look panel's own changes", () => {
+  function panel() {
+    let revision = "opening";
+    let counter = 0;
+    const calls: string[] = [];
+    const applied: string[] = [];
+    const session = new LookSession(
+      { values: { preset: "simple", font: "" }, revision },
+      async (change, expected) => {
+        calls.push(`undo:${change}`);
+        if (expected !== revision || change !== applied.at(-1))
+          return { ok: false, output: "Another change came between." };
+        applied.pop();
+        revision = `undo${++counter}`;
+        return { ok: true, output: "Undone", revision };
+      },
+    );
+    const set = (key: string, value: string) =>
+      session.set(key, value, async (expected) => {
+        calls.push(`${key}:${value}`);
+        if (expected !== revision) return { ok: false, output: "Another change came between." };
+        revision = `change${++counter}`;
+        applied.push(revision);
+        return { ok: true, output: "Applied", change: revision, revision };
+      });
+    return { session, set, calls, external: () => (revision = "someone-else") };
+  }
+  test("Cancel undoes each setting's change, newest first", async () => {
+    const p = panel();
+    await p.set("font", "Inter");
+    await p.set("preset", "paper");
+    await p.session.finish(false);
+    expect(p.calls).toEqual(["font:Inter", "preset:paper", "undo:change2", "undo:change1"]);
+    expect(p.session.changed).toBe(false);
+  });
+  test("choosing the latest setting again replaces its change; an earlier one stays", async () => {
+    const p = panel();
+    await p.set("font", "Inter");
+    await p.set("font", "Lora");
+    await p.set("preset", "paper");
+    await p.set("font", "");
+    expect(p.calls).toEqual(["font:Inter", "undo:change1", "font:Lora", "preset:paper", "font:"]);
+  });
+  test("a value read later counts as the opening value until it is changed", async () => {
+    const p = panel();
+    p.session.know("pictures", "photos");
+    await p.set("pictures", "photos");
+    expect(p.calls).toEqual([]);
+    await p.set("pictures", "drawings");
+    p.session.know("pictures", "photos");
+    await p.set("pictures", "drawings");
+    expect(p.calls).toEqual(["pictures:drawings"]);
+  });
+  test("Cancel refuses after another writer's change and undoes nothing more", async () => {
+    const p = panel();
+    await p.set("font", "Inter");
+    p.external();
+    await expect(p.session.finish(false)).rejects.toThrow("Another change");
+    expect(p.session.changed).toBe(true);
+  });
 });

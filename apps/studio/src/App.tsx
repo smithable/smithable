@@ -38,6 +38,7 @@ import { FirstLook } from "./FirstLook";
 import { lookSeenKey, seenLook } from "./first-look";
 import { doneKey, guideOff, presentedKey, TOURS } from "./guide";
 import { entryText, grouped, line } from "./history";
+import { LookPanel } from "./LookPanel";
 import { logStore } from "./logs";
 import { Making } from "./Making";
 import { ApplyVersionDialog, OldVersion, type OpenOld, openOldTab } from "./OldVersion";
@@ -237,9 +238,10 @@ export function App() {
   const [pickingLook, setPickingLook] = useState<{
     project: Project;
     preset: string;
-    automatic: boolean;
   }>();
   const [lookFinished, setLookFinished] = useState<string>();
+  // The Look panel (T1145): the whole app's look beside the preview, opened from the toolbar.
+  const [lookOpen, setLookOpen] = useState(false);
   const [troubleshooting, setTroubleshooting] = useState(false);
   const wakingNow = useSyncExternalStore(waking.subscribe, waking.get);
   const [outbox, setOutbox] = useState(false);
@@ -802,7 +804,7 @@ export function App() {
   useEffect(() => {
     if (initialLook && !pickingLook && !editingLook && spec.ux && project) {
       showLookPreview.current("preview");
-      setPickingLook({ project, preset: spec.ux.theme.preset, automatic: true });
+      setPickingLook({ project, preset: spec.ux.theme.preset });
     }
   }, [initialLook, pickingLook, editingLook, spec.ux, project]);
   const messageErrors = (message?.diagnostics ?? []).filter((d) => d.severity === "error");
@@ -1498,21 +1500,26 @@ export function App() {
   const workspaceVisible =
     workspaceControls ??
     (narrow ? phoneWindow !== "preview" : !floating || slotOf(manual) !== undefined);
+  // Look opens on the left, or on the right when Smith is docked as the left window.
+  const lookRight = !narrow && !floating && slotOf("smith") === 0;
   const lookAction = project.lookProject && (
-    <Button
-      variant="ghost"
-      className="justify-start px-2"
+    <ToolbarButton
+      label="Look"
       data-guide="look"
-      disabled={busy || Boolean(pickingLook) || !spec.plugins}
+      text={narrow}
+      pressed={lookOpen}
+      disabled={!lookOpen && (busy || Boolean(pickingLook) || !spec.plugins)}
       onClick={() => {
+        if (lookOpen) return setLookOpen(false);
         pauseGuide();
         showWindow("preview");
-        if (spec.ux) setPickingLook({ project, preset: spec.ux.theme.preset, automatic: false });
+        if (spec.ux) setLookOpen(true);
         else setEditingLook({ project, path: keptPage() });
       }}
     >
-      Look
-    </Button>
+      <path d="M12 3a9 9 0 1 0 0 18c.9 0 1.5-.7 1.5-1.5 0-.4-.1-.7-.4-1-.2-.3-.4-.6-.4-1 0-.8.7-1.5 1.5-1.5H16a5 5 0 0 0 5-5c0-4.4-4-8-9-8Z" />
+      <path d="M7.5 11.5h.01M10 7.5h.01M15 7.5h.01" strokeWidth="2.6" />
+    </ToolbarButton>
   );
   const reviewCount = release.review
     ? needsLook(release.review, { hosted: Boolean(project.home) })
@@ -2157,7 +2164,13 @@ export function App() {
                       transform: `translateX(calc(${(-phoneIndex * 100) / slots.length}% + ${rowPan.dx}px))`,
                       transition: rowPan.dx ? "none" : "transform 250ms ease-out",
                     }
-                  : gridOf(shown.length === 1 ? "one" : layout, shown, slots)
+                  : {
+                      ...gridOf(shown.length === 1 ? "one" : layout, shown, slots),
+                      // The windows make room for Look beside them (T1145).
+                      ...(lookOpen && spec.ux
+                        ? { [lookRight ? "marginRight" : "marginLeft"]: "var(--look-width)" }
+                        : {}),
+                    }
               }
             >
               <div
@@ -2449,10 +2462,9 @@ export function App() {
         <FirstLook
           project={pickingLook.project}
           preset={pickingLook.preset}
-          automatic={pickingLook.automatic}
           aiBadge={spec.ux?.aiBadge ?? true}
           onRefresh={catchUp}
-          onClose={({ error, settings }) => {
+          onClose={({ error }) => {
             const finishedApp = pickingLook.project.localDir ?? pickingLook.project.name;
             try {
               localStorage.setItem(lookSeenKey(finishedApp), "1");
@@ -2460,8 +2472,20 @@ export function App() {
             setLookFinished(finishedApp);
             setPickingLook(undefined);
             if (error) setMessage({ ok: false, text: error });
-            if (settings && pickingLook.project.lookProject === project.lookProject)
-              setEditingLook({ project, path: keptPage() });
+          }}
+        />
+      )}
+      {lookOpen && spec.ux && (
+        <LookPanel
+          key={project.lookProject}
+          project={project}
+          spec={spec}
+          place={narrow ? "sheet" : lookRight ? "right" : "left"}
+          onRefresh={catchUp}
+          onClose={({ error, customize }) => {
+            setLookOpen(false);
+            if (error) setMessage({ ok: false, text: error });
+            if (customize) setEditingLook({ project, path: keptPage() });
           }}
         />
       )}
@@ -2599,6 +2623,7 @@ function ToolbarButton({
   text,
   disabled,
   pressed,
+  "data-guide": guide,
 }: {
   label: string;
   onClick: () => void;
@@ -2606,9 +2631,12 @@ function ToolbarButton({
   text?: boolean;
   disabled?: boolean;
   pressed?: boolean;
+  /** The guide stop beside it, as data-guide. */
+  "data-guide"?: string;
 }) {
   return (
     <Button
+      data-guide={guide}
       variant={pressed ? "primary" : "ghost"}
       aria-label={label}
       aria-pressed={pressed}

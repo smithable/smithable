@@ -492,6 +492,13 @@ export const api = {
         lookProject,
       }),
     ),
+  /** One change of the Look panel, made against the exact revision it was chosen on. */
+  lookChange: (
+    name: string,
+    args: Record<string, unknown>,
+    revision: string,
+    lookProject: string,
+  ) => changing(call<Result>("/api/op", { name, args, expectedRevision: revision, lookProject })),
   undoThemeChoice: (change: string, revision: string, lookProject: string) =>
     changing(
       call<Result>("/api/undo", {

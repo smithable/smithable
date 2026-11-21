@@ -192,13 +192,19 @@ export async function checkPicturePicker(port = 5840) {
       const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
       page = await context.newPage();
       await page.goto(automatic ? base : `${base}/?guide=off`);
-      if (!automatic) await page.getByRole("button", { name: "Look", exact: true }).click();
+      if (!automatic) {
+        // Look in the toolbar opens the panel, whose Image type applies a style at once.
+        await page.getByRole("button", { name: "Look", exact: true }).click();
+        const picker = page.getByRole("complementary", { name: "Look", exact: true });
+        await picker.getByLabel("Image type", { exact: true }).waitFor();
+        return { context, page, picker };
+      }
       const picker = page.getByRole("dialog", { name: "Choose a look", exact: true });
       await picker.getByRole("button", { name: "Next: Pictures", exact: true }).waitFor();
       return { context, page, picker };
     };
     const requests = [];
-    // Automatic: choices are only staged and Skip restores the opening theme.
+    // Automatic: choices are only staged and Cancel restores the opening theme.
     let opened = await open(true);
     page.on("request", (request) => {
       if (new URL(request.url()).pathname === "/api/op") requests.push(request.postDataJSON());
@@ -232,7 +238,7 @@ export async function checkPicturePicker(port = 5840) {
     await pastel.getByText("1 of your own picture stays.", { exact: true }).waitFor();
     await pastel.click();
     assert.equal(requests.filter((r) => r.name === "setPictureStyle").length, 0);
-    await opened.picker.getByRole("button", { name: "Skip", exact: true }).click();
+    await opened.picker.getByRole("button", { name: "Cancel", exact: true }).click();
     await opened.picker.waitFor({ state: "detached" });
     assert.equal(readFileSync(join(dir, "smithable.ux.yml"), "utf8"), openingUx);
     await opened.context.close();
@@ -258,28 +264,30 @@ export async function checkPicturePicker(port = 5840) {
     await opened.context.close();
     // Later Look applies a chosen style immediately, with no presentation or guide.
     opened = await open(false);
-    await opened.picker.getByRole("button", { name: "Next: Pictures", exact: true }).click();
     const manual = page.waitForResponse(
       (response) => new URL(response.url()).pathname === "/api/op",
     );
-    await opened.picker.getByRole("button", { name: "Use Lifelike pictures", exact: true }).click();
+    await opened.picker
+      .getByLabel("Image type", { exact: true })
+      .selectOption({ label: "Lifelike" });
     const manualResult = await (await manual).json();
     assert.ok(manualResult.ok, manualResult.output);
+    await page.waitForFunction(() => document.querySelector('.look-panel[aria-busy="false"]'));
+    await opened.picker.getByRole("button", { name: "Close Look", exact: true }).click();
     await opened.picker.waitFor({ state: "detached" });
     for (const [i, file] of paths.entries())
       assert.equal(hash(readFileSync(join(images, file))), expected("v2", "lifelike", i).sha256);
     assert.equal(await page.getByRole("dialog", { name: /^Smith presents / }).count(), 0);
     await opened.context.close();
-    // A failed fetch changes no files and leaves Skip available.
+    // A failed fetch changes no files and leaves Cancel available.
     opened = await open(false);
-    await opened.picker.getByRole("button", { name: "Next: Pictures", exact: true }).click();
     const before = paths.map((file) => hash(readFileSync(join(images, file))));
     const beforeUx = readFileSync(join(dir, "smithable.ux.yml"), "utf8");
     library.offline(true);
     const failed = page.waitForResponse(
       (response) => new URL(response.url()).pathname === "/api/op",
     );
-    await opened.picker.getByRole("button", { name: "Use Pastel pictures", exact: true }).click();
+    await opened.picker.getByLabel("Image type", { exact: true }).selectOption({ label: "Pastel" });
     assert.equal((await (await failed).json()).ok, false);
     await opened.picker.getByRole("alert").waitFor();
     assert.deepEqual(
@@ -287,11 +295,11 @@ export async function checkPicturePicker(port = 5840) {
       before,
     );
     assert.equal(readFileSync(join(dir, "smithable.ux.yml"), "utf8"), beforeUx);
-    await opened.picker.getByRole("button", { name: "Skip", exact: true }).click();
+    await opened.picker.getByRole("button", { name: "Cancel", exact: true }).click();
     await opened.picker.waitFor({ state: "detached" });
     await opened.context.close();
     console.log(
-      "  ✓ picture picker: complete app sets, staged Skip, one pinned-version Keep, owned pictures, manual choice and offline refusal",
+      "  ✓ picture picker: complete app sets, staged Cancel, one pinned-version Keep, owned pictures, Look's choice and offline refusal",
     );
   } catch (error) {
     console.error(`Picture picker failed; fixture: ${root}`);

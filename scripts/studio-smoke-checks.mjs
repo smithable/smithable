@@ -11,9 +11,9 @@ import { checkStudioHistory } from "./studio-history-checks.mjs";
 
 async function checkBuilder(page, phone) {
   const tab = (name) => page.getByRole("tab", { name, exact: true });
-  const look = page.getByRole("dialog", { name: "Choose a look", exact: true });
+  const look = page.getByRole("complementary", { name: "Look", exact: true });
   await (await toolbarAction(page, "Look")).click();
-  await look.getByRole("button", { name: "Keep this look", exact: true }).click();
+  await look.getByRole("button", { name: "Close Look", exact: true }).click();
   await look.waitFor({ state: "detached" });
 
   const showPreview = async () => {
@@ -115,7 +115,7 @@ async function checkPreviewRange(page) {
 export async function checkStudioSmoke(browser, base, evidence) {
   for (const [phone, choice] of [
     [false, "Keep this look"],
-    [true, "Skip"],
+    [true, "Cancel"],
   ]) {
     const context = await browser.newContext({
       viewport: phone ? { width: 390, height: 844 } : { width: 1440, height: 900 },
@@ -144,7 +144,7 @@ export async function checkStudioSmoke(browser, base, evidence) {
       await look.waitFor({ state: "detached" });
       assert.equal(
         await readUx(),
-        choice === "Skip" ? openingUx : chosenUx,
+        choice === "Cancel" ? openingUx : chosenUx,
         `${choice} left the wrong theme saved`,
       );
       await presentation.getByRole("button", { name: "Skip", exact: true }).click();

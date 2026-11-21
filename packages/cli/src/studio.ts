@@ -1447,7 +1447,7 @@ export async function studio(
             onResult: (result) => {
               if (!result.ok && result.diagnostics.length) diagnostics = result.diagnostics;
               if (
-                ["setTheme", "setPictureStyle"].includes(String(name)) &&
+                ["setTheme", "resetThemeOverride", "setPictureStyle"].includes(String(name)) &&
                 result.ok &&
                 result.verification?.revision
               )
