@@ -2151,7 +2151,7 @@ exports[`valid specs > ../../../examples/builder/smithable.yml 1`] = `
           "required": false,
           "type": {
             "kind": "scalar",
-            "name": "int",
+            "name": "string",
           },
           "unique": false,
         },
@@ -2170,16 +2170,6 @@ exports[`valid specs > ../../../examples/builder/smithable.yml 1`] = `
           "type": {
             "kind": "scalar",
             "name": "pictures",
-          },
-          "unique": false,
-        },
-        {
-          "name": "enquiries",
-          "required": false,
-          "type": {
-            "kind": "relation",
-            "many": true,
-            "model": "Enquiry",
           },
           "unique": false,
         },
