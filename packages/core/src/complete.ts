@@ -220,6 +220,8 @@ function namesIn(text: string) {
   const actions = new Map<string, string | undefined>();
   /** "Model.field" to the values of a choice field. */
   const choices = new Map<string, string[]>();
+  /** "Model.field" of each picture or pictures field: what a gallery's cover may name. */
+  const pictured = new Set<string>();
   /** A landing page to its sections, each with its kind (a records section's name is its own). */
   const landing = new Map<string, Map<string, string>>();
   let section = "";
@@ -247,13 +249,16 @@ function namesIn(text: string) {
       if (section === "pages") pages.set(entry, of);
       if (section === "actions") actions.set(entry, of);
       const fields = /\bfields:\s*\{([^}]*)/.exec(inline)?.[1];
-      if (section === "models" && fields)
+      if (section === "models" && fields) {
         models.set(
           entry,
           [...fields.matchAll(/(?<![A-Za-z0-9])([a-z][A-Za-z0-9]*)\s*:/g)].map(
             (m) => m[1] as string,
           ),
         );
+        for (const m of fields.matchAll(/(?<![A-Za-z0-9])([a-z][A-Za-z0-9]*)\s*:\s*pictures?\b/g))
+          pictured.add(`${entry}.${m[1]}`);
+      }
     } else if (at === 4 && key && entry) {
       inFields = section === "models" && key === "fields";
       inLanding = section === "pages" && key === "landing";
@@ -264,6 +269,8 @@ function namesIn(text: string) {
     } else if (at === 6 && key && inFields) {
       models.get(entry)?.push(key);
       field = key;
+      if (/^:\s*(?:\{\s*type:\s*)?pictures?\b/.test(line.slice(line.indexOf(":"))))
+        pictured.add(`${entry}.${key}`);
       const values = choiceValues(line.slice(line.indexOf(":") + 1));
       if (values) choices.set(`${entry}.${key}`, values);
     } else if (at === 6 && key && inLanding) {
@@ -289,7 +296,7 @@ function namesIn(text: string) {
       if (kind && last) landing.get(entry)?.set(last, kind);
     }
   }
-  return { models, pages, actions, choices, landing };
+  return { models, pages, actions, choices, landing, pictured };
 }
 
 /** The app's own names that fit a place: a value's, or (for `keys`) the keys of a map. */
@@ -349,17 +356,20 @@ function companionNames(
   known: Known,
   keys: boolean,
 ): string[] | undefined {
-  const { models, pages, actions, choices, landing } = namesIn(known.spec ?? "");
+  const { models, pages, actions, choices, landing, pictured } = namesIn(known.spec ?? "");
   const kinds = [...models.keys()];
   const pageIds = [...pages.keys()];
   const [section, entry, part, fourth] = place.path;
   const depth = place.path.length;
   /** The fields of a page's model (every model's when the page names none). */
-  const pageFields = (page: string | undefined) => {
+  const pageModel = (page: string | undefined) => {
     const spec = known.spec ?? "";
-    const model = /^ {4}(?:crud|calendar|articles):\s*([A-Z][A-Za-z0-9]*)/m.exec(
+    return /^ {4}(?:crud|calendar|articles):\s*([A-Z][A-Za-z0-9]*)/m.exec(
       spec.slice(spec.indexOf(`\n  ${page}:`)),
     )?.[1];
+  };
+  const pageFields = (page: string | undefined) => {
+    const model = pageModel(page);
     return model ? (models.get(model) ?? []) : kinds.flatMap((m) => models.get(m) ?? []);
   };
   if (keys) {
@@ -408,8 +418,12 @@ function companionNames(
     if (section === "pages" && depth === 3 && part === "theme" && key === "preset") return presets;
     if (section === "pages" && depth === 3) {
       const fields = pageFields(entry);
-      if (part === "table" && ["columns", "sort", "below", "cover"].includes(key ?? ""))
-        return fields;
+      if (part === "table" && ["columns", "sort", "below"].includes(key ?? "")) return fields;
+      // A gallery's cover is one of the page model's picture fields.
+      if (part === "table" && key === "cover") {
+        const model = pages.get(entry ?? "") ?? pageModel(entry);
+        return fields.filter((f) => model && pictured.has(`${model}.${f}`));
+      }
       if (part === "form" && key === "fieldOrder") return fields;
     }
     // A form section's fields: "- { name: contact, fields: [name, email] }".

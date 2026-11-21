@@ -10,7 +10,7 @@ import {
   ImageIcon,
   type LucideIcon,
 } from "lucide-react";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Badge } from "#/components/ui/badge";
 import { Button } from "#/components/ui/button";
 import { Card } from "#/components/ui/card";
@@ -213,9 +213,10 @@ export function ModelTable<R extends Row>({
 }: ModelTableProps<R>) {
   // The row a shift-click selects from: a range, as in a file list or a spreadsheet.
   const anchor = useRef<number | null>(null);
-  // A gallery's picture shown whole: the dialog, and which of the covers it shows.
+  // A gallery's picture shown whole: the dialog, and the record whose cover it shows (by id, so
+  // a refresh of the rows never turns it into another record's).
   const dialog = useRef<HTMLDialogElement>(null);
-  const [shownAt, setShownAt] = useState(0);
+  const [shownId, setShownId] = useState<R["id"]>();
   // A computed field the server sent is kept: a total over related records is worked out there,
   // where the records are (a list strips them). One it did not (a related list's rows) is filled in.
   const shown = ui.compute
@@ -319,6 +320,11 @@ export function ModelTable<R extends Row>({
     formatValue(pictureField, displayValue(pictureField, row), app) !== "—";
   // A gallery's dialog steps through the covers of the records shown, in the list's order.
   const covered = view === "gallery" ? shown.filter(hasPicture) : [];
+  const shownAt = covered.findIndex((row) => row.id === shownId);
+  // The record shown is gone from the list (deleted, filtered out): the dialog closes.
+  useEffect(() => {
+    if (shownAt < 0) dialog.current?.close();
+  }, [shownAt]);
   // A picture's address; for several pictures, the cover's (the first). With its smaller copies
   // as a srcset, so a thumbnail or a card loads no more than it shows.
   const pictureAt = (field: RecordFieldUi<R>, row: R) => {
@@ -476,7 +482,7 @@ export function ModelTable<R extends Row>({
             >
               {/* The checkbox sits in the picture's corner, or in a column of its own beside the title. */}
               {selection && tiles && pictureField && (
-                <span className="absolute top-1 left-1 z-10">
+                <span className="absolute top-1 left-1 z-20">
                   {check(
                     row,
                     index,
@@ -494,7 +500,7 @@ export function ModelTable<R extends Row>({
                   aria-label={w.openPicture(nameOf(row))}
                   className="relative z-10 -mx-5 block w-[calc(100%+2.5rem)] cursor-zoom-in outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   onClick={() => {
-                    setShownAt(covered.indexOf(row));
+                    setShownId(row.id);
                     dialog.current?.showModal();
                   }}
                 >
@@ -795,8 +801,8 @@ export function ModelTable<R extends Row>({
       {pictureField && covered.length > 0 && (
         <PictureDialog
           dialog={dialog}
-          open={shownAt}
-          show={(i) => setShownAt((i + covered.length) % covered.length)}
+          open={Math.max(shownAt, 0)}
+          show={(i) => setShownId(covered[(i + covered.length) % covered.length]?.id)}
           pictures={covered.map((row) => ({
             image: {
               src: pictureAt(pictureField, row).src,

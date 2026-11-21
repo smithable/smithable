@@ -220,6 +220,16 @@ test("a companion file is helped from its own schema, with the spec's names", ()
   expect(ux("smithableUx: 0.1\npages:\n  orders:\n    table:\n      columns: [‸")).toEqual(
     expect.arrayContaining(["number", "customer", "status", "total"]),
   );
+  // A gallery's cover offers only the page model's picture fields.
+  const pictured =
+    "smithable: 0.1\nmodels:\n  Project:\n    fields:\n      name: string!\n      before: picture\n      plan: file\n  Shot: { fields: { title: string, photos: pictures } }\npages:\n  projects: { crud: Project }\n  shots: { crud: Shot }\n";
+  const cover = (page: string) => {
+    const text = `smithableUx: 0.1\npages:\n  ${page}:\n    table:\n      cover: `;
+    const found = completeSpec(text, text.length, { spec: pictured }, "smithable.ux.yml");
+    return found?.suggestions.map((s) => s.label) ?? [];
+  };
+  expect(cover("projects")).toEqual(["before"]);
+  expect(cover("shots")).toEqual(["photos"]);
   expect(ux("smithableUx: 0.1\ntheme:\n  density: ‸")).toEqual([
     "comfortable",
     "standard",
