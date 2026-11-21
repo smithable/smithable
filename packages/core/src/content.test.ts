@@ -320,6 +320,13 @@ pages:
   ).toContain("cannot link to other records");
   // A model asking more than a message keeps the sender's name, email and message too.
   expect(errors("project: Project, budget: money")).toContain("asks more than a message");
+  // The sender's words are stored as text, in fields the sender may fill.
+  expect(
+    errors("project: Project, name: string!, email: email!, message: int, phone: phone"),
+  ).toContain("cannot hold what the sender writes");
+  expect(
+    errors("project: Project, name: string!, email: email!, message: { type: text, by: app }"),
+  ).toContain("cannot hold what the sender writes");
   const ir = kept.ir as SpecIR;
   const read = (text: string) => validateContent({ path: "smithable.content.yml", text }, ir);
   const { content, diagnostics } = read(`smithableContent: 0.1

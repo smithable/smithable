@@ -34,13 +34,20 @@ export function ContactOwner({
   text?: string;
   button?: string;
   thanks?: string;
-  /** The kept model's form instead of name, email and message; it calls `sent` once sent. */
-  form?: (sent: (kept?: boolean) => void, button: string) => React.ReactNode;
   /** The signed-in viewer: their name and email are filled in and locked. */
   viewer?: { name: string; email: string } | null;
-  /** Without `form`: resolves to whether the message stayed in the outbox (the preview sends no mail). */
-  onSend?: (values: ContactValues) => Promise<{ kept?: boolean } | undefined>;
-}) {
+} & (
+  | {
+      /** Resolves to whether the message stayed in the outbox (the preview sends no mail). */
+      onSend: (values: ContactValues) => Promise<{ kept?: boolean } | undefined>;
+      form?: never;
+    }
+  | {
+      /** The kept model's form instead of name, email and message; it calls `sent` once sent. */
+      form: (sent: (kept?: boolean) => void, button: string) => React.ReactNode;
+      onSend?: never;
+    }
+)) {
   const id = useId();
   const [values, setValues] = useState<ContactValues>({
     name: viewer?.name ?? "",

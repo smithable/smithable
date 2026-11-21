@@ -700,6 +700,25 @@ function checkContact(
       );
       return {};
     }
+    // The server writes the sender's name, email and message into these as text: plain text
+    // fields the sender may fill, never computed or the app's own.
+    const unfit = kept.fields.filter(
+      (f) =>
+        SENT.includes(f.name) &&
+        (f.formula ||
+          f.byApp ||
+          f.type.kind !== "scalar" ||
+          !["string", "text", "email"].includes(f.type.name)),
+    );
+    if (unfit.length) {
+      ctx.error(
+        contact.keepAt ?? contact.toAt,
+        "invalid-value",
+        `${contact.keep}'s ${unfit.map((f) => f.name).join(", ")} cannot hold what the sender writes: the kept copy stores the sender's name, email and message as text.`,
+        `Make them plain fields of type string, text or email.`,
+      );
+      return {};
+    }
     return {
       contact: {
         to: contact.to,
