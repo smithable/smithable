@@ -131,6 +131,8 @@ export function mergeActionServer(
   ir: SpecIR,
   auth: AuthIR,
   t: Texts,
+  /** The models whose mails send a link to a copy (record-documents.md §5). */
+  sending: string[] = [],
 ): string {
   const a = actionNames(action);
   const model = modelNamed(ir, action.on);
@@ -236,6 +238,12 @@ export function mergeActionServer(
   const tables = [...new Map(referrers.map((r) => [r.model.name, r.model])).values()];
   const tableOf = `const TABLES = { ${tables.map((m) => `${JSON.stringify(m.name)}: ${names(m, t).table}`).join(", ")} } as const;`;
   const trashes = tables.filter((m) => m.trash).map((m) => m.name);
+  // A record merged away ends its sent links, or takes its copies along when deleted for good
+  // (record-documents.md §5), as its own delete would.
+  const links = (m: ModelIR, id: string) =>
+    sending.includes(m.name)
+      ? `\n${m.trash ? `endLinks(tx, viewer, ${JSON.stringify(m.name)}, ${id}, "trashed")` : `removeCopies(tx, ${JSON.stringify(m.name)}, ${id})`};`
+      : "";
   // Their words are their models' own (words-once.md): read from each model's ui.
   const counted = `[${others.map((m) => `{ model: ${JSON.stringify(m.name)}, label: ${names(m, t).ui}.label, plural: ${names(m, t).ui}.pluralLabel }`).join(", ")}]`;
   const readers = others.map((m) => names(m, t));
@@ -249,13 +257,18 @@ export function mergeActionServer(
     .join("");
   const combine = into === "new";
   const plain = !combine && referrers.length > 0;
+  const linked = [model, ...(combine ? [] : tables)].filter((m) => sending.includes(m.name));
+  const viewKit = [
+    ...(linked.some((m) => m.trash) ? ["endLinks"] : []),
+    ...(linked.some((m) => !m.trash) ? ["removeCopies"] : []),
+  ];
   return `${HEADER}import { ${combine ? "" : "and, "}eq, inArray${numbered ? ", max" : ""} } from "drizzle-orm";
 import { db } from "#/db";
 ${SCHEMA_IMPORT}
 import { AccessDenied, addressOf, addressOwner, allows, check, Conflict, personOf, type Viewer } from "#/kit/access";
 import { audit } from "#/kit/audit.server";
 import { refusal } from "#/kit/log.server";
-${numbered ? 'import { nextInSequence } from "#/kit/sequence.server";\n' : ""}import { w } from "#/kit/words";
+${numbered ? 'import { nextInSequence } from "#/kit/sequence.server";\n' : ""}${viewKit.length ? `import { ${viewKit.join(", ")} } from "#/kit/view.server";\n` : ""}import { w } from "#/kit/words";
 ${[n, ...(combine ? [] : readers)].map((x) => `import { ${x.access}, ${x.data} } from "${x.module}.server";`).join("\n")}
 ${[...new Set([model, ...(combine ? [] : tables)])].map((m) => `import { ${names(m, t).ui} } from "${names(m, t).module}";`).join("\n")}
 import { ${a.access} } from "./${kebab(action.name)}";
@@ -387,7 +400,7 @@ function refsOf(rows: Record<string, unknown>[]): Record<string, string[]> {
 }
 ${
   combine
-    ? combineCode(action, model, n, referrers, numbered, title, signedIn, owner, t)
+    ? combineCode(action, model, n, referrers, numbered, title, signedIn, owner, t, links)
     : chosenCode(
         action,
         model,
@@ -401,6 +414,8 @@ ${
         signedIn,
         owner,
         plain,
+        links,
+        tables,
       )
 }`;
 }
@@ -419,6 +434,8 @@ function chosenCode(
   signedIn: boolean,
   owner: (m: ModelIR, row: string) => string,
   plain: boolean,
+  links: (m: ModelIR, id: string) => string,
+  tables: ModelIR[],
 ): string {
   const a = actionNames(action);
   return `
@@ -507,7 +524,11 @@ export async function ${a.run}(viewer: Viewer | null, ids: number[], given: Reco
         const table = TABLES[d.model];
         if ((${literal(trashes)} as string[]).includes(d.model))
           tx.update(table).set({ deletedAt: when${signedIn ? ", deletedBy: personOf(viewer)" : ""} } as never).where(eq(table.id, d.id)).run();
-        else tx.delete(table).where(eq(table.id, d.id)).run();
+        else tx.delete(table).where(eq(table.id, d.id)).run();${tables
+          .map((m) => [m, links(m, "d.id")] as const)
+          .filter(([, l]) => l)
+          .map(([m, l]) => `\n        if (d.model === ${JSON.stringify(m.name)}) ${l.trim()}`)
+          .join("")}
       }
       // Each field the person decides must be decided: a program or Ask asks for the missing one.
       const chosen = choicesOf(raw, given);
@@ -520,9 +541,9 @@ export async function ${a.run}(viewer: Viewer | null, ids: number[], given: Reco
         ${
           model.trash
             ? `// It goes to the trash, its unique values released as a trashed record's are.
-        if (goes.has(other.id)) tx.update(${n.table}).set({ deletedAt: when${signedIn ? ", deletedBy: personOf(viewer)" : ""} }).where(eq(${n.table}.id, other.id)).run();`
+        if (goes.has(other.id)) tx.update(${n.table}).set({ deletedAt: when${signedIn ? ", deletedBy: personOf(viewer)" : ""} }).where(eq(${n.table}.id, other.id)).run();${links(model, "other.id") ? `\n        if (goes.has(other.id)) ${links(model, "other.id").trim()}` : ""}`
             : `// No trash for ${inert(n.pluralLabel.toLowerCase())}: it is deleted for good.
-        if (goes.has(other.id)) tx.delete(${n.table}).where(eq(${n.table}.id, other.id)).run();`
+        if (goes.has(other.id)) tx.delete(${n.table}).where(eq(${n.table}.id, other.id)).run();${links(model, "other.id") ? `\n        if (goes.has(other.id)) ${links(model, "other.id").trim()}` : ""}`
         }
         // What moved from it, so its Restore can put it back: tied to this trashing.
         const from = <T extends { from: number }>(list: T[]) => list.filter((x) => x.from === other.id);
@@ -551,6 +572,7 @@ function combineCode(
   signedIn: boolean,
   owner: (m: ModelIR, row: string) => string,
   t: Texts,
+  links: (m: ModelIR, id: string) => string,
 ): string {
   const a = actionNames(action);
   const refers = referrers.map((r) => {
@@ -613,7 +635,7 @@ export async function ${a.run}(viewer: Viewer | null, ids: number[], given: Reco
               ? `tx.update(${n.table}).set({ deletedAt: when${signedIn ? ", deletedBy: personOf(viewer)" : ""} }).where(eq(${n.table}.id, record.id)).run();`
               : `tx.delete(${n.table}).where(eq(${n.table}.id, record.id)).run();`
           }
-          audit(tx, viewer, { action: ${model.trash ? '"trashed"' : '"deleted"'}, model: ${JSON.stringify(model.name)}, record: record.id, title: record.${title}, details: { by: ${JSON.stringify(action.name)} } });
+          audit(tx, viewer, { action: ${model.trash ? '"trashed"' : '"deleted"'}, model: ${JSON.stringify(model.name)}, record: record.id, title: record.${title}, details: { by: ${JSON.stringify(action.name)} } });${links(model, "record.id").replace("\n", "\n          ")}
         }
       // Made as any new record is (A 153): its rules, its numbers counting up; theirs who ran it.
       const values = ${n.data}.checkCreate(tx, viewer, valuesOf(raw, chosen, remove) as never);

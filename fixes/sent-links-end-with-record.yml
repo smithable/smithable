@@ -1,0 +1,8 @@
+id: sent-links-end-with-record
+title: A link sent to a record's document stayed open after a merge or a split put the record in the trash or deleted it, and the Sent list and its Withdraw checked access apart from reading the links.
+severity: security
+exposure: Someone holding a link sent for a record that a merge or a split's undo then trashed or deleted could still open the record's copy until the link expired. For a record owned by an address, the document could take another member's business details as the sender.
+introduced: unknown
+affects:
+  kit: [src/kit/view.server.ts]
+migration: none
