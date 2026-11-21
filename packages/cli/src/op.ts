@@ -1,13 +1,4 @@
-import {
-  appendFileSync,
-  existsSync,
-  mkdirSync,
-  readFileSync,
-  renameSync,
-  rmSync,
-  statSync,
-  writeFileSync,
-} from "node:fs";
+import { existsSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { columnOf, plural } from "@smithable/adapter-tanstack";
 import {
@@ -1059,10 +1050,7 @@ function followInSamples(dir: string, effects: Effect[]): void {
     if (effect.kind === "rename-model") {
       const file = join(dir, "samples", `${effect.from}.yml`);
       if (existsSync(file))
-        changeTree([
-          { path: join(dir, "samples", `${effect.to}.yml`), data: readFileSync(file) },
-          { path: file, data: null },
-        ]);
+        changeTree([{ path: join(dir, "samples", `${effect.to}.yml`), from: file }]);
       continue;
     }
     // A choice value that goes: each sample holding it gets the new one, or loses it.

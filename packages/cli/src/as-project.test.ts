@@ -81,7 +81,11 @@ test("given a project user, the app's database and the tree are worked on by a c
     { path: file, data: " two", append: true },
     { path: join(dir, "gone.txt"), data: "x" },
     { path: join(dir, "gone.txt"), data: null },
+    { path: join(dir, "moved.txt"), data: "m" },
+    { path: join(dir, "here.txt"), from: join(dir, "moved.txt") },
   ]);
+  expect(readFileSync(join(dir, "here.txt"), "utf8")).toBe("m");
+  expect(statSync(join(dir, "moved.txt"), { throwIfNoEntry: false })).toBeUndefined();
   expect(readFileSync(file, "utf8")).toBe("one two");
   expect(statSync(file).gid).toBe(process.getgid?.());
   expect(statSync(join(dir, "gone.txt"), { throwIfNoEntry: false })).toBeUndefined();
