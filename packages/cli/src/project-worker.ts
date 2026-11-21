@@ -1,16 +1,16 @@
 // The project worker (T991): one long-lived child per project that runs the app's own tools
 // (tool-steps.ts) for a process holding Studio's token or the model key, so that process never
-// loads code the project can write. The child gets childEnv() and no secret, a pipe on fd 3 and
+// loads code the project can write. The child gets childOptions() and no secret, a pipe on fd 3 and
 // nothing else; every answer is data, size-capped and shape-checked, under a time limit. A worker
 // that crashes, hangs or answers out of shape is stopped and started again once; after that the
-// caller falls back to the tools' own processes (tsr, drizzle-kit, tsx), also on childEnv().
+// caller falls back to the tools' own processes (tsr, drizzle-kit, tsx), also on childOptions().
 // A process without a secret (local Studio, the CLI on a laptop) runs the steps in itself.
 import { type ChildProcess, spawn } from "node:child_process";
 import { resolve } from "node:path";
 import type { Readable, Writable } from "node:stream";
 import { fileURLToPath } from "node:url";
 import type { MigrationPlan } from "./generate.js";
-import { childEnv, holdsSecret } from "./secrets.js";
+import { childOptions, holdsSecret } from "./secrets.js";
 import * as local from "./tool-steps.js";
 
 /** The app's own tools, wherever they run. Undefined or false: the caller runs the tool's process. */
@@ -56,7 +56,7 @@ class Worker {
     this.starts++;
     const child = spawn(process.execPath, [MAIN], {
       cwd: this.dir,
-      env: childEnv(),
+      ...childOptions(),
       stdio: ["ignore", "ignore", "ignore", "pipe"],
       // A group of its own, so stopping it stops whatever the app's tools started too.
       detached: true,

@@ -3,7 +3,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { generate } from "./generate.js";
 import type { Io } from "./io.js";
-import { childEnv } from "./secrets.js";
+import { childOptions } from "./secrets.js";
 
 const URL = "http://localhost:3000";
 
@@ -33,7 +33,7 @@ export async function runDev(dir: string, io: Io, open: boolean): Promise<number
   const server = spawn("pnpm", ["dev"], {
     cwd: dir,
     stdio: "inherit",
-    env: childEnv(devServerEnv(process.env)),
+    ...childOptions(devServerEnv(process.env)),
   });
   if (open) void waitThenOpen(io);
   return new Promise((resolve) => server.on("exit", (status) => resolve(status ?? 0)));
@@ -64,7 +64,7 @@ export function openBrowser(url: string): void {
       : process.platform === "win32" || wsl
         ? ["cmd.exe", ["/c", "start", url]]
         : ["xdg-open", [url]];
-  spawn(command, args, { env: childEnv(), stdio: "ignore", detached: true })
+  spawn(command, args, { ...childOptions(), stdio: "ignore", detached: true })
     .on("error", () => {})
     .unref();
 }

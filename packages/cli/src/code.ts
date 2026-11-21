@@ -15,7 +15,7 @@ import { usageLine } from "./ask.js";
 import { discardChanges, ensureRepository, git, uncommittedRefusal } from "./git.js";
 import { exec, type Io } from "./io.js";
 import { projectIndex } from "./rules.js";
-import { childEnv } from "./secrets.js";
+import { childOptions } from "./secrets.js";
 import { loadSpec } from "./validate.js";
 import { installing } from "./vite-cache.js";
 
@@ -53,7 +53,7 @@ function run(
     const child = spawn(command, args, {
       cwd: dir,
       stdio: ["pipe", "pipe", "pipe"],
-      env: childEnv({ ...process.env, ...env }),
+      ...childOptions({ ...process.env, ...env }),
     });
     let out = "";
     child.stdout.on("data", (d) => (out += d));

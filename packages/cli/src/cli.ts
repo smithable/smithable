@@ -36,7 +36,7 @@ import { projectRevision } from "./project-revision.js";
 import { redo } from "./redo.js";
 import { report } from "./report.js";
 import { restore as applyVersion } from "./restore.js";
-import { holdSecrets, holdSecretsFromJson } from "./secrets.js";
+import { capabilityFault, holdSecrets, holdSecretsFromJson, projectUser } from "./secrets.js";
 import { type Level, security, updateSecurity } from "./security.js";
 import { staticPages } from "./static.js";
 import { studio } from "./studio.js";
@@ -78,6 +78,27 @@ export async function run(argv: string[], io: Io = processIo): Promise<number> {
       io.err(`${(error as Error).message}\n`);
       return 2;
     }
+  }
+  // Children may run under a configured uid (secrets.ts childOptions). A process given one must
+  // hold exactly what starts and stops them as that user and pass nothing on, or it does not run:
+  // a capability left inheritable or ambient would outlive a child's exec.
+  try {
+    if (projectUser()) {
+      let status = "";
+      try {
+        status = readFileSync("/proc/self/status", "utf8");
+      } catch {}
+      const fault = capabilityFault(status);
+      if (fault) {
+        io.err(
+          `Given a project uid, this process must hold exactly KILL, SETGID and SETUID and pass none on: ${fault}.\n`,
+        );
+        return 1;
+      }
+    }
+  } catch (error) {
+    io.err(`${(error as Error).message}\n`);
+    return 2;
   }
   // The shells' completion asks here; the words may hold options this parser does not know.
   if (argv[0] === "__complete") {

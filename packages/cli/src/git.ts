@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { childEnv } from "./secrets.js";
+import { childOptions } from "./secrets.js";
 
 /**
  * Who a commit is by when Git has no name or address configured (a newly installed Git): a
@@ -9,7 +9,7 @@ import { childEnv } from "./secrets.js";
 const FALLBACK = { "user.name": "Smithable", "user.email": "studio@smithable.invalid" };
 function identity(dir: string): string[] {
   return Object.entries(FALLBACK).flatMap(([key, value]) =>
-    spawnSync("git", ["config", key], { env: childEnv(), cwd: dir }).status === 0
+    spawnSync("git", ["config", key], { ...childOptions(), cwd: dir }).status === 0
       ? []
       : ["-c", `${key}=${value}`],
   );
@@ -58,7 +58,7 @@ export function git(dir: string, args: string[]): { ok: boolean; out: string } {
   const result = spawnSync("git", [...safeConfig, ...who, ...args], {
     cwd: dir,
     encoding: "utf8",
-    env: childEnv({ ...process.env, GIT_CONFIG_NOSYSTEM: "1" }),
+    ...childOptions({ ...process.env, GIT_CONFIG_NOSYSTEM: "1" }),
   });
   return { ok: result.status === 0, out: `${result.stdout}${result.stderr}`.trim() };
 }

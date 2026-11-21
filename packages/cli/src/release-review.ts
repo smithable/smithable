@@ -33,7 +33,7 @@ import { maintenanceInfo } from "./maintenance.js";
 import { lostFields } from "./op.js";
 import { loadPlugins } from "./plugins.js";
 import { privacyStates } from "./privacy-review.js";
-import { childEnv } from "./secrets.js";
+import { childOptions } from "./secrets.js";
 import type { Level, Result } from "./security.js";
 import { loadSpec } from "./validate.js";
 import { assetReview } from "./website-assets.js";
@@ -193,7 +193,7 @@ export function projectRevision(dir: string): string | undefined {
       ],
       {
         cwd: dir,
-        env: childEnv({ ...process.env, GIT_CONFIG_NOSYSTEM: "1" }),
+        ...childOptions({ ...process.env, GIT_CONFIG_NOSYSTEM: "1" }),
         maxBuffer: 4 * 1024 * 1024,
         stdio: ["ignore", "pipe", "ignore"],
       },

@@ -101,7 +101,7 @@ import { restore } from "./restore.js";
 import { projectIndex } from "./rules.js";
 import { doorAt, projectPeople } from "./sample-people.js";
 import { sampleRunner } from "./sample-run.js";
-import { childEnv, studioToken } from "./secrets.js";
+import { childOptions, studioToken } from "./secrets.js";
 import {
   pictureHashes,
   pictureStyleCards,
@@ -529,7 +529,7 @@ export async function studio(
     ? { [PREVIEW_TOKEN_HEADER]: previewToken }
     : {};
   // Neither Studio's token nor the model key: the app's code runs in this process (secrets.ts).
-  const previewEnv = childEnv();
+  const previewEnv = childOptions().env;
   if (previewToken) previewEnv[PREVIEW_TOKEN_DIGEST] = tokenDigest(previewToken);
   previewEnv.SMITHABLE_LOOK_KEY = lookKey;
   // The development door's secret (sample-users.md §4), new each start: the sample users act
@@ -668,7 +668,7 @@ export async function studio(
       ]),
       {
         cwd: dir,
-        env: childEnv({ ...devServerEnv(previewEnv), BETTER_AUTH_URL: preview, NO_COLOR: "1" }),
+        ...childOptions({ ...devServerEnv(previewEnv), BETTER_AUTH_URL: preview, NO_COLOR: "1" }),
         detached: true,
       },
     );

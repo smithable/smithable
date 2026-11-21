@@ -22,7 +22,7 @@ import { homedir } from "node:os";
 import { dirname, join, resolve, sep } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { tool } from "./io.js";
-import { childEnv } from "./secrets.js";
+import { childOptions } from "./secrets.js";
 
 /** Uploads are copied for the old version only up to this size in all; above it, none. */
 export const UPLOADS_MAX = 200 * 1024 * 1024;
@@ -68,7 +68,7 @@ const running = new Map<string, { abort: AbortController; children: Set<ChildPro
 /** Git in the project, with its hooks switched off for the command. */
 const git = (dir: string, args: string[]): string =>
   execFileSync("git", ["-c", "core.hooksPath=/dev/null", ...args], {
-    env: childEnv(),
+    ...childOptions(),
     cwd: dir,
     stdio: ["ignore", "pipe", "pipe"],
     maxBuffer: 16 * 1024 * 1024,
@@ -182,7 +182,12 @@ function run(
 ): Promise<string> {
   signal.throwIfAborted();
   return new Promise((done, fail) => {
-    const child = spawn(command, args, { cwd, env: childEnv(env), detached: true, stdio: "pipe" });
+    const child = spawn(command, args, {
+      cwd,
+      ...childOptions(env),
+      detached: true,
+      stdio: "pipe",
+    });
     children.add(child);
     let out = "";
     let err = "";
@@ -323,7 +328,7 @@ if (typeof window !== "undefined") {
     // it: pnpm exec would start it in a group of its own, out of reach. On the copy's own host.
     const child = spawn(
       ...tool(folder, "vite", ["dev", "--host", OLD_HOST, "--port", String(port), "--strictPort"]),
-      { cwd: folder, env: childEnv(env), detached: true, stdio: ["ignore", "pipe", "pipe"] },
+      { cwd: folder, ...childOptions(env), detached: true, stdio: ["ignore", "pipe", "pipe"] },
     );
     children.add(child);
     child.stdout?.on("data", (d) => options.log?.(String(d)));

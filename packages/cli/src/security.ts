@@ -15,7 +15,7 @@ import { discardChanges, ensureRepository, git, uncommitted, uncommittedRefusal 
 import { hostedLevel, levelLine } from "./hosted-level.js";
 import type { Io } from "./io.js";
 import { beginChecks, projectRevision, recordChecks } from "./release-review.js";
-import { childEnv } from "./secrets.js";
+import { childOptions } from "./secrets.js";
 import { loadSpec } from "./validate.js";
 import { assetReview } from "./website-assets.js";
 
@@ -96,8 +96,8 @@ export interface Result {
 }
 
 const has = (command: string) =>
-  spawnSync("sh", ["-c", `command -v ${command}`], { env: childEnv(), encoding: "utf8" }).status ===
-  0;
+  spawnSync("sh", ["-c", `command -v ${command}`], { ...childOptions(), encoding: "utf8" })
+    .status === 0;
 
 /**
  * Runs a tool on the project, mounted at /src when it runs in Docker. `args` get the project
@@ -113,7 +113,7 @@ function runTool(
   if (!installed && !has("docker")) return undefined;
   const [command, ...rest] = commandLine(tool, installed, dir, args, docker);
   const r = spawnSync(command as string, rest, {
-    env: childEnv(),
+    ...childOptions(),
     cwd: dir,
     encoding: "utf8",
     maxBuffer: 1 << 28,
@@ -499,7 +499,7 @@ export function readZap(r: Ran, text: string | undefined): Result {
 /** Runs a check that is a project command, e.g. the type check. */
 function command(dir: string, what: string, args: string[]): Result {
   const r = spawnSync("pnpm", args, {
-    env: childEnv(),
+    ...childOptions(),
     cwd: dir,
     encoding: "utf8",
     maxBuffer: 1 << 28,
@@ -594,7 +594,7 @@ export async function security(dir: string, io: Io, level: Level): Promise<numbe
   }
   const name = appName(dir);
   const docker = (args: string[]) =>
-    spawnSync("docker", args, { env: childEnv(), cwd: dir, encoding: "utf8" });
+    spawnSync("docker", args, { ...childOptions(), cwd: dir, encoding: "utf8" });
   if (!has("docker")) {
     io.err("Release checks build and run the app's image: they need Docker.\n");
     return 1;

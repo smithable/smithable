@@ -1,4 +1,4 @@
-// The project worker's own process (project-worker.ts): started in the project with childEnv() and
+// The project worker's own process (project-worker.ts): started in the project with childOptions() and
 // no secret, it runs the app's own tools for each question on fd 3, one at a time, and answers
 // each with a line of JSON. It ends when the pipe closes.
 import { Socket } from "node:net";

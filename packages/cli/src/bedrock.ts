@@ -1,9 +1,8 @@
 import { spawn } from "node:child_process";
-import { appendFileSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { appendFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { CutOffAnswerError, type Provider } from "@smithable/ai";
-import { childEnv } from "./secrets.js";
+import { childOptions, scratchDir } from "./secrets.js";
 
 /**
  * Prices per million tokens of Claude through Amazon Bedrock's EU inference profiles (eu-north-1,
@@ -35,7 +34,7 @@ export function bedrock(model: string, region: string, usageLog?: string): Provi
     price: price ? { input: price.input, output: price.output } : { input: 0, output: 0 },
     currency: "USD",
     async complete({ system, user, schema, maxOutputTokens }) {
-      const dir = mkdtempSync(join(tmpdir(), "smithable-bedrock-"));
+      const dir = scratchDir("smithable-bedrock-");
       try {
         const input = join(dir, "input.json");
         writeFileSync(
@@ -72,7 +71,7 @@ export function bedrock(model: string, region: string, usageLog?: string): Provi
               "--output",
               "json",
             ],
-            { env: childEnv(), stdio: ["ignore", "pipe", "pipe"] },
+            { ...childOptions(), stdio: ["ignore", "pipe", "pipe"] },
           );
           let stdout = "";
           let stderr = "";

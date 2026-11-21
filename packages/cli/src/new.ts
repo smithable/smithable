@@ -46,7 +46,7 @@ import { hostedLevel } from "./hosted-level.js";
 import { exec, type Io, tool } from "./io.js";
 import { type LibraryVersion, libraryVersion } from "./picture-style.js";
 import { addLibraryPictures, dropMissingPictures, placePictures } from "./pictures.js";
-import { childEnv } from "./secrets.js";
+import { childOptions } from "./secrets.js";
 import { readSite } from "./site-fetch.js";
 import { projectSitePersonal, replaceSitePersonalText } from "./site-personal.js";
 import { STARTER_ASSETS, STARTER_CODE, STARTER_SAMPLES, STARTERS } from "./starters.gen.js";
@@ -1235,7 +1235,10 @@ export function administered(
 
 /** The Git user's email address, when Git is there and knows one. */
 function gitEmail(): string | undefined {
-  const result = spawnSync("git", ["config", "user.email"], { env: childEnv(), encoding: "utf8" });
+  const result = spawnSync("git", ["config", "user.email"], {
+    ...childOptions(),
+    encoding: "utf8",
+  });
   const address = result.status === 0 ? result.stdout.trim() : "";
   return address || undefined;
 }
