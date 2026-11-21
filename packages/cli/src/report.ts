@@ -227,10 +227,14 @@ export interface Feedback {
 /** The spec files as a report sends them: the five files and the themes, addresses left out. */
 export function specFilesOf(dir: string): Record<string, string> {
   const files: Record<string, string> = {};
-  // Each as the project's own file: one that is not (a link put in the tree) is left out.
+  // Each as the project's own file: one that is not (a link put in the tree) is left out, and so
+  // is one past a megabyte, or past four in all.
+  let left = 4 << 20;
   const add = (name: string) => {
-    const text = readTreeOrNone(join(dir, name))?.toString("utf8");
-    if (text !== undefined) files[name] = redact(text);
+    const bytes = readTreeOrNone(join(dir, name), 1 << 20);
+    if (!bytes || bytes.length > left) return;
+    left -= bytes.length;
+    files[name] = redact(bytes.toString("utf8"));
   };
   for (const name of SPEC_FILES) add(name);
   const themes = join(dir, "themes");

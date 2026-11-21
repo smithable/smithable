@@ -7,7 +7,7 @@ import { specFilesOf } from "./report.js";
 import { forgetProjectUserForTests } from "./secrets.js";
 import { projectImage, projectPlugin } from "./studio.js";
 import { tempDir } from "./test-dir.js";
-import { projectTranslations } from "./validate.js";
+import { loadSpec, projectTranslations } from "./validate.js";
 
 const linux = process.platform === "linux";
 let dir: string;
@@ -60,4 +60,23 @@ test.runIf(linux)("a report's files leave out one that is a link", () => {
   mkdirSync(join(dir, "themes"));
   symlinkSync(secret, join(dir, "themes", "planted.yml"));
   expect(specFilesOf(dir)).toEqual({ "smithable.yml": "smithable: 0.1\n" });
+});
+
+test.runIf(linux)("a report holds at most four megabytes of files", () => {
+  writeFileSync(join(dir, "smithable.yml"), "smithable: 0.1\n");
+  mkdirSync(join(dir, "themes"));
+  for (const n of [1, 2, 3, 4, 5])
+    writeFileSync(join(dir, "themes", `t${n}.yml`), "a: 1\n".repeat((1 << 20) / 5));
+  writeFileSync(join(dir, "themes", "big.yml"), "a: 1\n".repeat((1 << 20) / 5 + 1));
+  const files = specFilesOf(dir);
+  expect(files["themes/big.yml"]).toBeUndefined();
+  expect(Object.keys(files).filter((f) => f.startsWith("themes/"))).toHaveLength(3);
+});
+
+test.runIf(linux)("the spec Studio's page shows is never read through a link", () => {
+  writeFileSync(secret, "smithable: 0.1\napp: { name: Mine }\n");
+  symlinkSync(secret, join(dir, "smithable.yml"));
+  const io = { out: () => {}, err: () => {} };
+  expect(() => loadSpec(dir, io as never).ir).not.toThrow();
+  expect(loadSpec(dir, io as never).ir).toBeUndefined();
 });
