@@ -8,7 +8,7 @@ import { timed } from "./io.js";
  * Returns how many modules were loaded.
  */
 export async function warmPreview(
-  port: number,
+  base: string,
   log: (text: string) => void,
   attempts = 240,
   /** Studio's token, when the preview takes one (behind a proxy). */
@@ -16,7 +16,6 @@ export async function warmPreview(
 ): Promise<number> {
   const started = Date.now();
   const seconds = () => Math.round((Date.now() - started) / 100) / 10;
-  const base = `http://127.0.0.1:${port}`;
   const get = async (path: string) => {
     try {
       const answer = await fetch(`${base}${path}`, { headers, redirect: "manual" });
