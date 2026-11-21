@@ -273,9 +273,7 @@ test("Review and Publish use current evidence and preserve the release destinati
       .waitFor();
     assert.match(await dialog.innerText(), /writer was interrupted/);
     await close(dialog);
-    metadata(
-      'const fs=await import("node:fs");fs.unlinkSync(writerLock(dir));',
-    );
+    metadata('const fs=await import("node:fs");fs.unlinkSync(writerLock(dir));');
     run(process.execPath, [
       cli,
       "op",
