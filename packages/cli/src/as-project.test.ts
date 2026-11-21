@@ -62,6 +62,7 @@ test("given a project user, the app's database and the tree are worked on by a c
   // A file in a folder that would not give it the project's group is written by the child.
   writeTreeFile(join(dir, "new", "deep", "file.txt"), "text");
   expect(readFileSync(join(dir, "new", "deep", "file.txt"), "utf8")).toBe("text");
+  expect(statSync(join(dir, "new", "deep", "file.txt")).gid).toBe(process.getgid?.());
   removeTree(join(dir, "new"));
   expect(statSync(join(dir, "new"), { throwIfNoEntry: false })).toBeUndefined();
   expect(childCallsForTests()).toBe(8);
