@@ -3,6 +3,7 @@ import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "vitest";
 import {
+  asMade,
   ensureRepository,
   git,
   ownRepository,
@@ -102,5 +103,29 @@ test("an app made inside another repository gets its own, and leaves that one al
     expect(git(app, ["rev-list", "--count", "HEAD"]).out).toBe("1");
   } finally {
     rmSync(outer, { recursive: true, force: true });
+  }
+});
+
+test("an app is as made until a change of the owner's or one by hand (T1163)", () => {
+  const dir = tempDir("smithable-git-");
+  const commit = (file: string, message: string) => {
+    writeFileSync(join(dir, file), file);
+    git(dir, ["add", "-A"]);
+    git(dir, ["commit", "-q", "-m", message]);
+  };
+  try {
+    expect(asMade(dir)).toBe(false);
+    writeFileSync(join(dir, "smithable.yml"), "smithable: 0.1\n");
+    ensureRepository(dir);
+    expect(asMade(dir)).toBe(true);
+    commit("a.txt", "smithable: make the app\n\nSmithable-Setup: true");
+    expect(asMade(dir)).toBe(true);
+    commit("b.txt", "smithable: set the theme\n\nSmithable-Op: {}");
+    expect(asMade(dir)).toBe(false);
+    git(dir, ["reset", "-q", "--hard", "HEAD~1"]);
+    commit("c.txt", "my own edit");
+    expect(asMade(dir)).toBe(false);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
   }
 });

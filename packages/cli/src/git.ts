@@ -73,6 +73,26 @@ export function ownRepository(dir: string): boolean {
   return prefix.ok && prefix.out === "";
 }
 
+/**
+ * Whether the app is as it was made (first-look.md §1): its own repository, whose commits are only
+ * the start of the history and the setting up, none of them a change of the owner's or made by
+ * hand. Read from the app's history, so a second browser or machine reads it the same.
+ */
+export function asMade(dir: string): boolean {
+  if (!ownRepository(dir)) return false;
+  // Past a handful of commits it is not new; no need to read the whole history.
+  const log = git(dir, ["log", "-n", "20", "--format=%B%x00"]);
+  if (!log.ok) return false;
+  const messages = log.out
+    .split("\0")
+    .map((m) => m.trim())
+    .filter(Boolean);
+  return (
+    messages.length < 20 &&
+    messages.every((m) => m === "smithable: start of history" || /^Smithable-Setup: /m.test(m))
+  );
+}
+
 /** Makes `dir` a Git repository of its own with a first commit, if it is not one yet. */
 export function ensureRepository(dir: string): void {
   if (ownRepository(dir)) return;

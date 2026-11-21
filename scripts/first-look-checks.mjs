@@ -14,7 +14,52 @@ export function stubPictureCatalogue(context) {
  * The first picker and the Look panel change the real app; Cancel undoes their own changes and
  * refuses to undo an intervening writer's work.
  */
+/**
+ * The app as made, whatever ran on it before (T1163): Studio reads it from the project, so the
+ * picker opens as for a new app. For checks on a project that earlier checks have changed.
+ */
+export async function asNewApp(target) {
+  await target.route("**/api/project", async (route) => {
+    const response = await route.fetch();
+    await route.fulfill({ response, json: { ...(await response.json()), asMade: true } });
+  });
+}
+
+/** While the picker is open only the preview and the picker show; closing brings back the rest. */
+async function checkPickerAlone(browser, base) {
+  // Docked Smith, and No code as a third window.
+  const context = await browser.newContext({ viewport: { width: 1366, height: 900 } });
+  await stubPictureCatalogue(context);
+  await asNewApp(context);
+  await context.addInitScript(() =>
+    localStorage.setItem(
+      "smithable:windows",
+      JSON.stringify({ layout: "three", slots: ["smith", "preview", "manual"], manual: "nocode" }),
+    ),
+  );
+  const page = await context.newPage();
+  const windows = () =>
+    page.locator("[data-window]:visible").evaluateAll((all) => all.map((w) => w.dataset.window));
+  try {
+    await page.goto(base);
+    const picker = page.getByRole("dialog", { name: "Choose a look", exact: true });
+    await picker.waitFor();
+    assert.deepEqual(await windows(), ["preview"], "windows beside the open picker");
+    await page.keyboard.press("Escape");
+    await picker.waitFor({ state: "detached" });
+    await page.locator("[data-window='manual']").waitFor();
+    assert.deepEqual(
+      (await windows()).sort(),
+      ["manual", "preview", "smith"],
+      "windows after the picker",
+    );
+  } finally {
+    await context.close();
+  }
+}
+
 export async function checkFirstLook(browser, base) {
+  await checkPickerAlone(browser, base);
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
   const page = await context.newPage();
   await stubPictureCatalogue(context);
@@ -53,6 +98,14 @@ export async function checkFirstLook(browser, base) {
   };
   try {
     await page.goto(base);
+    if (!(await project()).asMade) {
+      // An app changed since it was made opens without the picker (T1163); as made, it opens.
+      await page.getByRole("button", { name: "Look", exact: true }).waitFor();
+      await page.waitForTimeout(1000);
+      assert.equal(await picker.count(), 0, "the picker opened on a changed app");
+      await asNewApp(context);
+      await page.goto(base);
+    }
     await picker.waitFor();
     await picker.getByText("Hi, I’m Smith. Let’s give your app a look.", { exact: true }).waitFor();
     await picker.getByRole("heading", { name: "Which look feels right?", exact: true }).waitFor();

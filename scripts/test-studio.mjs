@@ -22,7 +22,7 @@ import { chromium } from "playwright";
 import { Client } from "../packages/cli/node_modules/@modelcontextprotocol/sdk/dist/esm/client/index.js";
 import { StreamableHTTPClientTransport } from "../packages/cli/node_modules/@modelcontextprotocol/sdk/dist/esm/client/streamableHttp.js";
 import { startFakeModel } from "./fake-model.mjs";
-import { checkFirstLook } from "./first-look-checks.mjs";
+import { asNewApp, checkFirstLook } from "./first-look-checks.mjs";
 import { P } from "./patience.mjs";
 import { checkPicturePicker } from "./picture-picker-browser.mjs";
 import { checkPorts } from "./ports.mjs";
@@ -708,6 +708,7 @@ try {
       // On a page of its own: every other step runs with ?guide=off.
       const fresh = await browser.newPage({ viewport: { width: 1440, height: 900 } });
       try {
+        await asNewApp(fresh);
         await fresh.goto(base);
         await fresh
           .getByRole("dialog", { name: "Choose a look", exact: true })

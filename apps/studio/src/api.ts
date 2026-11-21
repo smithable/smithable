@@ -160,6 +160,8 @@ export interface Project {
   plugins: { name: string; version: number }[];
   concepts: ConceptInfo[];
   trace: TraceEntry[];
+  /** The app is as it was made, with no change since (first-look.md §1): the look picker opens by itself. */
+  asMade?: true;
   /** Redo would make again the last change undone (none made since). */
   canRedo?: boolean;
   preview: string;

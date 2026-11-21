@@ -44,7 +44,7 @@ import {
   hasGenerationReceipt,
   startGeneration,
 } from "./generation-job.js";
-import { git, ownRepository, trailer, uncommittedRefusal } from "./git.js";
+import { asMade, git, ownRepository, trailer, uncommittedRefusal } from "./git.js";
 import { hostedLevel } from "./hosted-level.js";
 import { type Io, tool } from "./io.js";
 import { lookContext } from "./look-context.js";
@@ -913,6 +913,8 @@ export async function studio(
         .map((name) => ({ name, version: statSync(pluginPath(dir, name)).mtimeMs })),
       concepts: ir && auth ? projectIndex(dir, ir, auth).concepts : [],
       trace: trace(dir),
+      // A new app opens with the look picker; one changed since it was made does not (T1163).
+      ...(asMade(dir) ? { asMade: true as const } : {}),
       revision: projectRevision(dir),
       // Whether Redo has a change it would make again.
       canRedo: Boolean(redoTarget(dir)),

@@ -555,6 +555,13 @@ export function App() {
     ? slots.map((_, i) => i as 0 | 1 | 2)
     : arrangedShown.filter((i) => !smithHidden || slots[i] !== "smith");
   if (!shown.length) shown.push((previewAt >= 0 ? previewAt : 0) as 0 | 1 | 2);
+  // While the look picker is open, only the preview and the picker show (T1163). The other
+  // windows stay mounted, hidden, and come back as they were when it closes.
+  const lookAlone = Boolean(pickingLook);
+  const gridShown =
+    lookAlone && !narrow && shown.some((s) => slots[s] === "preview")
+      ? shown.filter((s) => slots[s] === "preview")
+      : shown;
   const dockedSmithSlot = arrangedShown.find(
     (i) => slots[i] === "smith" || slots[i] === "smith+changes",
   );
@@ -607,10 +614,10 @@ export function App() {
   };
   const swipeKey = useRef<(direction: 1 | -1) => void>(() => {});
   swipeKey.current = (direction) => {
-    if (narrow && !project?.making) stepRow(direction);
+    if (narrow && !project?.making && !pickingLook) stepRow(direction);
   };
   const rowPan = usePan({
-    enabled: narrow && !project?.making && !phoneSmithSheet,
+    enabled: narrow && !project?.making && !phoneSmithSheet && !pickingLook,
     follows: (start) => subContent(start) === undefined,
     onRelease: (direction, start) => {
       if (!subStep(subContent(start), direction)) stepRow(direction);
@@ -795,6 +802,8 @@ export function App() {
       !project.making &&
       project.lookProject &&
       project.revision &&
+      // Only a new app, read from its history: never an app changed since it was made (T1163).
+      project.asMade &&
       !guideOff() &&
       !seenLook(lookApp) &&
       lookFinished !== lookApp,
@@ -1387,12 +1396,14 @@ export function App() {
     guiding && !narrow
       ? sideFor(lit?.anchor, lit?.box, window.innerWidth, window.innerHeight, over)
       : "right";
-  const smithVisible = floating
-    ? panelOpen && side !== "fold"
-    : narrow
-      ? phoneSmithSheet ||
-        (phoneWindow === "smith" && (!phone.changesUnderSmith || phoneSub === "smith"))
-      : slotOf("smith") !== undefined;
+  const smithVisible = lookAlone
+    ? false
+    : floating
+      ? panelOpen && side !== "fold"
+      : narrow
+        ? phoneSmithSheet ||
+          (phoneWindow === "smith" && (!phone.changesUnderSmith || phoneSub === "smith"))
+        : slotOf("smith") !== undefined;
   const onCall = Boolean(audio && audio.call !== "idle");
   const listening = Boolean(audio && (audio.listening || audio.auto));
   const speakingHidden = !smithVisible && Boolean(audio?.speaking);
@@ -2165,7 +2176,7 @@ export function App() {
                       transition: rowPan.dx ? "none" : "transform 250ms ease-out",
                     }
                   : {
-                      ...gridOf(shown.length === 1 ? "one" : layout, shown, slots),
+                      ...gridOf(gridShown.length === 1 ? "one" : layout, gridShown, slots),
                       // The windows make room for Look beside them (T1145).
                       ...(lookOpen && spec.ux
                         ? { [lookRight ? "marginRight" : "marginLeft"]: "var(--look-width)" }
@@ -2205,7 +2216,7 @@ export function App() {
                       : undefined
                   }
                 />
-                {!narrow && (
+                {!narrow && !lookAlone && (
                   <PreviewArrows
                     left={
                       layout !== "one" && slotOf("preview") !== 0
@@ -2261,7 +2272,11 @@ export function App() {
                     )}
                     style={{
                       gridArea: area(smithSheet ? placed("preview") : s),
-                      display: !narrow && smithHidden && content === "smith" ? "none" : undefined,
+                      display:
+                        (!narrow && smithHidden && content === "smith") ||
+                        (lookAlone && (!narrow || smithSheet))
+                          ? "none"
+                          : undefined,
                     }}
                   >
                     {smithSheet && (
@@ -2504,32 +2519,37 @@ export function App() {
         </Suspense>
       )}
       {layerOn && (
-        <SmithLayer
-          mode={layer ?? "panel"}
-          appName={project.name}
-          lighter={previewRuns}
-          phone={narrow}
-          motion={motion}
-          movable={floating && !guiding}
-          open={panelOpen && side !== "fold"}
-          {...(over ? { over } : {})}
-          side={side === "left" ? "left" : "right"}
-          {...(layer === "closing" && !floating ? { target: narrow ? undefined : dockedAt() } : {})}
-          {...(guided && !guiding && !show.going ? { foldAfter: 90_000 } : {})}
-          activity={project.trace.length}
-          onNext={() => (show.said >= parts.length ? previewRuns && closeOverlay() : show.next())}
-          onSkip={closeOverlay}
-          onClosed={() => {
-            setLayer(floating ? "panel" : undefined);
-            setPresented(true);
-            if (narrow) showWindow("smith");
-          }}
-          onFold={() => setPanelOpen(false)}
-          onHide={hideSmith}
-          onDock={dock}
-        >
-          {smith(layer === "overlay" ? "overlay" : "panel")}
-        </SmithLayer>
+        // Hidden, not taken away, while the look picker is open (T1163): his thread stays.
+        <div className={lookAlone ? "hidden" : "contents"}>
+          <SmithLayer
+            mode={layer ?? "panel"}
+            appName={project.name}
+            lighter={previewRuns}
+            phone={narrow}
+            motion={motion}
+            movable={floating && !guiding}
+            open={panelOpen && side !== "fold"}
+            {...(over ? { over } : {})}
+            side={side === "left" ? "left" : "right"}
+            {...(layer === "closing" && !floating
+              ? { target: narrow ? undefined : dockedAt() }
+              : {})}
+            {...(guided && !guiding && !show.going ? { foldAfter: 90_000 } : {})}
+            activity={project.trace.length}
+            onNext={() => (show.said >= parts.length ? previewRuns && closeOverlay() : show.next())}
+            onSkip={closeOverlay}
+            onClosed={() => {
+              setLayer(floating ? "panel" : undefined);
+              setPresented(true);
+              if (narrow) showWindow("smith");
+            }}
+            onFold={() => setPanelOpen(false)}
+            onHide={hideSmith}
+            onDock={dock}
+          >
+            {smith(layer === "overlay" ? "overlay" : "panel")}
+          </SmithLayer>
+        </div>
       )}
       {releaseView === "review" && (
         <ReleaseReview

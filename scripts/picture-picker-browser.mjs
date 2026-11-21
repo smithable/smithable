@@ -159,7 +159,8 @@ export async function checkPicturePicker(port = 5840) {
       ["config", "user.name", "Fixture"],
       ["config", "user.email", "fixture@example.invalid"],
       ["add", "-A"],
-      ["commit", "-qm", "Fixture pictures"],
+      // Part of setting the app up, so it still opens as a new app (T1163).
+      ["commit", "-qm", "Fixture pictures\n\nSmithable-Setup: true"],
     ])
       execFileSync("git", args, { cwd: dir });
     const openingUx = readFileSync(join(dir, "smithable.ux.yml"), "utf8");
