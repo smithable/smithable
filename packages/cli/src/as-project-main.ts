@@ -20,12 +20,20 @@ const HOME: Record<string, () => Promise<unknown>> = {
   reseedPictures: () => import("./picture-style.js"),
   sync: () => import("./replace.js"),
   removeTree: () => import("./tree-files.js"),
-  writeTreeFile: () => import("./tree-files.js"),
+  changeTree: () => import("./tree-files.js"),
 };
 
 const text = readFileSync(0, "utf8");
 const name = (JSON.parse(text) as { name?: string }).name ?? "";
-// A closed list: any other name loads nothing and is answered as unknown.
-if (Object.hasOwn(HOME, name)) await HOME[name]?.();
-const { code, out } = answerCall(text);
+// A closed list: any other name loads nothing and is refused.
+const load = Object.hasOwn(HOME, name) ? HOME[name] : undefined;
+if (load) await load();
+const { code, out } = load
+  ? answerCall(text)
+  : {
+      code: 2,
+      out: JSON.stringify({
+        error: { name: "Error", message: "Not a function run as the project's user." },
+      }),
+    };
 process.stdout.write(out, () => process.exit(code));

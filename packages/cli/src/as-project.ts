@@ -14,20 +14,28 @@ const MAIN = fileURLToPath(new URL("../dist/as-project-main.js", import.meta.url
 type Op = (...args: any[]) => unknown;
 const ops = new Map<string, Op>();
 
-/** JSON that keeps Maps and bytes, and leaves undefined out, as a call would see them. */
+/**
+ * JSON that keeps Maps, Sets, bytes and an undefined in a list (an argument left out), and leaves
+ * an undefined property out, as a call would see them.
+ */
 export function encode(value: unknown): string {
   return JSON.stringify(value, function (key, v) {
     // The value before its toJSON (a Buffer's turns it into a list of numbers).
     const raw = (this as Record<string, unknown>)[key];
     if (raw instanceof Uint8Array) return { $bytes: Buffer.from(raw).toString("base64") };
-    return v instanceof Map ? { $map: [...v.entries()] } : v;
+    if (v instanceof Map) return { $map: [...v.entries()] };
+    if (v instanceof Set) return { $set: [...v] };
+    return v === undefined && Array.isArray(this) ? { $undefined: true } : v;
   });
 }
 export function decode(text: string): unknown {
   return JSON.parse(text, (_, v) => {
     if (!v || typeof v !== "object" || Array.isArray(v) || Object.keys(v).length !== 1) return v;
     if (Array.isArray(v.$map)) return new Map(v.$map);
+    if (Array.isArray(v.$set)) return new Set(v.$set);
     if (typeof v.$bytes === "string") return new Uint8Array(Buffer.from(v.$bytes, "base64"));
+    // Left as a hole in its list, which reads as undefined.
+    if (v.$undefined === true) return undefined;
     return v;
   });
 }
@@ -57,14 +65,17 @@ function inChild(name: string, args: unknown[]): unknown {
     stdio: ["pipe", "pipe", "pipe"],
   });
   if (run.error) throw run.error;
-  let answer: { value?: unknown; error?: { name: string; message: string } } | undefined;
+  let answer:
+    | { value?: unknown; error?: { name: string; message: string; code?: string } }
+    | undefined;
   try {
     answer = decode(run.stdout) as typeof answer;
   } catch {}
   if (!answer || run.status !== 0) {
     if (answer?.error) {
-      const error = new Error(answer.error.message);
+      const error: Error & { code?: string } = new Error(answer.error.message);
       error.name = answer.error.name;
+      if (answer.error.code) error.code = answer.error.code;
       throw error;
     }
     throw new Error(`${name} as the project's user failed: ${run.stderr.trim().slice(-500)}`);
@@ -80,7 +91,8 @@ export function answerCall(text: string): { code: number; out: string } {
   try {
     return { code: 0, out: encode({ value: fn(...args) }) };
   } catch (error) {
-    const e = error instanceof Error ? error : new Error(String(error));
-    return { code: 1, out: encode({ error: { name: e.name, message: e.message } }) };
+    const e: Error & { code?: unknown } = error instanceof Error ? error : new Error(String(error));
+    const code = typeof e.code === "string" ? e.code : undefined;
+    return { code: 1, out: encode({ error: { name: e.name, message: e.message, code } }) };
   }
 }

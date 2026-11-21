@@ -1,45 +1,40 @@
-// Plain file work in the project's tree that must be done with the project's rights where a
-// project user is configured (as-project.ts): removing what that user's tools made, and writing
-// where the folder would not give the file the project's group.
-import { mkdirSync, rmSync, statSync, writeFileSync } from "node:fs";
+// Plain file work in the project's tree, done as the project's user where one is configured
+// (as-project.ts). Not here as this process: a file it wrote would be its own, 0644 under the usual
+// umask, which the project could not change, a file of the project's it could not overwrite, and
+// a link the project put in the tree would lead its write elsewhere.
+import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import { asProject } from "./as-project.js";
-import { projectUser } from "./secrets.js";
+
+/** A file to write (making its folders) or append to, or, with `data: null`, one file to remove. */
+export type TreeChange = {
+  path: string;
+  data: string | Uint8Array | null;
+  mode?: number;
+  append?: boolean;
+};
+
+/** Applies the changes in order, all in one child where there is a project user. */
+export const changeTree = asProject("changeTree", (changes: TreeChange[]): void => {
+  for (const { path, data, mode, append } of changes) {
+    if (data === null) {
+      rmSync(path, { force: true });
+      continue;
+    }
+    mkdirSync(dirname(path), { recursive: true });
+    writeFileSync(path, data, {
+      ...(mode === undefined ? {} : { mode }),
+      ...(append ? { flag: "a" } : {}),
+    });
+  }
+});
+
+/** Writes one file of the project's tree, making its folders. */
+export function writeTreeFile(path: string, data: string | Uint8Array, mode?: number): void {
+  changeTree([{ path, data, mode }]);
+}
 
 /** Removes a file or folder and all in it; nothing when it is not there. */
 export const removeTree = asProject("removeTree", (path: string): void => {
   rmSync(path, { recursive: true, force: true });
 });
-
-const writeAsProject = asProject(
-  "writeTreeFile",
-  (path: string, data: string | Uint8Array, mode?: number): void => {
-    mkdirSync(dirname(path), { recursive: true });
-    writeFileSync(path, data, mode === undefined ? undefined : { mode });
-  },
-);
-
-/** Whether a new file at `path` would take the project's group: its nearest folder is setgid, that group. */
-function takesGroup(path: string, gid: number): boolean {
-  for (let folder = dirname(path); ; folder = dirname(folder)) {
-    const stat = statSync(folder, { throwIfNoEntry: false });
-    // A folder made under a setgid one is setgid too, with its group.
-    if (stat) return stat.isDirectory() && stat.gid === gid && (stat.mode & 0o2000) !== 0;
-    if (dirname(folder) === folder) return false;
-  }
-}
-
-/**
- * Writes a file of the project's tree, making its folders. Here, as this process, where the
- * nearest folder gives a new file the project's group (setgid, that group), so the project can
- * change it; otherwise as the project's user (checked for each write). Without one, here.
- */
-export function writeTreeFile(path: string, data: string | Uint8Array, mode?: number): void {
-  const user = projectUser();
-  if (user && !takesGroup(path, user.gid)) {
-    writeAsProject(path, data, mode);
-    return;
-  }
-  mkdirSync(dirname(path), { recursive: true });
-  writeFileSync(path, data, mode === undefined ? undefined : { mode });
-}

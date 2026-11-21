@@ -3,11 +3,17 @@ import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { afterEach, expect, test } from "vitest";
 import { childCallsForTests, decode, encode } from "./as-project.js";
-import { countValue, databasePath, restoreDatabase, snapshotDatabase } from "./database.js";
+import {
+  countValue,
+  databasePath,
+  pruneSnapshots,
+  restoreDatabase,
+  snapshotDatabase,
+} from "./database.js";
 import { keepImport } from "./import.js";
 import { forgetProjectUserForTests } from "./secrets.js";
 import { tempDir } from "./test-dir.js";
-import { removeTree, writeTreeFile } from "./tree-files.js";
+import { changeTree, removeTree, writeTreeFile } from "./tree-files.js";
 
 afterEach(() => {
   delete process.env.SMITHABLE_PROJECT_UID;
@@ -27,6 +33,8 @@ function asOwnUser(): boolean {
 test("a call's arguments and answer keep their Maps and bytes", () => {
   const value = {
     map: new Map([["a", 1]]),
+    set: new Set(["x"]),
+    args: [1, undefined, "three"],
     bytes: new Uint8Array([1, 2, 255]),
     buffer: Buffer.from("hi"),
     gone: undefined,
@@ -34,6 +42,9 @@ test("a call's arguments and answer keep their Maps and bytes", () => {
   };
   const back = decode(encode(value)) as Record<string, unknown>;
   expect(back.map).toEqual(new Map([["a", 1]]));
+  expect(back.set).toEqual(new Set(["x"]));
+  const args = back.args as unknown[];
+  expect([args.length, args[1], args[2]]).toEqual([3, undefined, "three"]);
   expect(back.bytes).toEqual(new Uint8Array([1, 2, 255]));
   expect(Buffer.from(back.buffer as Uint8Array).toString()).toBe("hi");
   expect("gone" in back).toBe(false);
@@ -59,13 +70,28 @@ test("given a project user, the app's database and the tree are worked on by a c
   expect(countValue(dir, "item", "name", "a")).toBe(2);
   // An error in the child is the caller's error, with its message.
   expect(() => keepImport(dir, "../out", "x")).toThrow("Invalid import id");
-  // A file in a folder that would not give it the project's group is written by the child.
-  writeTreeFile(join(dir, "new", "deep", "file.txt"), "text");
-  expect(readFileSync(join(dir, "new", "deep", "file.txt"), "utf8")).toBe("text");
-  expect(statSync(join(dir, "new", "deep", "file.txt")).gid).toBe(process.getgid?.());
+  // A Set arrives as a Set: the kept snapshot stays.
+  expect(snapshotDatabase(dir, "two")).toBe(true);
+  expect(pruneSnapshots(dir, new Set(["two"]))).toBe(1);
+  expect(restoreDatabase(dir, "two")).toBe(true);
+  // The tree's changes, in order, in one child: writes with their folders, an append, a removal.
+  const file = join(dir, "new", "deep", "file.txt");
+  changeTree([
+    { path: file, data: "one" },
+    { path: file, data: " two", append: true },
+    { path: join(dir, "gone.txt"), data: "x" },
+    { path: join(dir, "gone.txt"), data: null },
+  ]);
+  expect(readFileSync(file, "utf8")).toBe("one two");
+  expect(statSync(file).gid).toBe(process.getgid?.());
+  expect(statSync(join(dir, "gone.txt"), { throwIfNoEntry: false })).toBeUndefined();
+  // An error keeps its code.
+  expect(() => writeTreeFile(join(dir, "new"), "x")).toThrow(
+    expect.objectContaining({ code: "EISDIR" }),
+  );
   removeTree(join(dir, "new"));
   expect(statSync(join(dir, "new"), { throwIfNoEntry: false })).toBeUndefined();
-  expect(childCallsForTests()).toBe(8);
+  expect(childCallsForTests()).toBe(12);
 });
 
 test("the child knows where every function run as the project's user lives", async () => {
