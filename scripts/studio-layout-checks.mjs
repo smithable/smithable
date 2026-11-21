@@ -166,7 +166,7 @@ export async function checkCompactLook(browser, base, pictures) {
   try {
     await page.goto(`${base}/?guide=off`);
     await (await toolbarAction(page, "Look")).click();
-    await page.getByRole("button", { name: "More look settings", exact: true }).click();
+    await page.getByRole("button", { name: "Customise", exact: true }).click();
     const dialog = page.getByRole("dialog", { name: "Look", exact: true });
     await dialog.getByRole("tab", { name: "Customise", exact: true }).click();
     await dialog

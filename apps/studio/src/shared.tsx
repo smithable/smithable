@@ -192,14 +192,19 @@ export function Preview({
   // Error pages in a row: a request that arrived while the server rebuilt after a change gets
   // a 500 page, which answers but has no editor; it is loaded again, a few times.
   const errors = useRef(0);
-  // A page without its stylesheet starts the preview again, once for each change: one still
-  // without it after that is the app's own (a broken src/custom/styles.css).
-  const restyled = useRef<number>(undefined);
+  // A page without its stylesheet is loaded again first: one asked for while the server was
+  // still rebuilding the theme's CSS has it the second time (T1164: restarting at once took the
+  // hosted preview away for seconds on every theme change). A second page without it starts the
+  // preview again, once for each change: one still without it after that is the app's own (a
+  // broken src/custom/styles.css).
+  const restyled = useRef<{ version: number; tries: number }>(undefined);
   useEffect(() => {
     const onMessage = (e: MessageEvent) => {
-      if (!isPreviewMessage(e) || e.data.type !== "unstyled" || restyled.current === version)
-        return;
-      restyled.current = version;
+      if (!isPreviewMessage(e) || e.data.type !== "unstyled") return;
+      const tries = restyled.current?.version === version ? restyled.current.tries : 0;
+      if (tries >= 2) return;
+      restyled.current = { version, tries: tries + 1 };
+      if (tries === 0) return setAttempt((n) => n + 1);
       void api.previewRestart("unstyled").then(() => setAttempt((n) => n + 1));
     };
     window.addEventListener("message", onMessage);

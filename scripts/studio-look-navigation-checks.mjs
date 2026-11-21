@@ -28,9 +28,9 @@ export async function checkStudioLookNavigation(browser, base, label = "Customer
         redirected = true;
     });
     await launch.click();
-    // Look opens the first-look picker, which may reload the preview (signing it in again); the
-    // session ends once it is open, so the editor's own frame is the one that meets sign-in.
-    const more = page.getByRole("button", { name: "More look settings", exact: true });
+    // Look opens its panel, which may reload the preview (signing it in again); the session ends
+    // once it is open, so the editor's own frame is the one that meets sign-in.
+    const more = page.getByRole("button", { name: "Customise", exact: true });
     await more.waitFor();
     await context.clearCookies();
     await more.click();

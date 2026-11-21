@@ -171,7 +171,7 @@ try {
   );
 
   await page.getByRole("button", { name: "Look", exact: true }).click();
-  await page.getByRole("button", { name: "More look settings", exact: true }).click();
+  await page.getByRole("button", { name: "Customise", exact: true }).click();
   const dialog = page.getByRole("dialog", { name: "Look", exact: true });
   await dialog.getByRole("tab", { name: "Theme and settings", exact: true }).waitFor();
   assert.equal(await dialog.getByRole("list", { name: "Themes", exact: true }).count(), 1);

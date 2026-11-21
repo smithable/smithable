@@ -22,7 +22,7 @@ import { chromium } from "playwright";
 import { Client } from "../packages/cli/node_modules/@modelcontextprotocol/sdk/dist/esm/client/index.js";
 import { StreamableHTTPClientTransport } from "../packages/cli/node_modules/@modelcontextprotocol/sdk/dist/esm/client/streamableHttp.js";
 import { startFakeModel } from "./fake-model.mjs";
-import { checkFirstLook } from "./first-look-checks.mjs";
+import { asNewApp, checkFirstLook } from "./first-look-checks.mjs";
 import { P } from "./patience.mjs";
 import { checkPicturePicker } from "./picture-picker-browser.mjs";
 import { checkPorts } from "./ports.mjs";
@@ -718,10 +718,11 @@ try {
       // On a page of its own: every other step runs with ?guide=off.
       const fresh = await browser.newPage({ viewport: { width: 1440, height: 900 } });
       try {
+        await asNewApp(fresh);
         await fresh.goto(base);
         await fresh
           .getByRole("dialog", { name: "Choose a look", exact: true })
-          .getByRole("button", { name: "Skip", exact: true })
+          .getByRole("button", { name: "Cancel", exact: true })
           .click();
         // A new project: Smith presents it on the overlay, Studio behind it (smith-first.md
         // §12.1); Enter brings the next part, Skip closes it into his floating panel, then the
@@ -1687,7 +1688,7 @@ try {
     "look and feel: a theme, density and motion are chosen without touching code",
     async () => {
       await page.getByRole("button", { name: "Look", exact: true }).click();
-      await page.getByRole("button", { name: "More look settings", exact: true }).click();
+      await page.getByRole("button", { name: "Customise", exact: true }).click();
       const theme = page.getByRole("region", {
         name: "App-wide font, density and motion",
         exact: true,
@@ -1756,7 +1757,7 @@ try {
       if (!existsSync(join(dir, "node_modules", name))) throw new Error(`${name} is not installed`);
   });
   await step(
-    "a page that comes without its stylesheet starts the preview again, once for each change (finding 3)",
+    "a page that comes without its stylesheet is loaded again, then starts the preview again, once for each change (finding 3, T1164)",
     async () => {
       const unstyled = async () =>
         (await (await fetch(`${base}/api/logs`)).json()).filter((l) =>
@@ -1777,6 +1778,23 @@ try {
       // about:blank, whose messages carry Studio's own origin and are rightly not the preview's.
       await page.getByText("Updating…").waitFor({ state: "hidden", timeout: 120000 * P });
       await preview.locator("body[data-hydrated]").waitFor({ timeout: 120000 * P });
+      // The first time the page is only loaded again: the server may have been rebuilding.
+      await preview.locator("body").evaluate(() => {
+        window.smOldPage = true;
+      });
+      await say();
+      for (const deadline = Date.now() + 120000 * P; ; ) {
+        const fresh = await preview
+          .locator("body")
+          .evaluate((body) => !window.smOldPage && body.dataset.hydrated === "true", undefined, {
+            timeout: 2000,
+          })
+          .catch(() => false);
+        if (fresh) break;
+        if (Date.now() > deadline) throw new Error("the unstyled page was not loaded again");
+        await new Promise((r) => setTimeout(r, 500));
+      }
+      if ((await unstyled()) !== before) throw new Error("the first unstyled page restarted");
       await say();
       for (const deadline = Date.now() + 30000 * P; (await unstyled()) === before; ) {
         if (Date.now() > deadline) throw new Error("the preview was not started again");
@@ -1784,6 +1802,7 @@ try {
       }
       // It comes back; said again without a change in between, it is not started again.
       await preview.locator("body[data-hydrated]").waitFor({ timeout: 120000 * P });
+      await say();
       await say();
       await new Promise((r) => setTimeout(r, 2000));
       if ((await unstyled()) !== before + 1) throw new Error("the preview was started again twice");
@@ -1793,7 +1812,7 @@ try {
     "a theme pasted in the Look tab is checked, added as a file and used; undo removes it",
     async () => {
       await page.getByRole("button", { name: "Look", exact: true }).click();
-      await page.getByRole("button", { name: "More look settings", exact: true }).click();
+      await page.getByRole("button", { name: "Customise", exact: true }).click();
       const look = page.getByRole("dialog", { name: "Look", exact: true });
       await look.getByText("Add a theme").click();
       await look
@@ -2575,7 +2594,7 @@ try {
       .getByText("Add a logo")
       .waitFor({ timeout: 60000 * P });
     await page.getByRole("button", { name: "Look", exact: true }).click();
-    await page.getByRole("button", { name: "More look settings", exact: true }).click();
+    await page.getByRole("button", { name: "Customise", exact: true }).click();
     await look("App-wide font, density and motion")
       .getByRole("button", { name: "Comfortable" })
       .click();
@@ -2632,7 +2651,7 @@ try {
     // Native selected-page controls have visible labels and keyboard focus. They use the same
     // project history as chat: one Undo restores the original authored source.
     await page.getByRole("button", { name: "Look", exact: true }).click();
-    await page.getByRole("button", { name: "More look settings", exact: true }).click();
+    await page.getByRole("button", { name: "Customise", exact: true }).click();
     const menu = page
       .getByRole("dialog", { name: "Look", exact: true })
       .getByLabel("Menu layout", { exact: true });
@@ -2775,7 +2794,7 @@ try {
         .waitFor({ timeout: 60000 * P });
       // Its own theme, from the Look tab (look.md §1.5).
       await page.getByRole("button", { name: "Look", exact: true }).click();
-      await page.getByRole("button", { name: "More look settings", exact: true }).click();
+      await page.getByRole("button", { name: "Customise", exact: true }).click();
       const lookDialog = page.getByRole("dialog", { name: "Look", exact: true });
       await lookDialog.getByLabel("Theme selection target", { exact: true }).selectOption("home");
       await lookDialog.getByRole("button", { name: "Use Playful theme", exact: true }).click();
