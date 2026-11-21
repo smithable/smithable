@@ -65,13 +65,16 @@ export function FirstLook({
   }, []);
   // The card shows chosen at the click; the preview follows as soon as the CSS is written.
   const tried = useRef(0);
+  const triedCss = useRef<string>(undefined);
+  const open = useRef(true);
   const choose = async (theme: string) => {
     setSelected(theme);
     setError(undefined);
     const turn = ++tried.current;
     try {
       const { themeCss } = await adapter;
-      if (turn !== tried.current || !spec.ir) return;
+      // A click whose CSS comes after Keep began or the picker closed is dropped.
+      if (!open.current || turn !== tried.current || !spec.ir) return;
       const { ux } = stageThemeSelection(
         {
           ir: spec.ir,
@@ -81,7 +84,8 @@ export function FirstLook({
         },
         { preset: theme },
       );
-      tryThemeInPreview(themeCss(ux, project.ownThemes));
+      triedCss.current = themeCss(ux, project.ownThemes);
+      tryThemeInPreview(triedCss.current);
     } catch (reason) {
       if (turn === tried.current) setError((reason as Error).message);
     }
@@ -89,7 +93,15 @@ export function FirstLook({
   // Whatever closes the picker without Keep (Cancel, Escape, leaving the app) takes the tried
   // theme off the preview.
   const kept = useRef(false);
-  useEffect(() => () => letGoTriedTheme(!kept.current), []);
+  useEffect(
+    () => () => {
+      open.current = false;
+      letGoTriedTheme(!kept.current);
+    },
+    [],
+  );
+  // A style already put in by a Keep whose theme step was then refused is not put in again.
+  const picturesKept = useRef<string>(undefined);
   const finish = async (keep: boolean, style = selectedStyle) => {
     if (closing) return;
     if (!keep) {
@@ -99,21 +111,42 @@ export function FirstLook({
     setClosing(true);
     const lookProject = project.lookProject ?? "";
     const changingPictures = Boolean(
-      pictureStep && style && style !== pictures?.current && pictures?.offer,
+      pictureStep &&
+        style &&
+        style !== pictures?.current &&
+        style !== picturesKept.current &&
+        pictures?.offer,
     );
+    const failing: { step: "pictures" | "theme" } = { step: "theme" };
     const steps: ((revision: string) => Promise<LookChange>)[] = [];
     if (changingPictures)
-      steps.push((revision) =>
-        api.choosePictureStyle(style as string, revision, lookProject, pictures?.offer ?? ""),
-      );
+      steps.push(async (revision) => {
+        failing.step = "pictures";
+        const result = await api.choosePictureStyle(
+          style as string,
+          revision,
+          lookProject,
+          pictures?.offer ?? "",
+        );
+        if (result.ok) {
+          picturesKept.current = style;
+          failing.step = "theme";
+        }
+        return result;
+      });
     if (selected !== preset)
       steps.push((revision) => api.chooseTheme(selected, revision, lookProject));
+    // The page on screen keeps the tried theme until the new one replaces it; a page that loads
+    // meanwhile is the new one, with the real theme, and must not get the tried one again.
+    tried.current++;
+    letGoTriedTheme(false);
     try {
       await keepLook(project.revision ?? "", steps);
     } catch (reason) {
       const message = (reason as Error).message;
-      if (changingPictures) setPictureError(message);
+      if (failing.step === "pictures") setPictureError(message);
       else setError(message);
+      if (triedCss.current !== undefined) tryThemeInPreview(triedCss.current);
       setClosing(false);
       await onRefresh();
       return;

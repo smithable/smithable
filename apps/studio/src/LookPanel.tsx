@@ -88,8 +88,14 @@ export function LookPanel({
     observer.observe(header);
     return () => observer.disconnect();
   }, []);
+  // Focus goes back to what opened Look (its toolbar button) when the panel closes, also when
+  // Customise opens the editor, so the editor gives it back there in turn.
   useEffect(() => {
+    const previous = document.activeElement;
     heading.current?.focus();
+    return () => {
+      if (previous instanceof HTMLElement && previous.isConnected) previous.focus();
+    };
   }, []);
   const change = async (
     key: string,
