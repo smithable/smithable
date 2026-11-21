@@ -73,6 +73,8 @@ export function LookPanel({
   }, [lookProject, session]);
   const [pending, setPending] = useState(0);
   const [closing, setClosing] = useState(false);
+  // A brand color still waiting out its pause when Look closes is dropped, not applied.
+  const closed = useRef(false);
   const [error, setError] = useState<string>();
   const heading = useRef<HTMLHeadingElement>(null);
   // It hangs under Studio's header, whatever rows the header shows.
@@ -96,7 +98,9 @@ export function LookPanel({
       revision: string,
     ) => Promise<{ ok: boolean; output: string; change?: string; revision?: string }>,
   ) => {
+    if (closed.current) return;
     setPending((n) => n + 1);
+    setError(undefined);
     try {
       await session.set(key, value, apply);
     } catch (reason) {
@@ -114,6 +118,7 @@ export function LookPanel({
     );
   const close = async (keep: boolean, customize = false) => {
     if (closing) return;
+    closed.current = true;
     setClosing(true);
     let refusal: string | undefined;
     try {
@@ -199,9 +204,15 @@ export function LookPanel({
                 onChange={(event) => {
                   const style = event.target.value;
                   if (!style) return;
+                  // A new object re-renders the select, so a refused style shows the kept one.
                   void change("pictures", style, (revision) =>
                     api.choosePictureStyle(style, revision, lookProject, pictures?.offer ?? ""),
-                  ).then(() => api.pictureStyles(lookProject).then(setPictures, () => undefined));
+                  ).then(() =>
+                    api.pictureStyles(lookProject).then(
+                      (result) => setPictures({ ...result }),
+                      () => undefined,
+                    ),
+                  );
                 }}
               />
             </Row>
