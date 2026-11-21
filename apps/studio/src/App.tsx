@@ -1505,7 +1505,7 @@ export function App() {
   const lookAction = project.lookProject && (
     <ToolbarButton
       label="Look"
-      guide="look"
+      data-guide="look"
       text={narrow}
       pressed={lookOpen}
       disabled={!lookOpen && (busy || Boolean(pickingLook) || !spec.plugins)}
@@ -2623,7 +2623,7 @@ function ToolbarButton({
   text,
   disabled,
   pressed,
-  guide,
+  "data-guide": guide,
 }: {
   label: string;
   onClick: () => void;
@@ -2631,7 +2631,8 @@ function ToolbarButton({
   text?: boolean;
   disabled?: boolean;
   pressed?: boolean;
-  guide?: string;
+  /** The guide stop beside it, as data-guide. */
+  "data-guide"?: string;
 }) {
   return (
     <Button
