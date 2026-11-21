@@ -469,8 +469,8 @@ export interface PageIR extends SemanticText {
   export?: false;
   /** The page lists only the viewer's own records (my items, my orders); it needs sign-in. */
   mine?: true;
-  /** A "contact" block on the record page that mails the record's owner, or the user a field of the model names; `keep` names a model a copy of each message is stored in. */
-  contact?: { to: string; keep?: string };
+  /** A "contact" block on the record page that mails the record's owner, or the user a field of the model names; `keep` names a model a copy of each message is stored in, and `link` its reference to this page's model, which the server fills from the record. */
+  contact?: { to: string; keep?: string; link?: string };
   /** A crud page's record as a document (record-documents.md §4): each block names its fields. */
   document?: DocumentIR;
 }

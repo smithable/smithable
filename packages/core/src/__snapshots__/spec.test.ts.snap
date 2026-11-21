@@ -1907,6 +1907,585 @@ exports[`valid specs > ../../../examples/booking/smithable.yml 1`] = `
 }
 `;
 
+exports[`valid specs > ../../../examples/builder/smithable.yml 1`] = `
+{
+  "actions": [
+    {
+      "custom": false,
+      "input": [],
+      "name": "contacted",
+      "on": "Enquiry",
+      "set": [
+        {
+          "field": "status",
+          "value": "contacted",
+        },
+        {
+          "asked": true,
+          "field": "followUpOn",
+        },
+      ],
+      "when": {
+        "status": "new",
+      },
+    },
+    {
+      "custom": false,
+      "input": [],
+      "name": "visited",
+      "on": "Enquiry",
+      "set": [
+        {
+          "field": "status",
+          "value": "visited",
+        },
+        {
+          "asked": true,
+          "field": "followUpOn",
+        },
+      ],
+      "when": {
+        "status": "contacted",
+      },
+    },
+    {
+      "custom": false,
+      "input": [],
+      "name": "quoted",
+      "on": "Enquiry",
+      "set": [
+        {
+          "field": "status",
+          "value": "quoted",
+        },
+        {
+          "field": "followUpOn",
+          "formula": {
+            "args": [
+              {
+                "args": [],
+                "kind": "call",
+                "name": "TODAY",
+              },
+              {
+                "kind": "number",
+                "value": 7,
+              },
+              {
+                "kind": "text",
+                "value": "day",
+              },
+            ],
+            "kind": "call",
+            "name": "DATEADD",
+          },
+          "text": "DATEADD(TODAY(), 7, "day")",
+        },
+      ],
+      "when": {
+        "status": [
+          "contacted",
+          "visited",
+        ],
+      },
+    },
+    {
+      "custom": false,
+      "input": [],
+      "name": "won",
+      "on": "Enquiry",
+      "set": [
+        {
+          "field": "status",
+          "value": "won",
+        },
+      ],
+      "when": {
+        "status": "quoted",
+      },
+    },
+    {
+      "custom": false,
+      "input": [],
+      "name": "lost",
+      "on": "Enquiry",
+      "set": [
+        {
+          "field": "status",
+          "value": "lost",
+        },
+      ],
+      "when": {
+        "status": [
+          "new",
+          "contacted",
+          "visited",
+          "quoted",
+        ],
+      },
+    },
+  ],
+  "app": {
+    "currency": "EUR",
+    "description": "A small builder's site and enquiry book. Visitors see the services and past projects and ask for an estimate. The builder follows each enquiry up.",
+    "name": "Northshore Joinery",
+    "timezone": "Europe/Mariehamn",
+  },
+  "extensions": {},
+  "incoming": [],
+  "models": [
+    {
+      "description": "A kind of work the builder takes on, such as a renovation, an extension or a deck.",
+      "fields": [
+        {
+          "name": "name",
+          "required": true,
+          "type": {
+            "kind": "scalar",
+            "name": "string",
+          },
+          "unique": false,
+        },
+        {
+          "name": "summary",
+          "required": false,
+          "type": {
+            "kind": "scalar",
+            "name": "text",
+          },
+          "unique": false,
+        },
+        {
+          "name": "pricing",
+          "required": false,
+          "type": {
+            "kind": "scalar",
+            "name": "text",
+          },
+          "unique": false,
+        },
+        {
+          "name": "projects",
+          "required": false,
+          "type": {
+            "kind": "relation",
+            "many": true,
+            "model": "Project",
+          },
+          "unique": false,
+        },
+      ],
+      "name": "Service",
+    },
+    {
+      "description": "A finished job shown to visitors, with where and when it was done.",
+      "fields": [
+        {
+          "name": "title",
+          "required": true,
+          "type": {
+            "kind": "scalar",
+            "name": "string",
+          },
+          "unique": false,
+        },
+        {
+          "name": "service",
+          "required": true,
+          "type": {
+            "kind": "relation",
+            "many": false,
+            "model": "Service",
+          },
+          "unique": false,
+        },
+        {
+          "name": "place",
+          "required": false,
+          "type": {
+            "kind": "scalar",
+            "name": "string",
+          },
+          "unique": false,
+        },
+        {
+          "name": "year",
+          "required": false,
+          "type": {
+            "kind": "scalar",
+            "name": "int",
+          },
+          "unique": false,
+        },
+        {
+          "name": "summary",
+          "required": false,
+          "type": {
+            "kind": "scalar",
+            "name": "text",
+          },
+          "unique": false,
+        },
+        {
+          "name": "photos",
+          "required": false,
+          "type": {
+            "kind": "scalar",
+            "name": "pictures",
+          },
+          "unique": false,
+        },
+        {
+          "name": "enquiries",
+          "required": false,
+          "type": {
+            "kind": "relation",
+            "many": true,
+            "model": "Enquiry",
+          },
+          "unique": false,
+        },
+      ],
+      "name": "Project",
+    },
+    {
+      "description": "A visitor's request for an estimate, about a project like one shown.",
+      "fields": [
+        {
+          "name": "project",
+          "required": false,
+          "type": {
+            "kind": "relation",
+            "many": false,
+            "model": "Project",
+          },
+          "unique": false,
+        },
+        {
+          "name": "name",
+          "required": true,
+          "type": {
+            "kind": "scalar",
+            "name": "string",
+          },
+          "unique": false,
+        },
+        {
+          "name": "email",
+          "required": true,
+          "type": {
+            "kind": "scalar",
+            "name": "email",
+          },
+          "unique": false,
+        },
+        {
+          "name": "phone",
+          "required": false,
+          "type": {
+            "kind": "scalar",
+            "name": "phone",
+          },
+          "unique": false,
+        },
+        {
+          "name": "message",
+          "required": true,
+          "type": {
+            "kind": "scalar",
+            "name": "text",
+          },
+          "unique": false,
+        },
+        {
+          "byApp": true,
+          "default": "new",
+          "name": "status",
+          "required": true,
+          "type": {
+            "kind": "choice",
+            "values": [
+              "new",
+              "contacted",
+              "visited",
+              "quoted",
+              "won",
+              "lost",
+            ],
+          },
+          "unique": false,
+        },
+        {
+          "byApp": true,
+          "defaultFormula": {
+            "args": [],
+            "kind": "call",
+            "name": "TODAY",
+          },
+          "name": "followUpOn",
+          "required": false,
+          "type": {
+            "kind": "scalar",
+            "name": "date",
+          },
+          "unique": false,
+        },
+      ],
+      "name": "Enquiry",
+    },
+  ],
+  "navigation": [
+    {
+      "name": "main",
+      "pages": [
+        "start",
+        "enquiries",
+        "projects",
+        "services",
+        "team",
+      ],
+    },
+  ],
+  "outgoing": [],
+  "pages": [
+    {
+      "id": "home",
+      "pattern": {
+        "kind": "landing",
+        "sections": [
+          {
+            "button": "projects",
+            "kind": "hero",
+            "name": "hero",
+          },
+          {
+            "kind": "records",
+            "model": "Service",
+            "name": "services",
+          },
+          {
+            "kind": "records",
+            "limit": 6,
+            "model": "Project",
+            "name": "latest",
+          },
+          {
+            "kind": "features",
+            "name": "features",
+          },
+          {
+            "kind": "faq",
+            "name": "faq",
+          },
+          {
+            "kind": "footer",
+            "name": "footer",
+          },
+        ],
+      },
+      "route": "/",
+      "sections": [
+        {
+          "button": "projects",
+          "kind": "hero",
+          "name": "hero",
+        },
+        {
+          "kind": "records",
+          "model": "Service",
+          "name": "services",
+        },
+        {
+          "kind": "records",
+          "limit": 6,
+          "model": "Project",
+          "name": "latest",
+        },
+        {
+          "kind": "features",
+          "name": "features",
+        },
+        {
+          "kind": "faq",
+          "name": "faq",
+        },
+        {
+          "kind": "footer",
+          "name": "footer",
+        },
+      ],
+    },
+    {
+      "contact": {
+        "keep": "Enquiry",
+        "link": "project",
+        "to": "owner",
+      },
+      "filters": [
+        "service",
+      ],
+      "id": "projects",
+      "pattern": {
+        "kind": "crud",
+        "model": "Project",
+      },
+      "route": "/projects",
+      "sections": [
+        {
+          "kind": "crud",
+          "model": "Project",
+          "name": "crud",
+          "own": true,
+        },
+      ],
+      "sortable": [
+        "year",
+      ],
+    },
+    {
+      "id": "start",
+      "pattern": {
+        "items": [
+          {
+            "kind": "stat",
+            "measure": "count",
+            "model": "Enquiry",
+            "name": "new",
+            "where": {
+              "status": "new",
+            },
+          },
+          {
+            "kind": "stat",
+            "measure": "count",
+            "model": "Enquiry",
+            "name": "open",
+            "where": {
+              "status": [
+                "contacted",
+                "visited",
+                "quoted",
+              ],
+            },
+          },
+          {
+            "kind": "list",
+            "model": "Enquiry",
+            "name": "due",
+            "when": "followUpOn",
+            "where": {
+              "status": [
+                "new",
+                "contacted",
+                "visited",
+                "quoted",
+              ],
+            },
+            "within": {
+              "amount": 2,
+              "unit": "week",
+            },
+          },
+        ],
+        "kind": "dashboard",
+      },
+      "route": "/start",
+      "sections": [
+        {
+          "kind": "tiles",
+          "name": "dashboard",
+          "own": true,
+        },
+      ],
+    },
+    {
+      "actions": [
+        "contacted",
+        "quoted",
+        "won",
+        "lost",
+      ],
+      "filters": [
+        "status",
+      ],
+      "id": "enquiries",
+      "pattern": {
+        "kind": "crud",
+        "model": "Enquiry",
+      },
+      "route": "/enquiries",
+      "search": [
+        "name",
+        "email",
+        "message",
+      ],
+      "sections": [
+        {
+          "kind": "crud",
+          "model": "Enquiry",
+          "name": "crud",
+          "own": true,
+        },
+      ],
+      "sortable": [
+        "createdAt",
+        "followUpOn",
+      ],
+    },
+    {
+      "id": "services",
+      "pattern": {
+        "kind": "crud",
+        "model": "Service",
+      },
+      "route": "/services",
+      "sections": [
+        {
+          "kind": "crud",
+          "model": "Service",
+          "name": "crud",
+          "own": true,
+        },
+      ],
+    },
+    {
+      "id": "team",
+      "pattern": {
+        "kind": "users",
+        "mode": "manage",
+      },
+      "route": "/team",
+      "sections": [
+        {
+          "kind": "users",
+          "name": "users",
+          "own": true,
+        },
+      ],
+    },
+    {
+      "id": "privacy",
+      "pattern": {
+        "kind": "legal",
+        "legal": "privacy",
+      },
+      "route": "/privacy",
+      "sections": [
+        {
+          "kind": "legal",
+          "name": "legal",
+          "own": true,
+        },
+      ],
+    },
+  ],
+  "payments": [],
+  "queries": [],
+  "specVersion": "0.1",
+  "timers": [],
+}
+`;
+
 exports[`valid specs > ../../../examples/crm/smithable.yml 1`] = `
 {
   "actions": [

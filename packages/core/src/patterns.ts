@@ -1251,9 +1251,11 @@ export function patternInfo(page: PageIR) {
     inMenu: info.inMenu,
     access: info.access,
     routes: (route: string) => info.routes?.(route, pattern) ?? [],
-    parts: () => ({
+    parts: (): Record<string, string> => ({
       ...info.parts?.(pattern),
       ...Object.fromEntries(parts.map((s) => [s.name, s.kind])),
+      // A record page's contact block: its heading, text, button and thanks (marketplace.md §2.4).
+      ...(page.contact ? { contact: "contactBlock" } : {}),
     }),
     queries: () => info.queries?.(pattern) ?? [],
     forms: () => [

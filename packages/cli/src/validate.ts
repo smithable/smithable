@@ -500,6 +500,14 @@ export function explainSpec(ir: SpecIR, auth: AuthIR, ux?: UxIR, language?: stri
       `${action.name}${action.custom ? "" : ` (on ${action.on})`}: run by ${who.length ? who.join(", ") : "nobody"}`,
     );
   }
+  // A contact block's kept copy: its reference to the record, filled by the server (marketplace.md §2.4).
+  for (const page of ir.pages) {
+    const c = page.contact;
+    if (!c?.keep) continue;
+    lines.push(
+      `${page.id} contact: mails ${c.to === "owner" ? "the record's owner" : `the user in ${c.to}`}, keeps a copy in ${c.keep}${c.link ? `, its ${c.link} filled with the record by the server (never from the message)` : ""}`,
+    );
+  }
   // A landing page's hero: the page its button opens when the spec names none, and its second.
   for (const page of ir.pages) {
     if (page.pattern.kind !== "landing") continue;

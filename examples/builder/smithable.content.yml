@@ -19,6 +19,7 @@ models:
 
 actions:
   contacted: { label: Mark contacted }
+  visited: { label: Site visited }
   quoted: { label: Quote sent }
   won: { label: Won }
   lost: { label: Lost }
@@ -91,6 +92,5 @@ pages:
       sections:
         who: { title: Who asked }
         what: { title: What they asked about }
-        next: { title: What happens next }
   services:
     title: Services

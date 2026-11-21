@@ -1,6 +1,8 @@
 // Smithable app kit: "Contact the seller" on a record's page (marketplace.md §2.4). The message
 // is mailed to the record's owner by the page's server function, with the sender's address as
 // the reply-to; the owner's address is never shown, and nothing is kept unless the app keeps it.
+// A kept model with fields of its own asks them in its own form (`form`), the landing contact
+// form's; its reference to the record is filled by the server, never by the sender.
 import { CircleAlert, Send } from "lucide-react";
 import { useId, useState } from "react";
 import { Button } from "#/components/ui/button";
@@ -19,9 +21,21 @@ export function ContactOwner({
   recipient,
   viewer,
   onSend,
+  form,
+  title,
+  text,
+  button,
+  thanks,
 }: {
   /** Who receives it, as the block names them, e.g. "seller" or "owner". */
   recipient: string;
+  /** The app's own words (smithable.content.yml), else the kit's. */
+  title?: string;
+  text?: string;
+  button?: string;
+  thanks?: string;
+  /** The kept model's form instead of name, email and message; it calls `sent` once sent. */
+  form?: (sent: (kept?: boolean) => void, button: string) => React.ReactNode;
   /** The signed-in viewer: their name and email are filled in and locked. */
   viewer?: { name: string; email: string } | null;
   /** Resolves to whether the message stayed in the outbox (the preview sends no mail). */
@@ -49,12 +63,17 @@ export function ContactOwner({
   return (
     <Card data-kit="contact-owner" className="mt-10 max-w-3xl p-card">
       <h2 id={`${id}-title`} className="text-lg font-semibold">
-        {w.contactThe(recipient)}
+        {title ?? w.contactThe(recipient)}
       </h2>
+      {text && <p className="mt-2 whitespace-pre-line text-muted-foreground">{text}</p>}
       {state === "sent" || state === "kept" ? (
         <p role="status" className="mt-4">
-          {state === "kept" ? w.messageKept : w.messageSent}
+          {state === "kept" ? w.messageKept : (thanks ?? w.messageSent)}
         </p>
+      ) : form ? (
+        <div className="mt-4">
+          {form((kept) => setState(kept ? "kept" : "sent"), button ?? w.send)}
+        </div>
       ) : (
         <form onSubmit={send} aria-labelledby={`${id}-title`} className="mt-4 space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
@@ -100,7 +119,7 @@ export function ContactOwner({
             </p>
           )}
           <Button type="submit" disabled={state === "sending"}>
-            <Send aria-hidden className="size-4" /> {state === "sending" ? w.sending : w.send}
+            <Send aria-hidden className="size-4" /> {state === "sending" ? w.sending : (button ?? w.send)}
           </Button>
         </form>
       )}

@@ -5,7 +5,7 @@ theme:
   preset: craft                        # warm wood tones
 
 tones:
-  Enquiry.status: { new: warning, quoted: info, won: success, lost: neutral }
+  Enquiry.status: { new: warning, won: success, lost: neutral }
 
 pages:
   home:
@@ -16,10 +16,9 @@ pages:
     table: { view: cards, sort: year }
   enquiries:
     table:
-      columns: [name, project, status, followUpOn, createdAt]
+      columns: [name, project, status, followUpOn]
       sort: followUpOn
     form:
       sections:
         - { name: who, fields: [name, email, phone] }
         - { name: what, fields: [project, message] }
-        - { name: next, fields: [status, followUpOn, notes] }
