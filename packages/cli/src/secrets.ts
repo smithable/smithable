@@ -2,6 +2,8 @@
 // starts, so no child it runs inherits them (pnpm and its scripts, git and its hooks, the
 // project's tests, the preview's dev server), and handed only to the engine's own calls that need
 // them. Every child's options are built by childOptions, which leaves both out whatever it is given.
+
+import type { Stats } from "node:fs";
 import {
   chmodSync,
   chownSync,
@@ -173,7 +175,7 @@ export function sealScratch(dir: string): void {
 }
 
 /** A file of the project's opened as `copyBack` and `readOwn` open it, or an error. */
-function openOwn(path: string): [number, import("node:fs").Stats] {
+function openOwn(path: string): [number, Stats] {
   const fd = openSync(
     path,
     constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0) | (constants.O_NONBLOCK ?? 0),
@@ -196,7 +198,7 @@ function openOwn(path: string): [number, import("node:fs").Stats] {
  * link the project put there cannot show this process's own files. Undefined when it is not there.
  */
 export function readOwn(path: string, max = 64 * 1024): string | undefined {
-  let opened: [number, import("node:fs").Stats];
+  let opened: [number, Stats];
   try {
     opened = openOwn(path);
   } catch (error) {
