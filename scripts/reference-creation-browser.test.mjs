@@ -46,6 +46,13 @@ test("complete creation returns a current reference and preserves its requesting
       ];
     if (request.includes("not a creation"))
       return [{ op: "setApp", args: { description: "A changed description" } }];
+    if (request.includes("original proposal"))
+      return [
+        {
+          op: "addModel",
+          args: { model: "OriginalProposalSupplier", fields: { name: "string!" } },
+        },
+      ];
     const model = request.includes("keep selection")
       ? "UnselectedSupplier"
       : request.includes("legacy model")
@@ -112,6 +119,7 @@ function App(){
  const spec=useMemo(()=>project?readSpec(project.files):{},[project]);
  const run=async(name,args)=>{const result=await api.operation(name,args);if(result.ok)await refresh();return result.ok};
  return <PendingEdits.Provider value={edits.report}><output aria-label="Pending edits">{String(edits.pending())}</output><output aria-label="Creation starts">{started}</output>
+ <output aria-label="Current models">{spec.ir?.models.map(model=>model.name).join(", ")}</output>
  <ReferenceCreationProvider project={project?.lookProject} ir={spec.ir} run={run} onStart={()=>setStarted(n=>n+1)}><Form/></ReferenceCreationProvider>
  <button onClick={()=>setLegacy(true)}>Open ordinary wizard</button><output aria-label="Ordinary wizard closed">{legacyClosed}</output>
  {legacy&&<Wizard kind="model" models={spec.ir?.models??[]} run={run} onClose={()=>{setLegacy(false);setLegacyClosed(n=>n+1)}}/>}</PendingEdits.Provider>
@@ -223,6 +231,103 @@ createRoot(document.getElementById('root')).render(<StrictMode><App/></StrictMod
       await dialog.getByRole("button", { name: "Next", exact: true }).click();
       await dialog.getByRole("button", { name: "Create", exact: true }).waitFor();
     };
+    await page.evaluate(() => {
+      sessionStorage.setItem("smithable:ask-draft", "Existing Smith draft");
+      const synth = window.speechSynthesis;
+      const cancel = synth.cancel.bind(synth);
+      synth.cancel = () => {
+        sessionStorage.setItem("fixture-speech-cancelled", "true");
+        cancel();
+      };
+    });
+    await propose("model", "edited model for help");
+    const modelName = dialog.getByLabel("Kind of record", { exact: true });
+    const helpButton = dialog.getByRole("button", { name: "Ask Smith for help", exact: true });
+    const help = dialog.getByRole("region", { name: "Smith help", exact: true });
+    const back = help.getByRole("button", { name: "Back to creation", exact: true });
+    await modelName.fill("UnappliedSupplier");
+    const helpRequests = [];
+    let sharedReplies = 0;
+    const observeHelp = (request) => {
+      const path = new URL(request.url()).pathname;
+      if (path === "/api/said" && request.method() === "POST") sharedReplies++;
+      if (path === "/api/ask") helpRequests.push(request.postDataJSON().request);
+    };
+    page.on("request", observeHelp);
+    for (const returnByEscape of [true, false]) {
+      await helpButton.click();
+      const apply = help.getByRole("button", { name: "Apply", exact: true });
+      await apply.waitFor();
+      assert.equal(await back.evaluate((element) => element === document.activeElement), true);
+      assert.equal(await modelName.isVisible(), false, "the wizard stayed visible behind help");
+      assert.equal(
+        await help
+          .getByRole("textbox", { name: "Describe a change, or ask a question", exact: true })
+          .inputValue(),
+        "Add a kind of record: edited model for help",
+      );
+      if (returnByEscape) await page.keyboard.press("Escape");
+      else {
+        let finishApply, reportApply;
+        const applied = new Promise((resolve) => {
+          reportApply = resolve;
+        });
+        const applyGate = new Promise((resolve) => {
+          finishApply = resolve;
+        });
+        const holdApply = async (route) => {
+          reportApply();
+          await applyGate;
+          await route.fulfill({ json: { ok: false, output: "Controlled help apply refusal" } });
+        };
+        await page.route("**/api/ask/apply", holdApply);
+        await apply.click();
+        await applied;
+        assert.ok(await back.isDisabled(), "help allowed leaving during Apply");
+        await page.keyboard.press("Escape");
+        await page.keyboard.press("Escape");
+        await page.evaluate(
+          () =>
+            new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
+        );
+        assert.ok(await help.isVisible(), "Escape dismissed help during Apply");
+        finishApply();
+        await help.getByText("Controlled help apply refusal", { exact: true }).waitFor();
+        await page.unroute("**/api/ask/apply", holdApply);
+        await back.click();
+      }
+      await help.waitFor({ state: "detached" });
+      assert.equal(await modelName.inputValue(), "UnappliedSupplier");
+      assert.equal(
+        await helpButton.evaluate((element) => element === document.activeElement),
+        true,
+      );
+    }
+    page.off("request", observeHelp);
+    assert.deepEqual(
+      helpRequests,
+      Array(2).fill("Add a kind of record: edited model for help"),
+      "each help handoff should send its description exactly once",
+    );
+    assert.equal(sharedReplies, 0, "help wrote to the usual Smith thread");
+    assert.equal(
+      await page.evaluate(() => sessionStorage.getItem("smithable:ask-draft")),
+      "Existing Smith draft",
+    );
+    assert.equal(
+      await page.evaluate(() => sessionStorage.getItem("fixture-speech-cancelled")),
+      null,
+      "opening or leaving text help cancelled shared speech",
+    );
+    await page.evaluate(() => sessionStorage.removeItem("smithable:ask-draft"));
+    await page.keyboard.press("Escape");
+    await dialog.waitFor({ state: "detached" });
+    assert.equal(await draft.inputValue(), "preserved unsaved reference");
+    assert.equal(await form.getByLabel("Selected reference").textContent(), "Customer");
+    assert.equal((await (await fetch(`${base}/api/project`)).json()).trace.length, 0);
+    console.log(
+      "PASS modal Smith help responds in place and restores the wizard and requesting draft",
+    );
     let releaseAsk, askArrived;
     const askGate = new Promise((resolve) => {
       releaseAsk = resolve;
@@ -436,6 +541,32 @@ createRoot(document.getElementById('root')).render(<StrictMode><App/></StrictMod
     assert.match(project.files.spec, /EditedSupplier:/);
     assert.doesNotMatch(project.files.spec, /ProposedSupplier:/);
     assert.equal(await draft.inputValue(), "original");
+    await propose("model", "original proposal");
+    await helpButton.click();
+    await help.getByRole("button", { name: "Apply", exact: true }).waitFor();
+    await back.click();
+    await dialog.getByRole("button", { name: "Create", exact: true }).click();
+    await dialog.waitFor({ state: "detached" });
+    assert.equal(await result.textContent(), "OriginalProposalSupplier");
+    console.log("PASS the unchanged wizard proposal still applies after returning from help");
+    await propose("model", "edited model for help");
+    await modelName.fill("UnappliedSupplier");
+    await helpButton.click();
+    await help.getByRole("button", { name: "Apply", exact: true }).click();
+    await help.getByText(/^Done: /).waitFor();
+    await page
+      .getByLabel("Current models")
+      .filter({ hasText: /\bProposedSupplier\b/ })
+      .waitFor({ state: "attached" });
+    await back.click();
+    assert.equal(await modelName.inputValue(), "UnappliedSupplier");
+    await page.keyboard.press("Escape");
+    await dialog.waitFor({ state: "detached" });
+    assert.equal(
+      await form.getByLabel("Selected reference").textContent(),
+      "OriginalProposalSupplier",
+    );
+    console.log("PASS successful help Apply refreshes the project without selecting a reference");
   } catch (error) {
     if (page)
       await page.screenshot({ path: join(root, "failure.png"), fullPage: true }).catch(() => {});

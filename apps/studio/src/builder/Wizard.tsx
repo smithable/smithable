@@ -60,6 +60,7 @@ export function Wizard({
   onClose,
   onCreated,
   onBusyChange,
+  onAskForHelp,
 }: {
   kind: WizardKind;
   run: Run;
@@ -71,6 +72,8 @@ export function Wizard({
   onCreated?: (name: string) => void;
   /** A write is committing; preparation may still be cancelled. */
   onBusyChange?: (busy: boolean) => void;
+  /** A modal owns its own Smith surface and focus. */
+  onAskForHelp?: (text: string, button: HTMLButtonElement) => void;
 }) {
   const { title, asked, placeholder } = KINDS[kind];
   usePendingEdit(true); // An open wizard must stay where the person opened it.
@@ -310,7 +313,11 @@ export function Wizard({
             <Button
               variant="ghost"
               disabled={busy}
-              onClick={() => handToSmith(`${asked}${text.trim()}`)}
+              onClick={(event) => {
+                const request = `${asked}${text.trim()}`;
+                if (onAskForHelp) onAskForHelp(request, event.currentTarget);
+                else handToSmith(request);
+              }}
             >
               Ask Smith for help
             </Button>

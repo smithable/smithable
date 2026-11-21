@@ -559,12 +559,14 @@ export const api = {
     around: {
       conversation?: { request: string; reply: string }[];
       docs?: { title: string; url: string; text: string }[];
+      scope?: "reference-help";
     } = {},
   ) => call<Proposal>("/api/ask", { request, ...around }),
   /** Smith's thread lines that left no change, kept by Studio while it runs; one more with `line`. */
   said: (line?: { request: string; reply: string }) =>
     call<{ said: { at: string; request: string; reply: string }[] }>("/api/said", line),
-  applyProposal: (id: string) => changing(call<Result>("/api/ask/apply", { id })),
+  applyProposal: (id: string, scope?: "reference-help") =>
+    changing(call<Result>("/api/ask/apply", { id, scope })),
   /** Each change's verification kept for its revision, by id; one with none is left out. */
   verified: (ids: string[]) => call<Record<string, Verification>>("/api/verified", { ids }),
   /** Test it: the next depth on the newest revision (change-verified.md §5.2). */
