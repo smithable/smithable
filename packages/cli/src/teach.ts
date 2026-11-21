@@ -6,7 +6,7 @@ import { type Coder, coderFromEnv, runCoder } from "./code.js";
 import { generate } from "./generate.js";
 import { exec, type Io, tool } from "./io.js";
 import { declaredPlugins, NO_PLUGINS_HERE, PLUGIN_NAME, pluginPath } from "./plugins.js";
-import { holdsSecret } from "./secrets.js";
+import { loadsNoProjectCode } from "./secrets.js";
 
 /**
  * `smithable teach <section>` (ARCHITECTURE §5.1): for a section of smithable.yml that no
@@ -19,7 +19,7 @@ export async function teach(
   key: string | undefined,
   coder: Coder | undefined = coderFromEnv(),
 ): Promise<number> {
-  if (holdsSecret()) {
+  if (loadsNoProjectCode()) {
     io.err(`${NO_PLUGINS_HERE}\n`);
     return 1;
   }

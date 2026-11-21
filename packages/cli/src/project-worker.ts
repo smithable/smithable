@@ -10,7 +10,7 @@ import { resolve } from "node:path";
 import type { Readable, Writable } from "node:stream";
 import { fileURLToPath } from "node:url";
 import type { MigrationPlan } from "./generate.js";
-import { childOptions, holdsSecret } from "./secrets.js";
+import { childOptions, loadsNoProjectCode } from "./secrets.js";
 import * as local from "./tool-steps.js";
 
 /** The app's own tools, wherever they run. Undefined or false: the caller runs the tool's process. */
@@ -206,7 +206,7 @@ export function stopWorkers(): void {
 
 /** The steps for `dir`: in this process, or in the project worker when this process holds a secret. */
 export function stepsFor(dir: string, say: local.Say): Steps {
-  if (!holdsSecret())
+  if (!loadsNoProjectCode())
     return {
       createMigration: (migration) => local.createMigration(dir, migration),
       routeTree: () => local.routeTree(dir, say),
@@ -234,6 +234,6 @@ export function stepsFor(dir: string, say: local.Say): Steps {
  * process, or by starting the project worker. Failures only mean no head start.
  */
 export async function warmTools(dir: string): Promise<void> {
-  if (!holdsSecret()) return local.warmTools(dir);
+  if (!loadsNoProjectCode()) return local.warmTools(dir);
   await workerFor(dir).ask("warm");
 }

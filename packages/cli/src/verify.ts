@@ -34,6 +34,7 @@ import { exec, type Io, tool } from "./io.js";
 import { projectRevision } from "./project-revision.js";
 import { projectIndex } from "./rules.js";
 import { childOptions } from "./secrets.js";
+import { writeTreeFile } from "./tree-files.js";
 import { loadSpec } from "./validate.js";
 import { VERSION } from "./version.js";
 
@@ -64,8 +65,11 @@ export function keep(dir: string, v: Verification, out?: string): void {
   const file = out
     ? join(out, `${v.revision}-${v.environment.where}.json`)
     : keptPath(dir, v.revision, v.environment.where);
-  mkdirSync(dirname(file), { recursive: true });
-  writeFileSync(file, `${JSON.stringify(v, null, 2)}\n`);
+  const text = `${JSON.stringify(v, null, 2)}\n`;
+  if (out) {
+    mkdirSync(dirname(file), { recursive: true });
+    writeFileSync(file, text);
+  } else writeTreeFile(file, text);
 }
 
 export function readKept(dir: string, revision: string, where: Where): Verification | undefined {

@@ -6,6 +6,7 @@ import { readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { restoreDatabase, snapshotDatabase } from "./database.js";
 import { git } from "./git.js";
+import { changeTree, writeTreeFile } from "./tree-files.js";
 
 const record = (dir: string) => join(dir, "data", ".smithable", "fix-open.json");
 
@@ -25,11 +26,11 @@ export function rememberBeforeFix(dir: string, branch: string): void {
   // Another fix's: its data goes back first, so the one kept now is today's, not that fix's.
   if (kept) {
     restoreDatabase(dir, kept.snapshot);
-    rmSync(record(dir), { force: true });
+    changeTree([{ path: record(dir), data: null }]);
   }
   const snapshot = `fix-open-${branch.replace(/[^\w-]/g, "-")}`;
   if (!snapshotDatabase(dir, snapshot)) return;
-  writeFileSync(record(dir), JSON.stringify({ branch, snapshot }));
+  writeTreeFile(record(dir), JSON.stringify({ branch, snapshot }));
 }
 
 /**
@@ -42,6 +43,6 @@ export function backFromFix(dir: string): boolean {
   const now = git(dir, ["rev-parse", "--abbrev-ref", "HEAD"]).out.trim();
   if (now === kept.branch) return false;
   const restored = restoreDatabase(dir, kept.snapshot);
-  rmSync(record(dir), { force: true });
+  changeTree([{ path: record(dir), data: null }]);
   return restored;
 }

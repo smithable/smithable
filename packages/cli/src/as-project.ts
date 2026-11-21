@@ -4,6 +4,11 @@
 // in its place would be this process's, which the app could then not write. Each such function is
 // wrapped by asProject: given a project user, it runs in a node child as that user (the CLI's
 // as-project-main.js, one call each, the arguments and the answer as JSON); otherwise here.
+//
+// A child's answer is the project's word, not this process's: another process of the project's
+// user may reach the child while it runs. So this process never uses an answer as a path it then
+// opens, reads or writes itself. keepImport's answer, for one, only goes into the operation log's
+// recorded arguments, which the child then appends to (op.ts).
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { childOptions, projectUser } from "./secrets.js";

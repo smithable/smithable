@@ -18,6 +18,7 @@ import {
   recordChecks,
   recordDeployment,
   releaseReview,
+  writerLock,
 } from "./release-review.js";
 import { tempDir } from "./test-dir.js";
 
@@ -205,7 +206,7 @@ test("an interrupted metadata writer cannot leave a green current result", () =>
     [{ what: "Fixture", by: "fixture", ok: true, findings: [] }],
     projectRevision(dir),
   );
-  const lock = join(dir, "data/.smithable/release-review/writer.lock");
+  const lock = writerLock(dir);
   writeFileSync(lock, "interrupted fixture");
   expect(releaseReview(dir).checks?.current).toBe(false);
   expect(releaseReview(dir).comparison).toBe("unavailable");
