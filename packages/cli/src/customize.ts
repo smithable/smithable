@@ -8,6 +8,7 @@ import {
 import { generate, hashFile, readRecord } from "./generate.js";
 import { discardChanges, ensureRepository, git, uncommittedRefusal } from "./git.js";
 import type { Io } from "./io.js";
+import { treeText } from "./secrets.js";
 import { loadSpec } from "./validate.js";
 
 /**
@@ -63,7 +64,7 @@ export async function customize(
     ...(ux ? { ux } : {}),
   };
   const recorded = readRecord(dir).files[routePath];
-  const current = readFileSync(join(dir, routePath), "utf8");
+  const current = treeText(join(dir, routePath));
   const edited = recorded !== undefined && recorded !== hashFile(join(dir, routePath));
   let source: string;
   if (edited) {

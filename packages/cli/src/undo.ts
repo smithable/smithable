@@ -10,7 +10,7 @@ import { type FilesPlan, lostFields, runFilesChange } from "./op.js";
 import { loadPlugins } from "./plugins.js";
 import { ProjectBusyError, ProjectLockError, withProjectMutationSync } from "./project-mutation.js";
 import { projectRevision } from "./project-revision.js";
-import { childOptions, scratchDir } from "./secrets.js";
+import { childOptions, scratchDir, treeText } from "./secrets.js";
 import { projectThemes } from "./validate.js";
 import { installing } from "./vite-cache.js";
 
@@ -239,7 +239,7 @@ export function revertedFiles(
     const other = showAt(dir, `${sha}^`, path);
     if (base === other) continue;
     const at = join(dir, path);
-    const ours = existsSync(at) ? readFileSync(at, "utf8") : null;
+    const ours = existsSync(at) ? treeText(at) : null;
     if (ours === base) {
       files[path] = other;
       continue;
@@ -270,7 +270,7 @@ export function revertedFiles(
 function lostFieldsOf(dir: string, text: string): string[] {
   const plugins = loadPlugins(dir);
   const now = validateSpec(
-    { path: "smithable.yml", text: readFileSync(join(dir, "smithable.yml"), "utf8") },
+    { path: "smithable.yml", text: treeText(join(dir, "smithable.yml")) },
     { plugins },
   ).ir;
   const then = validateSpec({ path: "smithable.yml", text }, { plugins }).ir;
