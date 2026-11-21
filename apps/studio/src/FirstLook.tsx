@@ -6,21 +6,22 @@ import { ThemePreview } from "./first-look";
 import { ThemeCards } from "./ThemeCards";
 import { Button, cx } from "./ui";
 
-/** Themes preview live; picture cards use complete sets, applied once when kept. */
+/**
+ * The first visit's picker: themes preview live; picture cards use complete sets, applied once
+ * when kept. Look in the toolbar opens LookPanel instead.
+ */
 export function FirstLook({
   project,
   preset,
-  automatic,
   aiBadge,
   onRefresh,
   onClose,
 }: {
   project: Project;
   preset: string;
-  automatic: boolean;
   aiBadge: boolean;
   onRefresh: () => Promise<void>;
-  onClose: (options: { error?: string; settings?: boolean }) => void;
+  onClose: (options: { error?: string }) => void;
 }) {
   const [session] = useState(
     () =>
@@ -78,12 +79,12 @@ export function FirstLook({
       setPending((value) => value - 1);
     }
   };
-  const finish = async (keep: boolean, settings = false, style = selectedStyle) => {
+  const finish = async (keep: boolean, style = selectedStyle) => {
     if (closing) return;
     setClosing(true);
     let refusal = error;
     const changingPictures =
-      keep && !settings && pictureStep && style && style !== pictures?.current && pictures?.offer;
+      keep && pictureStep && style && style !== pictures?.current && pictures?.offer;
     try {
       await session.finish(
         keep,
@@ -104,10 +105,10 @@ export function FirstLook({
         await onRefresh();
         return;
       }
-      refusal = `Skip could not restore the opening look: ${(reason as Error).message} Review the changes in Changes.`;
+      refusal = `Cancel could not restore the opening look: ${(reason as Error).message} Review the changes in Changes.`;
     }
     await onRefresh();
-    onClose({ error: refusal, settings });
+    onClose({ error: refusal });
   };
   return (
     <section
@@ -125,22 +126,12 @@ export function FirstLook({
     >
       <div className="shrink-0 border-b border-line p-4">
         <div className="flex items-center gap-2">
-          {automatic && <SmithFace mood="pointing" />}
+          <SmithFace mood="pointing" />
           <h2 ref={heading} id="first-look-title" tabIndex={-1} className="text-lg font-semibold">
             Choose a look
           </h2>
         </div>
-        {automatic && (
-          <p className={cx(SMITHS, "mt-2 max-w-full")}>
-            Hi, I’m Smith. Let’s give your app a look.
-          </p>
-        )}
-        {!automatic && (
-          <p className="mt-1 text-sm text-muted">
-            Try a theme in your app, then choose a picture style when a complete set is available.
-            Skip puts back the opening look.
-          </p>
-        )}
+        <p className={cx(SMITHS, "mt-2 max-w-full")}>Hi, I’m Smith. Let’s give your app a look.</p>
       </div>
       <div className="min-h-0 flex-1 overflow-auto p-4">
         {havePictures && (
@@ -155,9 +146,7 @@ export function FirstLook({
         )}
         {!pictureStep ? (
           <>
-            <h3 className="mb-3 text-sm font-medium">
-              {automatic ? "Which look feels right?" : "Theme"}
-            </h3>
+            <h3 className="mb-3 text-sm font-medium">Which look feels right?</h3>
             <fieldset disabled={closing || Boolean(error)}>
               <ThemeCards
                 themes={project.themes}
@@ -176,14 +165,9 @@ export function FirstLook({
           </>
         ) : (
           <>
-            <h3 className="mb-3 text-sm font-medium">
-              {automatic ? "Choose an image style" : "Pictures"}
-            </h3>
+            <h3 className="mb-3 text-sm font-medium">Choose an image style</h3>
             <p className="mb-3 text-sm text-muted">
-              The same subjects, in another style.{" "}
-              {automatic
-                ? "Pictures change only when you keep this look."
-                : "Choose a style to apply it and keep this look."}
+              The same subjects, in another style. Pictures change only when you keep this look.
             </p>
             <fieldset disabled={closing || Boolean(error)}>
               <ul aria-label="Picture styles" className="space-y-3">
@@ -202,7 +186,6 @@ export function FirstLook({
                       onClick={() => {
                         setSelectedStyle(style.id);
                         setPictureError(undefined);
-                        if (!automatic) void finish(true, false, style.id);
                       }}
                     >
                       <span className="grid grid-cols-3 gap-1 p-2">
@@ -283,13 +266,8 @@ export function FirstLook({
           {havePictures && !pictureStep ? "Next: Pictures" : "Keep this look"}
         </Button>
         <Button variant="ghost" disabled={closing} onClick={() => void finish(false)}>
-          Skip
+          Cancel
         </Button>
-        {!automatic && (
-          <Button variant="ghost" disabled={closing} onClick={() => void finish(true, true)}>
-            More look settings
-          </Button>
-        )}
       </div>
     </section>
   );
