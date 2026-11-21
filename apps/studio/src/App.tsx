@@ -1392,7 +1392,7 @@ export function App() {
         (phoneWindow === "smith" && (!phone.changesUnderSmith || phoneSub === "smith"))
       : slotOf("smith") !== undefined;
   const onCall = Boolean(audio && audio.call !== "idle");
-  const listening = Boolean(audio && (audio.listening || audio.auto));
+  const listening = Boolean(audio && (audio.listening || audio.call === "active"));
   const speakingHidden = !smithVisible && Boolean(audio?.speaking);
   const audioHidden = !smithVisible && (onCall || listening || speakingHidden);
   const hideSmith = () => {

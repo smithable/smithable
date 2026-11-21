@@ -236,8 +236,16 @@ export async function checkStudioSpeech(
         .click({ position: { x: 8, y: 8 } });
       await overlay.waitFor({ state: "detached" });
       await page.goto(`${base}/?guide=off`);
-      const sound = page.getByRole("button", { name: "Sound: on", exact: true });
-      const voice = page.getByLabel("Voice", { exact: true });
+      const sound = page.getByRole("button", { name: "Turn Smith's voice off", exact: true });
+      const settings = page.getByRole("button", { name: "Voice settings", exact: true });
+      const voice = page.getByRole("combobox", { name: "Voice", exact: true });
+      const speed = page.getByRole("combobox", { name: "Speed", exact: true });
+      assert.equal(await voice.isVisible(), false);
+      await sound.focus();
+      await page.keyboard.press("Tab");
+      await settings.getByRole("tooltip", { name: "Voice settings", exact: true }).waitFor();
+      await page.keyboard.press("Enter");
+      await voice.waitFor();
       if (support === "browser") {
         assert.equal(await voice.inputValue(), "Google UK English Male");
         assert.equal(
@@ -256,21 +264,21 @@ export async function checkStudioSpeech(
           ),
         );
       }
+      await speed.selectOption("1.5");
+      await speed.press("Escape");
+      assert.equal(await settings.evaluate((element) => element === document.activeElement), true);
+      await voice.waitFor({ state: "hidden" });
       await sound.click();
-      await page
-        .getByRole("button", { name: "Sound: off", exact: true })
-        .getByText("Sound off")
-        .waitFor();
-      await page.getByLabel("Speaking speed", { exact: true }).selectOption("1.5");
-      await page.reload();
-      const off = page.getByRole("button", { name: "Sound: off", exact: true });
+      const off = page.getByRole("button", { name: "Turn Smith's voice on", exact: true });
       await off.waitFor();
-      assert.equal(await page.getByLabel("Speaking speed", { exact: true }).inputValue(), "1.5");
+      await page.reload();
+      await off.waitFor();
+      await settings.click();
+      assert.equal(await speed.inputValue(), "1.5");
+      if (support === "browser") assert.equal(await voice.inputValue(), "Fixture voice");
       await off.click();
-      await page
-        .getByRole("button", { name: "Sound: on", exact: true })
-        .getByText("Sound on")
-        .waitFor();
+      await sound.waitFor();
+      await voice.waitFor({ state: "hidden" });
       assert.equal(
         await page.evaluate(() => window.speechFixture.checks),
         0,
@@ -299,7 +307,7 @@ export async function checkStudioSpeech(
         await check.focus();
         await page.keyboard.press("Space");
         if (support === "available") {
-          await page.getByRole("button", { name: "Auto off", exact: true }).waitFor();
+          await page.getByRole("button", { name: "Start call", exact: true }).waitFor();
           const mic = page.getByRole("button", { name: /^Mic:/ });
           await mic.focus();
           await page.keyboard.press("Space");
@@ -349,8 +357,8 @@ export async function checkStudioSpeech(
         await page.waitForFunction(() => window.speechFixture.rates.includes(1.5));
         const before = await page.evaluate(() => window.speechFixture.utterances.length);
         const pauses = await page.evaluate(() => window.speechFixture.pauses);
-        await page.getByRole("button", { name: "Sound: on", exact: true }).click();
-        await page.getByRole("button", { name: "Sound: off", exact: true }).click();
+        await page.getByRole("button", { name: "Turn Smith's voice off", exact: true }).click();
+        await page.getByRole("button", { name: "Turn Smith's voice on", exact: true }).click();
         assert.equal(await page.evaluate(() => window.speechFixture.pauses), pauses + 1);
         assert.ok(await page.evaluate(() => window.speechFixture.resumes > 0));
         assert.equal(
@@ -360,7 +368,9 @@ export async function checkStudioSpeech(
         );
         // Let the saved thread replace the optimistic timestamp, then change unrelated UI state.
         await page.waitForTimeout(700);
-        await page.getByLabel("Speaking speed", { exact: true }).selectOption("1");
+        await settings.click();
+        await speed.selectOption("1");
+        await speed.press("Escape");
         assert.equal(
           await page.evaluate(() => window.speechFixture.utterances.length),
           before,
@@ -397,38 +407,33 @@ export async function checkStudioSpeech(
               ?.value === "Hi",
         );
         await page.waitForTimeout(1700);
-        assert.equal(await input.inputValue(), "Hi", "manual dictation sent without Auto");
+        assert.equal(await input.inputValue(), "Hi", "manual dictation sent without a call");
         await page.getByText(/Your voice is sent to Google to be written out/).waitFor();
         assert.equal(
           await page.getByText(/Your voice is sent to Google to be written out/).count(),
           1,
         );
         await input.fill("");
-        const automatic = page.getByRole("button", { name: "Auto off", exact: true });
-        assert.equal(
-          await automatic.evaluate(
-            (el) =>
-              el.parentElement ===
-              document.querySelector('[data-speech] button[aria-label^="Mic:"]').parentElement,
-          ),
-          true,
-        );
+        const startCall = page.getByRole("button", { name: "Start call", exact: true });
+        const endCall = page.getByRole("button", { name: "End call", exact: true });
+        assert.equal(await page.getByRole("button", { name: /^Auto / }).count(), 0);
         await page.evaluate(() => {
           window.speechFixture.behavior = "automatic";
+          window.speechFixture.hold = false;
         });
-        await automatic.click();
-        await page.getByRole("button", { name: "Auto on", exact: true }).waitFor();
+        await startCall.click();
+        await callGreetingFinished(page, 1);
         await utterWhileSilent(page);
         await page.waitForFunction(
           () =>
             document.querySelector('textarea[aria-label="Describe a change, or ask a question"]')
               ?.value === "Hi",
         );
-        await page.getByRole("button", { name: "Auto on", exact: true }).click();
-        await page.getByRole("button", { name: "Auto off", exact: true }).click();
-        await page.getByRole("button", { name: "Auto on", exact: true }).waitFor();
+        await endCall.click();
+        await startCall.click();
+        await callGreetingFinished(page, 2);
         await page.waitForTimeout(1700);
-        assert.equal(await input.inputValue(), "Hi", "an old Auto timer survived off/on toggles");
+        assert.equal(await input.inputValue(), "Hi", "an old send timer survived ending a call");
         await input.fill("");
         await utterWhileSilent(page);
         await page.waitForFunction(
@@ -440,13 +445,11 @@ export async function checkStudioSpeech(
           () =>
             document.querySelector('textarea[aria-label="Describe a change, or ask a question"]')
               ?.value === "",
-          {},
-          { timeout: 10000 },
         );
         assert.equal(await page.evaluate(() => window.speechFixture.captures), 2);
-        await page.getByRole("button", { name: "Auto on", exact: true }).click();
+        await endCall.click();
         await page.reload();
-        await page.getByRole("button", { name: "Auto off", exact: true }).waitFor();
+        await page.getByRole("button", { name: "Start call", exact: true }).waitFor();
         assert.equal(
           await page.getByText(/Your voice is sent to Google to be written out/).count(),
           0,
@@ -464,15 +467,33 @@ export async function checkStudioSpeech(
   }
 }
 
+async function callGreetingFinished(page, calls) {
+  await page.waitForFunction(
+    (count) =>
+      window.speechFixture.utterances.filter((u) => u.text === "I’m listening.").length === count &&
+      !window.speechSynthesis.speaking,
+    calls,
+  );
+}
+
+export async function feedSpeechFrames(page, fixture, voiced) {
+  await page.evaluate(
+    ({ fixture, voiced }) => {
+      const port = window[fixture].worklet.port;
+      for (let frame = 0; frame < (voiced ? 12 : 26); frame++) {
+        const data = voiced
+          ? Float32Array.from({ length: 512 }, (_, i) => 0.3 * Math.sin(i * 0.3))
+          : new Float32Array(512);
+        port.onmessage({ data });
+      }
+    },
+    { fixture, voiced },
+  );
+}
+
 async function utterWhileSilent(page) {
-  await page.evaluate(() => {
-    const port = window.speechFixture.worklet.port;
-    for (let frame = 0; frame < 12; frame++)
-      port.onmessage({
-        data: Float32Array.from({ length: 512 }, (_, i) => 0.3 * Math.sin(i * 0.3)),
-      });
-    for (let frame = 0; frame < 26; frame++) port.onmessage({ data: new Float32Array(512) });
-  });
+  await feedSpeechFrames(page, "speechFixture", true);
+  await feedSpeechFrames(page, "speechFixture", false);
 }
 
 async function checkSmithCall(page) {
@@ -487,12 +508,23 @@ async function checkSmithCall(page) {
   const speaking = header.getByRole("status").filter({ hasText: /^Smith is speaking$/ });
   const hint = header.getByText("You can hide Smith and keep talking.", { exact: true });
   await face.click();
-  const ownerSound = page.getByRole("button", { name: "Sound: on", exact: true });
+  const buttons = [
+    page.getByRole("button", { name: "Mic: off", exact: true }),
+    start,
+    page.getByRole("button", { name: /^Turn Smith's voice (on|off)$/ }),
+    page.getByRole("button", { name: "Voice settings", exact: true }),
+  ];
+  const boxes = await Promise.all(buttons.map((button) => button.boundingBox()));
+  assert.ok(boxes.every((box) => box && box.width >= 24 && box.height >= 24));
+  assert.equal(new Set(boxes.map((box) => box.y)).size, 1);
+  const ownerSound = page.getByRole("button", { name: "Turn Smith's voice off", exact: true });
   if (await ownerSound.isVisible()) await ownerSound.click();
   await page.evaluate(() => {
     window.speechFixture.hold = true;
   });
   await start.click();
+  const end = page.locator("[data-speech]").getByRole("button", { name: "End call", exact: true });
+  assert.equal(await end.locator("svg").getAttribute("fill"), "currentColor");
   await page.waitForFunction(() =>
     window.speechFixture.utterances.some((u) => u.text === "Hi, it’s Smith."),
   );
@@ -542,7 +574,7 @@ async function checkSmithCall(page) {
 
   // Permission can be denied after pressing Start call, and the same controls can retry.
   await face.click();
-  await page.getByRole("button", { name: "Sound: off", exact: true }).waitFor();
+  await page.getByRole("button", { name: "Turn Smith's voice on", exact: true }).waitFor();
   await page.evaluate(() => {
     window.speechFixture.micPermission = "deny";
   });
@@ -582,10 +614,7 @@ async function checkSmithCall(page) {
   });
   const mic = page.getByRole("button", { name: "Mic: off", exact: true });
   await mic.click();
-  await page
-    .getByRole("button", { name: "Mic: on", exact: true })
-    .getByText("Listening", { exact: true })
-    .waitFor();
+  await page.getByRole("button", { name: "Mic: on", exact: true }).waitFor();
   await page.getByRole("button", { name: "Close Smith", exact: true }).click();
   await dock.waitFor({ state: "hidden" });
   await header.getByRole("button", { name: "Stop listening", exact: true }).click();
@@ -593,7 +622,7 @@ async function checkSmithCall(page) {
   await dock.waitFor();
   await mic.waitFor();
 
-  await page.getByRole("button", { name: "Sound: off", exact: true }).click();
+  await page.getByRole("button", { name: "Turn Smith's voice on", exact: true }).click();
   await start.click();
   await page.waitForFunction(() =>
     window.speechFixture.utterances.some((u) => u.text === "Hi, it’s Smith."),
@@ -602,7 +631,7 @@ async function checkSmithCall(page) {
   await endHidden.click();
   assert.equal(await page.evaluate(() => window.speechFixture.released), 1);
   await face.click();
-  await page.getByRole("button", { name: "Sound: on", exact: true }).waitFor();
+  await page.getByRole("button", { name: "Turn Smith's voice off", exact: true }).waitFor();
   console.log(
     "  ✓ Smith call: one press, hidden conversation and End call, mic-only stop, denied and cancelled capture, reduced motion",
   );
