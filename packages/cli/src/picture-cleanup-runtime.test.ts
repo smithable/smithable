@@ -158,88 +158,94 @@ function webp(width: number, height: number, extra = 0, fill = 0): Uint8Array {
 }
 
 test("a smaller copy two records share stays while one still lists it, and goes after the other drops it (T1077)", async () => {
-  const root = mkdtempSync(join(tmpdir(), "picture-copies-"));
-  process.env.DATA_DIR = root;
-  const uploadsPath: string = "../../adapter-tanstack/templates/src/kit/uploads.ts";
-  type Stored = { file: string; width: number; height: number; smaller?: { file: string }[] };
-  const kit = (await import(uploadsPath)) as {
-    savePicture(model: string, bytes: Uint8Array, alt: string): Stored;
-    saveSmaller(model: string, bytes: Uint8Array, main: object): { file: string };
-    deletePicture(picture: Stored, stillUsed: boolean, used?: (file: string) => boolean): void;
-    dropCopies(before: Stored | null, after: Stored | null, used: (file: string) => boolean): void;
-  };
   const raw = new DatabaseSync(":memory:");
-  raw.exec("CREATE TABLE instructors(id INTEGER PRIMARY KEY, portrait TEXT)");
-  // The generated update's cleanup, run with the real kit against this table: sql`` becomes
-  // SQLite text with each column named and each value a parameter.
-  const source = file("src/generated/instructor.server.ts");
-  const at = source.indexOf("dropCopies(row.portrait, changed.portrait,");
-  const cleanup = source.slice(
-    source.lastIndexOf("    cleanUploads", at),
-    source.indexOf("    });", at) + 7,
-  );
-  const column = (name: string) => ({ column: name });
-  const sql = (parts: TemplateStringsArray, ...values: unknown[]) => ({
-    text: parts.reduce((all, part, i) => {
-      const value = values[i];
-      const named = typeof value === "object" && value ? (value as { column: string }).column : "?";
-      return all + part + (i < values.length ? named : "");
-    }, ""),
-    params: values.filter((v) => typeof v !== "object") as string[],
-  });
-  const db = {
-    select: () => ({
-      from: () => ({
-        where: (where: { text: string; params: string[] }) => ({
-          get: () =>
-            raw.prepare(`SELECT id FROM instructors WHERE ${where.text}`).get(...where.params),
+  const root = mkdtempSync(join(tmpdir(), "picture-copies-"));
+  const dataDir = process.env.DATA_DIR;
+  try {
+    process.env.DATA_DIR = root;
+    const uploadsPath: string = "../../adapter-tanstack/templates/src/kit/uploads.ts";
+    type Stored = { file: string; width: number; height: number; smaller?: { file: string }[] };
+    const kit = (await import(uploadsPath)) as {
+      savePicture(model: string, bytes: Uint8Array, alt: string): Stored;
+      saveSmaller(model: string, bytes: Uint8Array, main: object): { file: string };
+      deletePicture(picture: Stored, stillUsed: boolean, used?: (file: string) => boolean): void;
+      dropCopies(
+        before: Stored | null,
+        after: Stored | null,
+        used: (file: string) => boolean,
+      ): void;
+    };
+    raw.exec("CREATE TABLE instructors(id INTEGER PRIMARY KEY, portrait TEXT)");
+    // The generated update's cleanup, run with the real kit against this table: sql`` becomes
+    // SQLite text with each column named and each value a parameter.
+    const source = file("src/generated/instructor.server.ts");
+    const at = source.indexOf("dropCopies(row.portrait, changed.portrait,");
+    const cleanup = source.slice(
+      source.lastIndexOf("    cleanUploads", at),
+      source.indexOf("    });", at) + 7,
+    );
+    const column = (name: string) => ({ column: name });
+    const sql = (parts: TemplateStringsArray, ...values: unknown[]) => ({
+      text: parts.reduce((all, part, i) => {
+        const value = values[i];
+        const named =
+          typeof value === "object" && value ? (value as { column: string }).column : "?";
+        return all + part + (i < values.length ? named : "");
+      }, ""),
+      params: values.filter((v) => typeof v !== "object") as string[],
+    });
+    const db = {
+      select: () => ({
+        from: () => ({
+          where: (where: { text: string; params: string[] }) => ({
+            get: () =>
+              raw.prepare(`SELECT id FROM instructors WHERE ${where.text}`).get(...where.params),
+          }),
         }),
       }),
-    }),
-  };
-  const run = new Function(
-    "db",
-    "row",
-    "changed",
-    "deletePicture",
-    "dropCopies",
-    "schema",
-    "sql",
-    "keepsUpload",
-    "cleanUploads",
-    cleanup,
-  );
-  const mainBytes = webp(1200, 800, 400);
-  const main = kit.savePicture("instructor", mainBytes, "");
-  const copy = kit.saveSmaller("instructor", webp(480, 320, 30, 9), {
-    width: 1200,
-    height: 800,
-    bytes: mainBytes.length,
-  });
-  const copyPath = join(root, "uploads", copy.file);
-  const withCopy = { ...main, smaller: [copy] };
-  const without = { ...main, smaller: [] };
-  raw.exec(
-    `INSERT INTO instructors VALUES (1, '${JSON.stringify(withCopy)}'), (2, '${JSON.stringify(withCopy)}')`,
-  );
-  // An update of one record: the table holds its new value, the cleanup runs on before and after.
-  const update = (id: number) => {
-    raw
-      .prepare("UPDATE instructors SET portrait = ? WHERE id = ?")
-      .run(JSON.stringify(without), id);
-    run(
-      db,
-      { portrait: withCopy },
-      { portrait: without },
-      kit.deletePicture,
-      kit.dropCopies,
-      { instructors: { id: column("id"), portrait: column("portrait") } },
-      sql,
-      () => false,
-      (clean: () => void) => clean(),
+    };
+    const run = new Function(
+      "db",
+      "row",
+      "changed",
+      "deletePicture",
+      "dropCopies",
+      "schema",
+      "sql",
+      "keepsUpload",
+      "cleanUploads",
+      cleanup,
     );
-  };
-  try {
+    const mainBytes = webp(1200, 800, 400);
+    const main = kit.savePicture("instructor", mainBytes, "");
+    const copy = kit.saveSmaller("instructor", webp(480, 320, 30, 9), {
+      width: 1200,
+      height: 800,
+      bytes: mainBytes.length,
+    });
+    const copyPath = join(root, "uploads", copy.file);
+    const withCopy = { ...main, smaller: [copy] };
+    const without = { ...main, smaller: [] };
+    raw.exec(
+      `INSERT INTO instructors VALUES (1, '${JSON.stringify(withCopy)}'), (2, '${JSON.stringify(withCopy)}')`,
+    );
+    // An update of one record: the table holds its new value, the cleanup runs on before and after.
+    const update = (id: number) => {
+      raw
+        .prepare("UPDATE instructors SET portrait = ? WHERE id = ?")
+        .run(JSON.stringify(without), id);
+      run(
+        db,
+        { portrait: withCopy },
+        { portrait: without },
+        kit.deletePicture,
+        kit.dropCopies,
+        { instructors: { id: column("id"), portrait: column("portrait") } },
+        sql,
+        () => false,
+        (clean: () => void) => clean(),
+      );
+    };
     update(1);
     expect(existsSync(copyPath)).toBe(true);
     update(2);
@@ -247,6 +253,8 @@ test("a smaller copy two records share stays while one still lists it, and goes 
     expect(existsSync(join(root, "uploads", main.file))).toBe(true);
   } finally {
     raw.close();
+    if (dataDir === undefined) delete process.env.DATA_DIR;
+    else process.env.DATA_DIR = dataDir;
     rmSync(root, { recursive: true, force: true });
   }
 });

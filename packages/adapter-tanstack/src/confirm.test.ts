@@ -81,6 +81,8 @@ test("a question through a reference to the model the action adds to imports its
     "    confirm: Send invoice {number} with {mainLine.description}?\n",
   );
   const { server } = files(spec, content);
+  // The action adds to InvoiceLine (so its module imports invoiceLineData itself) and asks through it.
+  expect(server).toMatch(/^import \{[^}]*\} from "[^"]*invoice-line\.schema";$/m);
   expect(server).toContain('"mainLine.description": shown(');
   expect(server.match(/^import \{[^}]*\binvoiceLineData\b[^}]*\} from/gm)).toHaveLength(1);
 });
