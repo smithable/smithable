@@ -74,13 +74,13 @@ export type Progress = (
 
 /** What decides the install: the same in both means the packages installed here fit. */
 function installed(dir: string): string {
-  const pkg = JSON.parse(treeText(join(dir, "package.json")));
+  const pkg = JSON.parse(readFileSync(join(dir, "package.json"), "utf8"));
   const workspace = join(dir, "pnpm-workspace.yaml");
   return JSON.stringify([
     pkg.dependencies,
     pkg.devDependencies,
     pkg.packageManager,
-    existsSync(workspace) ? treeText(workspace) : "",
+    existsSync(workspace) ? readFileSync(workspace, "utf8") : "",
   ]);
 }
 

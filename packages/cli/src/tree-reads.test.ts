@@ -1,6 +1,6 @@
 // What this process writes back into the tree or sends to a model from it is read as the
 // project's own file where a project user is set (secrets.ts treeText, treeBytes).
-import { symlinkSync, writeFileSync } from "node:fs";
+import { copyFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, beforeEach, expect, test } from "vitest";
 import { projectLook } from "./project-look.js";
@@ -47,7 +47,11 @@ test("without a project user a missing file is ENOENT as before", () => {
 });
 
 test.runIf(linux)("the look sent to a model never reads the ux file through a link", () => {
-  writeFileSync(join(dir, "smithable.yml"), "smithable: 0.1\napp:\n  name: Shop\n");
+  const crm = new URL("../../../examples/crm/", import.meta.url).pathname;
+  for (const name of ["smithable.yml", "smithable.auth.yml", "smithable.ux.yml"])
+    copyFileSync(join(crm, name), join(dir, name));
+  expect(projectLook(dir)?.uxText).toContain("smithableUx");
+  rmSync(join(dir, "smithable.ux.yml"));
   symlinkSync(secret, join(dir, "smithable.ux.yml"));
   let look: unknown;
   try {

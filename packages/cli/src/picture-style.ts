@@ -20,7 +20,7 @@ import { YamlEditor } from "@smithable/core";
 import { asProject } from "./as-project.js";
 import { databasePath } from "./database.js";
 import { atLibrary, type Fetch, libraryBase } from "./pictures.js";
-import { treeBytes, treeText } from "./secrets.js";
+import { readTreeOrNone, treeBytes, treeText } from "./secrets.js";
 
 const TIMEOUT = 20_000;
 const MAX_PICTURE = 2_000_000;
@@ -204,8 +204,9 @@ export function planStyle(dir: string, version: LibraryVersion, style: string): 
     const role = roleOf(file);
     if (role === "logo") continue;
     const record = records[file];
-    const bytes = treeBytes(join(imagesDir(dir), file));
-    if (!record?.sha256 || !record.entry || sha256(bytes) !== record.sha256) {
+    const bytes =
+      record?.sha256 && record.entry ? readTreeOrNone(join(imagesDir(dir), file)) : undefined;
+    if (!bytes || !record?.entry || sha256(bytes) !== record.sha256) {
       plan.kept.push(file);
       continue;
     }

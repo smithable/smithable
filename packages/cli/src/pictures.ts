@@ -57,7 +57,7 @@ export async function libraryIndex(
   const file = join(dir, "index.json");
   try {
     if (existsSync(file) && Date.now() - statSync(file).mtimeMs < DAY)
-      return JSON.parse(treeText(file)) as PictureEntry[];
+      return JSON.parse(readFileSync(file, "utf8")) as PictureEntry[];
   } catch {
     // A broken cache is fetched again.
   }
