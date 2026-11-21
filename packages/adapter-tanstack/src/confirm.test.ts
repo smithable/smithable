@@ -66,6 +66,27 @@ test("another mail that may go keeps the question from saying it reaches nobody"
   expect(server).not.toContain("noRecipient: true };");
 });
 
+test("a question through a reference to the model the action adds to imports its data once (T1011)", () => {
+  const spec = at("smithable.yml")
+    .replace(
+      "      lines: InvoiceLine[]\n",
+      "      lines: InvoiceLine[]\n      mainLine: InvoiceLine\n",
+    )
+    .replace(
+      "    set: { status: sent, sentAt: NOW() }\n    confirm: true\n",
+      "    set: { status: sent, sentAt: NOW() }\n    add:\n      InvoiceLine: { description: Sent, unitPrice: 0 }\n    confirm: true\n",
+    );
+  const content = at("smithable.content.yml").replace(
+    "    confirm: Send invoice {number} of {total} to {client} at {client.email}?\n",
+    "    confirm: Send invoice {number} with {mainLine.description}?\n",
+  );
+  const { server } = files(spec, content);
+  // The action adds to InvoiceLine (so its module imports invoiceLineData itself) and asks through it.
+  expect(server).toMatch(/^import \{[^}]*\} from "[^"]*invoice-line\.schema";$/m);
+  expect(server).toContain('"mainLine.description": shown(');
+  expect(server.match(/^import \{[^}]*\binvoiceLineData\b[^}]*\} from/gm)).toHaveLength(1);
+});
+
 test("without a text it asks with the title only; without confirm there is no question", () => {
   const content = at("smithable.content.yml").replace(
     /\nactions:\n {2}sendInvoice:\n(?: {4}.*\n)+/,

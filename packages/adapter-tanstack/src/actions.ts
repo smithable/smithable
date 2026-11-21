@@ -849,9 +849,13 @@ function withQuestion(module: string, action: StandardActionIR, ir: SpecIR, t: T
       : [];
   const uis = new Map([[n.module, n.ui]]);
   for (const { other } of refs.values()) uis.set(names(other, t).module, names(other, t).ui);
+  // A name the module imports already (the record's own, or a model the action adds to or
+  // copies) is not imported twice.
+  const imported = (name: string) =>
+    new RegExp(`^import \\{[^}]*\\b${name}\\b[^}]*\\} from`, "m").test(module);
   const datas = [...refs.values()]
     .map(({ other }) => names(other, t))
-    .filter((on) => on.data !== n.data);
+    .filter((on) => on.data !== n.data && !imported(on.data));
   const imports = `import { app } from "#/generated/app";
 import { formatValue } from "#/kit/format";
 import type { RecordFieldUi } from "#/kit/model";
