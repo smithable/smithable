@@ -1,6 +1,6 @@
 // Smithable app kit: the EU's common icon for AI-generated content on a picture an AI made that
-// could pass for a photograph, drawn here from the EU's own files, black and unaltered, so no app
-// loads it from anywhere. It sits in the picture's bottom right corner, away from menus and
+// could pass for a photograph, drawn from the EU's own files, unaltered, so no app loads it. It
+// sits in the picture's bottom right corner, away from menus and
 // buttons, with nothing over it, and is one badge: on a small picture the basic icon alone; on one
 // across the page the EU's worded label ("AI GENERATED") in English, and in another language the
 // icon with the app's own words joined to it. A picture styled where it is used (under the hero's
