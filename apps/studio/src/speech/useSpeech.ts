@@ -1,7 +1,6 @@
 // Speech for Smith (docs/design/smith-speech.md §8): the `browser` provider (the browser's own
-// recognition and voices), the person's settings, one listening tab at a time, press to talk
-// (step 1) and automatic mode (step 2: the voice detector starts and ends each utterance while
-// Smith is silent). Barge-in waits for the speaker test (§4.3); a `browser` voice never has it.
+// recognition and voices), the person's settings, one listening tab at a time, manual dictation
+// and calls (the voice detector starts and ends each utterance while Smith is silent). Barge-in waits for the speaker test (§4.3); a `browser` voice never has it.
 import { useCallback, useEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import { playback } from "./playback";
@@ -18,7 +17,7 @@ interface Settings {
   sound: boolean;
   rate: number;
   voice?: string;
-  /** The mic as the person left it: off, or press to talk (automatic is chosen per visit). */
+  /** The mic as the person left it: off, or press to talk. */
   mic: "off" | "press";
   /** The line saying where the voice goes was shown, so the browser was asked once. */
   told?: true;
@@ -88,13 +87,8 @@ export interface Speech {
   needsLocalCheck: boolean;
   checkingHearing: boolean;
   hearingNote: string | undefined;
-  /** Automatic mode (§4.2): chosen per visit, never saved; back to press to talk by itself. */
-  auto: boolean;
-  setAuto: (on: boolean) => void;
-  /** A line about automatic mode: starting, or why it went back to press to talk. */
-  autoNote?: string;
-  /** Silero's files could not be had: the simple detector runs (the controls say so). */
-  simpleDetector: boolean;
+  /** A line about the current or most recent call. */
+  callNote?: string;
   listening: boolean;
   /** Words heard so far and not final yet, shown greyed. */
   interim: string;
@@ -120,7 +114,7 @@ export function useSpeech(
   onFinal: (text: string) => void,
   /** Listening ended; `heard` when anything final came in it (the moment to send it). */
   onEnd: (heard: boolean) => void,
-  /** The guide owns the conversation: keep Auto armed, without recognizing input. */
+  /** The guide owns the conversation: keep the call open and pause recognition. */
   inputBlocked = false,
 ): Speech {
   const inputBlockedNow = useRef(inputBlocked);
@@ -176,7 +170,6 @@ export function useSpeech(
   const [blocked, setBlocked] = useState(false);
   const [call, setCallState] = useState<Call>("idle");
   const callNow = useRef<Call>("idle");
-  const callGeneration = useRef(0);
   const setCall = (state: Call) => {
     callNow.current = state;
     setCallState(state);
@@ -233,10 +226,7 @@ export function useSpeech(
     }
     return true;
   };
-  // Automatic mode's state, read inside the detector's callbacks as it is now.
-  const [auto, setAutoOn] = useState(false);
-  const [autoNote, setAutoNote] = useState<string>();
-  const [simple, setSimple] = useState(false);
+  const [callNote, setCallNote] = useState<string>();
   const ear = useRef<Ear | undefined>(undefined);
   const lastHeard = useRef(0);
   const speakingNow = useRef(false);
@@ -278,7 +268,7 @@ export function useSpeech(
       r.onerror = (e) => {
         if (rec.current !== r) return;
         const permissionDenied = e.error === "not-allowed" || e.error === "service-not-allowed";
-        if (permissionDenied && callNow.current !== "idle") stopAuto();
+        if (permissionDenied && callNow.current !== "idle") stopCall();
         if (ear.current && e.error === "audio-capture") clash.current = true;
         if (
           e.error !== "aborted" &&
@@ -305,7 +295,7 @@ export function useSpeech(
         ended.current(heardAny);
         if (clash.current) {
           clash.current = false;
-          stopAuto(
+          stopCall(
             "This browser's speech recognition cannot listen beside the voice detector: press to talk instead.",
           );
         }
@@ -331,39 +321,30 @@ export function useSpeech(
     [Rec, canHear, onDeviceOnly, localHearing, checkingHearing, stopSpeaking, settings],
   );
 
-  // Automatic mode: the detector opens its own stream; an onset starts recognition (while Smith
-  // is silent), about 800 ms of silence ends it, and what was heard is sent as with a release.
+  // In a call the detector starts recognition while Smith is silent and ends it at a pause.
   const listenNow = useRef(listen);
   listenNow.current = listen;
-  // Each start gets a number; a stop (or a hidden tab, another tab, leaving) moves it on, so a
-  // start still loading its files finds itself cancelled after each wait and closes what it opened.
+  // A stopped or superseded call closes anything it opened while awaiting permission.
   const generation = useRef(0);
-  const starting = useRef(false);
-  const stopAuto = (note?: string) => {
+  const stopCall = (note?: string) => {
+    if (callNow.current === "idle") return;
     setHearingError(undefined);
     generation.current++;
-    starting.current = false;
     ear.current?.stop();
     ear.current = undefined;
-    if (callNow.current === "idle") rec.current?.stop();
-    else {
-      callGeneration.current++;
-      setCall("idle");
-      const active = rec.current;
-      rec.current = undefined;
-      manualListening.current = false;
-      setListening(false);
-      setInterim("");
-      active?.abort();
-      stopSpeaking();
-      setCallSound(undefined);
-    }
-    setAutoOn(false);
-    setAutoNote(note);
+    setCall("idle");
+    const active = rec.current;
+    rec.current = undefined;
+    manualListening.current = false;
+    setListening(false);
+    setInterim("");
+    active?.abort();
+    stopSpeaking();
+    setCallSound(undefined);
+    setCallNote(note);
   };
-  const startAuto = async (): Promise<boolean> => {
-    if (ear.current) return true;
-    if (starting.current || !Rec || !canHear) return false;
+  const openCallMicrophone = async (mine: number): Promise<boolean> => {
+    if (!Rec) return false;
     setHearingError(undefined);
     if (!settings.told) {
       flushSync(() =>
@@ -371,10 +352,8 @@ export function useSpeech(
       );
       save({ ...settings, told: true });
     }
-    const mine = ++generation.current;
     const cancelled = () => mine !== generation.current;
-    starting.current = true;
-    setAutoNote("Starting the voice detector…");
+    setCallNote("Starting call…");
     if (onDeviceOnly && localHearing === undefined) {
       // The policy keeps hearing on this computer: asked here, once, before anything opens.
       const local = await (
@@ -386,14 +365,12 @@ export function useSpeech(
       setLocalHearing(local);
       if (cancelled()) return false;
       if (!local) {
-        starting.current = false;
-        setAutoNote(undefined);
+        setCallNote(undefined);
         return false;
       }
     }
     const found = await loadDetector();
     if (cancelled()) return false;
-    setSimple(found.kind === "simple");
     const segments = segmenter();
     let frames: ((chunk: Float32Array) => Float32Array[]) | undefined;
     let queue = Promise.resolve();
@@ -430,8 +407,7 @@ export function useSpeech(
       });
     } catch (error) {
       if (cancelled()) return false;
-      starting.current = false;
-      setAutoNote(
+      setCallNote(
         error instanceof DOMException && error.name === "NotAllowedError"
           ? "Microphone access was refused. Allow the microphone for this Studio address in your browser's site settings, then try again. You can type instead."
           : "The microphone could not be opened. Check that it is connected and allowed, then try again. You can type instead.",
@@ -442,24 +418,21 @@ export function useSpeech(
       opened.stop();
       return false;
     }
-    starting.current = false;
     ear.current = opened;
     lastHeard.current = Date.now();
-    setAutoOn(true);
-    setAutoNote(undefined);
+    setCallNote(found.kind === "simple" ? "A simpler voice detector is in use." : undefined);
     channel.current?.postMessage("listening");
     return true;
   };
   const startCall = async () => {
     if (!voice || !canHear || inputBlockedNow.current || callNow.current !== "idle") return;
-    if (starting.current) stopAuto();
     rec.current?.abort();
-    const mine = ++callGeneration.current;
+    const mine = ++generation.current;
     setCall("starting");
     // Reset playback on the button gesture, before the microphone permission prompt.
     stopSpeaking();
-    const ready = await startAuto();
-    if (mine !== callGeneration.current) return;
+    const ready = await openCallMicrophone(mine);
+    if (mine !== generation.current) return;
     if (!ready) {
       setCall("idle");
       return;
@@ -469,39 +442,39 @@ export function useSpeech(
     setBlocked(false);
     player.current?.speak("Hi, it’s Smith. I’m listening.", voice, settings.rate);
   };
-  // biome-ignore lint/correctness/useExhaustiveDependencies: stopAuto reads current refs
+  // biome-ignore lint/correctness/useExhaustiveDependencies: stopCall reads current refs
   useEffect(() => {
-    if (call === "active" && (!canHear || !canSpeak)) stopAuto();
+    if (call === "active" && (!canHear || !canSpeak)) stopCall();
   }, [call, canHear, canSpeak]);
 
   // Back to press to talk after ten minutes without the person speaking, and when the tab hides.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: stopAuto reads refs only
+  // biome-ignore lint/correctness/useExhaustiveDependencies: stopCall reads refs only
   useEffect(() => {
-    if (!auto) return;
+    if (call !== "active") return;
     const timer = setInterval(() => {
       if (Date.now() - lastHeard.current > 10 * 60_000)
-        stopAuto("Back to press to talk: nothing was said for ten minutes.");
+        stopCall("Back to press to talk: nothing was said for ten minutes.");
     }, 15_000);
     return () => clearInterval(timer);
-  }, [auto]);
-  // A hidden tab stops listening; it keeps speaking.
+  }, [call]);
+  // Hiding the browser tab ends a call and stops manual dictation.
   useEffect(() => {
     const hide = () => {
       if (document.visibilityState !== "hidden") return;
       // Also a start still loading: it finds itself cancelled.
-      if (ear.current || starting.current) stopAuto("Back to press to talk: the tab was hidden.");
+      if (callNow.current !== "idle") stopCall("Back to press to talk: the tab was hidden.");
       else rec.current?.stop();
     };
     document.addEventListener("visibilitychange", hide);
     return () => document.removeEventListener("visibilitychange", hide);
   });
-  // Listening in another tab stops automatic mode here too.
+  // Listening in another tab ends the call here too.
   useEffect(() => {
     const c = channel.current;
     if (!c) return;
     const other = (e: MessageEvent) => {
-      if (e.data === "listening" && (ear.current || starting.current))
-        stopAuto("Back to press to talk: another tab listens.");
+      if (e.data === "listening" && callNow.current !== "idle")
+        stopCall("Back to press to talk: another tab listens.");
     };
     c.addEventListener("message", other);
     return () => c.removeEventListener("message", other);
@@ -562,10 +535,7 @@ export function useSpeech(
           : !canHear
             ? why
             : undefined),
-    auto,
-    setAuto: (on) => (on ? void startAuto() : stopAuto()),
-    ...(autoNote ? { autoNote } : {}),
-    simpleDetector: simple,
+    ...(callNote ? { callNote } : {}),
     listening,
     interim,
     where: whereLine("browser", browser, onDeviceOnly && localHearing === true),
@@ -577,12 +547,12 @@ export function useSpeech(
       else listen(true);
     },
     stopListening: () => {
-      if (ear.current || starting.current) stopAuto();
+      if (callNow.current !== "idle") stopCall();
       else rec.current?.stop();
     },
     call,
     startCall: () => void startCall(),
-    endCall: () => stopAuto(),
+    endCall: () => stopCall(),
     speak,
     stopSpeaking,
     speaking,

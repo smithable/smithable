@@ -72,9 +72,17 @@ The beta terms' line on diagnostics is B's to check against the first level (clo
 
 ## 8. Layout
 
-- **The top bar chooses the layout**, not the windows: a row of small rectangles, each a layout (one window; two side by side; two with a third column; two with a row below). Which window is in which slot is a setting (the gear): the defaults are No code | Preview (or Code | Preview) and, when a third slot is shown, Smith with Changes under it, right or below. The bar also has arrows at the left and right edge of the preview that hide and show the left and the right window for a bigger preview for a while; no dragging of dividers (A 120 step 2 is dropped: dragging was buggy and a few fixed shares are enough).
-- **Phone.** One window at a time; swipe at the top switches the main window (No code, Preview, Smith by default; Code when switched on in settings), swipe below switches the sub view (Behavior, Look, Who can, Content; Smith, Changes). The settings say whether Changes is under Smith and whether Code shows.
-- **Kept per device** in `localStorage` (layout, slots, hidden sides), as the preview's width was.
+- **Desktop.** Smith starts docked on the left with the app preview beside him. All settings
+  opens or closes the right pane, with No code and Code inside. The Smith face toggles his pane.
+  The preview's edge arrows can also collapse or restore a side pane. Help contains the Studio
+  tour, and publishing explains any test-hosting restriction.
+- **Phone.** One pane fills the screen. The edge arrows switch between Smith, the app and settings
+  in that order. A sideways swipe also switches panes when it starts on Studio's own controls or
+  panes. Gestures inside the app preview stay with the app. No code and Code stay inside settings.
+  More has the option to show Changes under Smith.
+- **Saved preferences.** The selected settings tab, the open settings state and Smith's docked or
+  floating position are kept on this device. An older layout supplies the settings tab and the
+  preference for showing Changes with Smith.
 
 ## 9. Steps (A, each a PR; core parts by Fable first where named)
 

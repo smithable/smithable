@@ -4,7 +4,7 @@ import { stubPictureCatalogue } from "./first-look-checks.mjs";
 import {
   openFormEntry,
   openPreviewAddress,
-  showWorkspaceControls,
+  openSettings,
   toolbarAction,
 } from "./studio-form-checks.mjs";
 import { checkStudioHistory } from "./studio-history-checks.mjs";
@@ -18,19 +18,11 @@ async function checkBuilder(page, phone) {
 
   const showPreview = async () => {
     if (phone) {
-      await showWorkspaceControls(page);
-      await page.getByRole("radio", { name: "Preview", exact: true }).check({ force: true });
+      const edge = page.getByRole("button", { name: "Show the app", exact: true });
+      if (await edge.isVisible()) await edge.click();
     }
   };
-  const showEditor = async () => {
-    if (phone) {
-      await showWorkspaceControls(page);
-      await page.getByRole("radio", { name: /^(No code|Code)$/ }).check({ force: true });
-    } else {
-      const open = page.getByRole("button", { name: "Show the window on the right" });
-      if (await open.isVisible()) await open.click();
-    }
-  };
+  const showEditor = () => openSettings(page);
   const preview = async (name) => {
     await showPreview();
     await page

@@ -271,9 +271,9 @@ export function sideFor(
 export function useSmithPlace(): ["floating" | "docked", (next: "floating" | "docked") => void] {
   const [place, setPlace] = useState<"floating" | "docked">(() => {
     try {
-      return localStorage.getItem(PLACE) === "docked" ? "docked" : "floating";
+      return localStorage.getItem(PLACE) === "floating" ? "floating" : "docked";
     } catch {
-      return "floating";
+      return "docked";
     }
   });
   return [

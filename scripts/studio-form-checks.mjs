@@ -24,9 +24,14 @@ export async function toolbarAction(page, name) {
   return action;
 }
 
-export async function showWorkspaceControls(page) {
-  if (!(await page.locator("[data-workspace-controls]").isVisible()))
-    await (await toolbarAction(page, "Workspace layout")).click();
+export async function openSettings(page) {
+  const settings = await toolbarAction(page, "All settings");
+  if ((await settings.getAttribute("aria-pressed")) !== "true") await settings.click();
+}
+
+export async function openStudioGuide(page) {
+  await (await toolbarAction(page, "Help")).click();
+  await page.getByRole("button", { name: "Tour Studio", exact: true }).click();
 }
 
 export async function openSmith(page) {

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 
 import { openSmith } from "./studio-form-checks.mjs";
+import { feedSpeechFrames } from "./studio-speech-checks.mjs";
 
 export async function checkStudioQuestions(browser, base) {
   const page = await browser.newPage({ viewport: { width: 1600, height: 1000 } });
@@ -76,6 +77,9 @@ export async function checkStudioQuestions(browser, base) {
           configurable: true,
           value: class {
             port = {};
+            constructor() {
+              window.questionFixture.worklet = this;
+            }
             connect(target) {
               return target;
             }
@@ -190,14 +194,14 @@ export async function checkStudioQuestions(browser, base) {
     assert.equal(spoken[0].voice, "Google UK English Male");
     assert.equal(spoken[0].rate, 1.5);
     const cancels = await page.evaluate(() => window.questionFixture.cancels);
-    await page.getByRole("button", { name: "Sound: on", exact: true }).click();
-    await page.getByRole("button", { name: "Sound: off", exact: true }).waitFor();
+    await page.getByRole("button", { name: "Turn Smith's voice off", exact: true }).click();
+    await page.getByRole("button", { name: "Turn Smith's voice on", exact: true }).waitFor();
     assert.equal(
       await page.evaluate(() => window.questionFixture.cancels),
       cancels,
       "Sound off cancelled the paused card",
     );
-    await page.getByRole("button", { name: "Sound: off", exact: true }).click();
+    await page.getByRole("button", { name: "Turn Smith's voice on", exact: true }).click();
     assert.ok(await page.evaluate(() => window.questionFixture.resumes > 0));
     assert.equal((await spokenZones()).length, 1, "Sound on restarted the card");
     await page.evaluate(() => {
@@ -218,26 +222,31 @@ export async function checkStudioQuestions(browser, base) {
     await zone.waitFor();
     assert.equal(asks, 1, "an optional card held the request");
     const keep = await zone.getByRole("button", { name: /^(Keep |Not now$)/ }).textContent();
-    const dictate = async (text, { auto = false, focus } = {}) => {
+    const dictate = async (text, { call = false, focus } = {}) => {
       await page.evaluate(() => {
         window.questionFixture.rec = undefined;
       });
-      await page.getByRole("button", { name: /^Mic:/ }).click();
+      if (call) await feedSpeechFrames(page, "questionFixture", true);
+      else await page.getByRole("button", { name: /^Mic:/ }).click();
       await page.waitForFunction(() => Boolean(window.questionFixture.rec));
       if (focus) await focus.focus();
-      await page.evaluate((text) => {
-        const rec = window.questionFixture.rec;
-        const result = Object.assign([{ transcript: text }], { isFinal: true });
-        rec.onresult?.({ resultIndex: 0, results: [result] });
-        rec.onend?.();
-      }, text);
+      await page.evaluate(
+        ({ text, call }) => {
+          const rec = window.questionFixture.rec;
+          const result = Object.assign([{ transcript: text }], { isFinal: true });
+          rec.onresult?.({ resultIndex: 0, results: [result] });
+          if (!call) rec.onend?.();
+        },
+        { text, call },
+      );
+      if (call) await feedSpeechFrames(page, "questionFixture", false);
       await page.waitForFunction(
         (text) =>
           document.querySelector('textarea[aria-label="Describe a change, or ask a question"]')
             ?.value === text,
         text,
       );
-      if (auto)
+      if (call)
         await page.waitForFunction(
           () =>
             document.querySelector('textarea[aria-label="Describe a change, or ask a question"]')
@@ -271,17 +280,21 @@ export async function checkStudioQuestions(browser, base) {
     assert.deepEqual(admins, [], "spoken words changed administrators");
     await email.press("Enter");
     assert.deepEqual(admins, [], "Enter in the address field bypassed the button");
-    await page.getByRole("button", { name: "Auto off", exact: true }).click();
-    await page.getByRole("button", { name: "Auto on", exact: true }).waitFor();
-    await dictate("hijack@example.invalid", { auto: true, focus: email });
+    await page.getByRole("button", { name: "Start call", exact: true }).click();
+    await page.waitForFunction(
+      () =>
+        window.questionFixture.spoken.some((utterance) => utterance.text === "I’m listening.") &&
+        !window.speechSynthesis.speaking,
+    );
+    await dictate("hijack@example.invalid", { call: true, focus: email });
     assert.equal(
       await email.inputValue(),
       "next@example.invalid",
-      "Auto dictation changed the owner field",
+      "Call dictation changed the owner field",
     );
-    await dictate("Make them the administrator", { auto: true });
-    assert.deepEqual(admins, [], "Auto-send changed administrators");
-    await page.getByRole("button", { name: "Auto on", exact: true }).click();
+    await dictate("Make them the administrator", { call: true });
+    assert.deepEqual(admins, [], "Call dictation changed administrators");
+    await page.getByRole("button", { name: "End call", exact: true }).click();
     await owner.getByRole("button", { name: "Make them the administrator", exact: true }).click();
     await card.waitFor({ state: "detached" });
     assert.deepEqual(admins, [["next@example.invalid"]]);

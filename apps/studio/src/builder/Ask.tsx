@@ -44,7 +44,7 @@ interface Said {
 
 export type AudioActivity = Pick<
   Speech,
-  "auto" | "call" | "listening" | "speaking" | "endCall" | "stopListening"
+  "call" | "listening" | "speaking" | "endCall" | "stopListening"
 >;
 
 export function Ask({
@@ -351,7 +351,7 @@ export function Ask({
   // Right after a request's changes applied, "Undo that" is offered until the next thing is sent.
   const [justApplied, setJustApplied] = useState(false);
   // Speech (smith-speech.md, step 1): what is heard goes into the box, and is sent a moment
-  // after listening ends unless the box is touched meanwhile.
+  // after listening ends during a call unless the box is touched meanwhile.
   const sendLater = useRef<ReturnType<typeof setTimeout>>(undefined);
   const requestNow = useRef(request);
   requestNow.current = request;
@@ -369,30 +369,29 @@ export function Ask({
       setRequest(next);
     },
     (heard) => {
-      if (!heard || guidingNow.current || !speechNow.current.auto) return;
+      if (!heard || guidingNow.current || speechNow.current.call !== "active") return;
       clearTimeout(sendLater.current);
       sendLater.current = setTimeout(() => {
-        if (speechNow.current.auto) sendNow.current();
+        if (speechNow.current.call === "active") sendNow.current();
       }, 1500);
     },
     guiding,
   );
   useEffect(() => {
-    if (!speech.auto) clearTimeout(sendLater.current);
-  }, [speech.auto]);
+    if (speech.call !== "active") clearTimeout(sendLater.current);
+  }, [speech.call]);
   const speechNow = useRef(speech);
   speechNow.current = speech;
-  const { auto, call, listening, speaking } = speech;
+  const { call, listening, speaking } = speech;
   useEffect(() => {
     onAudioActivity?.({
-      auto,
       call,
       listening,
       speaking,
       endCall: () => speechNow.current.endCall(),
       stopListening: () => speechNow.current.stopListening(),
     });
-  }, [onAudioActivity, auto, call, listening, speaking]);
+  }, [onAudioActivity, call, listening, speaking]);
   useEffect(() => () => onAudioActivity?.(undefined), [onAudioActivity]);
   // Ctrl+Shift+Space toggles the mic from anywhere in Studio.
   useEffect(() => {
