@@ -1,0 +1,24 @@
+smithableAuth: 0.1
+
+signIn:
+  providers: [email]
+  selfSignUp: false
+
+roles:
+  admin: all
+  staff:
+    pages: [menus, dishes, service-hours, venue]
+    create: [Menu, Dish, ServiceHour, Venue]
+    write: [Menu, Dish, ServiceHour, Venue]
+
+defaultRole: staff
+
+defaultAccess: shared
+admins: [owner@alderquay.example]
+
+public:
+  pages: [home, menu]
+  # The menu page publishes just the current menu; generic reads of menus and dishes stay private.
+  read:
+    - ServiceHour
+    - Venue

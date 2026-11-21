@@ -1,0 +1,50 @@
+- name: Roasted leek and potato soup
+  menu: House menu
+  service: lunch
+  description: With chives, cracked pepper and a slice of sourdough.
+  dietaryTags: Vegetarian
+  price: 12
+  smallPrice: 8
+- name: Beetroot and barley salad
+  menu: House menu
+  service: lunch
+  description: With apple, hazelnuts and mustard dressing.
+  dietaryTags: Vegan
+  price: 15
+- name: Butter-roasted perch
+  menu: House menu
+  service: dinner
+  description: With crushed potatoes, dill and lemon butter.
+  dietaryTags: Gluten-free
+  price: 25
+- name: Braised cabbage steaks
+  menu: House menu
+  service: dinner
+  description: With butter beans, lovage and a crisp shallot crumb.
+  dietaryTags: Vegan
+  price: 21
+- name: Celeriac and apple soup
+  menu: Winter holiday menu
+  service: lunch
+  description: With toasted pumpkin seeds and winter herbs.
+  dietaryTags: Vegan, Gluten-free
+  price: 14
+  smallPrice: 9
+- name: Mushroom and potato pie
+  menu: Winter holiday menu
+  service: lunch
+  description: With caramelised onion and a mustard leaf salad.
+  dietaryTags: Vegetarian
+  price: 17
+- name: Slow-roasted beef with juniper
+  menu: Winter holiday menu
+  service: dinner
+  description: With roast roots and a red wine sauce.
+  dietaryTags: Gluten-free
+  price: 29
+- name: Chestnut and lentil roast
+  menu: Winter holiday menu
+  service: dinner
+  description: With roast roots and lingonberry relish.
+  dietaryTags: Vegan
+  price: 23

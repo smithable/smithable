@@ -13,7 +13,8 @@ export type Kind =
   | "api"
   | "support"
   | "kiosk"
-  | "barbers";
+  | "barbers"
+  | "restaurant";
 
 export interface Question {
   about: "kind" | "audience" | "visitors" | "languages";
@@ -101,6 +102,8 @@ cue("support", 1, "request");
 cue("kiosk", 3, "takeaway take-away food-truck truck pre-order preorder hatch");
 cue("kiosk", 2, "dish dishes pick-up pickup");
 cue("kiosk", 1, "menu");
+cue("restaurant", 4, "restaurant bistro");
+cue("restaurant", 1, "lunch dinner");
 cue(
   "barbers",
   3,
@@ -167,7 +170,7 @@ const NOT = set("nothing not no never without");
 // Words for the people of a team are who uses it, never a thing it keeps.
 const NOT_THINGS = set("team colleague staff member");
 // Shapes that face outward: who signs in and what is seen are never taken from "my" or "our".
-const OUTWARD = new Set<string>(["booking", "marketplace", "status"]);
+const OUTWARD = new Set<string>(["booking", "marketplace", "status", "restaurant"]);
 
 // Things people keep records of, by the word they use (singular).
 const THING = set(`customer client contact company lead deal follow-up invoice payment quote

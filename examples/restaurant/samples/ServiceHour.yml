@@ -1,0 +1,9 @@
+- { weekday: wednesday, service: lunch, hours: '11:30–14:30' }
+- { weekday: wednesday, service: dinner, hours: '17:00–21:00' }
+- { weekday: thursday, service: lunch, hours: '11:30–14:30' }
+- { weekday: thursday, service: dinner, hours: '17:00–21:00' }
+- { weekday: friday, service: lunch, hours: '11:30–14:30' }
+- { weekday: friday, service: dinner, hours: '17:00–22:00' }
+- { weekday: saturday, service: lunch, hours: '12:00–15:00' }
+- { weekday: saturday, service: dinner, hours: '17:00–22:00' }
+- { weekday: sunday, service: lunch, hours: '12:00–15:00' }

@@ -1,0 +1,68 @@
+# yaml-language-server: $schema=../../packages/core/schema/smithable.schema.json
+smithable: 0.1
+
+app:
+  name: Alder Quay
+  description: A restaurant with a public menu, service hours and table reservations.
+  timezone: Europe/Mariehamn
+  currency: EUR
+
+models:
+  Menu:
+    fields:
+      name: string!
+      kind: regular | seasonal
+      startsOn: { type: date, required: { kind: seasonal } }
+      endsOn: { type: date, required: { kind: seasonal } }
+      status: draft | published
+      dishes: Dish[]
+  Dish:
+    fields:
+      name: string!
+      menu: Menu!
+      service: lunch | dinner
+      description: text
+      dietaryTags:
+        type: string
+        description: Public dietary labels separated by commas.
+      price: { type: money!, min: 0 }
+      smallPrice: { type: money, min: 0 }
+  ServiceHour:
+    namedBy: [weekday, service]
+    unique: [[weekday, service, hours]]
+    fields:
+      weekday: monday | tuesday | wednesday | thursday | friday | saturday | sunday
+      service: lunch | dinner
+      hours: string!
+  Venue:
+    fields:
+      name: string!
+      bookingUrl: url
+      directionsUrl: url
+
+pages:
+  home:
+    route: /
+    landing:
+      hero: { button: menu }
+      visit: { custom: VisitToday }
+      gallery:
+      footer:
+  menu:
+    sections:
+      visit: { custom: VisitToday }
+      food: { custom: ServiceMenu }
+  menus:
+    crud: Menu
+    filters: [kind, status]
+  dishes:
+    crud: Dish
+    filters: [menu, service]
+  service-hours:
+    crud: ServiceHour
+    filters: [weekday, service]
+  venue:
+    settings: Venue
+  team: { users: manage }
+
+navigation: [menu, menus, dishes, service-hours, venue, team]

@@ -1,0 +1,53 @@
+smithableContent: 0.1
+
+models:
+  Menu:
+    fields:
+      startsOn: { label: First day }
+      endsOn: { label: Last day }
+  Dish:
+    fields:
+      dietaryTags: { label: Dietary tags, help: Separate labels with commas. }
+      smallPrice: { label: Small portion price }
+  ServiceHour:
+    label: Service hours
+    fields:
+      hours: { help: 'Write the serving window, for example 11:30–14:30.' }
+  Venue:
+    fields:
+      bookingUrl: { label: Table booking link }
+      directionsUrl: { label: Directions link }
+
+pages:
+  home:
+    hero:
+      title: Alder Quay
+      eyebrow: Waterfront restaurant
+      subtitle: A light lunch by the quay or dinner as the harbour lights come on.
+      button: See the menu
+      image:
+        src: images/dining-room.webp
+        alt: Tables set for dinner beside tall windows overlooking the water
+        generated: true
+    visit: { title: Today at Alder Quay }
+    gallery:
+      title: From the kitchen
+      items:
+        - image:
+            src: images/gallery/from-the-kitchen.webp
+            alt: A bowl of soup served at the table
+            generated: true
+          caption: Soup with the season’s vegetables
+    footer:
+      text: Alder Quay · Mariehamn, Åland
+      items:
+        - { label: Menu, link: /menu }
+  menu:
+    title: Menu
+    visit: { title: Today’s service }
+  service-hours:
+    title: Service hours
+    subtitle: Add a row for each serving window on that weekday. Leave a service out when it’s closed.
+  venue:
+    title: Venue details
+    subtitle: Set where guests can reserve a table and find directions.
