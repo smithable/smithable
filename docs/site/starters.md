@@ -154,6 +154,9 @@ See it live: coming soon. Its page on smithable.ai: [smithable.ai/starters/api](
 
 ## Restaurant
 
+![Alder Quay restaurant landing page](starters/restaurant-1.webp)
+![Restaurant service hours and text menu grouped by lunch and dinner](starters/restaurant-2.webp)
+
 Alder Quay gives guests a text menu grouped by lunch and dinner, with dietary labels, prices and optional smaller portions. The menu and home page show today's service hours and links for booking a table and getting directions.
 
 ```sh
