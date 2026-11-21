@@ -14,6 +14,7 @@ import {
 import type { Io } from "./io.js";
 import { templateKitRevision } from "./maintenance.js";
 import { addLibraryPictures, type PlacedPicture } from "./pictures.js";
+import { treeText } from "./secrets.js";
 import {
   isSitePersonNameShape,
   projectSitePersonal,
@@ -684,7 +685,7 @@ export function replaceWebsitePersonalArtifacts(
         )
       ) {
         if (++count > 10_000) throw new Error("Too many generated website files to check.");
-        const source = readFileSync(target, "utf8");
+        const source = treeText(target);
         if (Buffer.byteLength(source) > 8 * 1024 * 1024)
           throw new Error("A generated website file is too large to check.");
         const primary =
@@ -696,9 +697,7 @@ export function replaceWebsitePersonalArtifacts(
           const checked = replaceWebsitePersonalFiles(
             {
               [name]: source,
-              ...(existsSync(metadata)
-                ? { "smithable.website.json": readFileSync(metadata, "utf8") }
-                : {}),
+              ...(existsSync(metadata) ? { "smithable.website.json": treeText(metadata) } : {}),
             },
             context,
           );

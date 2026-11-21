@@ -235,6 +235,22 @@ export function readTree(path: string, max = 8 * 1024 * 1024): Buffer | undefine
 export const readTreeText = (path: string, max?: number): string | undefined =>
   readTree(path, max)?.toString("utf8");
 
+/** `readTreeText`, failing as readFileSync does when the file is not there. */
+export function treeText(path: string): string {
+  const text = readTreeText(path);
+  if (text === undefined)
+    throw Object.assign(new Error(`ENOENT: no such file, open '${path}'`), { code: "ENOENT" });
+  return text;
+}
+
+/** `readTree`, failing as readFileSync does when the file is not there. */
+export function treeBytes(path: string): Buffer {
+  const bytes = readTree(path);
+  if (bytes === undefined)
+    throw Object.assign(new Error(`ENOENT: no such file, open '${path}'`), { code: "ENOENT" });
+  return bytes;
+}
+
 /** `readTree` where a file it refuses is left out, as if it were not there (a picture, a mail). */
 export function readTreeOrNone(path: string, max?: number): Buffer | undefined {
   try {

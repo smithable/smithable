@@ -30,6 +30,7 @@ import {
   withoutSampleDomains,
   withTimeZone,
 } from "./new.js";
+import { treeText } from "./secrets.js";
 import { removeTree, writeTreeFile } from "./tree-files.js";
 import type { WebsiteGenerationInput, WebsiteGenerationOptions } from "./website-input.js";
 
@@ -73,13 +74,13 @@ export type Progress = (
 
 /** What decides the install: the same in both means the packages installed here fit. */
 function installed(dir: string): string {
-  const pkg = JSON.parse(readFileSync(join(dir, "package.json"), "utf8"));
+  const pkg = JSON.parse(treeText(join(dir, "package.json")));
   const workspace = join(dir, "pnpm-workspace.yaml");
   return JSON.stringify([
     pkg.dependencies,
     pkg.devDependencies,
     pkg.packageManager,
-    existsSync(workspace) ? readFileSync(workspace, "utf8") : "",
+    existsSync(workspace) ? treeText(workspace) : "",
   ]);
 }
 
@@ -247,10 +248,7 @@ export async function replaceProject(
     // files that follow from the spec are generated again (no tool runs: the tables are the same).
     if (to.name?.trim() || to.admin?.trim() || to.timezone) {
       let files: Record<string, string> = Object.fromEntries(
-        SPEC_FILES.filter((f) => existsSync(join(dir, f))).map((f) => [
-          f,
-          readFileSync(join(dir, f), "utf8"),
-        ]),
+        SPEC_FILES.filter((f) => existsSync(join(dir, f))).map((f) => [f, treeText(join(dir, f))]),
       );
       if (to.name?.trim()) files = named(files, to.name.trim());
       if (to.admin?.trim()) files = withoutSampleDomains(administered(files, to.admin.trim()), io);

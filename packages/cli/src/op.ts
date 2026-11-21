@@ -61,6 +61,7 @@ import { ProjectBusyError, ProjectLockError, withProjectMutation } from "./proje
 import { projectRevision, sourceDigests } from "./project-revision.js";
 import { afterFailure, recordFailure } from "./report.js";
 import { recordRule } from "./rules.js";
+import { treeText } from "./secrets.js";
 import { themeTransaction } from "./theme-transaction.js";
 import { changeTree, type TreeChange, writeTreeFile } from "./tree-files.js";
 import { projectThemeFiles, projectThemes, projectTranslations } from "./validate.js";
@@ -255,17 +256,17 @@ export function projectFiles(dir: string, plugins: ReturnType<typeof loadPlugins
   const contextPath = join(dir, "smithable.context.yml");
   const peoplePath = join(dir, PEOPLE_PATH);
   return {
-    spec: readFileSync(join(dir, SPEC), "utf8"),
-    ...(existsSync(contentPath) ? { content: readFileSync(contentPath, "utf8") } : {}),
-    ...(existsSync(authPath) ? { auth: readFileSync(authPath, "utf8") } : {}),
-    ...(existsSync(uxPath) ? { ux: readFileSync(uxPath, "utf8") } : {}),
-    ...(existsSync(contextPath) ? { context: readFileSync(contextPath, "utf8") } : {}),
-    ...(existsSync(peoplePath) ? { people: readFileSync(peoplePath, "utf8") } : {}),
+    spec: treeText(join(dir, SPEC)),
+    ...(existsSync(contentPath) ? { content: treeText(contentPath) } : {}),
+    ...(existsSync(authPath) ? { auth: treeText(authPath) } : {}),
+    ...(existsSync(uxPath) ? { ux: treeText(uxPath) } : {}),
+    ...(existsSync(contextPath) ? { context: treeText(contextPath) } : {}),
+    ...(existsSync(peoplePath) ? { people: treeText(peoplePath) } : {}),
     plugins,
     themes: projectThemes(dir),
     themePaths: Object.fromEntries(
       projectThemeFiles(dir).flatMap((path) => {
-        const theme = parseTheme({ path, text: readFileSync(path, "utf8") }).theme;
+        const theme = parseTheme({ path, text: treeText(path) }).theme;
         return theme ? [[theme.name, `themes/${path.slice(path.lastIndexOf("/") + 1)}`]] : [];
       }),
     ),
@@ -1017,7 +1018,7 @@ function choicesInUse(
     );
     const { table, column } = columnOf(effect.model, effect.field);
     const file = join(dir, "samples", `${effect.model}.yml`);
-    const rows = existsSync(file) ? new YamlEditor(readFileSync(file, "utf8")).get([]) : [];
+    const rows = existsSync(file) ? new YamlEditor(treeText(file)).get([]) : [];
     const samples = Array.isArray(rows) ? (rows as Record<string, unknown>[]) : [];
     for (const value of gone) {
       const records = countValue(dir, table, column, value) ?? 0;
@@ -1057,7 +1058,7 @@ function followInSamples(dir: string, effects: Effect[]): void {
     if (effect.kind === "change-field" && effect.renamed) {
       const file = join(dir, "samples", `${effect.model}.yml`);
       if (!existsSync(file)) continue;
-      const editor = new YamlEditor(readFileSync(file, "utf8"));
+      const editor = new YamlEditor(treeText(file));
       const rows = editor.get([]);
       for (let i = 0; Array.isArray(rows) && i < rows.length; i++) {
         const path = [String(i), effect.field];
@@ -1073,7 +1074,7 @@ function followInSamples(dir: string, effects: Effect[]): void {
     if (effect.kind !== "rename-field" && effect.kind !== "remove-field") continue;
     const file = join(dir, "samples", `${effect.model}.yml`);
     if (!existsSync(file)) continue;
-    const editor = new YamlEditor(readFileSync(file, "utf8"));
+    const editor = new YamlEditor(treeText(file));
     const rows = editor.get([]);
     const key = effect.kind === "rename-field" ? effect.from : effect.field;
     for (let i = 0; Array.isArray(rows) && i < rows.length; i++) {

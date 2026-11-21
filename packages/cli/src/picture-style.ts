@@ -20,6 +20,7 @@ import { YamlEditor } from "@smithable/core";
 import { asProject } from "./as-project.js";
 import { databasePath } from "./database.js";
 import { atLibrary, type Fetch, libraryBase } from "./pictures.js";
+import { treeBytes, treeText } from "./secrets.js";
 
 const TIMEOUT = 20_000;
 const MAX_PICTURE = 2_000_000;
@@ -79,7 +80,7 @@ export function readRecords(dir: string): PictureRecords {
   // Never through a link: the record is read only from a plain file in plain folders.
   if (linkedRecordPath(dir)) return {};
   try {
-    const said = JSON.parse(readFileSync(join(imagesDir(dir), "pictures.json"), "utf8"));
+    const said = JSON.parse(treeText(join(imagesDir(dir), "pictures.json")));
     return said && typeof said === "object" && !Array.isArray(said) ? said : {};
   } catch {
     return {};
@@ -203,7 +204,7 @@ export function planStyle(dir: string, version: LibraryVersion, style: string): 
     const role = roleOf(file);
     if (role === "logo") continue;
     const record = records[file];
-    const bytes = readFileSync(join(imagesDir(dir), file));
+    const bytes = treeBytes(join(imagesDir(dir), file));
     if (!record?.sha256 || !record.entry || sha256(bytes) !== record.sha256) {
       plan.kept.push(file);
       continue;
@@ -317,7 +318,7 @@ export async function placeStyle(
       files.push({ path: `public/images/${write.file}`, bytes });
       const old = join(dir, "public", "images", write.file);
       if (roleOf(write.file) === "sample" && existsSync(old))
-        swaps.push({ from: readFileSync(old), to: bytes, generated: !!write.record.generated });
+        swaps.push({ from: treeBytes(old), to: bytes, generated: !!write.record.generated });
     }
   }
   if (failed.length) return `No pictures were changed: ${failed.join("; ")}.`;
@@ -471,7 +472,7 @@ export function creditsText(records: PictureRecords): string {
 function heroWords(dir: string, entry: VersionEntry): string | undefined {
   const path = join(dir, "smithable.content.yml");
   if (!existsSync(path)) return undefined;
-  const editor = new YamlEditor(readFileSync(path, "utf8"));
+  const editor = new YamlEditor(treeText(path));
   const found: string[][] = [];
   const walk = (value: unknown, at: string[]) => {
     if (!value || typeof value !== "object" || Array.isArray(value)) return;

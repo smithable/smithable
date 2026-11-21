@@ -51,7 +51,7 @@ import type { Io } from "./io.js";
 import { readRecords, sha256 } from "./picture-style.js";
 import { loadPlugins } from "./plugins.js";
 import { contextFacts, reviewsFor } from "./privacy-review.js";
-import { readTreeText } from "./secrets.js";
+import { readTreeText, treeText } from "./secrets.js";
 
 /**
  * Reads and validates the spec with its companions: smithable.auth.yml (required) and,
@@ -252,12 +252,7 @@ export function loadSpec(
  * A spec file's text, read as the project's own file where a project user is set (secrets.ts
  * readTreeText): what is parsed here reaches Studio's page. As readFileSync when it is not there.
  */
-function readText(path: string): string {
-  const text = readTreeText(path);
-  if (text === undefined)
-    throw Object.assign(new Error(`ENOENT: no such file, open '${path}'`), { code: "ENOENT" });
-  return text;
-}
+const readText = treeText;
 
 export function projectTranslations(dir: string): Record<string, string> {
   return Object.fromEntries(

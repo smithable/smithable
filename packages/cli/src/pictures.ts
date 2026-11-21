@@ -25,6 +25,7 @@ import {
   recordsText,
   type VersionEntry,
 } from "./picture-style.js";
+import { treeText } from "./secrets.js";
 
 const LIBRARY = "https://docs.smithable.ai/images";
 /** The styles a new app's pictures are in; drawn styles are chosen afterwards (first-look §4). */
@@ -56,7 +57,7 @@ export async function libraryIndex(
   const file = join(dir, "index.json");
   try {
     if (existsSync(file) && Date.now() - statSync(file).mtimeMs < DAY)
-      return JSON.parse(readFileSync(file, "utf8")) as PictureEntry[];
+      return JSON.parse(treeText(file)) as PictureEntry[];
   } catch {
     // A broken cache is fetched again.
   }
@@ -431,7 +432,7 @@ function writeCredits(
 export function dropMissingPictures(dir: string, io: Io): void {
   const file = join(dir, "smithable.content.yml");
   if (!existsSync(file)) return;
-  const editor = new YamlEditor(readFileSync(file, "utf8"));
+  const editor = new YamlEditor(treeText(file));
   const missing: string[][] = [];
   const walk = (value: unknown, path: string[]) => {
     if (!value || typeof value !== "object" || Array.isArray(value)) return;

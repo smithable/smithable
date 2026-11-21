@@ -12,7 +12,7 @@ import {
 import { dirname, join } from "node:path";
 import { type Diagnostic, formatDiagnostic } from "@smithable/core";
 import type { Io } from "./io.js";
-import { childOptions, scratchDir } from "./secrets.js";
+import { childOptions, scratchDir, treeText } from "./secrets.js";
 import { loadSpec } from "./validate.js";
 
 /**
@@ -73,7 +73,7 @@ export function managedOnDisk(dir: string): Record<string, string> {
   const files: Record<string, string> = {};
   const add = (path: string) => {
     const at = join(dir, path);
-    if (existsSync(at) && statSync(at).isFile()) files[path] = readFileSync(at, "utf8");
+    if (existsSync(at) && statSync(at).isFile()) files[path] = treeText(at);
   };
   for (const path of readdirSync(dir)) if (isManaged(path)) add(path);
   for (const folder of ["themes", "samples"]) {

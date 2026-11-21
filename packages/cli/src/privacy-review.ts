@@ -18,6 +18,7 @@ import {
   validateUx,
 } from "@smithable/core";
 import { git as run } from "./git.js";
+import { treeText } from "./secrets.js";
 import { loadSpec } from "./validate.js";
 
 /** Each of the page's parts, by the facts it says, in the page's own headings. */
@@ -132,7 +133,7 @@ export function privacyStates(dir: string): PrivacyState[] {
   const loaded = loadSpec(dir, { out: () => {}, err: () => {} });
   if (!loaded.ir || !loaded.auth) return [];
   const contextPath = join(dir, "smithable.context.yml");
-  const context = existsSync(contextPath) ? readFileSync(contextPath, "utf8") : undefined;
+  const context = existsSync(contextPath) ? treeText(contextPath) : undefined;
   return reviewsFor(loaded.ir, loaded.auth, loaded.content, loaded.ux, context).map((r) => {
     const state: PrivacyState = {
       page: r.page,

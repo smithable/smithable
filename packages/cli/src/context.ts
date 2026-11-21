@@ -3,6 +3,7 @@ import { dirname, join } from "node:path";
 import { buildContext } from "@smithable/index";
 import type { Io } from "./io.js";
 import { projectIndex } from "./rules.js";
+import { treeText } from "./secrets.js";
 import { changeTree } from "./tree-files.js";
 import { loadSpec } from "./validate.js";
 
@@ -40,7 +41,7 @@ export function context(
             c.files.filter((f) => f.role !== "generated").map((f) => f.path),
           ),
         ),
-      ].map((path) => ({ path, text: readFileSync(join(dir, path), "utf8") }))
+      ].map((path) => ({ path, text: treeText(join(dir, path)) }))
     : [];
   const slice = buildContext(index, request, { implementation: custom });
   logTokens(dir, { source: "context", request, concepts: slice.concepts, tokens: slice.tokens });

@@ -15,7 +15,7 @@ import { usageLine } from "./ask.js";
 import { discardChanges, ensureRepository, git, uncommittedRefusal } from "./git.js";
 import { exec, type Io } from "./io.js";
 import { projectIndex } from "./rules.js";
-import { childOptions } from "./secrets.js";
+import { childOptions, treeText } from "./secrets.js";
 import { loadSpec } from "./validate.js";
 import { installing } from "./vite-cache.js";
 
@@ -433,7 +433,7 @@ export async function writeCode(
           .map((f) => f.path);
   const code = paths
     .filter((path) => existsSync(join(dir, path)))
-    .map((path) => ({ path, text: readFileSync(join(dir, path), "utf8") }));
+    .map((path) => ({ path, text: treeText(join(dir, path)) }));
   const context = buildContext(index, `${instructions} (${concept})`, { implementation: code });
   // A custom action's examples are the app's tests of it (docs/design/intents.md §6).
   const action = concept.startsWith("action:")

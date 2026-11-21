@@ -14,6 +14,7 @@ import {
 import { hashFile, readRecord } from "./generate.js";
 import { git, ownRepository } from "./git.js";
 import type { Io } from "./io.js";
+import { treeText } from "./secrets.js";
 import { loadSpec } from "./validate.js";
 import { VERSION } from "./version.js";
 
@@ -92,7 +93,7 @@ export function cardFiles(
   content: { languages?: string[] },
 ): { name: string; text: string }[] {
   return cardFileNames(content).flatMap((name) =>
-    existsSync(join(root, name)) ? [{ name, text: readFileSync(join(root, name), "utf8") }] : [],
+    existsSync(join(root, name)) ? [{ name, text: treeText(join(root, name)) }] : [],
   );
 }
 
