@@ -77006,8 +77006,8 @@ function insertVenue(owner: string | null, values: Record<string, unknown> = {})
 describe("Menu", () => {
   test("admin", async () => {
     const viewer = signedIn("admin");
-    const others = insertMenu(stranger.id, {"status":"published"});
-    const own = insertMenu(viewer.id, {"status":"published"});
+    const others = insertMenu(stranger.id);
+    const own = insertMenu(viewer.id);
     expect({
       readOthers: await reads(menuData, viewer, others.id),
       readOwn: await reads(menuData, viewer, own.id),
@@ -77029,8 +77029,8 @@ describe("Menu", () => {
 
   test("staff", async () => {
     const viewer = signedIn("staff");
-    const others = insertMenu(stranger.id, {"status":"published"});
-    const own = insertMenu(viewer.id, {"status":"published"});
+    const others = insertMenu(stranger.id);
+    const own = insertMenu(viewer.id);
     expect({
       readOthers: await reads(menuData, viewer, others.id),
       readOwn: await reads(menuData, viewer, own.id),
@@ -77052,7 +77052,7 @@ describe("Menu", () => {
 
   test("a visitor who has not signed in", async () => {
     const viewer = null;
-    const others = insertMenu(stranger.id, {"status":"published"});
+    const others = insertMenu(stranger.id);
     expect({
       readOthers: await reads(menuData, viewer, others.id),
       readOwn: false,
@@ -77062,7 +77062,7 @@ describe("Menu", () => {
       deleteOthers: await can(() => menuData.remove(viewer, others.id)),
       deleteOwn: false,
     }).toEqual({
-      readOthers: true,
+      readOthers: false,
       readOwn: false,
       create: false,
       changeOthers: false,
@@ -77070,23 +77070,6 @@ describe("Menu", () => {
       deleteOthers: false,
       deleteOwn: false,
     });
-  });
-
-  test("a visitor reading the menu is not told who added its dishes", async () => {
-    const parent = insertMenu(stranger.id, {"status":"published"});
-    insertDish(stranger.id, { menuId: parent.id });
-    const related = (await menuData.get(null, parent.id))?.dishes ?? [];
-    expect(related.length).toBeGreaterThan(0);
-    for (const row of related) expect(row.ownerId).toBeNull();
-  });
-
-  test("visitors read only menu records where status is published", async () => {
-    const fitting = insertMenu(stranger.id, {"status":"published"});
-    const hidden = insertMenu(stranger.id, {"status":"draft"});
-    expect(await reads(menuData, null, fitting.id)).toBe(true);
-    expect(await reads(menuData, null, hidden.id)).toBe(false);
-    expect((await menuData.list(null)).map((r) => r.id)).not.toContain(hidden.id);
-    expect(await reads(menuData, signedIn("admin"), hidden.id)).toBe(true);
   });
 });
 
@@ -77149,7 +77132,7 @@ describe("Dish", () => {
       deleteOthers: await can(() => dishData.remove(viewer, others.id)),
       deleteOwn: false,
     }).toEqual({
-      readOthers: true,
+      readOthers: false,
       readOwn: false,
       create: false,
       changeOthers: false,
@@ -77157,25 +77140,6 @@ describe("Dish", () => {
       deleteOthers: false,
       deleteOwn: false,
     });
-  });
-
-  test("a visitor reading a dish is not shown the menu it may not read", async () => {
-    const viewer = null;
-    const hidden = insertMenu(stranger.id, { status: "draft" });
-    const row = insertDish(stranger.id, { menuId: hidden.id });
-    expect(await reads(menuData, viewer, hidden.id)).toBe(false);
-    expect((await dishData.get(viewer, row.id))?.menu ?? null).toBeNull();
-    expect((await dishData.list(viewer)).find((r) => r.id === row.id)?.menu ?? null).toBeNull();
-  });
-
-  test("a menu that stops being public disappears from the dish a visitor reads", async () => {
-    const linked = insertMenu(stranger.id, { status: "published" });
-    const row = insertDish(stranger.id, { menuId: linked.id });
-    expect((await dishData.get(null, row.id))?.menu).not.toBeNull();
-    db.update(schema.menus).set({ status: "draft" }).where(eq(schema.menus.id, linked.id)).run();
-    expect(await reads(menuData, null, linked.id)).toBe(false);
-    expect((await dishData.get(null, row.id))?.menu ?? null).toBeNull();
-    expect((await dishData.list(null)).find((r) => r.id === row.id)?.menu ?? null).toBeNull();
   });
 });
 
@@ -77710,14 +77674,14 @@ export const CARDS: Record<string, CardFacts> = {
           models: [
             {
               model: "Menu",
-              read: { all: false, own: false, where: "status is published" },
+              read: { all: false, own: false },
               add: { all: false, own: false },
               change: { all: false, own: false },
               delete: { all: false, own: false },
             },
             {
               model: "Dish",
-              read: { all: true, own: false },
+              read: { all: false, own: false },
               add: { all: false, own: false },
               change: { all: false, own: false },
               delete: { all: false, own: false },
@@ -78508,7 +78472,7 @@ function missingReference(values: Record<string, unknown>): string | undefined {
 
 /** Who may read, create, change and delete dishes. */
 export const dishAccess: ModelAccess = {
-  read: { public: true, roles: ["admin", "staff"], owner: false },
+  read: { public: false, roles: ["admin", "staff"], owner: false },
   create: { public: false, roles: ["admin", "staff"], owner: false },
   write: { public: false, roles: ["admin", "staff"], owner: true },
   delete: { public: false, roles: ["admin"], owner: true },
@@ -79147,12 +79111,7 @@ function usedBy(tx: Tx, id: number, title: string) {
 
 /** Who may read, create, change and delete menus. */
 export const menuAccess: ModelAccess = {
-  read: {
-    public: true,
-    roles: ["admin", "staff"],
-    owner: false,
-    where: { status: "published" },
-  },
+  read: { public: false, roles: ["admin", "staff"], owner: false },
   create: { public: false, roles: ["admin", "staff"], owner: false },
   write: { public: false, roles: ["admin", "staff"], owner: true },
   delete: { public: false, roles: ["admin"], owner: true },
@@ -79210,7 +79169,6 @@ export const menuData = {
     if (scope === "all") return undefined;
     // Nothing to read (a key whose role does not read this kind, where nothing is public): no row.
     if (scope === "none") return sql\`0\`;
-    if (scope === "public") return and(eq(schema.menus.status, "published"));
     return scope === "own" && viewer ? eq(schema.menus.ownerId, viewer.id) : sql\`false\`;
   },
 
@@ -83523,23 +83481,23 @@ exports[`../../../examples/restaurant/smithable.yml > the generated files are as
   "src/db/index.ts": "ba378d34 kit",
   "src/db/schema.ts": "2f8da1d6 generated",
   "src/db/seed.ts": "5a9cf2f0 generated",
-  "src/generated/access.test.ts": "984d121d generated",
+  "src/generated/access.test.ts": "363ca689 generated",
   "src/generated/activity.server.ts": "1c3531e4 generated",
   "src/generated/app.ts": "460919da generated",
-  "src/generated/card.server.ts": "befe8428 generated",
+  "src/generated/card.server.ts": "7348d596 generated",
   "src/generated/card.ts": "5cab12e4 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/dev-door.server.ts": "9ec56e66 generated",
   "src/generated/dish.import.server.ts": "76a8902e generated",
   "src/generated/dish.import.ts": "44be2252 generated",
   "src/generated/dish.schema.ts": "76f288f1 generated",
-  "src/generated/dish.server.ts": "21d7ccee generated",
+  "src/generated/dish.server.ts": "c56b4fdb generated",
   "src/generated/dish.ts": "ad19bbed generated",
   "src/generated/hooks.ts": "f0f6cf2f generated",
   "src/generated/menu.import.server.ts": "b249159e generated",
   "src/generated/menu.import.ts": "92ea81bd generated",
   "src/generated/menu.schema.ts": "018a735f generated",
-  "src/generated/menu.server.ts": "570dcfcf generated",
+  "src/generated/menu.server.ts": "6d10109c generated",
   "src/generated/menu.ts": "90dc90c2 generated",
   "src/generated/my-time.ts": "c315432b generated",
   "src/generated/pages.ts": "b1c929dd generated",

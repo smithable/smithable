@@ -18,8 +18,7 @@ admins: [owner@alderquay.example]
 
 public:
   pages: [home, menu]
+  # The menu page publishes just the current menu; generic reads of menus and dishes stay private.
   read:
-    - Menu: { where: { status: published } }
-    - Dish
     - ServiceHour
     - Venue

@@ -1,43 +1,54 @@
 import { createServerFn } from "@tanstack/react-start";
 import { eq } from "drizzle-orm";
 import { useEffect, useState } from "react";
+import { db } from "#/db";
 import { dishes, menus } from "#/db/schema";
 import { app } from "#/generated/app";
 import type { CustomSectionProps } from "#/generated/custom";
-import { dishData } from "#/generated/dish.server";
-import { menuData } from "#/generated/menu.server";
+import { pageAccess } from "#/generated/pages";
 import { dayText, moneyText } from "#/kit/format";
 import { Section } from "#/kit/Landing";
 import { now } from "#/kit/now";
+import { guardPage } from "#/kit/page-guard";
 import { currentViewer } from "#/lib/viewer.server";
 import { activeMenu, localServiceDay, serviceLabel, services } from "./service";
 
 const loadMenu = createServerFn().handler(async () => {
+  guardPage(pageAccess.menu, await currentViewer(), "/menu");
   const { date } = localServiceDay(now(), app.timeZone);
-  const viewer = await currentViewer();
-  const published = await menuData.list(viewer, eq(menus.status, "published"));
-  const menu = activeMenu(published, date);
-  if (!menu) return null;
-  const rows = await dishData.list(viewer, eq(dishes.menuId, menu.id));
-  return {
-    name: menu.name,
-    period: menu.kind === "seasonal" ? { from: menu.startsOn, to: menu.endsOn } : null,
-    dishes: rows
-      .sort((a, b) => a.id - b.id)
-      .map(({ id, name, service, description, dietaryTags, price, smallPrice }) => ({
-        id,
-        name,
-        service,
-        description,
+  // Read the published projection together, without granting generic access to future or draft records.
+  return db.transaction((tx) => {
+    const published = tx.select().from(menus).where(eq(menus.status, "published")).all();
+    const menu = activeMenu(published, date);
+    if (!menu) return null;
+
+    const rows = tx
+      .select({
+        id: dishes.id,
+        name: dishes.name,
+        service: dishes.service,
+        description: dishes.description,
+        dietaryTags: dishes.dietaryTags,
+        price: dishes.price,
+        smallPrice: dishes.smallPrice,
+      })
+      .from(dishes)
+      .where(eq(dishes.menuId, menu.id))
+      .orderBy(dishes.id)
+      .all();
+    return {
+      name: menu.name,
+      period: menu.kind === "seasonal" ? { from: menu.startsOn, to: menu.endsOn } : null,
+      dishes: rows.map(({ dietaryTags, ...dish }) => ({
+        ...dish,
         dietaryTags:
           dietaryTags
             ?.split(",")
             .map((tag) => tag.trim())
             .filter(Boolean) ?? [],
-        price,
-        smallPrice,
       })),
-  };
+    };
+  });
 });
 
 export function ServiceMenu({ name, texts, title, text }: CustomSectionProps) {
