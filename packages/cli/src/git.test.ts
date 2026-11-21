@@ -129,3 +129,16 @@ test("an app is as made until a change of the owner's or one by hand (T1163)", (
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test("files changed by hand and not committed make an app no longer as made (T1163)", () => {
+  const dir = tempDir("smithable-git-");
+  try {
+    writeFileSync(join(dir, "smithable.yml"), "smithable: 0.1\n");
+    ensureRepository(dir);
+    expect(asMade(dir)).toBe(true);
+    writeFileSync(join(dir, "smithable.yml"), "smithable: 0.1\n# mine\n");
+    expect(asMade(dir)).toBe(false);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});

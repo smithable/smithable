@@ -89,7 +89,9 @@ export function asMade(dir: string): boolean {
     .filter(Boolean);
   return (
     messages.length < 20 &&
-    messages.every((m) => m === "smithable: start of history" || /^Smithable-Setup: /m.test(m))
+    messages.every((m) => m === "smithable: start of history" || /^Smithable-Setup: /m.test(m)) &&
+    // Files changed by hand and not yet committed are a change too.
+    uncommitted(dir).length === 0
   );
 }
 
