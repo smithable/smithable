@@ -18,6 +18,7 @@ pages:
     table:
       columns: [name, project, status, followUpOn]
       sort: followUpOn
+      actions: menu                    # the next steps in one menu, not Won beside Lost
     form:
       sections:
         - { name: who, fields: [name, email, phone] }

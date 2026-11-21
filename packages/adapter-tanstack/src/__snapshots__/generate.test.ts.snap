@@ -43147,9 +43147,9 @@ import { enquiryAccess, enquiryData } from "#/generated/enquiry.server";
 import { allows } from "#/kit/access";
 import { contains } from "#/kit/search";
 import { inArray, and } from "drizzle-orm";
+import { withDefaults, type Search, count, listQuery, optional, text } from "#/kit/params";
 import { orderOf } from "#/kit/filter";
 import { currentViewer } from "#/lib/viewer.server";
-import { type Search, count, listQuery, optional, text } from "#/kit/params";
 import { buttonVariants } from "#/components/ui/button";
 import { contacted, contactedAccess, contactedFits, contactedMany } from "#/generated/actions/contacted";
 import { quoted, quotedAccess, quotedFits, quotedMany } from "#/generated/actions/quoted";
@@ -43173,7 +43173,9 @@ import { Filters } from "#/kit/Filters";
 /** The enquiries matching the search and the filters, among those the viewer may read. */
 const searchEnquiries = createServerFn()
   .validator(listQuery)
-  .handler(async ({ data }) => {
+  .handler(async ({ data: given }) => {
+    // The page's default filters, where the address says nothing ("all" clears one).
+    const data = { ...given, f: withDefaults(given.f ?? {}, { status: "new,contacted,visited,quoted" }) };
     const viewer = await currentViewer();
     const where = and(
       data.q ? contains([schema.enquiries.name, schema.enquiries.email, schema.enquiries.message], data.q) : undefined,
@@ -43240,6 +43242,7 @@ function EnquiriesPage() {
   },
 ]}
         values={values}
+        defaults={{ status: "new,contacted,visited,quoted" }}
         sorts={[
   { value: "createdAt", label: "Added, oldest first" },
   { value: "-createdAt", label: "Added, newest first" },
@@ -45246,7 +45249,7 @@ exports[`../../../examples/builder/smithable.yml > the generated files are as re
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/app-card.tsx": "48827720 generated",
   "src/routes/enquiries/$id.tsx": "ecddb05b generated",
-  "src/routes/enquiries/index.tsx": "ac5f6ba6 generated",
+  "src/routes/enquiries/index.tsx": "2cb98751 generated",
   "src/routes/enquiries/new.tsx": "14abb828 generated",
   "src/routes/files/$model.$field.ts": "37c1c781 kit",
   "src/routes/files/$model.$id.$field.$n.ts": "5288014d kit",

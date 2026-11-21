@@ -84,6 +84,7 @@ pages:
     crud: Enquiry
     search: [name, email, message]
     filters: [status]
+    defaultFilter: { status: [new, contacted, visited, quoted] }   # the open ones; Won and Lost behind the chips
     sortable: [createdAt, followUpOn]
     actions: [contacted, quoted, won, lost]
   services:

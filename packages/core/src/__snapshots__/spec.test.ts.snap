@@ -2433,6 +2433,9 @@ exports[`valid specs > ../../../examples/builder/smithable.yml 1`] = `
         "won",
         "lost",
       ],
+      "defaultFilter": {
+        "status": "new,contacted,visited,quoted",
+      },
       "filters": [
         "status",
       ],
