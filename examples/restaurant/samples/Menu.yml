@@ -1,0 +1,8 @@
+- name: House menu
+  kind: regular
+  status: published
+- name: Winter holiday menu
+  kind: seasonal
+  startsOn: 2026-12-24
+  endsOn: 2027-01-06
+  status: published

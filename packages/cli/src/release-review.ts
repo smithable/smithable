@@ -15,6 +15,7 @@ import {
   unlinkSync,
   writeFileSync,
 } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   type Allowed,
@@ -35,6 +36,7 @@ import { loadPlugins } from "./plugins.js";
 import { privacyStates } from "./privacy-review.js";
 import { childOptions } from "./secrets.js";
 import type { Level, Result } from "./security.js";
+import { changeTree } from "./tree-files.js";
 import { loadSpec } from "./validate.js";
 import { assetReview } from "./website-assets.js";
 
@@ -140,11 +142,22 @@ function deploymentRecord(dir: string): Deployment | undefined {
     },
   };
 }
+/** The writer's lock: this process's own file, outside the tree the project can change. */
+export function writerLock(dir: string): string {
+  const root = join(tmpdir(), `smithable-release-locks-${process.getuid?.() ?? "user"}`);
+  mkdirSync(root, { recursive: true, mode: 0o700 });
+  const owner = lstatSync(root);
+  if (
+    !owner.isDirectory() ||
+    (process.getuid && (owner.uid !== process.getuid() || (owner.mode & 0o077) !== 0))
+  )
+    throw new Error(`${root} is not a private folder of this user. Fix or remove it, then retry.`);
+  return join(root, `${createHash("sha256").update(realpathSync(dir)).digest("hex")}.lock`);
+}
 /** Short synchronous metadata writes are serialized; interrupted locks fail closed. */
 function locked<T>(dir: string, write: () => T): T {
-  const root = join(dir, STATE);
-  mkdirSync(root, { recursive: true });
-  const path = join(root, "writer.lock");
+  changeTree([{ path: join(dir, STATE), folder: true }]);
+  const path = writerLock(dir);
   let fd: number;
   try {
     fd = openSync(path, "wx", 0o600);
@@ -169,8 +182,10 @@ function save(
 ): void {
   const path = join(dir, STATE, name),
     staging = `${path}.${randomUUID()}`;
-  writeFileSync(staging, JSON.stringify(value), { mode: 0o600 });
-  renameSync(staging, path);
+  changeTree([
+    { path: staging, data: JSON.stringify(value), mode: 0o600 },
+    { path, from: staging },
+  ]);
 }
 /** Git-visible project files only; configuration, live data and ignored files are separate. */
 export function projectRevision(dir: string): string | undefined {
@@ -502,7 +517,7 @@ export function releaseReview(dir: string, options: { hosted?: boolean } = {}) {
   }
   const latestChecks = checksRecord(dir);
   const latestDeployment = deploymentRecord(dir);
-  const busy = existsSync(join(dir, STATE, "writer.lock"));
+  const busy = existsSync(writerLock(dir));
   const baselineChanged =
     latestDeployment?.run !== baseline?.run || latestDeployment?.at !== baseline?.at;
   const comparable =

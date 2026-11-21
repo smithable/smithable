@@ -1,7 +1,8 @@
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, symlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, test } from "vitest";
 import { parseMail, readOutbox } from "./outbox.js";
+import { forgetProjectUserForTests } from "./secrets.js";
 import { tempDir } from "./test-dir.js";
 
 describe("the preview's outbox", () => {
@@ -41,5 +42,25 @@ describe("the preview's outbox", () => {
       writeFileSync(join(outbox, file), `To: a@example.com\nSubject: ${subject}\n\nText\n`);
     writeFileSync(join(outbox, "notes.txt"), "not a mail");
     expect(readOutbox(dir).map((m) => m.subject)).toEqual(["second", "first"]);
+  });
+
+  test("where a project user is set, a mail that is a link the app put there is left out", () => {
+    if (process.platform !== "linux") return;
+    const dir = tempDir("outbox-");
+    const outbox = join(dir, "data", "mail", "outbox");
+    mkdirSync(outbox, { recursive: true });
+    writeFileSync(join(dir, "secret"), "Subject: this process's own\n\nText\n");
+    symlinkSync(join(dir, "secret"), join(outbox, "2026-10-08T12-00-00-000Z-c.eml"));
+    writeFileSync(join(outbox, "2026-10-08T10-00-00-000Z-a.eml"), "Subject: first\n\nText\n");
+    process.env.SMITHABLE_PROJECT_UID = String(process.getuid?.());
+    process.env.SMITHABLE_PROJECT_GID = String(process.getgid?.());
+    forgetProjectUserForTests();
+    try {
+      expect(readOutbox(dir).map((m) => m.subject)).toEqual(["first"]);
+    } finally {
+      delete process.env.SMITHABLE_PROJECT_UID;
+      delete process.env.SMITHABLE_PROJECT_GID;
+      forgetProjectUserForTests();
+    }
   });
 });

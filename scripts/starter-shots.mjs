@@ -116,6 +116,26 @@ const SHOTS = {
       },
     ],
   ],
+  restaurant: [
+    [
+      "home",
+      "list",
+      "visitor",
+      false,
+      async (page) => {
+        await page.getByRole("link", { name: "Book a table" }).waitFor();
+      },
+    ],
+    [
+      "menu",
+      "list",
+      "visitor",
+      false,
+      async (page) => {
+        await page.getByRole("heading", { name: /House menu|Winter holiday menu/ }).waitFor();
+      },
+    ],
+  ],
   // A past project with its estimate request as a visitor sees it, and the enquiries to follow up.
   builder: [
     ["projects", 1, "visitor", true],

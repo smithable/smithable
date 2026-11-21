@@ -3990,6 +3990,59 @@ async function marketplaceFlow(dir, base) {
   }
 }
 
+/** A seasonal menu takes over at local midnight and gives way when its last day ends. */
+async function restaurantFlow(base) {
+  const browser = await chromium.launch();
+  const page = await browser.newPage({ viewport: { width: 390, height: 844 }, isMobile: true });
+  const clock = (body) =>
+    fetch(`${base}/_dev/clock`, {
+      method: "POST",
+      headers: { "x-dev-door": DOOR_SECRET, "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+  const show = async (at, menu) => {
+    const moved = await clock({ at });
+    if (!moved.ok) throw new Error(`the menu's test clock: ${moved.status}`);
+    await open(page, `${base}/menu`);
+    await page.getByRole("heading", { name: menu, exact: true }).waitFor();
+  };
+  try {
+    await show("2026-12-23T21:59:59.000Z", "House menu");
+    await page.getByRole("heading", { name: "Roasted leek and potato soup" }).waitFor();
+    await page.getByText("11:30–14:30", { exact: true }).waitFor();
+
+    await show("2026-12-23T22:00:00.000Z", "Winter holiday menu");
+    const dish = page.getByRole("listitem").filter({ hasText: "Celeriac and apple soup" });
+    await dish.getByText("€14.00", { exact: true }).waitFor();
+    await dish.getByText("Small portion €9.00", { exact: true }).waitFor();
+    await dish.getByText("Vegan · Gluten-free", { exact: true }).waitFor();
+    const booking = page.getByRole("link", { name: "Book a table", exact: true });
+    if ((await booking.getAttribute("href")) !== "https://example.com/reservations")
+      throw new Error("the external booking link is missing");
+    await page.getByRole("link", { name: "Get directions", exact: true }).waitFor();
+    if (await page.evaluate(() => document.documentElement.scrollWidth > innerWidth))
+      throw new Error("the phone menu scrolls sideways");
+
+    await show("2027-01-04T10:00:00.000Z", "Winter holiday menu");
+    await page.getByText("Not served today", { exact: true }).first().waitFor();
+
+    await show("2027-01-06T22:00:00.000Z", "House menu");
+    if (await page.getByText("Celeriac and apple soup", { exact: true }).count())
+      throw new Error("the holiday dish is still in the regular menu");
+    console.log(
+      "  ✓ restaurant: the mobile menu changes at local midnight; prices, tags, hours and booking are public",
+    );
+  } catch (error) {
+    console.log(
+      `  ✗ restaurant: ${error.message.split("\n")[0]}\n    at ${page.url()}, see ${await screenshot(page)}`,
+    );
+    failures.push("restaurant flow");
+  } finally {
+    await clock({ offset: 0 }).catch(() => {});
+    await browser.close();
+  }
+}
+
 /**
  * The status starter: a visitor sees the services with their state, the recent incidents and
  * the history, without signing in; staff resolve an incident with its action, and the public
@@ -9928,6 +9981,7 @@ test("the session cookie's name and attributes", async () => {
         await kioskPaymentFlow(dir, base);
       }
       if (example === "barbers") await barbersFlow(dir, base);
+      if (example === "restaurant") await restaurantFlow(base);
       if (example === "crm") await importFlow(dir, base);
       if (example === "status") await statusFlow(base);
       if (example === "status") await sessionFlow(base);

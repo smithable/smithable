@@ -23,6 +23,7 @@ import { dirname, join, resolve, sep } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { tool } from "./io.js";
 import { childOptions } from "./secrets.js";
+import { changeTree, writeTreeFile } from "./tree-files.js";
 
 /** Uploads are copied for the old version only up to this size in all; above it, none. */
 export const UPLOADS_MAX = 200 * 1024 * 1024;
@@ -244,8 +245,7 @@ export async function openOldVersion(
       data: "samples",
       pictures: "none",
     };
-    mkdirSync(join(dir, "data", ".smithable"), { recursive: true });
-    writeFileSync(recordPath(dir), JSON.stringify(record));
+    writeTreeFile(recordPath(dir), JSON.stringify(record));
     rmSync(folder, { recursive: true, force: true });
     rmSync(home, { recursive: true, force: true });
     mkdirSync(base(), { recursive: true });
@@ -334,7 +334,7 @@ if (typeof window !== "undefined") {
     child.stdout?.on("data", (d) => options.log?.(String(d)));
     child.stderr?.on("data", (d) => options.log?.(String(d)));
     if (child.pid) record.pid = child.pid;
-    writeFileSync(recordPath(dir), JSON.stringify(record));
+    writeTreeFile(recordPath(dir), JSON.stringify(record));
     return { ...record, child, url, closeKey };
   } catch (error) {
     // Only this opening's own: a newer one has already closed it and started its own.
@@ -401,6 +401,6 @@ export function closeOldVersion(dir: string): { unstopped?: { pid: number; port:
   try {
     git(dir, ["worktree", "prune"]);
   } catch {}
-  rmSync(recordPath(dir), { force: true });
+  changeTree([{ path: recordPath(dir), data: null }]);
   return unstopped ? { unstopped } : {};
 }

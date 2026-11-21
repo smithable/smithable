@@ -3,6 +3,8 @@ import { dirname, join } from "node:path";
 import { buildContext } from "@smithable/index";
 import type { Io } from "./io.js";
 import { projectIndex } from "./rules.js";
+import { treeText } from "./secrets.js";
+import { changeTree } from "./tree-files.js";
 import { loadSpec } from "./validate.js";
 
 /** Local record of the context sizes Smithable produced (ARCHITECTURE §9.3); never sent anywhere. */
@@ -10,8 +12,9 @@ export const TOKEN_LOG = "data/.smithable/token-log.jsonl";
 
 export function logTokens(dir: string, entry: Record<string, unknown>): void {
   const path = join(dir, TOKEN_LOG);
-  mkdirSync(dirname(path), { recursive: true });
-  appendFileSync(path, `${JSON.stringify({ at: new Date().toISOString(), ...entry })}\n`);
+  changeTree([
+    { path, data: `${JSON.stringify({ at: new Date().toISOString(), ...entry })}\n`, append: true },
+  ]);
 }
 
 /**
@@ -38,7 +41,7 @@ export function context(
             c.files.filter((f) => f.role !== "generated").map((f) => f.path),
           ),
         ),
-      ].map((path) => ({ path, text: readFileSync(join(dir, path), "utf8") }))
+      ].map((path) => ({ path, text: treeText(join(dir, path)) }))
     : [];
   const slice = buildContext(index, request, { implementation: custom });
   logTokens(dir, { source: "context", request, concepts: slice.concepts, tokens: slice.tokens });

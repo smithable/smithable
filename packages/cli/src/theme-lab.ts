@@ -26,6 +26,7 @@ import { create } from "./new.js";
 import { runOperation } from "./op.js";
 import { previewConfig } from "./preview-editor.js";
 import { projectLook } from "./project-look.js";
+import { treeText } from "./secrets.js";
 import { STARTERS } from "./starters.gen.js";
 import { loadSpec, projectThemeFiles } from "./validate.js";
 
@@ -225,7 +226,7 @@ export async function themeLab(
   const ownThemes = () =>
     projectThemeFiles(target).map((path) => ({
       name: basename(path).replace(/\.ya?ml$/, ""),
-      text: readFileSync(path, "utf8"),
+      text: treeText(path),
     }));
 
   const server = createServer(async (req, res) => {

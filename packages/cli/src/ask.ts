@@ -27,7 +27,7 @@ import type { Io } from "./io.js";
 import { requiredButEmpty, runOperation } from "./op.js";
 import { loadPlugins } from "./plugins.js";
 import { projectIndex } from "./rules.js";
-import { modelKey } from "./secrets.js";
+import { modelKey, treeText } from "./secrets.js";
 import { loadSpec, projectThemes } from "./validate.js";
 
 /**
@@ -310,7 +310,7 @@ export async function proposeFor(
   const { ir, auth, content, ux } = loadSpec(dir, io);
   if (!ir || !auth) return undefined;
   const read = (name: string) =>
-    existsSync(join(dir, name)) ? readFileSync(join(dir, name), "utf8") : undefined;
+    existsSync(join(dir, name)) ? treeText(join(dir, name)) : undefined;
   const files = {
     spec: read("smithable.yml") as string,
     ...(read("smithable.content.yml") ? { content: read("smithable.content.yml") } : {}),

@@ -101,7 +101,7 @@ import { restore } from "./restore.js";
 import { projectIndex } from "./rules.js";
 import { doorAt, projectPeople } from "./sample-people.js";
 import { sampleRunner } from "./sample-run.js";
-import { childOptions, studioToken } from "./secrets.js";
+import { childOptions, readOwn, readTreeOrNone, readTreeText, studioToken } from "./secrets.js";
 import {
   pictureHashes,
   pictureStyleCards,
@@ -109,6 +109,7 @@ import {
   stylePreview,
 } from "./studio-picture-styles.js";
 import { translate } from "./translate.js";
+import { changeTree } from "./tree-files.js";
 import { undo, undoChange, undoLatest } from "./undo.js";
 import { loadSpec, projectTranslations } from "./validate.js";
 import { countConsequences, customUsers, environment, readKept, verify } from "./verify.js";
@@ -452,6 +453,14 @@ export class TooLarge extends Error {
 }
 
 /** A request's JSON body, refused past `max` bytes: by its stated length before anything is read, and while it is read. */
+/** A picture of the project's as Studio serves it: the project's own file, or none. */
+export const projectImage = (dir: string, path: string): Buffer | undefined =>
+  readTreeOrNone(join(dir, "public", "images", path), 32 << 20);
+
+/** A declared plugin's code as Studio serves it to the tab: the project's own file, or none. */
+export const projectPlugin = (dir: string, name: string): Buffer | undefined =>
+  declaredPlugins(dir).includes(name) ? readTreeOrNone(pluginPath(dir, name)) : undefined;
+
 export async function readJson(
   chunks: AsyncIterable<Buffer | string>,
   length: string | undefined,
@@ -854,7 +863,9 @@ export async function studio(
   // A message for the first to open Studio, left by whoever made the project (a hosted
   // workspace says why a description could not be used), shown once.
   const noticeFile = join(dir, NOTICE);
-  let notice = existsSync(noticeFile) ? readFileSync(noticeFile, "utf8").trim() : undefined;
+  let notice = readTreeOrNone(noticeFile, 64 * 1024)
+    ?.toString("utf8")
+    .trim();
   // A leftover server Studio could not stop: if its port still answers, the person is told.
   if (leftover)
     void fetch(`http://${OLD_HOST}:${leftover.port}/`, { signal: AbortSignal.timeout(3000) }).then(
@@ -863,13 +874,12 @@ export async function studio(
       },
       () => {},
     );
-  rmSync(noticeFile, { force: true });
+  changeTree([{ path: noticeFile, data: null }]);
 
   const state = () => {
     const quiet = { out: () => {}, err: () => {} };
     const { ir, auth, themes } = loadSpec(dir, quiet);
-    const read = (f: string) =>
-      existsSync(join(dir, f)) ? readFileSync(join(dir, f), "utf8") : undefined;
+    const read = (f: string) => readTreeText(join(dir, f));
     return {
       name: ir?.app.name ?? "",
       // The themes the ux file may name, each with its picture, for the Look tab's cards.
@@ -973,8 +983,12 @@ export async function studio(
     if (!result.ok) replaceable = true;
     writePreviewConfig();
     pending = undefined;
-    notice = existsSync(noticeFile) ? readFileSync(noticeFile, "utf8").trim() : undefined;
-    rmSync(noticeFile, { force: true });
+    try {
+      notice = readOwn(noticeFile)?.trim();
+    } catch {
+      notice = undefined;
+    }
+    changeTree([{ path: noticeFile, data: null }]);
     await settled();
     // The log starts with the person's app: nothing of the app that was here, and nothing
     // of what the dev server said while the files under it were being exchanged.
@@ -1283,8 +1297,8 @@ export async function studio(
           url.pathname,
         );
       if (image) {
-        const file = join(dir, "public", "images", image[1] as string);
-        if (!existsSync(file)) return json({ ok: false }, 404);
+        const bytes = projectImage(dir, image[1] as string);
+        if (!bytes) return json({ ok: false }, 404);
         res.writeHead(200, {
           "Content-Type":
             image[2] === "svg"
@@ -1293,12 +1307,13 @@ export async function studio(
           "Content-Security-Policy": "sandbox; default-src 'none'; style-src 'unsafe-inline'",
           "Cache-Control": "no-cache",
         });
-        return res.end(readFileSync(file));
+        return res.end(bytes);
       }
       const plugin = /^\/api\/plugins\/([\w-]+)\.mjs$/.exec(url.pathname)?.[1];
-      if (plugin && declaredPlugins(dir).includes(plugin)) {
+      const code = plugin && projectPlugin(dir, plugin);
+      if (code) {
         res.writeHead(200, { "Content-Type": "text/javascript", "Cache-Control": "no-cache" });
-        return res.end(readFileSync(pluginPath(dir, plugin)));
+        return res.end(code);
       }
       const change = /^\/api\/change\/([0-9a-f]{40})$/.exec(url.pathname)?.[1];
       if (change && ownRepository(dir)) {

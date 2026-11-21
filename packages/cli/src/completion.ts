@@ -41,6 +41,7 @@ export function complete(words: string[], current: string, dir = "."): string[] 
       "support",
       "kiosk",
       "barbers",
+      "restaurant",
       "builder",
     ];
   if (command === "security" && words.at(-1) === "--level") return ["fast", "normal", "release"];

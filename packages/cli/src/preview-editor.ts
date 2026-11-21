@@ -13,6 +13,7 @@ import { LOOK_FRAME_BODY } from "./look-frame-runtime.js";
 import { lookGeneration } from "./look-generation.js";
 import { type LookPreviewConfig, lookPreviewHandler } from "./look-preview.js";
 import { RECORD_PROBE } from "./preview-discovery.js";
+import { writeTreeFile } from "./tree-files.js";
 
 /** The runtime, run in the preview page inside Studio's iframe. */
 export const RUNTIME = `
@@ -999,8 +1000,7 @@ export function holdFullReloads(server: Pick<DevServer, "environments">) {
  */
 export function writePreviewConfig(path: string, text: string): boolean {
   if (existsSync(path) && readFileSync(path, "utf8") === text) return false;
-  mkdirSync(dirname(path), { recursive: true });
-  writeFileSync(path, text);
+  writeTreeFile(path, text);
   return true;
 }
 

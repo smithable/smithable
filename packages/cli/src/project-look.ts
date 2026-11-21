@@ -3,6 +3,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { basename, join } from "node:path";
 import { type ProjectLook, parseTheme } from "@smithable/core";
 import { projectRevision } from "./project-revision.js";
+import { treeText } from "./secrets.js";
 import { loadSpec, projectThemeFiles } from "./validate.js";
 
 export function projectLook(app: string, page?: string): ProjectLook | undefined {
@@ -12,15 +13,15 @@ export function projectLook(app: string, page?: string): ProjectLook | undefined
   return {
     ir: project.ir,
     revision: projectRevision(app),
-    specText: readFileSync(join(app, "smithable.yml"), "utf8"),
+    specText: treeText(join(app, "smithable.yml")),
     auth: project.auth,
     themes: project.themes ?? [],
-    uxText: existsSync(path) ? readFileSync(path, "utf8") : "smithableUx: 0.1\n",
+    uxText: existsSync(path) ? treeText(path) : "smithableUx: 0.1\n",
     themeFiles: projectThemeFiles(app).map((path) => ({
       name:
-        parseTheme({ path, text: readFileSync(path, "utf8") }).theme?.name ??
+        parseTheme({ path, text: treeText(path) }).theme?.name ??
         basename(path).replace(/\.ya?ml$/, ""),
-      text: readFileSync(path, "utf8"),
+      text: treeText(path),
     })),
     page,
   };

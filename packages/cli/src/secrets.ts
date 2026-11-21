@@ -2,11 +2,14 @@
 // starts, so no child it runs inherits them (pnpm and its scripts, git and its hooks, the
 // project's tests, the preview's dev server), and handed only to the engine's own calls that need
 // them. Every child's options are built by childOptions, which leaves both out whatever it is given.
+
+import type { Stats } from "node:fs";
 import {
   chmodSync,
   chownSync,
   closeSync,
   constants,
+  existsSync,
   fstatSync,
   lstatSync,
   mkdirSync,
@@ -76,6 +79,13 @@ export const holdsSecret = (env: NodeJS.ProcessEnv = process.env): boolean =>
   held.SMITHABLE_STUDIO_TOKEN !== undefined ||
   (NAMES.some((name) => held[name] !== undefined) &&
     (fromStdin || Boolean(env.SMITHABLE_HOSTED_LEVEL?.trim())));
+
+/**
+ * This process loads no code the project can write (its plugins, the app's own tools, the app's
+ * Playwright): it holds a secret, or its children run as the project's user, which only means
+ * something if this process is not that user.
+ */
+export const loadsNoProjectCode = (): boolean => holdsSecret() || projectUser() !== undefined;
 
 /** The user children may run as, by `SMITHABLE_PROJECT_UID` and `_GID`; none when they are not set. */
 const PROJECT = ["SMITHABLE_PROJECT_UID", "SMITHABLE_PROJECT_GID"] as const;
@@ -147,7 +157,7 @@ export function childOptions(
  * `childWrites`, for a folder a child running as that user makes its files in (a plain mkdtemp is
  * 0700, this process's alone). The temporary folder can be listed, so a project process may put a
  * link in a writable one first: this process writes there only with `wx`, locks it with
- * `sealScratch` once the child is done, and takes the child's files with `checkBack`, `readBack`
+ * `sealScratch` once the child is done, and takes the child's files with `copyBack`
  * or `takeBack`, never through a link.
  */
 export function scratchDir(prefix: string, childWrites = false): string {
@@ -165,6 +175,91 @@ export function sealScratch(dir: string): void {
   if (projectUser()) chmodSync(dir, 0o2750);
 }
 
+/** A file of the project's opened as `copyBack` and `readOwn` open it, or an error. */
+function openOwn(path: string): [number, Stats] {
+  const fd = openSync(
+    path,
+    constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0) | (constants.O_NONBLOCK ?? 0),
+  );
+  try {
+    const stat = fstatSync(fd);
+    const owner = projectUser()?.uid ?? process.getuid?.() ?? stat.uid;
+    if (stat.isFile() && stat.nlink === 1 && stat.uid === owner) return [fd, stat];
+  } catch (error) {
+    closeSync(fd);
+    throw error;
+  }
+  closeSync(fd);
+  throw new Error(`${path} is not a file the child made.`);
+}
+
+/**
+ * A small file of the project's tree read by this process: not through a link at its end, a
+ * plain file with one name of the project user's (this process's where none is configured), so a
+ * link the project put there cannot show this process's own files. Undefined when it is not there.
+ */
+export function readOwn(path: string, max = 64 * 1024): string | undefined {
+  return readOwnBytes(path, max)?.toString("utf8");
+}
+
+function readOwnBytes(path: string, max: number): Buffer | undefined {
+  let opened: [number, Stats];
+  try {
+    opened = openOwn(path);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return undefined;
+    throw error;
+  }
+  try {
+    if (opened[1].size > max) throw new Error(`${path} is larger than ${max} bytes.`);
+    const buffer = Buffer.alloc(opened[1].size);
+    const read = readSync(opened[0], buffer, 0, buffer.length, 0);
+    return buffer.subarray(0, read);
+  } finally {
+    closeSync(opened[0]);
+  }
+}
+
+/**
+ * A file of the project's tree whose content this process shows or sends on (Studio's pages, a
+ * report). Where children run under a configured uid it is read as `readOwn` reads it, so a link
+ * the project put on its path cannot show this process's own files; otherwise as before.
+ * Undefined when it is not there; an error when it is there but not a plain file of the project's.
+ */
+export function readTree(path: string, max = 8 * 1024 * 1024): Buffer | undefined {
+  if (projectUser()) return readOwnBytes(path, max);
+  return existsSync(path) ? readFileSync(path) : undefined;
+}
+
+/** `readTree` as text. */
+export const readTreeText = (path: string, max?: number): string | undefined =>
+  readTree(path, max)?.toString("utf8");
+
+/** `readTreeText`, failing as readFileSync does when the file is not there. */
+export function treeText(path: string): string {
+  const text = readTreeText(path);
+  if (text === undefined)
+    throw Object.assign(new Error(`ENOENT: no such file, open '${path}'`), { code: "ENOENT" });
+  return text;
+}
+
+/** `readTree`, failing as readFileSync does when the file is not there. */
+export function treeBytes(path: string): Buffer {
+  const bytes = readTree(path);
+  if (bytes === undefined)
+    throw Object.assign(new Error(`ENOENT: no such file, open '${path}'`), { code: "ENOENT" });
+  return bytes;
+}
+
+/** `readTree` where a file it refuses is left out, as if it were not there (a picture, a mail). */
+export function readTreeOrNone(path: string, max?: number): Buffer | undefined {
+  try {
+    return readTree(path, max);
+  } catch {
+    return undefined;
+  }
+}
+
 /**
  * Copies a file a child made into `to`, a new file in a folder of this process's, so that what
  * is read or opened later is this process's own copy. The child's file is opened without following
@@ -172,15 +267,8 @@ export function sealScratch(dir: string): void {
  * process's where none is configured); anything else is refused.
  */
 export function copyBack(from: string, to: string): void {
-  const fd = openSync(
-    from,
-    constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0) | (constants.O_NONBLOCK ?? 0),
-  );
+  const [fd, stat] = openOwn(from);
   try {
-    const stat = fstatSync(fd);
-    const owner = projectUser()?.uid ?? process.getuid?.() ?? stat.uid;
-    if (!stat.isFile() || stat.nlink !== 1 || stat.uid !== owner)
-      throw new Error(`${from} is not a file the child made.`);
     const out = openSync(to, "wx", 0o600);
     try {
       // The size it had when opened: a project process still holding it open cannot add to it.

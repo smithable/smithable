@@ -3,6 +3,8 @@ import { join, relative } from "node:path";
 import { implementationIndex } from "@smithable/adapter-tanstack";
 import type { AuthIR, SpecIR } from "@smithable/core";
 import { buildIndex, hashRule, type ProjectIndex, type RuleStatus } from "@smithable/index";
+import { treeText } from "./secrets.js";
+import { writeTreeFile } from "./tree-files.js";
 
 /** Where the texts of rules are recorded when they get an id; committed with the project. */
 const BASELINE = ".smithable/rules.json";
@@ -23,7 +25,7 @@ export function recordRule(dir: string, id: string, text: string): void {
   const baseline = readJson<Record<string, string>>(join(dir, BASELINE)) ?? {};
   baseline[id] = hashRule(text);
   const sorted = Object.fromEntries(Object.entries(baseline).sort(([a], [b]) => (a < b ? -1 : 1)));
-  writeFileSync(join(dir, BASELINE), `${JSON.stringify(sorted, null, 2)}\n`);
+  writeTreeFile(join(dir, BASELINE), `${JSON.stringify(sorted, null, 2)}\n`);
 }
 
 /**
@@ -37,7 +39,7 @@ export function projectIndex(dir: string, ir: SpecIR, auth: AuthIR): ProjectInde
     generated: implementationIndex(ir, auth),
     custom: sourceFiles(join(dir, "src", "custom")).map((file) => ({
       path: relative(dir, file),
-      text: readFileSync(file, "utf8"),
+      text: treeText(file),
     })),
     ruleBaseline: readJson<Record<string, string>>(join(dir, BASELINE)) ?? {},
     testResults: testResults(dir),
@@ -66,7 +68,7 @@ function sourceFiles(dir: string): string[] {
 
 function readJson<T>(path: string): T | undefined {
   try {
-    return JSON.parse(readFileSync(path, "utf8")) as T;
+    return JSON.parse(treeText(path)) as T;
   } catch {
     return undefined;
   }

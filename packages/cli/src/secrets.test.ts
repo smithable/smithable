@@ -22,7 +22,11 @@ import {
   forgetProjectUserForTests,
   holdSecrets,
   holdSecretsFromJson,
+  loadsNoProjectCode,
   modelKey,
+  readOwn,
+  readTree,
+  readTreeOrNone,
   releaseSecretsForTests,
   scratchDir,
   sealScratch,
@@ -140,6 +144,39 @@ test("a link planted in a scratch folder makes the write or the taking back fail
   process.env.SMITHABLE_PROJECT_GID = String(process.getgid?.());
   forgetProjectUserForTests();
   expect(() => copyBack(secret, join(mine, "taken"))).toThrow("not a file the child made");
+});
+
+test("a file of the tree that Studio shows is read through no link where a project user is set", () => {
+  const tree = mkdtempSync(join(tmpdir(), "smithable-tree-test-"));
+  const mine = mkdtempSync(join(tmpdir(), "smithable-mine-test-"));
+  dirs.push(tree, mine);
+  const secret = join(mine, "secret");
+  writeFileSync(secret, "this process's own");
+  writeFileSync(join(tree, "logo.png"), "png");
+  symlinkSync(secret, join(tree, "planted.png"));
+  // Without a project user nothing changes: there is no other user to show anything to.
+  expect(readTree(join(tree, "planted.png"))?.toString()).toBe("this process's own");
+  expect(readTree(join(tree, "missing.png"))).toBeUndefined();
+  if (process.platform !== "linux") return;
+  process.env.SMITHABLE_PROJECT_UID = String(process.getuid?.());
+  process.env.SMITHABLE_PROJECT_GID = String(process.getgid?.());
+  forgetProjectUserForTests();
+  expect(readTree(join(tree, "logo.png"))?.toString()).toBe("png");
+  expect(readTree(join(tree, "missing.png"))).toBeUndefined();
+  // A link at its end, and a second name of another file, are refused, and left out where asked.
+  expect(() => readTree(join(tree, "planted.png"))).toThrow();
+  expect(readTreeOrNone(join(tree, "planted.png"))).toBeUndefined();
+  linkSync(join(tree, "logo.png"), join(tree, "again.png"));
+  expect(readTreeOrNone(join(tree, "again.png"))).toBeUndefined();
+  writeFileSync(join(tree, "big.png"), "too big");
+  expect(readTreeOrNone(join(tree, "big.png"), 2)).toBeUndefined();
+  // A folder on the way swapped for a link reaches only files of the project user's: this
+  // process's own, under another project user, are refused.
+  if (process.getuid?.() === 0) return;
+  symlinkSync(mine, join(tree, "images"));
+  process.env.SMITHABLE_PROJECT_UID = String((process.getuid?.() ?? 0) + 1);
+  forgetProjectUserForTests();
+  expect(readTreeOrNone(join(tree, "images", "secret"))).toBeUndefined();
 });
 
 test("only the sites whose child writes in it have a writable scratch folder, and each locks it", () => {
@@ -271,4 +308,31 @@ test("on standard input the two come as JSON, and nothing else is taken", () => 
     /does not take "PATH"/,
   );
   expect(() => holdSecretsFromJson(JSON.stringify({ modelKey: 4 }))).toThrow(/must be a string/);
+});
+
+test("a process whose children run as the project's user loads none of the project's code itself", () => {
+  expect(loadsNoProjectCode()).toBe(false);
+  process.env.SMITHABLE_PROJECT_UID = "4242";
+  process.env.SMITHABLE_PROJECT_GID = "4242";
+  forgetProjectUserForTests();
+  expect(loadsNoProjectCode()).toBe(true);
+  // Where the choice is made, it is made by this, not by the secrets alone.
+  const here = new URL(".", import.meta.url).pathname;
+  const bySecret = readdirSync(here)
+    .filter((f) => f.endsWith(".ts") && !f.endsWith(".test.ts") && f !== "secrets.ts")
+    .filter((f) => readFileSync(join(here, f), "utf8").includes("holdsSecret("));
+  expect(bySecret).toEqual([]);
+});
+
+test("a file of the tree read by this process is not read through a link the project put there", () => {
+  const mine = mkdtempSync(join(tmpdir(), "smithable-own-"));
+  const tree = mkdtempSync(join(tmpdir(), "smithable-tree-"));
+  dirs.push(mine, tree);
+  writeFileSync(join(mine, "secret"), "this process's own");
+  expect(readOwn(join(tree, "notice.txt"))).toBeUndefined();
+  symlinkSync(join(mine, "secret"), join(tree, "notice.txt"));
+  expect(() => readOwn(join(tree, "notice.txt"))).toThrow();
+  writeFileSync(join(tree, "plain.txt"), "a notice");
+  expect(readOwn(join(tree, "plain.txt"))).toBe("a notice");
+  expect(() => readOwn(join(tree, "plain.txt"), 4)).toThrow("larger than");
 });

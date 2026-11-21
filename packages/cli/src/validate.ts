@@ -51,6 +51,7 @@ import type { Io } from "./io.js";
 import { readRecords, sha256 } from "./picture-style.js";
 import { loadPlugins } from "./plugins.js";
 import { contextFacts, reviewsFor } from "./privacy-review.js";
+import { readTreeText, treeText } from "./secrets.js";
 
 /**
  * Reads and validates the spec with its companions: smithable.auth.yml (required) and,
@@ -83,7 +84,7 @@ export function loadSpec(
   const path = isDirectory(target) ? join(target, "smithable.yml") : target;
   let text: string;
   try {
-    text = readFileSync(path, "utf8");
+    text = readText(path);
   } catch {
     io.err(`No spec found at ${path}.\n`);
     return { path };
@@ -107,7 +108,7 @@ export function loadSpec(
     );
     return { path };
   }
-  const authFile = { path: authPath, text: readFileSync(authPath, "utf8") };
+  const authFile = { path: authPath, text: readText(authPath) };
   // The roles are needed to check smithable.yml; the full check of the auth file needs its IR.
   const roles = validateAuth(authFile).auth?.roles.map((r) => r.name);
   let plugins: SpecPlugin[];
@@ -135,7 +136,7 @@ export function loadSpec(
   const contentPath = join(dirname(path), "smithable.content.yml");
   if (existsSync(contentPath)) {
     const result = validateContent(
-      { path: contentPath, text: readFileSync(contentPath, "utf8") },
+      { path: contentPath, text: readText(contentPath) },
       ir,
       undefined,
       auth,
@@ -153,7 +154,7 @@ export function loadSpec(
         continue;
       }
       const read = validateContent(
-        { path: file, text: readFileSync(file, "utf8") },
+        { path: file, text: readText(file) },
         ir,
         { of: content, language },
         auth,
@@ -166,7 +167,7 @@ export function loadSpec(
   // The project's own themes, which the ux file's preset may name.
   const themes: ThemeIR[] = [];
   for (const file of projectThemeFiles(dirname(path))) {
-    const result = parseTheme({ path: file, text: readFileSync(file, "utf8") });
+    const result = parseTheme({ path: file, text: readText(file) });
     print(result.diagnostics);
     if (!result.theme) return failed(file, result.diagnostics);
     themes.push(result.theme);
@@ -174,12 +175,7 @@ export function loadSpec(
   let ux: UxIR | undefined;
   const uxPath = join(dirname(path), "smithable.ux.yml");
   if (existsSync(uxPath)) {
-    const result = validateUx(
-      { path: uxPath, text: readFileSync(uxPath, "utf8") },
-      ir,
-      themes,
-      auth,
-    );
+    const result = validateUx({ path: uxPath, text: readText(uxPath) }, ir, themes, auth);
     print(result.diagnostics);
     if (!result.ux) return failed(uxPath, result.diagnostics);
     ux = result.ux;
@@ -189,7 +185,7 @@ export function loadSpec(
   let samples: SamplesIR | undefined;
   if (sampleFiles.length) {
     const result = validateSamples(
-      sampleFiles.map((file) => ({ path: file, text: readFileSync(file, "utf8") })),
+      sampleFiles.map((file) => ({ path: file, text: readText(file) })),
       ir,
       content,
     );
@@ -204,10 +200,7 @@ export function loadSpec(
     (file) => file.replace(/^.*[\\/]/, "").replace(/\.ya?ml$/, "") === PEOPLE_FILE,
   );
   if (peopleFile) {
-    const result = validatePeople(
-      { path: peopleFile, text: readFileSync(peopleFile, "utf8") },
-      auth,
-    );
+    const result = validatePeople({ path: peopleFile, text: readText(peopleFile) }, auth);
     print(result.diagnostics);
     if (result.diagnostics.some((d) => d.severity === "error"))
       return failed(peopleFile, result.diagnostics);
@@ -219,7 +212,7 @@ export function loadSpec(
     (file) => file.replace(/^.*[\\/]/, "").replace(/\.ya?ml$/, "") === ASK_FILE,
   );
   if (askFile) {
-    const result = validateAsk({ path: askFile, text: readFileSync(askFile, "utf8") }, ir, auth);
+    const result = validateAsk({ path: askFile, text: readText(askFile) }, ir, auth);
     print(result.diagnostics);
     if (result.diagnostics.some((d) => d.severity === "error"))
       return failed(askFile, result.diagnostics);
@@ -229,7 +222,7 @@ export function loadSpec(
   if (existsSync(contextPath)) {
     const problems = validateContext({
       path: contextPath,
-      text: readFileSync(contextPath, "utf8"),
+      text: readText(contextPath),
     });
     print(problems);
     if (problems.length) return failed(contextPath, problems);
@@ -237,7 +230,7 @@ export function loadSpec(
   // A note, not a failure: payments work with fake until a release (payments.md §3.5).
   const providerNote = paymentsProviderNote(ir, {
     path: contextPath,
-    text: existsSync(contextPath) ? readFileSync(contextPath, "utf8") : undefined,
+    text: existsSync(contextPath) ? readText(contextPath) : undefined,
   });
   if (providerNote) print([providerNote]);
   return {
@@ -255,11 +248,19 @@ export function loadSpec(
 }
 
 /** The project's language files' texts, by language (smithable.content.<language>.yml). */
+/**
+ * A spec file's text, read as the project's own file where a project user is set (secrets.ts
+ * readTreeText): what is parsed here reaches Studio's page. As readFileSync when it is not there.
+ */
+const readText = treeText;
+
 export function projectTranslations(dir: string): Record<string, string> {
   return Object.fromEntries(
     LANGUAGES.flatMap((language) => {
       const file = join(dir, translationPath(language));
-      return existsSync(file) ? [[language, readFileSync(file, "utf8")]] : [];
+      // Shown whole in Studio: read as the project's own file (secrets.ts readTreeText).
+      const text = readTreeText(file);
+      return text === undefined ? [] : [[language, text]];
     }),
   );
 }
@@ -267,7 +268,7 @@ export function projectTranslations(dir: string): Record<string, string> {
 /** The project's themes that parse, for operations; problems are reported by `loadSpec`. */
 export function projectThemes(dir: string): ThemeIR[] {
   return projectThemeFiles(dir).flatMap((file) => {
-    const theme = parseTheme({ path: file, text: readFileSync(file, "utf8") }).theme;
+    const theme = parseTheme({ path: file, text: readText(file) }).theme;
     return theme ? [theme] : [];
   });
 }
@@ -323,7 +324,7 @@ export function validate(
   let shown = { ir, auth, ux };
   if (write) {
     const specPath = isDirectory(target) ? join(target, "smithable.yml") : target;
-    const result = writeExplicit(readFileSync(specPath, "utf8"), ir, auth, ux);
+    const result = writeExplicit(readText(specPath), ir, auth, ux);
     if (result.written.length) {
       writeFileSync(specPath, result.text);
       io.out(`\nWritten into ${specPath}:\n${result.written.map((w) => `  ${w}\n`).join("")}`);
@@ -356,7 +357,7 @@ function privacyFindings(
   const contextPath = join(dirname(path), "smithable.context.yml");
   // The privacy page's completeness (legal-page.md §6.3): what is missing, and its review.
   const contentFile = join(dirname(path), "smithable.content.yml");
-  const contextText = existsSync(contextPath) ? readFileSync(contextPath, "utf8") : undefined;
+  const contextText = existsSync(contextPath) ? readText(contextPath) : undefined;
   const { analytics } = contextFacts(contextText);
   const privacy = privacyCheck(
     ir,

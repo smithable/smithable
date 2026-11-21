@@ -20,6 +20,7 @@ import { templateKitRevision } from "./maintenance.js";
 import { taggedContent } from "./picture-style.js";
 import { contextFacts } from "./privacy-review.js";
 import { stepsFor } from "./project-worker.js";
+import { treeText } from "./secrets.js";
 import { valueSql } from "./tool-steps.js";
 import { changeTree, type TreeChange, writeTreeFile } from "./tree-files.js";
 import { loadSpec } from "./validate.js";
@@ -60,9 +61,8 @@ export interface GenerateFlags {
 /** The stack profile the project was last generated with, from smithable.lock. */
 export function projectProfile(dir: string): string | undefined {
   try {
-    return (
-      JSON.parse(readFileSync(join(dir, "smithable.lock"), "utf8")) as { stackProfile?: string }
-    ).stackProfile;
+    return (JSON.parse(treeText(join(dir, "smithable.lock"))) as { stackProfile?: string })
+      .stackProfile;
   } catch {
     return undefined;
   }
@@ -106,7 +106,7 @@ export async function generate(dir: string, io: Io, flags: GenerateFlags): Promi
     smithableVersion: VERSION,
     kitRevision: templateKitRevision,
     // The same reading as the privacy page's review (privacy-review.ts), so they agree.
-    ...contextFacts(existsSync(contextPath) ? readFileSync(contextPath, "utf8") : undefined),
+    ...contextFacts(existsSync(contextPath) ? treeText(contextPath) : undefined),
     ...(Object.keys(packages).length ? { packages } : {}),
     auth,
     ...(plugins?.length ? { plugins } : {}),
@@ -190,7 +190,7 @@ export async function generate(dir: string, io: Io, flags: GenerateFlags): Promi
 function applyOverrides(dir: string): boolean {
   const path = join(dir, "pnpm-workspace.yaml");
   if (!existsSync(path)) return false;
-  const workspace = new YamlEditor(readFileSync(path, "utf8"));
+  const workspace = new YamlEditor(treeText(path));
   for (const retired of STACK_PROFILE.retiredOverrides)
     if (workspace.has(["overrides", retired])) workspace.removeAndPrune(["overrides", retired], 0);
   for (const [dependency, version] of Object.entries(STACK_PROFILE.overrides)) {
@@ -200,7 +200,7 @@ function applyOverrides(dir: string): boolean {
     } else if (workspace.has(["overrides"])) workspace.add(["overrides"], dependency, version);
     else workspace.add([], "overrides", { [dependency]: version });
   }
-  if (workspace.text === readFileSync(path, "utf8")) return false;
+  if (workspace.text === treeText(path)) return false;
   writeTreeFile(path, workspace.text);
   return true;
 }
@@ -279,8 +279,8 @@ function migrate(
     const tag = latestMigration(dir);
     const snapshot = join(dir, "drizzle", "meta", `${tag.slice(0, 4)}_snapshot.json`);
     // A newer model on the name goes first (an older version applied).
-    const taken = dropTakenTablesSql(readFileSync(snapshot, "utf8"), renamed.from, renamed.to);
-    const before = taken?.snapshot ?? readFileSync(snapshot, "utf8");
+    const taken = dropTakenTablesSql(treeText(snapshot), renamed.from, renamed.to);
+    const before = taken?.snapshot ?? treeText(snapshot);
     writeTreeFile(
       join(dir, "drizzle", `${tag}.sql`),
       [...(taken?.sql ?? []), ...renameModelSql(before, renamed.from, renamed.to)].join(
@@ -299,12 +299,7 @@ function migrate(
     const tag = latestMigration(dir);
     const snapshot = join(dir, "drizzle", "meta", `${tag.slice(0, 4)}_snapshot.json`);
     // A rename back onto a name a newer column has taken drops that column first.
-    const taken = dropTakenColumn(
-      readFileSync(snapshot, "utf8"),
-      rename.model,
-      rename.to,
-      rename.reference,
-    );
+    const taken = dropTakenColumn(treeText(snapshot), rename.model, rename.to, rename.reference);
     writeTreeFile(
       join(dir, "drizzle", `${tag}.sql`),
       [
@@ -315,7 +310,7 @@ function migrate(
     writeTreeFile(
       snapshot,
       renameInSnapshot(
-        taken?.snapshot ?? readFileSync(snapshot, "utf8"),
+        taken?.snapshot ?? treeText(snapshot),
         rename.model,
         rename.from,
         rename.to,
@@ -337,7 +332,7 @@ function migrate(
   let tag = newest();
   if (tag && tag !== before) {
     const file = join(dir, "drizzle", `${tag}.sql`);
-    writeTreeFile(file, quoteReferences(readFileSync(file, "utf8")));
+    writeTreeFile(file, quoteReferences(treeText(file)));
   }
   // Records holding a choice value that goes get the new one: in the new migration, or in one of
   // its own when the schema did not change (a choice is stored as text).
@@ -348,7 +343,7 @@ function migrate(
       tag = newest();
     }
     const file = join(dir, "drizzle", `${tag}.sql`);
-    const sql = readFileSync(file, "utf8");
+    const sql = treeText(file);
     writeTreeFile(
       file,
       [sql.trim() ? sql.trimEnd() : "", ...updates]
@@ -366,7 +361,7 @@ function migrate(
 function declaredPackages(dir: string): Record<string, string> | string {
   const path = join(dir, "smithable.context.yml");
   if (!existsSync(path)) return {};
-  const packages = new YamlEditor(readFileSync(path, "utf8")).get(["packages"]);
+  const packages = new YamlEditor(treeText(path)).get(["packages"]);
   if (packages === undefined) return {};
   if (typeof packages !== "object" || packages === null || Array.isArray(packages))
     return 'smithable.context.yml: "packages" must map package names to versions.';
@@ -384,9 +379,7 @@ function declaredPackages(dir: string): Record<string, string> | string {
 
 /** The tag of the newest migration, e.g. "0003_rename_notes". */
 function latestMigration(dir: string): string {
-  const journal = JSON.parse(
-    readFileSync(join(dir, "drizzle", "meta", "_journal.json"), "utf8"),
-  ) as {
+  const journal = JSON.parse(treeText(join(dir, "drizzle", "meta", "_journal.json"))) as {
     entries: { tag: string }[];
   };
   const last = journal.entries[journal.entries.length - 1];
@@ -396,7 +389,7 @@ function latestMigration(dir: string): string {
 
 export function readRecord(dir: string): FileRecord {
   try {
-    const saved = JSON.parse(readFileSync(join(dir, RECORD), "utf8")) as {
+    const saved = JSON.parse(treeText(join(dir, RECORD))) as {
       files: Record<string, string> | { path: string; sha256: string }[];
     };
     // A list of { path, sha256 }; records written before 2026-09-28 map paths to hashes.
