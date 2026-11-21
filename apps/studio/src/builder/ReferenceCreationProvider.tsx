@@ -124,6 +124,7 @@ function CreationDialog({
   const dialog = useRef<HTMLDialogElement>(null);
   const committing = useRef(false);
   const [help, setHelp] = useState<string>();
+  const [helpApplying, setHelpApplying] = useState(false);
   const helpLauncher = useRef<HTMLButtonElement>(null);
   const back = useRef<HTMLButtonElement>(null);
   useEffect(() => {
@@ -144,8 +145,9 @@ function CreationDialog({
       aria-label="Create and select"
       onCancel={(event) => {
         event.preventDefault();
+        if (committing.current) return;
         if (help !== undefined) setHelp(undefined);
-        else if (!committing.current) onClose();
+        else onClose();
       }}
       className="m-auto max-h-[90vh] w-[min(42rem,92vw)] overflow-auto rounded-lg bg-panel text-fg shadow-xl backdrop:bg-black/40"
     >
@@ -180,13 +182,22 @@ function CreationDialog({
                 <button
                   ref={back}
                   type="button"
+                  disabled={helpApplying}
                   onClick={() => setHelp(undefined)}
-                  className="rounded border border-line px-3 py-1 text-sm hover:bg-subtle"
+                  className="rounded border border-line px-3 py-1 text-sm hover:bg-subtle disabled:opacity-50"
                 >
                   Back to creation
                 </button>
               </div>
-              <Ask {...modelNotice} helpRequest={help} words={words} />
+              <Ask
+                {...modelNotice}
+                helpRequest={help}
+                words={words}
+                onApplyingChange={(applying) => {
+                  committing.current = applying;
+                  setHelpApplying(applying);
+                }}
+              />
             </section>
           )}
         </>

@@ -225,6 +225,12 @@ createRoot(document.getElementById('root')).render(<StrictMode><App/></StrictMod
     };
     await page.evaluate(() => {
       sessionStorage.setItem("smithable:ask-draft", "Existing Smith draft");
+      const synth = window.speechSynthesis;
+      const cancel = synth.cancel.bind(synth);
+      synth.cancel = () => {
+        sessionStorage.setItem("fixture-speech-cancelled", "true");
+        cancel();
+      };
     });
     await propose("model", "edited model for help");
     const modelName = dialog.getByLabel("Kind of record", { exact: true });
@@ -233,8 +239,11 @@ createRoot(document.getElementById('root')).render(<StrictMode><App/></StrictMod
     const back = help.getByRole("button", { name: "Back to creation", exact: true });
     await modelName.fill("UnappliedSupplier");
     let helpCalls = 0;
+    let sharedReplies = 0;
     const observeHelp = (request) => {
-      if (new URL(request.url()).pathname === "/api/ask") {
+      const path = new URL(request.url()).pathname;
+      if (path === "/api/said" && request.method() === "POST") sharedReplies++;
+      if (path === "/api/ask") {
         helpCalls++;
         assert.equal(request.postDataJSON().request, "Add a kind of record: edited model for help");
       }
@@ -242,7 +251,8 @@ createRoot(document.getElementById('root')).render(<StrictMode><App/></StrictMod
     page.on("request", observeHelp);
     for (const returnByEscape of [true, false]) {
       await helpButton.click();
-      await help.getByRole("button", { name: "Apply", exact: true }).waitFor();
+      const apply = help.getByRole("button", { name: "Apply", exact: true });
+      await apply.waitFor();
       assert.equal(await back.evaluate((element) => element === document.activeElement), true);
       assert.equal(await modelName.isVisible(), false, "the wizard stayed visible behind help");
       assert.equal(
@@ -252,7 +262,30 @@ createRoot(document.getElementById('root')).render(<StrictMode><App/></StrictMod
         "Add a kind of record: edited model for help",
       );
       if (returnByEscape) await page.keyboard.press("Escape");
-      else await back.click();
+      else {
+        let finishApply, reportApply;
+        const applied = new Promise((resolve) => {
+          reportApply = resolve;
+        });
+        const applyGate = new Promise((resolve) => {
+          finishApply = resolve;
+        });
+        const holdApply = async (route) => {
+          reportApply();
+          await applyGate;
+          await route.fulfill({ json: { ok: false, output: "Controlled help apply refusal" } });
+        };
+        await page.route("**/api/ask/apply", holdApply);
+        await apply.click();
+        await applied;
+        assert.ok(await back.isDisabled(), "help allowed leaving during Apply");
+        await page.keyboard.press("Escape");
+        assert.ok(await help.isVisible(), "Escape dismissed help during Apply");
+        finishApply();
+        await help.getByText("Controlled help apply refusal", { exact: true }).waitFor();
+        await page.unroute("**/api/ask/apply", holdApply);
+        await back.click();
+      }
       await help.waitFor({ state: "detached" });
       assert.equal(await modelName.inputValue(), "UnappliedSupplier");
       assert.equal(
@@ -262,9 +295,15 @@ createRoot(document.getElementById('root')).render(<StrictMode><App/></StrictMod
     }
     page.off("request", observeHelp);
     assert.equal(helpCalls, 2, "each help handoff should send exactly once");
+    assert.equal(sharedReplies, 0, "help wrote to the usual Smith thread");
     assert.equal(
       await page.evaluate(() => sessionStorage.getItem("smithable:ask-draft")),
       "Existing Smith draft",
+    );
+    assert.equal(
+      await page.evaluate(() => sessionStorage.getItem("fixture-speech-cancelled")),
+      null,
+      "opening or leaving text help cancelled shared speech",
     );
     await page.evaluate(() => sessionStorage.removeItem("smithable:ask-draft"));
     await page.keyboard.press("Escape");

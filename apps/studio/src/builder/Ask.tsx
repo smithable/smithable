@@ -76,9 +76,12 @@ export function Ask({
   speech: speechProviders = [],
   onAudioActivity,
   helpRequest,
+  onApplyingChange,
 }: {
   /** Initial words for Smith inside the reference creation dialog. Uses its own draft. */
   helpRequest?: string;
+  /** Reports a confirmed change in flight to the dialog owning the help view. */
+  onApplyingChange?: (applying: boolean) => void;
   /** Where Smith may hear and speak, from the host's policy layer (smith-speech.md §3). */
   speech?: { name: "browser" | "service"; onDeviceOnly?: true }[];
   onAudioActivity?: (activity: AudioActivity | undefined) => void;
@@ -178,6 +181,7 @@ export function Ask({
   }, [helpRequest]);
   const say = (request: string, reply: string) => {
     setSaid((list) => [...list, { at: new Date().toISOString(), request, reply }]);
+    if (helpRequest !== undefined) return;
     void api.said({ request, reply }).then(
       (kept) => setSaid(kept.said),
       () => undefined,
@@ -404,6 +408,7 @@ export function Ask({
     if (!proposal) return;
     const revision = proposalRevision.current;
     onBeginChange?.();
+    onApplyingChange?.(true);
     setBusy(true);
     try {
       const result = await api.applyProposal(proposal.id);
@@ -437,6 +442,7 @@ export function Ask({
       setOutput((error as Error).message);
     } finally {
       setBusy(false);
+      onApplyingChange?.(false);
     }
   };
 
@@ -866,7 +872,7 @@ export function Ask({
             {making ? "Make it once the app is there" : busy && !proposal ? "Working…" : "Send"}
           </Button>
         </div>
-        {speechProviders.length > 0 || speech.why ? (
+        {helpRequest === undefined && (speechProviders.length > 0 || speech.why) ? (
           <SpeechControls speech={speech} inputDisabled={guiding} />
         ) : null}
         {overlay || presenting
