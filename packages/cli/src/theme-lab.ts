@@ -1,4 +1,4 @@
-import { childOptions } from "./secrets.js";
+import { childOptions, scratchDir } from "./secrets.js";
 // `smithable theme lab` (docs/design/theme-lab.md §3, local mode): the theme lab beside a real
 // app. Makes the chosen starter's app (booking by default, with the controls it lacks, as the
 // theme sheet makes it), serves its preview with the editor's runtime and the lab on the next
@@ -9,17 +9,8 @@ import { childOptions } from "./secrets.js";
 
 import { type ChildProcess, spawn } from "node:child_process";
 import { randomBytes, randomUUID } from "node:crypto";
-import {
-  existsSync,
-  mkdirSync,
-  mkdtempSync,
-  readFileSync,
-  realpathSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { existsSync, mkdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { createServer, type IncomingMessage } from "node:http";
-import { tmpdir } from "node:os";
 import { basename, extname, join, normalize, resolve } from "node:path";
 import {
   type ContentIR,
@@ -56,7 +47,7 @@ const quiet = (io: Io): Io => ({ ...io, out: () => {} });
 
 /** The lab's app: a starter's, and for booking a field for each control it has none for. */
 async function labApp(io: Io, starter: string): Promise<string | undefined> {
-  const dir = join(mkdtempSync(join(tmpdir(), "smithable-theme-lab-")), "app");
+  const dir = join(scratchDir("smithable-theme-lab-"), "app");
   io.out(
     starter === "booking"
       ? "Making the lab's app (a booking app with every control)…\n"

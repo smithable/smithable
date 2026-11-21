@@ -1,4 +1,4 @@
-import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, expect, test } from "vitest";
@@ -12,6 +12,7 @@ import {
   holdSecretsFromJson,
   modelKey,
   releaseSecretsForTests,
+  scratchDir,
   studioToken,
 } from "./secrets.js";
 
@@ -62,6 +63,22 @@ test("children may run under a configured uid, with that user's home and name, a
     expect(child.env.USER).toBe("root");
     expect(child.env.HOME).toBe("/root");
   }
+});
+
+test("a scratch folder is the project group's to enter where a project uid is configured", () => {
+  const plain = scratchDir("smithable-scratch-test-");
+  expect(statSync(plain).mode & 0o7777).toBe(0o700);
+  rmSync(plain, { recursive: true });
+  if (process.platform !== "linux") return;
+  // This process's own ids, so the change of group is one it may make.
+  process.env.SMITHABLE_PROJECT_UID = String(process.getuid?.());
+  process.env.SMITHABLE_PROJECT_GID = String(process.getgid?.());
+  forgetProjectUserForTests();
+  const shared = scratchDir("smithable-scratch-test-");
+  const stat = statSync(shared);
+  expect(stat.mode & 0o7777).toBe(0o2770);
+  expect(stat.gid).toBe(process.getgid?.());
+  rmSync(shared, { recursive: true });
 });
 
 test("a project uid given alone, or not a number, refuses rather than running children as this user", () => {

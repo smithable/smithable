@@ -2,7 +2,9 @@
 // starts, so no child it runs inherits them (pnpm and its scripts, git and its hooks, the
 // project's tests, the preview's dev server), and handed only to the engine's own calls that need
 // them. Every child's options are built by childOptions, which leaves both out whatever it is given.
-import { readFileSync } from "node:fs";
+import { chmodSync, chownSync, mkdtempSync, readFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 const NAMES = ["SMITHABLE_STUDIO_TOKEN", "SMITHABLE_MODEL_KEY"] as const;
 type SecretName = (typeof NAMES)[number];
@@ -123,6 +125,21 @@ export function childOptions(
     ...(user.name ? { USER: user.name, LOGNAME: user.name } : {}),
   });
   return { env, uid: user.uid, gid: user.gid };
+}
+
+/**
+ * A new temporary folder for this process and its children: where a project user is configured,
+ * that user's group with mode 2770, so a child running as that user can enter and write it (a
+ * plain mkdtemp is 0700, this process's alone).
+ */
+export function scratchDir(prefix: string): string {
+  const made = mkdtempSync(join(tmpdir(), prefix));
+  const user = projectUser();
+  if (user) {
+    chownSync(made, -1, user.gid);
+    chmodSync(made, 0o2770);
+  }
+  return made;
 }
 
 /** CAP_KILL, CAP_SETGID and CAP_SETUID: what starts and stops a child as the project user. */

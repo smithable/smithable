@@ -7,7 +7,6 @@ import {
   fstatSync,
   lstatSync,
   mkdirSync,
-  mkdtempSync,
   openSync,
   readdirSync,
   readFileSync,
@@ -16,13 +15,12 @@ import {
   rmSync,
   writeFileSync,
 } from "node:fs";
-import { tmpdir } from "node:os";
 import { dirname, join, relative, resolve } from "node:path";
 import { CAPTURE_MS, captureProgram, stopCaptureProgram } from "./backup-capture.js";
 import { appName } from "./build.js";
 import type { Io } from "./io.js";
 import { S3 } from "./s3.js";
-import { childOptions } from "./secrets.js";
+import { childOptions, scratchDir } from "./secrets.js";
 
 /**
  * Backups (ARCHITECTURE §12): what is irreplaceable in /data, the database (a consistent
@@ -219,7 +217,7 @@ export async function backup(
   options: { to: string; container?: string },
 ): Promise<number> {
   const app = appName(dir);
-  const local = mkdtempSync(join(tmpdir(), "smithable-backup-"));
+  const local = scratchDir("smithable-backup-");
   const name = `${app}/${stamp()}-${randomUUID().replaceAll("-", "").slice(0, 12)}`;
   try {
     if (options.container) {
@@ -360,7 +358,7 @@ export async function restore(
   options: { from: string; backup?: string; container?: string },
 ): Promise<number> {
   const app = appName(dir);
-  const local = mkdtempSync(join(tmpdir(), "smithable-restore-"));
+  const local = scratchDir("smithable-restore-");
   try {
     const source = target(options.from);
     // Only the backups' own folders (named by their time); anything else under the app's

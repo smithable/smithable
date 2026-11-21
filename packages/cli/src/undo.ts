@@ -1,6 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { validateSpec } from "@smithable/core";
 import { databasePath, hasSnapshot, restoreDatabase } from "./database.js";
@@ -11,7 +10,7 @@ import { type FilesPlan, lostFields, runFilesChange } from "./op.js";
 import { loadPlugins } from "./plugins.js";
 import { ProjectBusyError, ProjectLockError, withProjectMutationSync } from "./project-mutation.js";
 import { projectRevision } from "./project-revision.js";
-import { childOptions } from "./secrets.js";
+import { childOptions, scratchDir } from "./secrets.js";
 import { projectThemes } from "./validate.js";
 import { installing } from "./vite-cache.js";
 
@@ -248,7 +247,7 @@ export function revertedFiles(
     if (base === null || other === null || ours === null) return { conflict: path };
     let scratch: string | undefined;
     try {
-      scratch = mkdtempSync(join(tmpdir(), "smithable-undo-"));
+      scratch = scratchDir("smithable-undo-");
       const names = ["ours", "base", "other"].map((n) => join(scratch as string, n));
       writeFileSync(names[0] as string, ours);
       writeFileSync(names[1] as string, base);

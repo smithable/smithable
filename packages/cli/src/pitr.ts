@@ -4,15 +4,14 @@
 // changed and removed since, and on request brings back or undoes, in place. The same
 // statements as the hosted service (core's dataDiffSql and restoreOrder).
 import { spawn, spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { existsSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { dataKey, tableNames, titleField } from "@smithable/adapter-tanstack";
 import { dataDiffSql, type ModelIR, restoreOrder, snake } from "@smithable/core";
 import { BUSY_MS } from "./database.js";
 import type { Io } from "./io.js";
-import { childOptions } from "./secrets.js";
+import { childOptions, scratchDir } from "./secrets.js";
 import { loadSpec } from "./validate.js";
 
 /** How long the stream keeps every second (the hosted service's window). */
@@ -44,7 +43,7 @@ export function backupContinuous(
     io.err(`There is no database at ${db}: give the app's data folder with --data.\n`);
     return Promise.resolve(1);
   }
-  const config = join(mkdtempSync(join(tmpdir(), "smithable-litestream-")), "litestream.yml");
+  const config = join(scratchDir("smithable-litestream-"), "litestream.yml");
   writeFileSync(
     config,
     `l0-retention: ${WINDOW}\nsnapshot:\n  interval: 24h\n  retention: ${WINDOW}\ndbs:\n  - path: ${JSON.stringify(db)}\n    replica:\n      url: ${JSON.stringify(replicaUrl(options.to))}\n`,
@@ -105,7 +104,7 @@ export function restoreAt(
   }
   const spec = ir;
   // The restored copy lives in a folder of its own, gone when this returns.
-  const then = join(mkdtempSync(join(tmpdir(), "smithable-restore-")), "then.db");
+  const then = join(scratchDir("smithable-restore-"), "then.db");
   try {
     return compare(then);
   } finally {
