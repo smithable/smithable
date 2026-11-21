@@ -70,11 +70,11 @@ import { type PresentedDiagnostic, ValidationNotice } from "./validation-notice"
 import {
   gridOf,
   isManualView,
-  keptChangesBesideSmith,
   type ManualView,
   type PhoneWindow,
   phoneWindows,
   type SlotContent,
+  useChangesBesideSmith,
   useManualView,
   usePhoneSettings,
   useSettingsOpen,
@@ -188,7 +188,7 @@ export function App() {
   const [manual, setManual] = useManualView();
   const [settingsOpen, setSettingsOpen] = useSettingsOpen();
   const [leftClosed, setLeftClosed] = useState(false);
-  const [changesBeside, setChangesBeside] = useState(keptChangesBesideSmith);
+  const [changesBeside, setChangesBeside] = useChangesBesideSmith();
   // A change's notice offers to undo it; errors stay until dismissed, other notices fade.
   const [message, setMessage] = useState<{
     ok: boolean;
@@ -526,7 +526,6 @@ export function App() {
   const shown: (0 | 1 | 2)[] = narrow
     ? [0, 1, 2]
     : [...(leftVisible ? ([0] as const) : []), 1, ...(settingsOpen ? ([2] as const) : [])];
-  const dockedSmithSlot = floating ? undefined : 0;
   const mountedSlots: (0 | 1 | 2)[] = !narrow && !floating && !leftVisible ? [0, ...shown] : shown;
   const phoneIndex = Math.max(0, phoneList.indexOf(phoneWindow));
   /**
@@ -2057,12 +2056,12 @@ export function App() {
                 const content = slots[s] as SlotContent;
                 const windows = windowsIn(content, manual);
                 const first = windows[0] as WindowId;
-                const slot = !narrow && first === "smith" ? dockedSmithSlot : placed(first);
+                const slot = !narrow && first === "smith" ? 0 : placed(first);
                 if (content === "preview" || slot !== s) return null;
                 const smithSheet = narrow && phoneSmithSheet && first === "smith";
                 return (
                   <div
-                    key={content}
+                    key={s}
                     data-window={content}
                     data-phone-sheet={smithSheet ? "smith" : undefined}
                     className={cx(
@@ -2194,6 +2193,17 @@ export function App() {
                           <Panel
                             key={w}
                             title="Changes"
+                            actions={
+                              !narrow && (
+                                <Button
+                                  variant="ghost"
+                                  aria-label="Close Changes"
+                                  onClick={() => setChangesBeside(false)}
+                                >
+                                  ×
+                                </Button>
+                              )
+                            }
                             className={cx(
                               "min-h-0",
                               content === "smith+changes" ? "flex-[2] border-t" : "flex-1",

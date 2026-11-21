@@ -453,7 +453,7 @@ export function useSpeech(
     if (call !== "active") return;
     const timer = setInterval(() => {
       if (Date.now() - lastHeard.current > 10 * 60_000)
-        stopCall("Back to press to talk: nothing was said for ten minutes.");
+        stopCall("The call ended after ten minutes without speech.");
     }, 15_000);
     return () => clearInterval(timer);
   }, [call]);
@@ -462,7 +462,7 @@ export function useSpeech(
     const hide = () => {
       if (document.visibilityState !== "hidden") return;
       // Also a start still loading: it finds itself cancelled.
-      if (callNow.current !== "idle") stopCall("Back to press to talk: the tab was hidden.");
+      if (callNow.current !== "idle") stopCall("The call ended when you left this browser tab.");
       else rec.current?.stop();
     };
     document.addEventListener("visibilitychange", hide);
@@ -474,7 +474,7 @@ export function useSpeech(
     if (!c) return;
     const other = (e: MessageEvent) => {
       if (e.data === "listening" && callNow.current !== "idle")
-        stopCall("Back to press to talk: another tab listens.");
+        stopCall("The call ended because another tab started listening.");
     };
     c.addEventListener("message", other);
     return () => c.removeEventListener("message", other);

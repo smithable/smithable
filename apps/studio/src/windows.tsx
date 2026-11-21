@@ -70,13 +70,25 @@ export function useSettingsOpen(): [boolean, (open: boolean) => void] {
   return [open, setOpen];
 }
 
-export function keptChangesBesideSmith() {
-  try {
-    const legacy = JSON.parse(localStorage.getItem("smithable:windows") ?? "null");
-    return Array.isArray(legacy?.slots) && legacy.slots.includes("smith+changes");
-  } catch {
-    return false;
-  }
+const CHANGES_BESIDE = "smithable:changes-beside-smith";
+
+export function useChangesBesideSmith(): [boolean, (open: boolean) => void] {
+  const [open, setOpen] = useState(() => {
+    try {
+      const saved = localStorage.getItem(CHANGES_BESIDE);
+      if (saved !== null) return saved === "1";
+      const legacy = JSON.parse(localStorage.getItem("smithable:windows") ?? "null");
+      return Array.isArray(legacy?.slots) && legacy.slots.includes("smith+changes");
+    } catch {
+      return false;
+    }
+  });
+  useEffect(() => {
+    try {
+      localStorage.setItem(CHANGES_BESIDE, open ? "1" : "0");
+    } catch {}
+  }, [open]);
+  return [open, setOpen];
 }
 
 export function gridOf(slots: (0 | 1 | 2)[], contents: SlotContent[]): React.CSSProperties {

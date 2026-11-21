@@ -11,11 +11,13 @@ function IconButton({
   children,
   ...props
 }: ComponentProps<"button"> & { label: string; tip?: string }) {
+  const tipId = useId();
   return (
     <button
       type="button"
       {...props}
       aria-label={label}
+      aria-describedby={tip === label ? undefined : tipId}
       className={cx(
         "group relative flex size-8 shrink-0 items-center justify-center rounded-md border border-line text-fg-soft hover:bg-subtle focus-visible:outline-2 focus-visible:outline-accent disabled:opacity-40",
         className,
@@ -23,8 +25,12 @@ function IconButton({
     >
       {children}
       <span
+        id={tipId}
         role="tooltip"
-        className="pointer-events-none invisible absolute bottom-full left-0 z-30 mb-1 w-max max-w-44 rounded bg-fg px-2 py-1 text-xs font-normal text-panel group-hover:visible group-focus-visible:visible"
+        className={cx(
+          "pointer-events-none invisible absolute bottom-full left-0 z-30 mb-1 w-max max-w-44 rounded bg-fg px-2 py-1 text-xs font-normal text-panel",
+          !props["aria-expanded"] && "group-hover:visible group-focus-visible:visible",
+        )}
       >
         {tip}
       </span>
@@ -115,7 +121,10 @@ export function SpeechControls({
               aria-expanded={settingsOpen}
               aria-controls={settingsId}
               onKeyDown={closeSettings}
-              onClick={() => setSettingsOpen(!settingsOpen)}
+              onClick={() => {
+                setSettingsOpen(!settingsOpen);
+                settingsButton.current?.focus();
+              }}
             >
               <svg
                 aria-hidden="true"
