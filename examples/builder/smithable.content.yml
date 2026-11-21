@@ -1,0 +1,96 @@
+# What visitors read. Derived from names when not given here.
+smithableContent: 0.1
+
+models:
+  Service:
+    fields:
+      pricing: { label: How it is priced }
+  Project:
+    fields:
+      place: { label: Where }
+      photos: { label: Photos }
+  Enquiry:
+    label: Enquiry
+    fields:
+      project: { label: About the project }
+      message: { label: What you have in mind }
+      followUpOn: { label: Follow up on }
+      status: { values: { new: New, contacted: Contacted, visited: Visited, quoted: Quoted, won: Won, lost: Lost } }
+
+actions:
+  contacted: { label: Mark contacted }
+  quoted: { label: Quote sent }
+  won: { label: Won }
+  lost: { label: Lost }
+
+pages:
+  privacy:
+    title: Privacy
+    operator:
+      name: Northshore Joinery Ab
+      address: Strandvägen 4, 22100 Mariehamn
+      email: hello@northshore.example
+      country: Åland, Finland
+      hosting: in the EU
+  home:
+    description: Renovations, extensions, decks and saunas on the islands, by a small joinery. See our work and ask for an estimate.
+    hero:
+      title: Built to last by the sea
+      subtitle: A small joinery for renovations, extensions, decks and saunas. Look through our projects and ask for an estimate on one like yours.
+      button: See our projects
+    services:
+      eyebrow: What we do
+      title: Our services
+      text: Every job starts with a visit. We look at the site, listen to what you want, and send a written estimate within a week.
+    latest:
+      eyebrow: Recent work
+      title: Projects
+      text: Open a project to see what was done, and ask for an estimate on something like it.
+    features:
+      eyebrow: Why us
+      title: Qualified, insured, local
+      items:
+        - title: Qualified carpenters
+          text: Two master carpenters and an apprentice. We do the joinery ourselves and bring in licensed electricians and plumbers we have worked with for years.
+        - title: Insured work
+          text: Every job is covered by our liability insurance, and we give two years' guarantee on our own work.
+        - title: Written estimates
+          text: You get a written estimate after the visit, with the work, the materials and the time. Larger jobs are priced by the job, small repairs by the hour.
+        - title: Where we work
+          text: Mainland Åland and the near archipelago. Further out we come when the ferries allow, and say so in the estimate.
+    faq:
+      eyebrow: Before you ask
+      title: Common questions
+      items:
+        - question: How soon can you start?
+          answer: Small jobs often within a month. Renovations and extensions are booked a season ahead, so ask early for a summer job.
+        - question: Is the visit free?
+          answer: Yes, within mainland Åland. In the archipelago we charge the ferry, and deduct it if you go ahead.
+        - question: Do you handle the building permit?
+          answer: We draw up what the municipality needs for an extension or a new sauna, and you sign the application. We tell you in the estimate if a permit is needed.
+        - question: Can I do part of the work myself?
+          answer: Often, yes. Painting and clearing out are common. Say so in your enquiry and we price the rest.
+    footer:
+      text: Northshore Joinery · Strandvägen 4, Mariehamn
+      items:
+        - { label: Projects, link: /projects }
+        - { label: Email us, link: "mailto:hello@northshore.example" }
+  projects:
+    title: Projects
+    subtitle: Work we have finished on the islands. Open one to ask for an estimate on something like it.
+    contact:
+      title: Ask for an estimate
+      text: Tell us what you have in mind. We answer within two working days and book a visit.
+      button: Send enquiry
+      thanks: Thank you. We will get back to you within two working days.
+  start:
+    title: Today
+  enquiries:
+    title: Enquiries
+    form:
+      sections:
+        who: { title: Who asked }
+        what: { title: What they asked about }
+        next: { title: What happens next }
+  services:
+    title: Services

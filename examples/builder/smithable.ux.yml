@@ -1,0 +1,25 @@
+# How the app looks. Technology-neutral: presets and choices, never CSS.
+smithableUx: 0.1
+
+theme:
+  preset: craft                        # warm wood tones
+
+tones:
+  Enquiry.status: { new: warning, quoted: info, won: success, lost: neutral }
+
+pages:
+  home:
+    sections:
+      services: { layout: ledger }     # the services as ruled rows, how each is priced beside it
+      latest: { band: muted }
+  projects:
+    table: { view: cards, sort: year }
+  enquiries:
+    table:
+      columns: [name, project, status, followUpOn, createdAt]
+      sort: followUpOn
+    form:
+      sections:
+        - { name: who, fields: [name, email, phone] }
+        - { name: what, fields: [project, message] }
+        - { name: next, fields: [status, followUpOn, notes] }

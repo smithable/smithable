@@ -1,0 +1,94 @@
+# yaml-language-server: $schema=../../packages/core/schema/smithable.schema.json
+smithable: 0.1
+
+app:
+  name: Northshore Joinery
+  description: A small builder's site and enquiry book. Visitors see the services and past projects and ask for an estimate. The builder follows each enquiry up.
+  currency: EUR
+  timezone: Europe/Mariehamn
+
+models:
+  Service:
+    description: A kind of work the builder takes on, such as a renovation, an extension or a deck.
+    fields:
+      name: string!
+      summary: text
+      pricing: text                     # how the price is reckoned: by the hour, by the job, after a visit
+      projects: Project[]
+
+  Project:
+    description: A finished job shown to visitors, with where and when it was done.
+    fields:
+      title: string!
+      service: Service!
+      place: string                     # the village or the island, never the client's address
+      year: int
+      summary: text
+      photos: pictures                  # optional: a project reads well without them
+      enquiries: Enquiry[]
+
+  Enquiry:
+    description: A visitor's request for an estimate, about a project like one shown.
+    fields:
+      project: Project                  # the project the visitor asked from
+      name: string!
+      email: email!
+      phone: phone
+      message: text!
+      status: new | contacted | visited | quoted | won | lost
+      followUpOn: date = TODAY()        # when to get back to them next
+      notes: text                       # the builder's own, never shown to the visitor
+
+actions:
+  contacted:
+    on: Enquiry
+    when: { status: new }
+    set: { status: contacted, followUpOn: }
+  quoted:
+    on: Enquiry
+    when: { status: [contacted, visited] }
+    set: { status: quoted, followUpOn: 'DATEADD(TODAY(), 7, "day")' }
+  won:
+    on: Enquiry
+    when: { status: quoted }
+    set: { status: won }
+  lost:
+    on: Enquiry
+    when: { status: [new, contacted, visited, quoted] }
+    set: { status: lost }
+
+pages:
+  home:
+    route: /
+    landing:
+      hero: { button: projects }
+      services: { records: Service }
+      latest: { records: Project, limit: 6 }
+      features:                         # qualifications and how the work is done, as text
+      faq:
+      footer:
+  projects:                             # public: each project with "Ask for an estimate"
+    crud: Project
+    filters: [service]
+    sortable: [year]
+    contact: { to: owner, keep: Enquiry }
+  start:                                # the builder's morning: what is new, what is due
+    dashboard:
+      new: { count: Enquiry, where: { status: new } }
+      open: { count: Enquiry, where: { status: [contacted, visited, quoted] } }
+      due: { list: Enquiry, when: followUpOn, within: 2 weeks, where: { status: [new, contacted, visited, quoted] } }
+  enquiries:
+    crud: Enquiry
+    search: [name, email, message]
+    filters: [status]
+    sortable: [createdAt, followUpOn]
+    actions: [contacted, quoted, won, lost]
+  services:
+    crud: Service
+  team:
+    users: manage
+  privacy:
+    route: /privacy
+    legal: privacy
+
+navigation: [start, enquiries, projects, services, team]
