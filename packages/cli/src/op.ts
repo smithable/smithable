@@ -71,6 +71,7 @@ import { projectRevision, sourceDigests } from "./project-revision.js";
 import { afterFailure, recordFailure } from "./report.js";
 import { recordRule } from "./rules.js";
 import { themeTransaction } from "./theme-transaction.js";
+import { writeTreeFile } from "./tree-files.js";
 import { projectThemeFiles, projectThemes, projectTranslations } from "./validate.js";
 import {
   browserNotRun,
@@ -690,28 +691,25 @@ async function applyAndCheckpoint(
   // From the first write to the commit: rollback only while no newer editor files would be lost.
   let committed = false;
   try {
-    writeFileSync(join(dir, SPEC), result.files.spec);
-    if (result.files.content !== undefined) writeFileSync(contentPath, result.files.content);
-    if (result.files.auth !== undefined) writeFileSync(authPath, result.files.auth);
-    if (result.files.ux !== undefined) writeFileSync(uxPath, result.files.ux);
-    if (result.files.context !== undefined) writeFileSync(contextPath, result.files.context);
+    writeTreeFile(join(dir, SPEC), result.files.spec);
+    if (result.files.content !== undefined) writeTreeFile(contentPath, result.files.content);
+    if (result.files.auth !== undefined) writeTreeFile(authPath, result.files.auth);
+    if (result.files.ux !== undefined) writeTreeFile(uxPath, result.files.ux);
+    if (result.files.context !== undefined) writeTreeFile(contextPath, result.files.context);
     if (result.files.people !== undefined) {
-      mkdirSync(dirname(peoplePath), { recursive: true });
-      writeFileSync(peoplePath, result.files.people);
+      writeTreeFile(peoplePath, result.files.people);
     }
     for (const [language, text] of Object.entries(result.files.translations ?? {}))
-      writeFileSync(join(dir, translationPath(language)), text);
+      writeTreeFile(join(dir, translationPath(language)), text);
     for (const path of result.removed) rmSync(join(dir, path), { force: true });
     for (const file of [...result.added, ...(flags.files ?? [])]) {
-      mkdirSync(dirname(join(dir, file.path)), { recursive: true });
-      writeFileSync(join(dir, file.path), "text" in file ? file.text : file.bytes);
+      writeTreeFile(join(dir, file.path), "text" in file ? file.text : file.bytes);
     }
     if (placed) {
-      for (const file of placed.files) writeFileSync(join(dir, file.path), file.bytes);
+      for (const file of placed.files) writeTreeFile(join(dir, file.path), file.bytes);
       for (const file of placed.texts)
         if (file.text) {
-          mkdirSync(dirname(join(dir, file.path)), { recursive: true });
-          writeFileSync(join(dir, file.path), file.text);
+          writeTreeFile(join(dir, file.path), file.text);
         } else rmSync(join(dir, file.path), { force: true });
       const reseeded = reseedPictures(dir, placed.swaps);
       io.out(

@@ -2,8 +2,9 @@
 // it can see. Under a shared package store it sees none, so after an install that changed the
 // lock it would keep serving the old bundle until the app's Vite config changes (T742). Every
 // install the engine runs drops it when the lock changed, so the next start bundles afresh.
-import { existsSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { removeTree } from "./tree-files.js";
 
 const LOCK = "pnpm-lock.yaml";
 const lockOf = (dir: string) => {
@@ -20,7 +21,7 @@ export function installing<T>(dir: string, install: () => T): T {
     // Also after a failed install that already rewrote the lock; and never a failure of its own.
     if (lockOf(dir) !== before)
       try {
-        rmSync(join(dir, "node_modules", ".vite"), { recursive: true, force: true });
+        removeTree(join(dir, "node_modules", ".vite"));
       } catch {}
   }
 }

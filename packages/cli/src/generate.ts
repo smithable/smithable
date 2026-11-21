@@ -21,6 +21,7 @@ import { taggedContent } from "./picture-style.js";
 import { contextFacts } from "./privacy-review.js";
 import { stepsFor } from "./project-worker.js";
 import { valueSql } from "./tool-steps.js";
+import { writeTreeFile } from "./tree-files.js";
 import { loadSpec } from "./validate.js";
 import { VERSION } from "./version.js";
 import { installing } from "./vite-cache.js";
@@ -150,16 +151,14 @@ export async function generate(dir: string, io: Io, flags: GenerateFlags): Promi
     // Scaffold and custom files are created once and then belong to the project.
     if (file.zone === "scaffold" || file.zone === "custom") {
       if (existsSync(path)) continue;
-      mkdirSync(dirname(path), { recursive: true });
-      writeFileSync(path, file.content);
+      writeTreeFile(path, file.content);
       written++;
       changed.push(file.path);
       continue;
     }
     next.files[file.path] = hash(file.content);
     if (existsSync(path) && readFileSync(path, "utf8") === file.content) continue;
-    mkdirSync(dirname(path), { recursive: true });
-    writeFileSync(path, file.content);
+    writeTreeFile(path, file.content);
     written++;
     changed.push(file.path);
   }
@@ -167,8 +166,7 @@ export async function generate(dir: string, io: Io, flags: GenerateFlags): Promi
   const produced = new Set(files.map((f) => f.path));
   const removed = Object.keys(previous.files).filter((path) => !produced.has(path));
   for (const path of removed) rmSync(join(dir, path), { force: true });
-  mkdirSync(join(dir, ".smithable"), { recursive: true });
-  writeFileSync(join(dir, RECORD), serializeRecord(next));
+  writeTreeFile(join(dir, RECORD), serializeRecord(next));
   if (applyOverrides(dir)) changed.push("pnpm-workspace.yaml");
   io.out(`Generated ${files.length} files (${written} changed, ${removed.length} removed).\n`);
 

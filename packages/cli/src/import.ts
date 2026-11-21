@@ -31,6 +31,7 @@ import {
   type SpecIR,
   titleField,
 } from "@smithable/core";
+import { asProject } from "./as-project.js";
 import { readBeta } from "./beta.js";
 import { BUSY_MS, databasePath } from "./database.js";
 
@@ -46,7 +47,7 @@ export interface PreparedImport {
 }
 
 /** Reads the source and looks the references up; nothing is written. */
-export function prepareImport(
+function prepareImportHere(
   dir: string,
   effect: ImportEffect,
   ir: SpecIR,
@@ -157,7 +158,7 @@ export function refusalText(refusals: ImportRefusal[]): string {
  * Adds the prepared records in one transaction, owned by `owner`; on the first that the
  * database refuses (a unique value taken), none, with that record's line.
  */
-export function insertImport(
+function insertImportHere(
   dir: string,
   prepared: PreparedImport,
   ir: SpecIR,
@@ -192,7 +193,7 @@ export function insertImport(
  * Whom imported records belong to: the user given (by id or email: hosted, the service names who
  * is importing), else the first admin who has signed in, else no one.
  */
-export function importOwner(
+function importOwnerHere(
   dir: string,
   auth: AuthIR,
   wanted = process.env.SMITHABLE_IMPORT_OWNER,
@@ -227,7 +228,7 @@ const importPath = (id: string) => {
 };
 
 /** Keeps the raw CSV under data/.smithable/imports/ so redo can run it again; returns the path. */
-export function keepImport(dir: string, id: string, text: string): string {
+function keepImportHere(dir: string, id: string, text: string): string {
   const path = importPath(id);
   mkdirSync(dirname(join(dir, path)), { recursive: true });
   writeFileSync(join(dir, path), text);
@@ -235,7 +236,14 @@ export function keepImport(dir: string, id: string, text: string): string {
 }
 
 /** Forgets the kept file of an import that was rolled back. */
-export function dropImport(dir: string, id: string): void {
+function dropImportHere(dir: string, id: string): void {
   if (!SAFE_IMPORT_ID.test(id)) return;
   rmSync(join(dir, importPath(id)), { force: true });
 }
+
+// Run as the project's user where one is configured (as-project.ts).
+export const prepareImport = asProject("prepareImport", prepareImportHere);
+export const insertImport = asProject("insertImport", insertImportHere);
+export const importOwner = asProject("importOwner", importOwnerHere);
+export const keepImport = asProject("keepImport", keepImportHere);
+export const dropImport = asProject("dropImport", dropImportHere);
