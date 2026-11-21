@@ -4,6 +4,7 @@ import { STARTER_TEXTS } from "@smithable/ai";
 import { expect, test, vi } from "vitest";
 import { run } from "./cli.js";
 import { administered } from "./new.js";
+import { forgetProjectUserForTests } from "./secrets.js";
 import { tempDir } from "./test-dir.js";
 import { captureIo } from "./test-io.js";
 import { VERSION } from "./version.js";
@@ -13,6 +14,23 @@ test("--version prints the Smithable and spec versions", async () => {
   expect(await run(["--version"], io)).toBe(0);
   // The version is whatever is stamped (scripts/set-version.mjs runs before the publish workflow's tests).
   expect(io.stdout).toBe(`smithable ${VERSION} (spec 0.1)\n`);
+});
+
+test("given a project uid, a process without exactly the three capabilities does not run", async () => {
+  // A test process holds no capability (or, as root, all of them): either way not the three.
+  process.env.SMITHABLE_PROJECT_UID = "1000";
+  process.env.SMITHABLE_PROJECT_GID = "1000";
+  forgetProjectUserForTests();
+  try {
+    const io = captureIo();
+    expect(await run(["--version"], io)).toBe(1);
+    expect(io.stderr).toContain("must hold exactly KILL, SETGID and SETUID");
+    expect(io.stdout).toBe("");
+  } finally {
+    delete process.env.SMITHABLE_PROJECT_UID;
+    delete process.env.SMITHABLE_PROJECT_GID;
+    forgetProjectUserForTests();
+  }
 });
 
 test("no arguments prints help", async () => {

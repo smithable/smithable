@@ -21,7 +21,7 @@ import { runOperation } from "./op.js";
 import { loadPlugins } from "./plugins.js";
 import { restore } from "./restore.js";
 import { projectIndex } from "./rules.js";
-import { childEnv } from "./secrets.js";
+import { childOptions } from "./secrets.js";
 import { undoLatest } from "./undo.js";
 import { loadSpec } from "./validate.js";
 import { verify } from "./verify.js";
@@ -185,7 +185,7 @@ function tools(dir: string): Tool[] {
           cwd: dir,
           encoding: "utf8",
           stdio: ["ignore", "pipe", "pipe"],
-          env: childEnv({ ...process.env, NO_COLOR: "1" }),
+          ...childOptions({ ...process.env, NO_COLOR: "1" }),
         });
         // The summary and any failures; the full log would waste the agent's context.
         const lines = `${result.stdout}${result.stderr}`.split("\n");

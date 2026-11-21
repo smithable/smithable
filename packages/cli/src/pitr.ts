@@ -12,14 +12,14 @@ import { dataKey, tableNames, titleField } from "@smithable/adapter-tanstack";
 import { dataDiffSql, type ModelIR, restoreOrder, snake } from "@smithable/core";
 import { BUSY_MS } from "./database.js";
 import type { Io } from "./io.js";
-import { childEnv } from "./secrets.js";
+import { childOptions } from "./secrets.js";
 import { loadSpec } from "./validate.js";
 
 /** How long the stream keeps every second (the hosted service's window). */
 const WINDOW = "720h";
 
 const hasLitestream = () =>
-  spawnSync("sh", ["-c", "command -v litestream"], { env: childEnv() }).status === 0;
+  spawnSync("sh", ["-c", "command -v litestream"], { ...childOptions() }).status === 0;
 
 /** Litestream's replica for a folder or an s3:// address (credentials in AWS_* variables). */
 const replicaUrl = (to: string) => (to.startsWith("s3://") ? to : `file://${resolve(to)}`);
@@ -54,7 +54,7 @@ export function backupContinuous(
   );
   return new Promise((done) => {
     const child = spawn("litestream", ["replicate", "-config", config], {
-      env: childEnv(),
+      ...childOptions(),
       stdio: "inherit",
     });
     child.on("exit", (code) => done(code ?? 0));
@@ -123,7 +123,7 @@ export function restoreAt(
         at.toISOString().replace(/\.\d+Z$/, "Z"),
         replicaUrl(options.from),
       ],
-      { env: childEnv(), encoding: "utf8" },
+      { ...childOptions(), encoding: "utf8" },
     );
     if (restored.status !== 0) {
       io.err(

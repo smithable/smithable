@@ -14,7 +14,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { type Diagnostic, formatDiagnostic } from "@smithable/core";
 import type { Io } from "./io.js";
-import { childEnv } from "./secrets.js";
+import { childOptions } from "./secrets.js";
 import { loadSpec } from "./validate.js";
 
 /**
@@ -44,7 +44,7 @@ export function isManaged(path: string): boolean {
 /** A managed file's text at a commit, or null when the commit has none (or cannot be read). */
 export function showAt(dir: string, rev: string, path: string): string | null {
   const r = spawnSync("git", ["show", `${rev}:${path}`], {
-    env: childEnv(),
+    ...childOptions(),
     cwd: dir,
     encoding: "utf8",
     stdio: ["ignore", "pipe", "ignore"],
@@ -55,7 +55,7 @@ export function showAt(dir: string, rev: string, path: string): string | null {
 /** Every managed file a commit has, with its text; undefined when the commit cannot be read. */
 export function managedAt(dir: string, rev: string): Record<string, string> | undefined {
   const r = spawnSync("git", ["ls-tree", "-r", "--name-only", rev], {
-    env: childEnv(),
+    ...childOptions(),
     cwd: dir,
     encoding: "utf8",
     stdio: ["ignore", "pipe", "ignore"],

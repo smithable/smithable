@@ -7,7 +7,7 @@ import { migrationConsequences, migrationKind, type SchemaSnapshot } from "./fix
 import { generate, projectProfile } from "./generate.js";
 import { discardChanges, ensureRepository, git, uncommitted, uncommittedRefusal } from "./git.js";
 import type { Io } from "./io.js";
-import { childEnv } from "./secrets.js";
+import { childOptions } from "./secrets.js";
 import { loadSpec } from "./validate.js";
 import { VERSION } from "./version.js";
 
@@ -69,7 +69,7 @@ export async function upgrade(dir: string, io: Io): Promise<number> {
     ["tests", ["test"]],
   ] as const) {
     const run = spawnSync("pnpm", [...args], {
-      env: childEnv(),
+      ...childOptions(),
       cwd: dir,
       encoding: "utf8",
       maxBuffer: 1 << 26,

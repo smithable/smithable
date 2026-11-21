@@ -22,7 +22,7 @@ import { CAPTURE_MS, captureProgram, stopCaptureProgram } from "./backup-capture
 import { appName } from "./build.js";
 import type { Io } from "./io.js";
 import { S3 } from "./s3.js";
-import { childEnv } from "./secrets.js";
+import { childOptions } from "./secrets.js";
 
 /**
  * Backups (ARCHITECTURE §12): what is irreplaceable in /data, the database (a consistent
@@ -230,7 +230,7 @@ export async function backup(
       const token = randomUUID();
       const exec = (args: string[], step: string, absent = false) => {
         const result = spawnSync("docker", args, {
-          env: childEnv(),
+          ...childOptions(),
           encoding: "utf8",
           timeout: step === "The snapshot" ? CAPTURE_MS + 5000 : undefined,
         });
@@ -326,7 +326,7 @@ export async function backup(
             toUploads: join(local, "uploads"),
           }),
         ],
-        { env: childEnv(), cwd: dir, encoding: "utf8", timeout: CAPTURE_MS + 5000 },
+        { ...childOptions(), cwd: dir, encoding: "utf8", timeout: CAPTURE_MS + 5000 },
       );
       if (snap.error || snap.signal || snap.status !== 0)
         throw new Error(
@@ -382,7 +382,7 @@ export async function restore(
       io.err("Legacy backup: no manifest or checksum verification is available.\n");
     if (options.container) {
       const docker = (args: string[]) => {
-        const result = spawnSync("docker", args, { env: childEnv(), encoding: "utf8" });
+        const result = spawnSync("docker", args, { ...childOptions(), encoding: "utf8" });
         if (result.error || result.signal || result.status !== 0)
           throw new Error(
             `Docker ${args[0]} failed: ${result.error?.message || result.stderr || result.signal || `exit status ${result.status}`}`,

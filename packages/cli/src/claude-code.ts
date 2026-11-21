@@ -3,7 +3,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { Provider } from "@smithable/ai";
-import { childEnv } from "./secrets.js";
+import { childOptions } from "./secrets.js";
 
 /**
  * A frontier model through the user's own Claude Code (ARCHITECTURE §9.5): `claude -p`
@@ -37,7 +37,7 @@ export function claudeCode(model?: string): Provider {
         ];
         const out = await new Promise<string>((resolve, reject) => {
           const child = spawn("claude", args, {
-            env: childEnv(),
+            ...childOptions(),
             cwd: dir,
             stdio: ["ignore", "pipe", "pipe"],
           });

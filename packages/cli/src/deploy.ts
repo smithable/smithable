@@ -11,7 +11,7 @@ import {
   projectRevision,
   recordDeployment,
 } from "./release-review.js";
-import { childEnv } from "./secrets.js";
+import { childOptions } from "./secrets.js";
 import { security } from "./security.js";
 
 /** Sign-in provider keys and mail settings passed to the app from the environment when set; never stored. */
@@ -95,7 +95,7 @@ export async function deploy(
   const docker = (args: string[]) =>
     spawnSync("docker", args, {
       cwd: dir,
-      env: childEnv(env),
+      ...childOptions(env),
       encoding: "utf8",
       maxBuffer: 1 << 26,
     });
