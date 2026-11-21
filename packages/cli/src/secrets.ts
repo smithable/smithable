@@ -14,7 +14,8 @@ import {
   openSync,
   readdirSync,
   readFileSync,
-  writeFileSync,
+  readSync,
+  writeSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -164,26 +165,30 @@ export function sealScratch(dir: string): void {
   if (projectUser()) chmodSync(dir, 0o2750);
 }
 
-/** A child's file opened without following a link: a regular file of the project user's (this process's where none is configured), or an error. */
-function openBack(path: string): number {
-  const fd = openSync(path, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
-  const stat = fstatSync(fd);
-  if (stat.isFile() && stat.uid === (projectUser()?.uid ?? process.getuid?.() ?? stat.uid))
-    return fd;
-  closeSync(fd);
-  throw new Error(`${path} is not a file the child made.`);
-}
-
-/** Refuses a child's file that is a link, not a plain file, or another user's: in a sealed folder, it stays so. */
-export function checkBack(path: string): void {
-  closeSync(openBack(path));
-}
-
-/** A child's file's contents, refused as `checkBack` refuses. */
-export function readBack(path: string): Buffer {
-  const fd = openBack(path);
+/**
+ * Copies a file a child made into `to`, a new file in a folder of this process's, so that what
+ * is read or opened later is this process's own copy. The child's file is opened without following
+ * a link or waiting on a pipe, and must be a plain file with one name, of the project user's (this
+ * process's where none is configured); anything else is refused.
+ */
+export function copyBack(from: string, to: string): void {
+  const fd = openSync(
+    from,
+    constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0) | (constants.O_NONBLOCK ?? 0),
+  );
   try {
-    return readFileSync(fd);
+    const stat = fstatSync(fd);
+    const owner = projectUser()?.uid ?? process.getuid?.() ?? stat.uid;
+    if (!stat.isFile() || stat.nlink !== 1 || stat.uid !== owner)
+      throw new Error(`${from} is not a file the child made.`);
+    const out = openSync(to, "wx", 0o600);
+    try {
+      const buffer = Buffer.alloc(1 << 20);
+      for (let n = readSync(fd, buffer); n > 0; n = readSync(fd, buffer))
+        writeSync(out, buffer, 0, n);
+    } finally {
+      closeSync(out);
+    }
   } finally {
     closeSync(fd);
   }
@@ -191,8 +196,8 @@ export function readBack(path: string): Buffer {
 
 /**
  * Copies what a child made in `from` into `to`, a folder of this process's: folders and plain
- * files only, each file read as `readBack` reads it (a link or another user's file is refused,
- * whatever a folder on the way was swapped for) and written new.
+ * files only, each file as `copyBack` copies it (a link or another user's file is refused, so a
+ * folder on the way swapped for a link reaches only what the project could have put here itself).
  */
 export function takeBack(from: string, to: string): void {
   for (const entry of readdirSync(from)) {
@@ -200,7 +205,7 @@ export function takeBack(from: string, to: string): void {
     if (lstatSync(a).isDirectory()) {
       mkdirSync(b);
       takeBack(a, b);
-    } else writeFileSync(b, readBack(a), { flag: "wx" });
+    } else copyBack(a, b);
   }
 }
 
