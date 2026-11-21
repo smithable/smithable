@@ -1877,17 +1877,23 @@ ${dropPictures(
   // the model's picture fields (files are named by their content, so they may be shared).
   const stillShown = (_k: string, file: string) =>
     `keepsUpload(${file}) || !!db.select({ id: ${n.table}.id }).from(${n.table}).where(sql\`${pictures.map((k) => `\${${n.table}.${k}} like \${\`%"file":"\${${file}}"%\`}`).join(" or ")}\`).get()`;
-  const dropPictures = (after: (key: string) => string, afterList: (key: string) => string) =>
+  // On an update (`kept`, the picture after), a picture kept with fewer smaller copies loses
+  // the dropped copies' files the same way.
+  const dropPictures = (
+    after: (key: string) => string,
+    afterList: (key: string) => string,
+    kept?: (key: string) => string,
+  ) =>
     pictures.length
       ? `    cleanUploads(() => {\n${[
           ...singles.map(
             (k) =>
-              `    if (row.${k} && row.${k}.file !== ${after(k)}) deletePicture(row.${k}, ${stillShown(k, `row.${k}.file`)}, (file) => ${stillShown(k, "file")});\n`,
+              `    if (row.${k} && row.${k}.file !== ${after(k)}) deletePicture(row.${k}, ${stillShown(k, `row.${k}.file`)}, (file) => ${stillShown(k, "file")});\n${kept ? `    dropCopies(row.${k}, ${kept(k)}, (file) => ${stillShown(k, "file")});\n` : ""}`,
           ),
           // Of several pictures, each one no longer among them.
           ...pictureLists.map(
             (k) =>
-              `    for (const p of row.${k} ?? []) if (!${afterList(k)}.includes(p.file)) deletePicture(p, ${stillShown(k, "p.file")}, (file) => ${stillShown(k, "file")});\n`,
+              `    for (const p of row.${k} ?? []) if (!${afterList(k)}.includes(p.file)) deletePicture(p, ${stillShown(k, "p.file")}, (file) => ${stillShown(k, "file")});${kept ? ` else dropCopies(p, ${kept(k)}.find((q) => q.file === p.file), (file) => ${stillShown(k, "file")});` : ""}\n`,
           ),
           // Documents the same way.
           ...docSingles.map(
@@ -1967,7 +1973,7 @@ ${(composedName(model) || lined) && referenced ? 'import { sortRows } from "#/ki
   )
   .join(
     "",
-  )}${longTitle(model) ? 'import { titleOf } from "#/kit/format";\n' : ""}${mails ? `${OUTGOING_IMPORT}\n` : ""}${filteredBy || ((referenced || paged) && titleColumn !== "id") || (paged && (searched.length || nameSearch.some((c) => c.includes("contains(")))) ? `import { contains } from "#/kit/search";\n` : ""}${paged || ruled || orderPage || filteredBy ? 'import { BadInput } from "#/kit/refusal";\n' : ""}${ruled ? 'import { fits } from "#/kit/model";\n' : ""}${paged ? 'import { aggregate, type Filterable, nearest, sortOf, whereOf, wordsOf } from "#/kit/where";\n' : ""}${ruled ? 'import { w } from "#/kit/words";\n' : ""}${pictures.length ? `import { ${[...(singles.length || pictureLists.length ? ["deletePicture"] : []), ...(docSingles.length || docLists.length ? ["deleteFile"] : [])].join(", ")} } from "#/kit/uploads";\n` : ""}${model.fields.some(isUpload) ? 'import { acceptFiles, cleanUploads, keepsUpload } from "#/kit/receipts.server";\n' : ""}${model.review && signedIn ? 'import { tellReviewers } from "#/kit/review-mail.server";\n' : ""}${capacity?.closes || capacity?.cancelUntil ? 'import { now } from "#/kit/now";\n' : ""}${payEntry ? 'import { askPayment } from "#/kit/payments.server";\n' : ""}${sends ? `import { ${trashing ? "endLinks, " : ""}removeCopies } from "#/kit/view.server";\n` : ""}import { afterChange, afterDelete } from "./hooks";
+  )}${longTitle(model) ? 'import { titleOf } from "#/kit/format";\n' : ""}${mails ? `${OUTGOING_IMPORT}\n` : ""}${filteredBy || ((referenced || paged) && titleColumn !== "id") || (paged && (searched.length || nameSearch.some((c) => c.includes("contains(")))) ? `import { contains } from "#/kit/search";\n` : ""}${paged || ruled || orderPage || filteredBy ? 'import { BadInput } from "#/kit/refusal";\n' : ""}${ruled ? 'import { fits } from "#/kit/model";\n' : ""}${paged ? 'import { aggregate, type Filterable, nearest, sortOf, whereOf, wordsOf } from "#/kit/where";\n' : ""}${ruled ? 'import { w } from "#/kit/words";\n' : ""}${pictures.length ? `import { ${[...(singles.length || pictureLists.length ? ["deletePicture", "dropCopies"] : []), ...(docSingles.length || docLists.length ? ["deleteFile"] : [])].join(", ")} } from "#/kit/uploads";\n` : ""}${model.fields.some(isUpload) ? 'import { acceptFiles, cleanUploads, keepsUpload } from "#/kit/receipts.server";\n' : ""}${model.review && signedIn ? 'import { tellReviewers } from "#/kit/review-mail.server";\n' : ""}${capacity?.closes || capacity?.cancelUntil ? 'import { now } from "#/kit/now";\n' : ""}${payEntry ? 'import { askPayment } from "#/kit/payments.server";\n' : ""}${sends ? `import { ${trashing ? "endLinks, " : ""}removeCopies } from "#/kit/view.server";\n` : ""}import { afterChange, afterDelete } from "./hooks";
 ${occ ? occupiesImports() : ""}${unmerge ? unmergeImports(ir, model, t) : ""}${[...others]
   .map((m) => `import { ${names(m, t).data} } from "./${kebab(m.name)}.server";`)
   .join("\n")}${others.size ? "\n" : ""}${[...labelledKinds]
@@ -2885,6 +2891,7 @@ ${loadComputed}    let changed: typeof ${n.table}.$inferSelect;
 ${dropPictures(
   (k) => `changed.${k}?.file`,
   (k) => `(changed.${k} ?? []).map((p) => p.file)`,
+  (k) => (pictureLists.includes(k) ? `(changed.${k} ?? [])` : `changed.${k}`),
 )}    await afterChange("afterUpdate", "${model.name}", changed, viewer);
     return changed;
   },

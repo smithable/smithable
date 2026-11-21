@@ -1,0 +1,9 @@
+id: dropped-picture-copies
+title: An edit that kept a picture but dropped one of its smaller copies left the copy's file stored.
+severity: fix
+exposure: none
+introduced: unknown
+affects:
+  kit: [src/kit/uploads.ts]
+  features: [field:picture, field:pictures]
+migration: none

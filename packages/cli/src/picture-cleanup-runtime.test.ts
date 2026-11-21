@@ -91,6 +91,7 @@ test("generated post-commit picture cleanup is fenced and rechecks current refer
     "row",
     "changed",
     "deletePicture",
+    "dropCopies",
     "schema",
     "sql",
     "keepsUpload",
@@ -106,6 +107,8 @@ test("generated post-commit picture cleanup is fenced and rechecks current refer
         expect(() => other.exec("BEGIN IMMEDIATE")).toThrow(/locked/);
         if (!used) present = false;
       },
+      // The picture is removed, not kept with fewer copies: nothing for dropCopies.
+      () => {},
       { instructors: { id: "id", portrait: "portrait" } },
       () => "condition",
       () => receiptActive,
