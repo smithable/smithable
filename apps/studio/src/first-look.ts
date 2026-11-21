@@ -5,10 +5,6 @@ export interface LookChange {
   change?: string;
   revision?: string;
 }
-export interface ThemePreviewHost {
-  apply: (preset: string, revision: string) => Promise<LookChange>;
-  undo: (change: string, revision: string) => Promise<LookChange>;
-}
 
 /**
  * A look panel's own changes, one per setting at most: choosing a setting again undoes its
@@ -112,17 +108,20 @@ export class LookSession {
   }
 }
 
-/** The first-look picker: a look session over the theme alone. */
-export class ThemePreview extends LookSession {
-  constructor(
-    opening: { preset: string; revision: string },
-    private readonly host: ThemePreviewHost,
-  ) {
-    super({ values: { preset: opening.preset }, revision: opening.revision }, host.undo);
-  }
-
-  choose(preset: string): Promise<void> {
-    return this.set("preset", preset, (revision) => this.host.apply(preset, revision));
+/**
+ * Keep in the first-look picker (T1164): a choice there was only tried on in the preview, so Keep
+ * makes the look's real changes, one operation each, every one on the revision the last left.
+ * The picture style goes first: it needs the picture library and is the one likely to be refused.
+ */
+export async function keepLook(
+  revision: string,
+  steps: ((revision: string) => Promise<LookChange>)[],
+): Promise<void> {
+  let at = revision;
+  for (const step of steps) {
+    const result = await step(at);
+    if (!result.ok) throw new Error(result.output);
+    if (result.revision) at = result.revision;
   }
 }
 

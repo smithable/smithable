@@ -2476,6 +2476,7 @@ export function App() {
       {pickingLook && (
         <FirstLook
           project={pickingLook.project}
+          spec={spec}
           preset={pickingLook.preset}
           aiBadge={spec.ux?.aiBadge ?? true}
           onRefresh={catchUp}

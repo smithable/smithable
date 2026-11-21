@@ -138,15 +138,13 @@ export async function checkStudioSmoke(browser, base, evidence) {
       assert.ok(theme, "The alternate theme needs an accessible name");
       await alternative.click();
       await look.getByRole("button", { name: theme, exact: true, pressed: true }).waitFor();
-      const chosenUx = await readUx();
-      assert.notEqual(chosenUx, openingUx, "The selected theme did not reach the project");
+      // A tried theme is only in the preview (T1164): Keep saves it, Cancel leaves the app as it was.
+      assert.equal(await readUx(), openingUx, "A tried theme reached the project");
       await look.getByRole("button", { name: choice, exact: true }).click();
       await look.waitFor({ state: "detached" });
-      assert.equal(
-        await readUx(),
-        choice === "Cancel" ? openingUx : chosenUx,
-        `${choice} left the wrong theme saved`,
-      );
+      const savedUx = await readUx();
+      if (choice === "Cancel") assert.equal(savedUx, openingUx, "Cancel saved a theme");
+      else assert.notEqual(savedUx, openingUx, "Keep did not save the chosen theme");
       await presentation.getByRole("button", { name: "Skip", exact: true }).click();
       await presentation.waitFor({ state: "detached" });
       // On a cold runner the guide waits for the preview or its own 20-second fallback.

@@ -1,40 +1,37 @@
+import { stageThemeSelection } from "@smithable/core";
 import { useEffect, useRef, useState } from "react";
 import { api, type PictureStyles, type Project } from "./api";
 import { SMITHS } from "./builder/chat-style";
 import { SmithFace } from "./builder/SmithFace";
-import { ThemePreview } from "./first-look";
+import type { Spec } from "./engine";
+import { keepLook, type LookChange } from "./first-look";
+import { letGoTriedTheme, tryThemeInPreview } from "./preview";
 import { ThemeCards } from "./ThemeCards";
 import { Button, cx } from "./ui";
 
 /**
- * The first visit's picker: themes preview live; picture cards use complete sets, applied once
- * when kept. Look in the toolbar opens LookPanel instead.
+ * The first visit's picker: a theme card is only tried on in the preview, its CSS put into the
+ * page, with no operation (T1164); picture cards use complete sets. Keep makes the changes, the
+ * picture style and one setTheme; Cancel makes none. Look in the toolbar opens LookPanel instead.
  */
 export function FirstLook({
   project,
+  spec,
   preset,
   aiBadge,
   onRefresh,
   onClose,
 }: {
   project: Project;
+  spec: Spec;
   preset: string;
   aiBadge: boolean;
   onRefresh: () => Promise<void>;
   onClose: (options: { error?: string }) => void;
 }) {
-  const [session] = useState(
-    () =>
-      new ThemePreview(
-        { preset, revision: project.revision ?? "" },
-        {
-          apply: (theme, revision) => api.chooseTheme(theme, revision, project.lookProject ?? ""),
-          undo: (change, revision) =>
-            api.undoThemeChoice(change, revision, project.lookProject ?? ""),
-        },
-      ),
-  );
   const [selected, setSelected] = useState(preset);
+  // The adapter writes a theme's CSS; it is loaded beside the picker, as the look editor loads it.
+  const [adapter] = useState(() => import("@smithable/adapter-tanstack"));
   const [pictures, setPictures] = useState<PictureStyles>();
   const [pictureStep, setPictureStep] = useState(false);
   const [selectedStyle, setSelectedStyle] = useState<string>();
@@ -56,7 +53,6 @@ export function FirstLook({
     };
   }, [project.lookProject]);
   const havePictures = Boolean(pictures?.offer && pictures.styles.length);
-  const [pending, setPending] = useState(0);
   const [closing, setClosing] = useState(false);
   const [error, setError] = useState<string>();
   const heading = useRef<HTMLHeadingElement>(null);
@@ -67,55 +63,72 @@ export function FirstLook({
       if (previous instanceof HTMLElement && previous.isConnected) previous.focus();
     };
   }, []);
+  // The card shows chosen at the click; the preview follows as soon as the CSS is written.
+  const tried = useRef(0);
   const choose = async (theme: string) => {
-    setPending((value) => value + 1);
+    setSelected(theme);
+    setError(undefined);
+    const turn = ++tried.current;
     try {
-      await session.choose(theme);
-      setSelected(theme);
-    } catch (error) {
-      setError((error as Error).message);
-    } finally {
-      await onRefresh();
-      setPending((value) => value - 1);
+      const { themeCss } = await adapter;
+      if (turn !== tried.current || !spec.ir) return;
+      const { ux } = stageThemeSelection(
+        {
+          ir: spec.ir,
+          uxText: project.files.ux ?? "",
+          themes: project.ownThemes,
+          ...(spec.auth ? { auth: spec.auth } : {}),
+        },
+        { preset: theme },
+      );
+      tryThemeInPreview(themeCss(ux, project.ownThemes));
+    } catch (reason) {
+      if (turn === tried.current) setError((reason as Error).message);
     }
   };
+  // Whatever closes the picker without Keep (Cancel, Escape, leaving the app) takes the tried
+  // theme off the preview.
+  const kept = useRef(false);
+  useEffect(() => () => letGoTriedTheme(!kept.current), []);
   const finish = async (keep: boolean, style = selectedStyle) => {
     if (closing) return;
-    setClosing(true);
-    let refusal = error;
-    const changingPictures =
-      keep && pictureStep && style && style !== pictures?.current && pictures?.offer;
-    try {
-      await session.finish(
-        keep,
-        changingPictures
-          ? (revision) =>
-              api.choosePictureStyle(
-                style as string,
-                revision,
-                project.lookProject ?? "",
-                pictures?.offer ?? "",
-              )
-          : undefined,
-      );
-    } catch (reason) {
-      if (changingPictures) {
-        setPictureError((reason as Error).message);
-        setClosing(false);
-        await onRefresh();
-        return;
-      }
-      refusal = `Cancel could not restore the opening look: ${(reason as Error).message} Review the changes in Changes.`;
+    if (!keep) {
+      onClose({});
+      return;
     }
+    setClosing(true);
+    const lookProject = project.lookProject ?? "";
+    const changingPictures = Boolean(
+      pictureStep && style && style !== pictures?.current && pictures?.offer,
+    );
+    const steps: ((revision: string) => Promise<LookChange>)[] = [];
+    if (changingPictures)
+      steps.push((revision) =>
+        api.choosePictureStyle(style as string, revision, lookProject, pictures?.offer ?? ""),
+      );
+    if (selected !== preset)
+      steps.push((revision) => api.chooseTheme(selected, revision, lookProject));
+    try {
+      await keepLook(project.revision ?? "", steps);
+    } catch (reason) {
+      const message = (reason as Error).message;
+      if (changingPictures) setPictureError(message);
+      else setError(message);
+      setClosing(false);
+      await onRefresh();
+      return;
+    }
+    // With nothing changed no new page comes, so the tried theme is taken off this one.
+    kept.current = steps.length > 0;
     await onRefresh();
-    onClose({ error: refusal });
+    onClose({});
   };
   return (
     <section
       role="dialog"
       aria-label="Choose a look"
       aria-labelledby="first-look-title"
-      aria-busy={pending > 0 || closing}
+      aria-busy={closing}
       className="first-look"
       onKeyDown={(event) => {
         if (event.key === "Escape") {
@@ -147,7 +160,7 @@ export function FirstLook({
         {!pictureStep ? (
           <>
             <h3 className="mb-3 text-sm font-medium">Which look feels right?</h3>
-            <fieldset disabled={closing || Boolean(error)}>
+            <fieldset disabled={closing}>
               <ThemeCards
                 themes={project.themes}
                 preset={selected}
@@ -169,7 +182,7 @@ export function FirstLook({
             <p className="mb-3 text-sm text-muted">
               The same subjects, in another style. Pictures change only when you keep this look.
             </p>
-            <fieldset disabled={closing || Boolean(error)}>
+            <fieldset disabled={closing}>
               <ul aria-label="Picture styles" className="space-y-3">
                 {pictures?.styles.map((style) => (
                   <li key={style.id}>
@@ -244,14 +257,15 @@ export function FirstLook({
             Your current picture style is no longer offered. The app keeps its pictures.
           </p>
         )}
-        {pending > 0 && (
-          <p role="status" className="mt-3 text-sm text-muted">
-            Updating your preview…
+        {closing && (
+          <p role="status" className="mt-3 flex items-center gap-2 text-sm text-muted">
+            <SmithFace mood="working" />
+            Keeping your look…
           </p>
         )}
         {error && (
           <p role="alert" className="mt-3 text-sm text-danger">
-            {error} Close the picker and reopen Look to read the app again.
+            {error}
           </p>
         )}
       </div>

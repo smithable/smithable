@@ -19,12 +19,13 @@ so the overlay shows once per browser even while the app is still as made.
 The two steps:
 
 1. **Theme.** The shipped themes as cards, the picked set first, in its order. Choosing a card
-   applies it to the preview at once. The app's current theme is shown as chosen.
+   shows it in the preview at once, on the page being looked at, without changing the app. The
+   app's current theme is shown as chosen.
 2. **Pictures.** The image styles this app can have, as cards, each showing three of the app's
    own pictures in that style, straight from the library. The chosen style is put into the
    app once, when the look is kept.
 
-"Keep this look" closes it. "Cancel" closes it and puts back what was there when it opened. Then
+"Keep this look" makes the changes and closes it. "Cancel" closes it and changes nothing. Then
 Smith's presentation and the guide follow as today. For any app, new or not, Look in the top bar
 opens the Look panel beside the preview, without the presentation or the guide.
 
@@ -35,8 +36,8 @@ library. Picking is free, instant and the same every time.
 
 - First run is decided in Studio (`App.tsx`, `firstVisit`), per browser and per app, in the
   browser's storage: the making screen, then Smith's presentation on an overlay, then the guide.
-- Themes: `THEME_PRESETS`, the picked themes first. Look's cards run `setTheme { preset }` on a
-  click. There is no trying before applying.
+- Themes: `THEME_PRESETS`, the picked themes first. Look's cards ran `setTheme { preset }` on a
+  click. There was no trying before applying (changed in §3, 2026-11-22).
 - Every applied operation is one Git commit in the app's repository, with the files it changed,
   and can be undone on its own (ARCHITECTURE, "Checkpoints use Git").
 - Pictures are placed once, by the CLI at creation (`pictures.ts`, `addLibraryPictures`), fetched
@@ -52,14 +53,22 @@ library. Picking is free, instant and the same every time.
 ## 3 Step 1: theme
 
 - Look's theme cards become one component used in both places.
-- A click applies the theme with `setTheme`. A second click first undoes the overlay's own
-  earlier theme change, so the overlay leaves at most one theme change behind.
-- "Cancel" undoes the overlay's own changes, newest first, and nothing else. If someone else (a
-  second browser, Smith, the command line) changed the app meanwhile so that an undo no longer
-  applies cleanly, the overlay says so and leaves the app as it is; it never undoes another's work.
-- When Cancel had to refuse, the changes are ordinary entries in the app's history and can be
-  undone there like any other.
-- Clicks are handled one at a time; a click while a change is being applied waits for it.
+- A click in the overlay only tries the theme on (Johan, 2026-11-22: until the picker closes no
+  real change should be made). The card shows as chosen at once, and Studio puts the theme's
+  CSS, as the app's `theme.css` would have it (`stageThemeSelection` in the browser, then the
+  adapter's `themeCss`), into the preview's page through the preview editor's
+  `smithable:theme-css` message, the same way the theme lab shows a theme. There is no
+  operation, no commit, no regeneration, and no line in Smith or Changes. A page that loads again
+  while the overlay is open gets the tried theme again.
+- "Keep this look" makes the look's changes through the operation layer: the picture style when
+  one was chosen (first, since it needs the image library and is the one likely to be refused),
+  then one `setTheme { preset }` when the theme differs from the app's. Each runs on the
+  revision the last left. These are the only entries in the app's history, and the only lines in
+  Smith and Changes. While they run, Smith's working face shows; the preview keeps showing the
+  tried look until the new page has it.
+- "Cancel", Escape or leaving the app makes no change, and takes the tried theme off the preview
+  page (an empty `smithable:theme-css`). There is nothing to undo, so nothing can undo another
+  writer's work.
 - On a wide screen the overlay sits to one side, the preview beside it; on a phone it is a sheet
   over the lower half.
 
@@ -171,5 +180,6 @@ out what no page uses, by that record and not by folder names. Its own task.
 Step 3 gets the full review and the gate (core, and files written into projects). Tests, at
 least: a style change undone restores the same bytes; a changed or uploaded picture survives; an
 incomplete style is not offered; no network refuses and changes nothing; a changed library does
-not change a generated app; Cancel puts back the opening state and refuses when another change
-came between; Studio's check walks the overlay, keeps, skips and reopens it from Look.
+not change a generated app; a tried theme writes nothing and Cancel leaves the app as it was;
+Keep makes one `setTheme`; Studio's check walks the overlay, keeps, skips and reopens it from
+Look.

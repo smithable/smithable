@@ -205,18 +205,12 @@ export async function checkPicturePicker(port = 5840) {
       return { context, page, picker };
     };
     const requests = [];
-    // Automatic: choices are only staged and Cancel restores the opening theme.
+    // Automatic: a theme is only tried on in the preview and Cancel writes nothing (T1164).
     let opened = await open(true);
     page.on("request", (request) => {
       if (new URL(request.url()).pathname === "/api/op") requests.push(request.postDataJSON());
     });
-    const theme = opened.picker.locator('button[aria-pressed="false"]').first();
-    const applied = page.waitForResponse(
-      (response) => new URL(response.url()).pathname === "/api/op",
-    );
-    await theme.click();
-    assert.ok((await (await applied).json()).ok);
-    await page.waitForFunction(() => document.querySelector('.first-look[aria-busy="false"]'));
+    await opened.picker.locator('button[aria-pressed="false"]').first().click();
     await opened.picker.getByRole("button", { name: "Next: Pictures", exact: true }).click();
     await opened.picker
       .getByRole("heading", { name: "Choose an image style", exact: true })
@@ -241,6 +235,7 @@ export async function checkPicturePicker(port = 5840) {
     assert.equal(requests.filter((r) => r.name === "setPictureStyle").length, 0);
     await opened.picker.getByRole("button", { name: "Cancel", exact: true }).click();
     await opened.picker.waitFor({ state: "detached" });
+    assert.deepEqual(requests, [], "a tried theme or style wrote something");
     assert.equal(readFileSync(join(dir, "smithable.ux.yml"), "utf8"), openingUx);
     await opened.context.close();
     // The library advances after cards were read. Keep must use the shown v1 pictures once.
