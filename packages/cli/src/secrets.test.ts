@@ -22,6 +22,7 @@ import {
   forgetProjectUserForTests,
   holdSecrets,
   holdSecretsFromJson,
+  loadsNoProjectCode,
   modelKey,
   releaseSecretsForTests,
   scratchDir,
@@ -271,4 +272,18 @@ test("on standard input the two come as JSON, and nothing else is taken", () => 
     /does not take "PATH"/,
   );
   expect(() => holdSecretsFromJson(JSON.stringify({ modelKey: 4 }))).toThrow(/must be a string/);
+});
+
+test("a process whose children run as the project's user loads none of the project's code itself", () => {
+  expect(loadsNoProjectCode()).toBe(false);
+  process.env.SMITHABLE_PROJECT_UID = "4242";
+  process.env.SMITHABLE_PROJECT_GID = "4242";
+  forgetProjectUserForTests();
+  expect(loadsNoProjectCode()).toBe(true);
+  // Where the choice is made, it is made by this, not by the secrets alone.
+  const here = new URL(".", import.meta.url).pathname;
+  const bySecret = readdirSync(here)
+    .filter((f) => f.endsWith(".ts") && !f.endsWith(".test.ts") && f !== "secrets.ts")
+    .filter((f) => readFileSync(join(here, f), "utf8").includes("holdsSecret("));
+  expect(bySecret).toEqual([]);
 });

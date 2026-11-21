@@ -2,7 +2,7 @@ import { existsSync, lstatSync, readFileSync, realpathSync } from "node:fs";
 import { createRequire } from "node:module";
 import { join, sep } from "node:path";
 import { resolvePlugin, type SpecPlugin, YamlEditor } from "@smithable/core";
-import { holdsSecret } from "./secrets.js";
+import { loadsNoProjectCode } from "./secrets.js";
 
 export const PLUGIN_NAME = /^[A-Za-z0-9][A-Za-z0-9_-]*$/;
 
@@ -42,7 +42,7 @@ export function loadPlugins(dir: string, extra: string[] = []): SpecPlugin[] {
   if (names.length === 0) return [];
   // A plugin is the project's code: never loaded beside a secret. The check is on holding one,
   // not on a hosted flag, so it fails closed.
-  if (holdsSecret()) throw new Error(NO_PLUGINS_HERE);
+  if (loadsNoProjectCode()) throw new Error(NO_PLUGINS_HERE);
   const root = realpathSync(dir);
   return names.flatMap((name) => {
     const path = pluginPath(dir, name);

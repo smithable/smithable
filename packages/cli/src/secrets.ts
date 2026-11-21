@@ -77,6 +77,13 @@ export const holdsSecret = (env: NodeJS.ProcessEnv = process.env): boolean =>
   (NAMES.some((name) => held[name] !== undefined) &&
     (fromStdin || Boolean(env.SMITHABLE_HOSTED_LEVEL?.trim())));
 
+/**
+ * This process loads no code the project can write (its plugins, the app's own tools, the app's
+ * Playwright): it holds a secret, or its children run as the project's user, which only means
+ * something if this process is not that user.
+ */
+export const loadsNoProjectCode = (): boolean => holdsSecret() || projectUser() !== undefined;
+
 /** The user children may run as, by `SMITHABLE_PROJECT_UID` and `_GID`; none when they are not set. */
 const PROJECT = ["SMITHABLE_PROJECT_UID", "SMITHABLE_PROJECT_GID"] as const;
 
