@@ -1,4 +1,4 @@
-import { type ChildProcess, spawn } from "node:child_process";
+import { type ChildProcess, execFileSync, spawn } from "node:child_process";
 import {
   chmodSync,
   cpSync,
@@ -6,12 +6,13 @@ import {
   mkdirSync,
   mkdtempSync,
   readFileSync,
+  realpathSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterAll, beforeAll, describe, expect, test } from "vitest";
+import { afterAll, beforeAll, describe, expect, test, vi } from "vitest";
 import {
   PREVIEW_TOKEN_DIGEST,
   PREVIEW_TOKEN_HEADER,
@@ -51,6 +52,23 @@ async function until(check: () => boolean, ms = 30_000): Promise<void> {
   }
 }
 
+/** The standalone Vite processes launched from this fixture's private directory. */
+function previewsIn(dir: string): number[] {
+  const command = ` ${join(dir, "node_modules/.bin/vite")} dev `;
+  return execFileSync("ps", ["-ww", "-e", "-o", "pid=,args="], { encoding: "utf8" })
+    .split("\n")
+    .filter((line) => `${line} `.includes(command))
+    .map((line) => Number.parseInt(line, 10));
+}
+
+function killGroup(pid: number): void {
+  try {
+    process.kill(-pid, "SIGKILL");
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "ESRCH") throw error;
+  }
+}
+
 interface Seen {
   env?: Record<string, string>;
   url?: string;
@@ -73,7 +91,7 @@ function hosted(given: "stdin" | "env") {
   };
 
   beforeAll(async () => {
-    dir = mkdtempSync(join(tmpdir(), "studio-host-"));
+    dir = realpathSync(mkdtempSync(join(tmpdir(), "studio-host-")));
     for (const name of [
       "smithable.yml",
       "smithable.auth.yml",
@@ -93,12 +111,41 @@ function hosted(given: "stdin" | "env") {
     studio.stdin?.end(given === "stdin" ? JSON.stringify({ studioToken: TOKEN }) : "");
     // Studio's own first request to the preview (its warm-up) has come in.
     await until(() => seen().some((line) => line.url));
+    expect(previewsIn(dir).length).toBeGreaterThan(0);
   }, 60_000);
 
-  afterAll(() => {
-    if (studio?.pid) process.kill(-studio.pid, "SIGKILL");
-    rmSync(dir, { recursive: true, force: true });
-  });
+  afterAll(async () => {
+    if (!dir) return;
+    const studioPid = studio?.pid;
+    const studioRunning = () =>
+      studio?.pid && studio.exitCode === null && studio.signalCode === null;
+    try {
+      // Let Studio stop the detached preview through its usual shutdown path.
+      if (studioRunning()) {
+        studio?.kill("SIGTERM");
+        await until(() => !studioRunning(), 5000);
+      }
+      await vi.waitFor(() => expect(previewsIn(dir)).toEqual([]), {
+        timeout: 2000,
+        interval: 200,
+      });
+    } finally {
+      // Keep a failed shutdown assertion from leaking this fixture's processes.
+      try {
+        if (studioPid) {
+          killGroup(studioPid);
+          await until(() => !studioRunning(), 2000);
+        }
+        const previews = previewsIn(dir);
+        if (previews.length) {
+          previews.forEach(killGroup);
+          await until(() => previewsIn(dir).length === 0, 2000);
+        }
+      } finally {
+        rmSync(dir, { recursive: true, force: true });
+      }
+    }
+  }, 15_000);
 
   test("the preview's process never sees Studio's token, only its own credential", () => {
     const lines = seen();
