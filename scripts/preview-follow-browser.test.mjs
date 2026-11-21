@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import test from "node:test";
 import { chromium } from "playwright";
-import { openPreviewAddress, showWorkspaceControls } from "./studio-form-checks.mjs";
+import { openPreviewAddress, openStudioGuide } from "./studio-form-checks.mjs";
 
 // A real app and preview runtime: navigation reports are observed, never substituted.
 test("No code follows real preview navigation without losing edits or opening hidden windows", {
@@ -332,8 +332,7 @@ test("No code follows real preview navigation without losing edits or opening hi
     // The saved guide preference prevents an automatic tour; expose the explicit Guide menu.
     await page.goto(base);
     await following.waitFor();
-    await page.getByRole("button", { name: "Guide", exact: true }).click();
-    await page.getByRole("menuitem", { name: "Tour Studio", exact: true }).click();
+    await openStudioGuide(page);
     const skip = page.getByRole("button", { name: "Skip guide", exact: true });
     await skip.waitFor();
     await navigateInApp("/orders");
@@ -343,14 +342,14 @@ test("No code follows real preview navigation without losing edits or opening hi
     console.log("PASS active guide defers following until dismissal");
 
     await page.setViewportSize({ width: 720, height: 900 });
-    await showWorkspaceControls(page);
-    await page.getByRole("radio", { name: "Preview", exact: true }).check({ force: true });
+    const showApp = page.getByRole("button", { name: "Show the app", exact: true });
+    if (await showApp.isVisible()) await showApp.click();
     await navigateInApp("/customers");
     assert.equal(await context(), "orders", "a hidden column followed on screen");
-    assert.ok(await page.getByRole("radio", { name: "Preview", exact: true }).isChecked());
-    await page.getByRole("radio", { name: "No code", exact: true }).check({ force: true });
+    assert.ok(!(await showApp.isVisible()));
+    await page.getByRole("button", { name: "Show settings", exact: true }).click();
     await followed("customers");
-    assert.ok(await page.getByRole("radio", { name: "No code", exact: true }).isChecked());
+    assert.ok(await showApp.isVisible());
     assert.equal(
       operations.length,
       0,

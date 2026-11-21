@@ -13,7 +13,7 @@ import { join } from "node:path";
 import { parseArgs } from "node:util";
 import { chromium } from "playwright";
 import { cli, newApp, repo } from "./dev-app.mjs";
-import { openPreviewAddress, showWorkspaceControls } from "./studio-form-checks.mjs";
+import { openPreviewAddress, openSettings, toolbarAction } from "./studio-form-checks.mjs";
 
 const { values: opts, positionals } = parseArgs({
   allowPositionals: true,
@@ -203,8 +203,8 @@ async function shoot(browser, starter, change) {
     await save("nocode", await clip([fields], undefined, 8, 8), CARD);
 
     // Edit by code: the line in smithable.yml, saved by itself (this applies the change, once).
-    await showWorkspaceControls(page);
-    await page.getByRole("radio", { name: "Code", exact: true }).check({ force: true });
+    await openSettings(page);
+    await page.getByRole("tab", { name: "Code", exact: true }).click();
     const editor = page.getByLabel("smithable.yml");
     await editor.waitFor({ timeout: 30000 });
     const text = await editor.evaluate((e) => e.value);
@@ -217,6 +217,8 @@ async function shoot(browser, starter, change) {
     await page.getByText("Saved", { exact: true }).waitFor({ timeout: 90000 });
     // Under 1024 pixels Studio gives the editor the window's width and room for enough lines.
     await page.setViewportSize({ width: 1000, height: 1100 });
+    await openSettings(page);
+    await page.getByRole("tab", { name: "Code", exact: true }).click();
     await page.waitForTimeout(1000);
     const yml = page.locator(".cm-editor", { has: page.getByLabel("smithable.yml") });
     const line = yml.locator(".cm-line", { hasText: change.line }).first();
@@ -261,8 +263,12 @@ async function shoot(browser, starter, change) {
     );
 
     // The result after: the same page.
-    await showWorkspaceControls(page);
-    await page.getByRole("radio", { name: "No code", exact: true }).check({ force: true });
+    if (await page.getByRole("button", { name: "Show the app", exact: true }).isVisible())
+      await page.getByRole("button", { name: "Show the app", exact: true }).click();
+    else {
+      const settings = await toolbarAction(page, "All settings");
+      if ((await settings.getAttribute("aria-pressed")) === "true") await settings.click();
+    }
     await page.waitForTimeout(4000);
     await save("after", await result());
     await page.close();

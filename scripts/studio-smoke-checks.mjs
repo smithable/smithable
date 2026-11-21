@@ -155,7 +155,17 @@ export async function checkStudioSmoke(browser, base, evidence) {
       assert.equal(await look.count(), 0);
       assert.equal(await presentation.count(), 0);
       await checkStudioHistory(page, phone, evidence);
-      if (!phone) await checkPreviewRange(page);
+      if (!phone) {
+        // Range selection lives in the preview's table layout, which needs the full width.
+        for (const side of ["left", "right"]) {
+          const hide = page.getByRole("button", {
+            name: `Hide the window on the ${side}`,
+            exact: true,
+          });
+          if (await hide.isVisible()) await hide.click();
+        }
+        await checkPreviewRange(page);
+      }
     } catch (error) {
       await page
         .screenshot({ path: join(evidence, `${layout}.png`), timeout: 3000 })

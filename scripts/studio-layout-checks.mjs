@@ -25,7 +25,8 @@ export async function checkStudioLayout(browser, base, pictures) {
       if (pictures)
         await page.screenshot({ path: join(pictures, `after-${viewport.width}-guide.png`) });
       if (viewport.width < 1024) {
-        await page.getByRole("button", { name: "Show Smith", exact: true }).click();
+        const arrow = page.getByRole("button", { name: "Show Smith", exact: true });
+        if (await arrow.isVisible()) await arrow.click();
       }
       const input = page
         .getByRole("textbox", { name: "Describe a change, or ask a question" })

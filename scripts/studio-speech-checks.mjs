@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { openSmith } from "./studio-form-checks.mjs";
 
 export async function checkStudioSpeech(
   browser,
@@ -608,8 +609,7 @@ async function checkSmithCall(page) {
 
   await page.setViewportSize({ width: 1600, height: 1000 });
   await page.goto(new URL("?guide=off", page.url()).href);
-  await face.click();
-  await page.getByRole("button", { name: "Dock", exact: true }).click();
+  await openSmith(page);
   const dock = page.getByRole("heading", { name: "Ask Smith", exact: true });
   await dock.waitFor();
   await page.evaluate(() => {
