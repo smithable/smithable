@@ -146,21 +146,22 @@ export function rootRoute(
       ...(team ? ["History", ...(trash ? ["Trash2"] : [])] : []),
     ]),
   ].sort();
-  const item = (to: string, label: string, icon: string, id: string) =>
-    `      {\n        to: ${JSON.stringify(to)},\n        label: ${label},\n        icon: ${icon},\n        access: pageAccess[${JSON.stringify(id)}],\n      },`;
+  const item = (to: string, label: string, icon: string, id: string, editable = true) =>
+    `      {\n        to: ${JSON.stringify(to)},\n        label: ${label},\n        icon: ${icon},\n        access: pageAccess[${JSON.stringify(id)}],${editable ? `\n        page: ${JSON.stringify(id)},` : ""}\n      },`;
   const admin = team
     ? `  {\n    name: "admin",\n    label: w.admin,\n    items: [\n${[
         item(team.route, t.pageTitleOf(team.id), iconOf(team.id), team.id),
-        ...(trash ? [item(join(team.route, "trash"), "w.trashView", "Trash2", team.id)] : []),
-        item(join(team.route, "activity"), "w.activity", "History", team.id),
+        ...(trash
+          ? [item(join(team.route, "trash"), "w.trashView", "Trash2", team.id, false)]
+          : []),
+        item(join(team.route, "activity"), "w.activity", "History", team.id, false),
       ].join("\n")}\n    ],\n  },`
     : undefined;
   const menus = ir.navigation.flatMap((menu) => {
     const pages = menu.pages.filter((id) => id !== team?.id);
     if (pages.length === 0) return [];
-    const items = pages.map(
-      (id) =>
-        `      {\n        to: ${JSON.stringify(pageRoute.get(id) ?? "/")},\n        label: ${t.pageTitleOf(id)},\n        icon: ${iconOf(id)},\n        access: pageAccess[${JSON.stringify(id)}],\n      },`,
+    const items = pages.map((id) =>
+      item(pageRoute.get(id) ?? "/", t.pageTitleOf(id), iconOf(id), id),
     );
     const menuLabel = t.menuLabel(menu.name);
     const label = menuLabel === undefined ? "" : ` label: ${JSON.stringify(menuLabel)},`;

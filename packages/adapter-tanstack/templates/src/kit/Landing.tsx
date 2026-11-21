@@ -26,13 +26,21 @@ import { ConsentSettings } from "./Consent";
 import { contactHref } from "./contact-href";
 import { dayText, numberText } from "./format";
 import { ModelTable, PicturePlaceholder } from "./ModelTable";
-import { type AppUi, type RecordUi, type Row, textMarker } from "./model";
+import {
+  type AppUi,
+  menuItemMarker,
+  navigationMarker,
+  type RecordUi,
+  type Row,
+  textMarker,
+} from "./model";
 import { PictureDialog } from "./PictureDialog";
 import { tx, w } from "./words";
 
 export interface LandingLink {
   to: LinkProps["to"];
   label: string;
+  page?: string;
   /** Who may open it, for a menu entry not every visitor sees (a members' page in the site frame). */
   access?: Rule;
 }
@@ -67,6 +75,7 @@ function LandingLayoutView({
   logo,
   link,
   header,
+  page,
   width,
   footer,
   site,
@@ -83,6 +92,7 @@ function LandingLayoutView({
    * scrolling; over the hero, on the hero's own wash (dark or brand) until the hero has passed.
    */
   header?: { position?: "sticky" | "scrolling"; over?: "dark" | "brand" };
+  page?: string;
   /** How wide the content runs: contained (72rem) unless wide (80rem) or full. */
   width?: "wide" | "full";
   footer?: LandingFooter;
@@ -171,6 +181,7 @@ function LandingLayoutView({
       )}
     >
       <header
+        {...(page ? navigationMarker(page) : {})}
         data-part="header"
         data-position={header?.position}
         data-over={over && clear ? over : undefined}
@@ -211,6 +222,7 @@ function LandingLayoutView({
                   <li key={String(m.to)}>
                     <Link
                       to={m.to}
+                      {...(m.page ? menuItemMarker(m.page) : {})}
                       className="underline-offset-4 hover:underline"
                       activeProps={{ "aria-current": "page", className: "text-primary-text" }}
                     >
@@ -269,7 +281,12 @@ function LandingLayoutView({
             <ul className="mx-auto max-w-(--landing-width) px-5 py-2">
               {menu.map((m) => (
                 <li key={String(m.to)}>
-                  <Link to={m.to} onClick={() => setOpen(false)} className="block py-3 font-medium">
+                  <Link
+                    to={m.to}
+                    {...(m.page ? menuItemMarker(m.page) : {})}
+                    onClick={() => setOpen(false)}
+                    className="block py-3 font-medium"
+                  >
                     {m.label}
                   </Link>
                 </li>

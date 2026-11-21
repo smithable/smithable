@@ -27,6 +27,7 @@ import { Ask, type AudioActivity, usePresentation } from "./builder/Ask";
 import { NoCode, OPEN_PART, type OpenPart } from "./builder/NoCode";
 import { mailTemplates, OutgoingTemplate } from "./builder/OutgoingTemplate";
 import { SelectedButton, selectedButton } from "./builder/SelectedButton";
+import { SelectedNavigation, selectedNavigation } from "./builder/SelectedNavigation";
 import { SmithFace } from "./builder/SmithFace";
 import { SummaryTab } from "./builder/SummaryTab";
 import { Visualize } from "./builder/Visualize";
@@ -780,7 +781,7 @@ export function App() {
         !selectingCode &&
         event.data.type === "select" &&
         typeof event.data.concept === "string" &&
-        /^(action|field|model|page|text):[\w.-]+$/.test(event.data.concept)
+        /^(action|field|model|page|text|navigation):[\w.-]+$/.test(event.data.concept)
       )
         setSelectedPart(event.data);
     };
@@ -1308,6 +1309,7 @@ export function App() {
   };
   if (!project) return <p className="p-6 text-sm text-quiet">Opening the project…</p>;
   const button = selectedButton(selectedPart, spec);
+  const navigation = selectedNavigation(selectedPart, spec);
   const selectionAnchor = selectedPart?.anchor;
   const previewFrame = () =>
     previewBox?.querySelector<HTMLIFrameElement>('iframe[title="App preview"]');
@@ -2569,6 +2571,20 @@ export function App() {
           host={smithVisible && !overlaid ? selectionHost : undefined}
           position={narrow ? undefined : selectionPosition}
           reveal={revealSelection}
+        />
+      )}
+      {navigation && (
+        <SelectedNavigation
+          key={selectedPart?.concept}
+          part={navigation}
+          run={run}
+          close={clearSelection}
+          position={narrow ? undefined : selectionPosition}
+          go={(path) => {
+            clearSelection();
+            openPreviewWindow();
+            setGo((previous) => ({ path, key: (previous?.key ?? 0) + 1 }));
+          }}
         />
       )}
     </div>

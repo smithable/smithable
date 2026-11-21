@@ -81,12 +81,17 @@ if (typeof window !== "undefined" && window.parent !== window) {
     text && /^pages[.][^.]+[.][^.]+[.](button|secondButton)$/.test(text.dataset.smText ?? "")
       ? text.closest("[data-hero] a, [data-hero] button")
       : null;
+  const menuItemAt = (element) => {
+    const link = element instanceof Element ? element.closest("a") : null;
+    const mark = "[data-sm-part=menu-item]";
+    return link?.matches(mark) ? link : link?.querySelector(mark);
+  };
   const canPick = (event) => {
     if (selecting) return true;
     const target = event.target;
     if (!event.shiftKey || !(target instanceof Element) || editing(target)) return false;
-    // A marked hero action is one editor target, including the padding around its text.
-    if (heroButton(textAt(target))) return true;
+    // Preview actions and menu items include the padding around their text.
+    if (heroButton(textAt(target)) || menuItemAt(target)) return true;
     const mark = target.closest("[data-sm-concept], [data-sm-text]");
     if (!mark) return false;
     const control = controlAt(target);
@@ -314,7 +319,8 @@ if (typeof window !== "undefined" && window.parent !== window) {
     hovered?.removeAttribute("data-sm-hover");
     hovered = null;
     if (!canPick(event)) return;
-    hovered = heroButton(textAt(event.target)) ?? markedAt(event.target);
+    const text = textAt(event.target);
+    hovered = heroButton(text) ?? menuItemAt(event.target)?.closest("a") ?? markedAt(event.target);
     hovered?.setAttribute("data-sm-hover", "");
     if (hovered?.dataset.smPart === "column") hovered.draggable = true;
   }, true);
@@ -357,7 +363,7 @@ if (typeof window !== "undefined" && window.parent !== window) {
   }, true);
   document.addEventListener("click", (event) => {
     if (designOnly() || !canPick(event)) return;
-    const marked = markedAt(event.target);
+    const marked = menuItemAt(event.target) ?? markedAt(event.target);
     event.preventDefault();
     event.stopPropagation();
     if (!marked) return;

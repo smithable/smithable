@@ -2839,10 +2839,99 @@ try {
         );
       for (let i = 0; i < 60 * P && !framed(); i++) await new Promise((r) => setTimeout(r, 1000));
       if (!framed()) throw new Error("the ux file has no frame for the customers");
+      await openPreview("/home");
+      const pick = async (target, position) => {
+        const select = page.getByRole("button", { name: "Select", exact: true });
+        if ((await select.getAttribute("aria-pressed")) !== "true") await select.click();
+        await preview.locator("html[data-sm-selecting]").waitFor({ state: "attached" });
+        await target.click({ position });
+      };
+      const topBar = preview.locator('header[data-sm-concept="navigation:landing.home"]');
+      const originalPosition = await topBar.getAttribute("data-position");
+      const positions =
+        originalPosition === "scrolling" ? ["sticky", "scrolling"] : ["scrolling", "sticky"];
+      for (const position of positions) {
+        await pick(topBar, { x: 4, y: 4 });
+        const settings = page.getByRole("form", { name: "Top bar", exact: true });
+        await settings
+          .getByRole("checkbox", { name: "Stays at the top when scrolling", exact: true })
+          .setChecked(position === "sticky");
+        await settings.getByRole("button", { name: "Apply", exact: true }).click();
+        await topBar.and(preview.locator(`[data-position="${position}"]`)).waitFor();
+        await settings.waitFor({ state: "hidden" });
+      }
+      const item = topBar.locator('[data-sm-concept="text:pages.customers.title"]:visible');
+      const drawer = topBar.getByRole("button", { name: "Open menu", exact: true });
+      if (await drawer.isVisible()) await drawer.click();
+      const original = (await item.textContent())?.trim();
+      if (!original) throw new Error("the menu item has no label");
+      await pick(item, { x: 2, y: 2 });
+      const itemEditor = page.getByRole("form", { name: original, exact: true });
+      await itemEditor.getByLabel("Menu item text", { exact: true }).fill("Customer list");
+      await itemEditor.getByRole("button", { name: "Apply", exact: true }).click();
+      await itemEditor.waitFor({ state: "hidden" });
+      if (
+        !readFileSync(join(dir, "smithable.content.yml"), "utf8").includes("title: Customer list")
+      )
+        throw new Error("the selected menu wording was not saved");
+      await openPreview("/home");
+      if (await drawer.isVisible()) await drawer.click();
+      await pick(item);
+      await page
+        .getByRole("form", { name: "Customer list", exact: true })
+        .getByRole("button", { name: "Open page", exact: true })
+        .click();
+      await page.waitForFunction(() =>
+        [...document.querySelectorAll('iframe[title="App preview"]')].some(
+          (frame) => new URL(frame.src).pathname === "/customers",
+        ),
+      );
+      await op("setText", { path: ["pages", "customers", "title"], text: original });
+      await op("setSectionLook", {
+        page: "home",
+        section: "header",
+        key: "position",
+        value: originalPosition ?? "default",
+      });
       // Back to its kind's, for the steps after this one.
       await page.getByLabel("Frame of Customers").selectOption("default");
       for (let i = 0; i < 60 * P && framed(); i++) await new Promise((r) => setTimeout(r, 1000));
       if (framed()) throw new Error("the customers kept the site's frame");
+      await openPreview("/customers");
+      const menuSource = /^navigation: (\S+)$/m.exec(
+        readFileSync(join(dir, "smithable.ux.yml"), "utf8"),
+      )?.[1];
+      const workspace = preview.locator('[data-sm-concept="navigation:workspace"]:visible').first();
+      const workspaceHeader = preview.locator('header[data-sm-concept="navigation:workspace"]');
+      const placement =
+        (await workspaceHeader.getAttribute("data-navigation")) === "topbar-centered"
+          ? "sidebar"
+          : "topbar-centered";
+      await pick(workspace, { x: 4, y: 4 });
+      const workspaceSettings = page.getByRole("form", { name: "App navigation", exact: true });
+      await workspaceSettings.getByLabel("Menu placement", { exact: true }).selectOption(placement);
+      await workspaceSettings.getByRole("button", { name: "Apply", exact: true }).click();
+      await workspaceSettings.waitFor({ state: "hidden" });
+      await workspaceHeader
+        .and(preview.locator(`[data-navigation="${placement}"]`))
+        .waitFor({ state: "attached" });
+      const workspaceItem = preview
+        .locator(
+          'a:visible:has([data-sm-part="menu-item"][data-sm-concept="text:pages.customers.title"])',
+        )
+        .first();
+      if (!(await workspaceItem.isVisible())) {
+        await workspaceHeader
+          .getByRole("button", { name: "Open menu", exact: true })
+          .first()
+          .click();
+      }
+      await pick(workspaceItem, { x: 2, y: 2 });
+      await page
+        .getByRole("form", { name: original, exact: true })
+        .getByRole("button", { name: "Cancel", exact: true })
+        .click();
+      await op("setMenuLayout", { navigation: menuSource ?? "inherit" });
       await sub("Behavior");
     },
   );
