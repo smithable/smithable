@@ -245,6 +245,7 @@ light:
   card: "oklch(0.910 0.030 85.0)"
   primary: "oklch(0.420 0.090 155.0)"
   muted: "oklch(0.940 0.020 85.0)"
+  muted-foreground: "#4F584C"
   border: "oklch(0.620 0.040 120.0)"
   accent: "oklch(0.930 0.040 60.0)"
 dark:

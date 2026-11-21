@@ -120,7 +120,9 @@ export function Preview({
   // so does reloading Studio (kept for the browser tab's session, like the place in each mode).
   const current = useRef(keptPage());
   const [opened, setOpened] = useState(0);
-  const [typed, setTyped] = useState(current.current);
+  const [previewPath, setPreviewPath] = useState(current.current);
+  const [draftAddress, setDraftAddress] = useState<string>();
+  const typed = draftAddress ?? previewPath;
   const frame = useRef<HTMLIFrameElement>(null);
   // Ctrl+R with the pointer over the preview reloads the preview alone (Johan, 2026-10-10); with
   // the preview focused, its page's editor does the same.
@@ -222,14 +224,14 @@ export function Preview({
   };
   useEffect(() => {
     const onMessage = (e: MessageEvent) => {
-      // The router reports the same page again (replaceState); only a new page is news, so
-      // what is being typed in the address is not overwritten.
       if (!isPreviewMessage(e) || e.data.type !== "navigated" || e.data.path === current.current)
         return;
-      current.current = e.data.path;
-      setTyped(e.data.path);
+      const path = e.data.path;
+      current.current = path;
+      // Follow the frame's location without replacing an address the user is editing.
+      setPreviewPath(path);
       try {
-        sessionStorage.setItem(PAGE_KEY, e.data.path);
+        sessionStorage.setItem(PAGE_KEY, path);
       } catch {}
     };
     window.addEventListener("message", onMessage);
@@ -321,7 +323,8 @@ export function Preview({
     try {
       sessionStorage.setItem(PAGE_KEY, current.current);
     } catch {}
-    setTyped(current.current);
+    setPreviewPath(current.current);
+    setDraftAddress(undefined);
     setListing(false);
     setActive(-1);
     setOpened((n) => n + 1);
@@ -331,7 +334,7 @@ export function Preview({
     setAddressError(undefined);
     setListing(false);
     setActive(-1);
-    setTyped(current.current);
+    setDraftAddress(undefined);
     if (returnFocus) addressButton.current?.focus();
   }, []);
   useEffect(() => {
@@ -374,7 +377,7 @@ export function Preview({
     onShowPage();
     open(target.pathname + target.search + target.hash);
   };
-  const path = current.current.split(/[?#]/)[0] || "/";
+  const path = previewPath.split(/[?#]/)[0] || "/";
   const pageName =
     [...pages]
       .filter(
@@ -427,7 +430,7 @@ export function Preview({
               ref={addressButton}
               type="button"
               data-preview-page
-              data-preview-current={current.current}
+              data-preview-current={previewPath}
               aria-expanded={addressOpen}
               aria-controls={`${listId}-address`}
               title="Open preview address"
@@ -508,7 +511,7 @@ export function Preview({
                   autoComplete="off"
                   value={typed}
                   onChange={(e) => {
-                    setTyped(e.target.value);
+                    setDraftAddress(e.target.value);
                     setAddressError(undefined);
                     setListing(true);
                     setActive(-1);
