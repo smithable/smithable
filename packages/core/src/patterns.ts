@@ -1261,6 +1261,8 @@ export function patternInfo(page: PageIR) {
     forms: () => [
       ...(info.forms?.(pattern) ?? []),
       ...parts.flatMap((s) => (s.form ? [s.form] : [])),
+      // A record page's contact block keeps a copy of what a visitor sends.
+      ...(page.contact?.keep ? [page.contact.keep] : []),
     ],
     follow: (spec: YamlEditor, effect: Effect, ir: SpecIR) => {
       const own = info.follow?.(spec, page as PageIR & { pattern: PatternOf<"crud"> }, effect, ir);

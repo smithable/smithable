@@ -306,6 +306,32 @@ pages:
   expect(auth(", create: [Message]")).not.toContain("contact-form-closed");
 });
 
+test("a public record page's contact block needs visitors to be allowed to add the copy it keeps", () => {
+  const ir = validateSpec({
+    path: "smithable.yml",
+    text: `smithable: 0.1
+app: { name: Studio }
+models:
+  Project:
+    fields: { title: string! }
+  Enquiry:
+    fields: { name: string!, email: email!, message: text!, project: Project }
+pages:
+  projects: { crud: Project, contact: { to: owner, keep: Enquiry } }
+`,
+  }).ir;
+  const auth = (create: string) =>
+    validateAuth(
+      {
+        path: "smithable.auth.yml",
+        text: `smithableAuth: 0.1\nsignIn: { providers: [google] }\ndefaultAccess: shared\nroles: { admin: {} }\npublic: { pages: [projects], read: [Project]${create} }\n`,
+      },
+      ir,
+    ).diagnostics.map((d) => d.code);
+  expect(auth("")).toContain("contact-form-closed");
+  expect(auth(", create: [Enquiry]")).not.toContain("contact-form-closed");
+});
+
 test("outgoing mail meets the access rules: a visitor-typed address is not mailed, a role must read the model", () => {
   const ir = validateSpec({
     path: "smithable.yml",
