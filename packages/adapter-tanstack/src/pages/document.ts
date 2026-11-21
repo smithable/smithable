@@ -316,9 +316,9 @@ export function documentRoute(
       : "row.owner";
   const sent = sends
     ? `
-/** The record as the viewer may read it, in the transaction given: whether they may, and may change it. */
+/** The record as the viewer may read it, in the transaction given (one in the trash is not): whether they may, and may change it. */
 function rights(q: Pick<typeof db, "select">, viewer: Viewer | null, id: number): { read: boolean; write: boolean } {
-  const row = q.select({ owner: ${n.table}.${hasSignIn(auth) ? ownerKey(model) : "id"} }).from(${n.table}).where(and(eq(${n.table}.id, id), ${n.data}.readable(viewer))).get();
+  const row = q.select({ owner: ${n.table}.${hasSignIn(auth) ? ownerKey(model) : "id"} }).from(${n.table}).where(and(eq(${n.table}.id, id)${model.trash ? `, isNull(${n.table}.deletedAt)` : ""}, ${n.data}.readable(viewer))).get();
   return { read: row !== undefined, write: row !== undefined && allows(${n.access}.write, viewer, ${owner}) };
 }
 
@@ -349,7 +349,7 @@ const withdrawSent = createServerFn({ method: "POST" })
 `
     : "";
   return `${HEADER}import { createFileRoute, notFound${sends ? ", useRouter" : ""} } from "@tanstack/react-router";
-import { createServerFn } from "@tanstack/react-start";${sends ? '\nimport { getRequestHeaders } from "@tanstack/react-start/server";\nimport { and, eq } from "drizzle-orm";' : ""}
+import { createServerFn } from "@tanstack/react-start";${sends ? `\nimport { getRequestHeaders } from "@tanstack/react-start/server";\nimport { and, eq${model.trash ? ", isNull" : ""} } from "drizzle-orm";` : ""}
 import { z } from "zod";
 import { db } from "#/db";${sends ? `\n${SCHEMA_IMPORT}` : ""}
 import { app } from "#/generated/app";

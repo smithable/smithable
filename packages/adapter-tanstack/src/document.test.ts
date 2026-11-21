@@ -158,6 +158,14 @@ test("a mail that says {view} makes the link's page, and the document page lists
   );
   const kept = [...trashed].find(([path]) => path.endsWith("/invoice.server.ts"))?.[1];
   expect(kept).toContain('endLinks(tx, viewer, "Invoice", id, "trashed");');
+  // A trashed invoice shows no Sent list and refuses Withdraw, as a missing one does.
+  const trashedPage = [...trashed].find(([path]) =>
+    path.endsWith("/invoices/$id_.document.tsx"),
+  )?.[1];
+  expect(trashedPage).toContain(
+    ".where(and(eq(schema.invoices.id, id), isNull(schema.invoices.deletedAt), invoiceData.readable(viewer))).get();",
+  );
+  expect(trashedPage).toContain('import { and, eq, isNull } from "drizzle-orm";');
 });
 
 test("a merge or a split that trashes or deletes a record ends its links as a delete does (T1013)", () => {
