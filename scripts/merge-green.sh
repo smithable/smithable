@@ -77,6 +77,23 @@ drop_lock() {
 has_checks() { [ -n "$(gh pr checks "$pr" "${repo[@]}" 2>/dev/null || true)" ]; }
 head_sha() { gh pr view "$pr" "${repo[@]}" --json headRefOid -q .headRefOid; }
 merged() { [ "$(gh pr view "$pr" "${repo[@]}" --json state -q .state)" = MERGED ]; }
+# The branch is deleted by GitHub's own "delete head branches" setting, which retargets the pull
+# requests based on it to this one's base. gh's --delete-branch deleted it through the API instead,
+# and GitHub closed the pull requests stacked on it (#1299, 2026-11-21). Any still based on it after
+# the merge are retargeted here, in case the setting is off or GitHub has not got to them yet.
+# The merge is done by then, so nothing here fails the script.
+retarget_stacked() {
+  local refs head base n
+  refs=$(gh pr view "$pr" "${repo[@]}" --json headRefName,baseRefName,isCrossRepository -q '"\(.isCrossRepository) \(.headRefName) \(.baseRefName)"') || {
+    echo "Could not read #$pr's branches: check by hand for pull requests based on its branch."; return 0; }
+  # A fork's branch of the same name is not this repository's: nothing here is based on it.
+  [ "${refs%% *}" = false ] || return 0
+  refs=${refs#* } head=${refs% *} base=${refs#* }
+  for n in $(gh pr list "${repo[@]}" --base "$head" --state open --limit 500 --json number -q '.[].number' || echo "Could not list the pull requests based on $head: check them by hand." >&2); do
+    if gh pr edit "$n" "${repo[@]}" --base "$base" >/dev/null; then echo "Retargeted #$n from $head to $base."
+    else echo "Could not retarget #$n, which is based on $head: set its base to $base by hand."; fi
+  done
+}
 refuse() {
   gh pr merge "$pr" "${repo[@]}" --disable-auto >/dev/null 2>&1 || true
   echo "Not merging #$pr: $1"
@@ -126,8 +143,9 @@ if plain_docs; then
   fi
   rm -f "$rules"
   # The head that was read is the head that is merged.
-  gh pr merge "$pr" --admin --merge --delete-branch --match-head-commit "$head" >/dev/null
+  gh pr merge "$pr" "${repo[@]}" --admin --merge --match-head-commit "$head" >/dev/null
   merged || refuse "GitHub did not merge it."
+  retarget_stacked
   echo "Merged #$pr (plain documents: no check to wait for)."
   exit 0
 fi
@@ -213,7 +231,7 @@ for attempt in 1 2 3 4 5 6 7 8; do
   # cloud #201 on 2026-10-14); that one is merged below by the script itself, once the required
   # check is confirmed green, which is what branch protection asks.
   armed=1
-  gh pr merge "$pr" "${repo[@]}" --auto --merge --delete-branch >/dev/null 2>&1 || armed=0
+  gh pr merge "$pr" "${repo[@]}" --auto --merge >/dev/null 2>&1 || armed=0
   # The checks branch protection requires, as GitHub's own merge goes by (here `check`, which
   # reports on every job of its run). Others are not asked: a run that a newer one cancelled
   # (a pull request opened with the full-ci label starts two) leaves jobs that read as failed.
@@ -233,7 +251,7 @@ for attempt in 1 2 3 4 5 6 7 8; do
     case "$rollup" in
       *"$(printf 'check\tCOMPLETED\tSUCCESS')"*|*"$(printf 'check\tCOMPLETED\tFAILURE')"*) break ;;
     esac
-    merged && { echo "Merged #$pr."; exit 0; }
+    merged && { echo "Merged #$pr."; retarget_stacked; exit 0; }
     if [ -n "$rollup" ] && [ "$(printf '%s\n' "$rollup" | grep -c -v "$(printf '\tCOMPLETED\t')")" != 0 ]; then
       [ $((i % 30)) = 0 ] && echo "#$pr: its checks are still running"
       sleep 10
@@ -260,15 +278,15 @@ for attempt in 1 2 3 4 5 6 7 8; do
     sleep 10
   done
   if ! gh pr checks "$pr" "${repo[@]}" --required --watch --fail-fast >/dev/null; then
-    merged && { echo "Merged #$pr."; exit 0; }
+    merged && { echo "Merged #$pr."; retarget_stacked; exit 0; }
     gh pr checks "$pr" "${repo[@]}" || true
     refuse "a check failed."
   fi
   # Green: the merge follows within moments, unless another merge put it behind meanwhile; with
   # auto-merge not armed, the script merges it now.
-  [ "$armed" = 0 ] && gh pr merge "$pr" "${repo[@]}" --merge --delete-branch >/dev/null 2>&1 || true
+  [ "$armed" = 0 ] && gh pr merge "$pr" "${repo[@]}" --merge >/dev/null 2>&1 || true
   for _ in $(seq 24); do
-    merged && { echo "Merged #$pr."; exit 0; }
+    merged && { echo "Merged #$pr."; retarget_stacked; exit 0; }
     sleep 5
   done
   echo "#$pr is green but not merged (behind main again?): going round again."
