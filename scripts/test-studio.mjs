@@ -1747,7 +1747,7 @@ try {
       if (!existsSync(join(dir, "node_modules", name))) throw new Error(`${name} is not installed`);
   });
   await step(
-    "a page that comes without its stylesheet starts the preview again, once for each change (finding 3)",
+    "a page that comes without its stylesheet is loaded again, then starts the preview again, once for each change (finding 3, T1164)",
     async () => {
       const unstyled = async () =>
         (await (await fetch(`${base}/api/logs`)).json()).filter((l) =>
@@ -1768,6 +1768,23 @@ try {
       // about:blank, whose messages carry Studio's own origin and are rightly not the preview's.
       await page.getByText("Updating…").waitFor({ state: "hidden", timeout: 120000 * P });
       await preview.locator("body[data-hydrated]").waitFor({ timeout: 120000 * P });
+      // The first time the page is only loaded again: the server may have been rebuilding.
+      await preview.locator("body").evaluate(() => {
+        window.smOldPage = true;
+      });
+      await say();
+      for (const deadline = Date.now() + 120000 * P; ; ) {
+        const fresh = await preview
+          .locator("body")
+          .evaluate((body) => !window.smOldPage && body.dataset.hydrated === "true", undefined, {
+            timeout: 2000,
+          })
+          .catch(() => false);
+        if (fresh) break;
+        if (Date.now() > deadline) throw new Error("the unstyled page was not loaded again");
+        await new Promise((r) => setTimeout(r, 500));
+      }
+      if ((await unstyled()) !== before) throw new Error("the first unstyled page restarted");
       await say();
       for (const deadline = Date.now() + 30000 * P; (await unstyled()) === before; ) {
         if (Date.now() > deadline) throw new Error("the preview was not started again");
@@ -1775,6 +1792,7 @@ try {
       }
       // It comes back; said again without a change in between, it is not started again.
       await preview.locator("body[data-hydrated]").waitFor({ timeout: 120000 * P });
+      await say();
       await say();
       await new Promise((r) => setTimeout(r, 2000));
       if ((await unstyled()) !== before + 1) throw new Error("the preview was started again twice");
