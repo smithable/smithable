@@ -156,7 +156,7 @@ export function childOptions(
  * `childWrites`, for a folder a child running as that user makes its files in (a plain mkdtemp is
  * 0700, this process's alone). The temporary folder can be listed, so a project process may put a
  * link in a writable one first: this process writes there only with `wx`, locks it with
- * `sealScratch` once the child is done, and takes the child's files with `checkBack`, `readBack`
+ * `sealScratch` once the child is done, and takes the child's files with `copyBack`
  * or `takeBack`, never through a link.
  */
 export function scratchDir(prefix: string, childWrites = false): string {
