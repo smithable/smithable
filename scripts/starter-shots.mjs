@@ -116,6 +116,26 @@ const SHOTS = {
       },
     ],
   ],
+  restaurant: [
+    [
+      "home",
+      "list",
+      "visitor",
+      false,
+      async (page) => {
+        await page.getByRole("link", { name: "Book a table" }).waitFor();
+      },
+    ],
+    [
+      "menu",
+      "list",
+      "visitor",
+      false,
+      async (page) => {
+        await page.getByRole("heading", { name: /House menu|Winter holiday menu/ }).waitFor();
+      },
+    ],
+  ],
   api: [
     ["admin", "tasks", "admin"],
     // A key just made: the card with the call to copy and an assistant's lines.

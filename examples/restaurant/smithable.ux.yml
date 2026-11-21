@@ -1,0 +1,18 @@
+smithableUx: 0.1
+
+theme:
+  preset: restaurant
+
+pages:
+  home:
+    sections:
+      hero: { layout: inset }
+      gallery: { columns: 2, band: muted }
+  menu:
+    frame: site
+  menus:
+    table: { columns: [name, kind, startsOn, endsOn, status] }
+  dishes:
+    table: { columns: [name, menu, service, price, smallPrice] }
+  service-hours:
+    table: { columns: [weekday, service, hours] }

@@ -151,3 +151,15 @@ smithable new my-tasks --starter api
 ```
 
 See it live: coming soon. Its page on smithable.ai: [smithable.ai/starters/api](https://smithable.ai/starters/api).
+
+## Restaurant
+
+Alder Quay gives guests a text menu grouped by lunch and dinner, with dietary labels, prices and optional smaller portions. The menu and home page show today's service hours and links for booking a table and getting directions.
+
+```sh
+smithable new my-restaurant --starter restaurant
+```
+
+Create a seasonal menu in **Menus**, set its first and last serving days and add dishes to it. Change its status to **Published** when it's ready. The seasonal menu appears at the start of its first day in the restaurant's time zone. The regular menu returns at the end of its last day. If two seasonal menus overlap, the one with the later start date takes precedence.
+
+In **Service hours**, enter a serving window for each weekday and service you offer. In **Venue details**, replace the sample table booking and directions links. Add your own photos to the home page's dining room cover and kitchen gallery, or remove both pictures in Studio for a text-only site.

@@ -4574,6 +4574,444 @@ exports[`valid specs > ../../../examples/records/smithable.yml 1`] = `
 }
 `;
 
+exports[`valid specs > ../../../examples/restaurant/smithable.yml 1`] = `
+{
+  "actions": [],
+  "app": {
+    "currency": "EUR",
+    "description": "A restaurant with a public menu, service hours and table reservations.",
+    "name": "Alder Quay",
+    "timezone": "Europe/Mariehamn",
+  },
+  "extensions": {},
+  "incoming": [],
+  "models": [
+    {
+      "fields": [
+        {
+          "name": "name",
+          "required": true,
+          "type": {
+            "kind": "scalar",
+            "name": "string",
+          },
+          "unique": false,
+        },
+        {
+          "default": "regular",
+          "name": "kind",
+          "required": true,
+          "type": {
+            "kind": "choice",
+            "values": [
+              "regular",
+              "seasonal",
+            ],
+          },
+          "unique": false,
+        },
+        {
+          "name": "startsOn",
+          "required": false,
+          "requiredWhen": {
+            "kind": "seasonal",
+          },
+          "type": {
+            "kind": "scalar",
+            "name": "date",
+          },
+          "unique": false,
+        },
+        {
+          "name": "endsOn",
+          "required": false,
+          "requiredWhen": {
+            "kind": "seasonal",
+          },
+          "type": {
+            "kind": "scalar",
+            "name": "date",
+          },
+          "unique": false,
+        },
+        {
+          "default": "draft",
+          "name": "status",
+          "required": true,
+          "type": {
+            "kind": "choice",
+            "values": [
+              "draft",
+              "published",
+            ],
+          },
+          "unique": false,
+        },
+        {
+          "name": "dishes",
+          "required": false,
+          "type": {
+            "kind": "relation",
+            "many": true,
+            "model": "Dish",
+          },
+          "unique": false,
+        },
+      ],
+      "name": "Menu",
+    },
+    {
+      "fields": [
+        {
+          "name": "name",
+          "required": true,
+          "type": {
+            "kind": "scalar",
+            "name": "string",
+          },
+          "unique": false,
+        },
+        {
+          "name": "menu",
+          "required": true,
+          "type": {
+            "kind": "relation",
+            "many": false,
+            "model": "Menu",
+          },
+          "unique": false,
+        },
+        {
+          "default": "lunch",
+          "name": "service",
+          "required": true,
+          "type": {
+            "kind": "choice",
+            "values": [
+              "lunch",
+              "dinner",
+            ],
+          },
+          "unique": false,
+        },
+        {
+          "name": "description",
+          "required": false,
+          "type": {
+            "kind": "scalar",
+            "name": "text",
+          },
+          "unique": false,
+        },
+        {
+          "description": "Public dietary labels separated by commas.",
+          "name": "dietaryTags",
+          "required": false,
+          "type": {
+            "kind": "scalar",
+            "name": "string",
+          },
+          "unique": false,
+        },
+        {
+          "min": 0,
+          "name": "price",
+          "required": true,
+          "type": {
+            "kind": "scalar",
+            "name": "money",
+          },
+          "unique": false,
+        },
+        {
+          "min": 0,
+          "name": "smallPrice",
+          "required": false,
+          "type": {
+            "kind": "scalar",
+            "name": "money",
+          },
+          "unique": false,
+        },
+      ],
+      "name": "Dish",
+    },
+    {
+      "fields": [
+        {
+          "default": "monday",
+          "name": "weekday",
+          "required": true,
+          "type": {
+            "kind": "choice",
+            "values": [
+              "monday",
+              "tuesday",
+              "wednesday",
+              "thursday",
+              "friday",
+              "saturday",
+              "sunday",
+            ],
+          },
+          "unique": false,
+        },
+        {
+          "default": "lunch",
+          "name": "service",
+          "required": true,
+          "type": {
+            "kind": "choice",
+            "values": [
+              "lunch",
+              "dinner",
+            ],
+          },
+          "unique": false,
+        },
+        {
+          "name": "hours",
+          "required": true,
+          "type": {
+            "kind": "scalar",
+            "name": "string",
+          },
+          "unique": false,
+        },
+      ],
+      "name": "ServiceHour",
+      "nameParts": [
+        {
+          "field": "weekday",
+        },
+        {
+          "field": "service",
+        },
+      ],
+      "unique": [
+        {
+          "fields": [
+            "weekday",
+            "service",
+            "hours",
+          ],
+          "scope": true,
+        },
+      ],
+    },
+    {
+      "fields": [
+        {
+          "name": "name",
+          "required": true,
+          "type": {
+            "kind": "scalar",
+            "name": "string",
+          },
+          "unique": false,
+        },
+        {
+          "name": "bookingUrl",
+          "required": false,
+          "type": {
+            "kind": "scalar",
+            "name": "url",
+          },
+          "unique": false,
+        },
+        {
+          "name": "directionsUrl",
+          "required": false,
+          "type": {
+            "kind": "scalar",
+            "name": "url",
+          },
+          "unique": false,
+        },
+      ],
+      "name": "Venue",
+    },
+  ],
+  "navigation": [
+    {
+      "name": "main",
+      "pages": [
+        "menu",
+        "menus",
+        "dishes",
+        "service-hours",
+        "venue",
+        "team",
+      ],
+    },
+  ],
+  "outgoing": [],
+  "pages": [
+    {
+      "id": "home",
+      "pattern": {
+        "kind": "landing",
+        "sections": [
+          {
+            "button": "menu",
+            "kind": "hero",
+            "name": "hero",
+          },
+          {
+            "component": "VisitToday",
+            "kind": "custom",
+            "name": "visit",
+          },
+          {
+            "kind": "gallery",
+            "name": "gallery",
+          },
+          {
+            "kind": "footer",
+            "name": "footer",
+          },
+        ],
+      },
+      "route": "/",
+      "sections": [
+        {
+          "button": "menu",
+          "kind": "hero",
+          "name": "hero",
+        },
+        {
+          "component": "VisitToday",
+          "kind": "custom",
+          "name": "visit",
+        },
+        {
+          "kind": "gallery",
+          "name": "gallery",
+        },
+        {
+          "kind": "footer",
+          "name": "footer",
+        },
+      ],
+    },
+    {
+      "id": "menu",
+      "pattern": {
+        "kind": "sections",
+      },
+      "route": "/menu",
+      "sections": [
+        {
+          "component": "VisitToday",
+          "kind": "custom",
+          "name": "visit",
+        },
+        {
+          "component": "ServiceMenu",
+          "kind": "custom",
+          "name": "food",
+        },
+      ],
+    },
+    {
+      "filters": [
+        "kind",
+        "status",
+      ],
+      "id": "menus",
+      "pattern": {
+        "kind": "crud",
+        "model": "Menu",
+      },
+      "route": "/menus",
+      "sections": [
+        {
+          "kind": "crud",
+          "model": "Menu",
+          "name": "crud",
+          "own": true,
+        },
+      ],
+    },
+    {
+      "filters": [
+        "menu",
+        "service",
+      ],
+      "id": "dishes",
+      "pattern": {
+        "kind": "crud",
+        "model": "Dish",
+      },
+      "route": "/dishes",
+      "sections": [
+        {
+          "kind": "crud",
+          "model": "Dish",
+          "name": "crud",
+          "own": true,
+        },
+      ],
+    },
+    {
+      "filters": [
+        "weekday",
+        "service",
+      ],
+      "id": "service-hours",
+      "pattern": {
+        "kind": "crud",
+        "model": "ServiceHour",
+      },
+      "route": "/service-hours",
+      "sections": [
+        {
+          "kind": "crud",
+          "model": "ServiceHour",
+          "name": "crud",
+          "own": true,
+        },
+      ],
+    },
+    {
+      "id": "venue",
+      "pattern": {
+        "kind": "settings",
+        "model": "Venue",
+      },
+      "route": "/venue",
+      "sections": [
+        {
+          "kind": "settings",
+          "model": "Venue",
+          "name": "settings",
+          "own": true,
+        },
+      ],
+    },
+    {
+      "id": "team",
+      "pattern": {
+        "kind": "users",
+        "mode": "manage",
+      },
+      "route": "/team",
+      "sections": [
+        {
+          "kind": "users",
+          "name": "users",
+          "own": true,
+        },
+      ],
+    },
+  ],
+  "payments": [],
+  "queries": [],
+  "specVersion": "0.1",
+  "timers": [],
+}
+`;
+
 exports[`valid specs > ../../../examples/status/smithable.yml 1`] = `
 {
   "actions": [
