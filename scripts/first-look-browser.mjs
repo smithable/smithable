@@ -71,6 +71,16 @@ try {
 } catch (error) {
   if (smoke) {
     writeFileSync(join(root, "server.log"), log);
+    // What the preview said: its dev server's and its tools' lines, which Studio keeps.
+    try {
+      const logs = await (
+        await fetch(`${base}/api/logs`, { signal: AbortSignal.timeout(5000) })
+      ).json();
+      writeFileSync(
+        join(root, "server.log"),
+        `${log}\n--- preview ---\n${JSON.stringify(logs, null, 1)}`,
+      );
+    } catch {}
     console.error(`Studio smoke evidence: ${root}`);
   }
   throw error;
