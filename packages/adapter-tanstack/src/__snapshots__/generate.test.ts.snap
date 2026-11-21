@@ -14174,7 +14174,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "8c886a7b kit",
   "src/kit/unused-samples.ts": "860c6650 kit",
-  "src/kit/uploads.ts": "59161084 kit",
+  "src/kit/uploads.ts": "724b80f6 kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
@@ -16547,7 +16547,7 @@ import { AccessDenied, allows, check, Conflict, type ModelAccess, personOf, read
 import { audit, changedFields } from "#/kit/audit.server";
 import { refusal } from "#/kit/log.server";
 import { contains } from "#/kit/search";
-import { deletePicture } from "#/kit/uploads";
+import { deletePicture, dropCopies } from "#/kit/uploads";
 import { acceptFiles, cleanUploads, keepsUpload } from "#/kit/receipts.server";
 import { afterChange, afterDelete } from "./hooks";
 import { timeOffData } from "./time-off.server";
@@ -16771,6 +16771,7 @@ export const barberData = {
     }
     cleanUploads(() => {
     if (row.portrait && row.portrait.file !== changed.portrait?.file) deletePicture(row.portrait, keepsUpload(row.portrait.file) || !!db.select({ id: schema.barbers.id }).from(schema.barbers).where(sql\`\${schema.barbers.portrait} like \${\`%"file":"\${row.portrait.file}"%\`}\`).get(), (file) => keepsUpload(file) || !!db.select({ id: schema.barbers.id }).from(schema.barbers).where(sql\`\${schema.barbers.portrait} like \${\`%"file":"\${file}"%\`}\`).get());
+    dropCopies(row.portrait, changed.portrait, (file) => keepsUpload(file) || !!db.select({ id: schema.barbers.id }).from(schema.barbers).where(sql\`\${schema.barbers.portrait} like \${\`%"file":"\${file}"%\`}\`).get());
     });
     await afterChange("afterUpdate", "Barber", changed, viewer);
     return changed;
@@ -21873,7 +21874,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/generated/barber.import.server.ts": "ba93731a generated",
   "src/generated/barber.import.ts": "76b4b2ca generated",
   "src/generated/barber.schema.ts": "4e204ae0 generated",
-  "src/generated/barber.server.ts": "40acd2a9 generated",
+  "src/generated/barber.server.ts": "aa2e295a generated",
   "src/generated/barber.ts": "dcdf162d generated",
   "src/generated/card.server.ts": "86f8f526 generated",
   "src/generated/card.ts": "5cab12e4 generated",
@@ -21966,7 +21967,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/time-text.ts": "eb8db028 kit",
   "src/kit/trace.server.ts": "8c886a7b kit",
   "src/kit/unused-samples.ts": "860c6650 kit",
-  "src/kit/uploads.ts": "59161084 kit",
+  "src/kit/uploads.ts": "724b80f6 kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/words.ts": "dd75b285 kit",
   "src/kit/words/en.ts": "a509a677 kit",
@@ -27997,7 +27998,7 @@ import { refusal } from "#/kit/log.server";
 import { contains } from "#/kit/search";
 import { BadInput } from "#/kit/refusal";
 import { aggregate, type Filterable, nearest, sortOf, whereOf, wordsOf } from "#/kit/where";
-import { deletePicture } from "#/kit/uploads";
+import { deletePicture, dropCopies } from "#/kit/uploads";
 import { acceptFiles, cleanUploads, keepsUpload } from "#/kit/receipts.server";
 import { afterChange, afterDelete } from "./hooks";
 import { sessionData } from "./session.server";
@@ -28477,6 +28478,7 @@ export const instructorData = {
     }
     cleanUploads(() => {
     if (row.portrait && row.portrait.file !== changed.portrait?.file) deletePicture(row.portrait, keepsUpload(row.portrait.file) || !!db.select({ id: schema.instructors.id }).from(schema.instructors).where(sql\`\${schema.instructors.portrait} like \${\`%"file":"\${row.portrait.file}"%\`}\`).get(), (file) => keepsUpload(file) || !!db.select({ id: schema.instructors.id }).from(schema.instructors).where(sql\`\${schema.instructors.portrait} like \${\`%"file":"\${file}"%\`}\`).get());
+    dropCopies(row.portrait, changed.portrait, (file) => keepsUpload(file) || !!db.select({ id: schema.instructors.id }).from(schema.instructors).where(sql\`\${schema.instructors.portrait} like \${\`%"file":"\${file}"%\`}\`).get());
     });
     await afterChange("afterUpdate", "Instructor", changed, viewer);
     return changed;
@@ -29849,7 +29851,7 @@ import { refusal } from "#/kit/log.server";
 import { contains } from "#/kit/search";
 import { BadInput } from "#/kit/refusal";
 import { aggregate, type Filterable, nearest, sortOf, whereOf, wordsOf } from "#/kit/where";
-import { deletePicture } from "#/kit/uploads";
+import { deletePicture, dropCopies } from "#/kit/uploads";
 import { acceptFiles, cleanUploads, keepsUpload } from "#/kit/receipts.server";
 import { afterChange, afterDelete } from "./hooks";
 import { type PostSettable } from "./post";
@@ -30320,6 +30322,7 @@ export const postData = {
     }
     cleanUploads(() => {
     if (row.cover && row.cover.file !== changed.cover?.file) deletePicture(row.cover, keepsUpload(row.cover.file) || !!db.select({ id: schema.posts.id }).from(schema.posts).where(sql\`\${schema.posts.cover} like \${\`%"file":"\${row.cover.file}"%\`}\`).get(), (file) => keepsUpload(file) || !!db.select({ id: schema.posts.id }).from(schema.posts).where(sql\`\${schema.posts.cover} like \${\`%"file":"\${file}"%\`}\`).get());
+    dropCopies(row.cover, changed.cover, (file) => keepsUpload(file) || !!db.select({ id: schema.posts.id }).from(schema.posts).where(sql\`\${schema.posts.cover} like \${\`%"file":"\${file}"%\`}\`).get());
     });
     await afterChange("afterUpdate", "Post", changed, viewer);
     return changed;
@@ -37193,7 +37196,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/instructor.import.server.ts": "fccf980a generated",
   "src/generated/instructor.import.ts": "73c07c95 generated",
   "src/generated/instructor.schema.ts": "6e0adbca generated",
-  "src/generated/instructor.server.ts": "a84e6338 generated",
+  "src/generated/instructor.server.ts": "431932c6 generated",
   "src/generated/instructor.ts": "f02243c8 generated",
   "src/generated/message.import.server.ts": "529f366e generated",
   "src/generated/message.import.ts": "63ded8df generated",
@@ -37206,7 +37209,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/post.import.server.ts": "779addc6 generated",
   "src/generated/post.import.ts": "d5299966 generated",
   "src/generated/post.schema.ts": "67ddc9a8 generated",
-  "src/generated/post.server.ts": "e3c48c68 generated",
+  "src/generated/post.server.ts": "9ec32b97 generated",
   "src/generated/post.ts": "3b8935b4 generated",
   "src/generated/roles.ts": "12ea3da4 generated",
   "src/generated/session.formulas.ts": "26cfcc26 generated",
@@ -37305,7 +37308,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "8c886a7b kit",
   "src/kit/unused-samples.ts": "860c6650 kit",
-  "src/kit/uploads.ts": "59161084 kit",
+  "src/kit/uploads.ts": "724b80f6 kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
@@ -57465,7 +57468,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "8c886a7b kit",
   "src/kit/unused-samples.ts": "860c6650 kit",
-  "src/kit/uploads.ts": "59161084 kit",
+  "src/kit/uploads.ts": "724b80f6 kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
@@ -61022,7 +61025,7 @@ import { AccessDenied, allows, check, Conflict, type ModelAccess, personOf, read
 import { audit, changedFields } from "#/kit/audit.server";
 import { refusal } from "#/kit/log.server";
 import { contains } from "#/kit/search";
-import { deletePicture } from "#/kit/uploads";
+import { deletePicture, dropCopies } from "#/kit/uploads";
 import { acceptFiles, cleanUploads, keepsUpload } from "#/kit/receipts.server";
 import { afterChange, afterDelete } from "./hooks";
 import { orderLineUi } from "./order-line";
@@ -61242,6 +61245,7 @@ export const dishData = {
     }
     cleanUploads(() => {
     if (row.picture && row.picture.file !== changed.picture?.file) deletePicture(row.picture, keepsUpload(row.picture.file) || !!db.select({ id: schema.dishes.id }).from(schema.dishes).where(sql\`\${schema.dishes.picture} like \${\`%"file":"\${row.picture.file}"%\`}\`).get(), (file) => keepsUpload(file) || !!db.select({ id: schema.dishes.id }).from(schema.dishes).where(sql\`\${schema.dishes.picture} like \${\`%"file":"\${file}"%\`}\`).get());
+    dropCopies(row.picture, changed.picture, (file) => keepsUpload(file) || !!db.select({ id: schema.dishes.id }).from(schema.dishes).where(sql\`\${schema.dishes.picture} like \${\`%"file":"\${file}"%\`}\`).get());
     });
     await afterChange("afterUpdate", "Dish", changed, viewer);
     return changed;
@@ -66709,7 +66713,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/generated/dish.import.server.ts": "aee46d8b generated",
   "src/generated/dish.import.ts": "44be2252 generated",
   "src/generated/dish.schema.ts": "134b49aa generated",
-  "src/generated/dish.server.ts": "30718e7c generated",
+  "src/generated/dish.server.ts": "c54fc9a1 generated",
   "src/generated/dish.ts": "3b947d71 generated",
   "src/generated/hooks.ts": "5c440337 generated",
   "src/generated/my-time.ts": "c315432b generated",
@@ -66809,7 +66813,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/time-text.ts": "eb8db028 kit",
   "src/kit/trace.server.ts": "8c886a7b kit",
   "src/kit/unused-samples.ts": "860c6650 kit",
-  "src/kit/uploads.ts": "59161084 kit",
+  "src/kit/uploads.ts": "724b80f6 kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/words.ts": "dd75b285 kit",
   "src/kit/words/en.ts": "a509a677 kit",
@@ -68745,7 +68749,7 @@ import { refusal } from "#/kit/log.server";
 import { contains } from "#/kit/search";
 import { BadInput } from "#/kit/refusal";
 import { aggregate, type Filterable, nearest, sortOf, whereOf, wordsOf } from "#/kit/where";
-import { deletePicture } from "#/kit/uploads";
+import { deletePicture, dropCopies } from "#/kit/uploads";
 import { acceptFiles, cleanUploads, keepsUpload } from "#/kit/receipts.server";
 import { tellReviewers } from "#/kit/review-mail.server";
 import { afterChange, afterDelete } from "./hooks";
@@ -69291,7 +69295,7 @@ export const itemData = {
       throw refusal(error);
     }
     cleanUploads(() => {
-    for (const p of row.photos ?? []) if (!(changed.photos ?? []).map((p) => p.file).includes(p.file)) deletePicture(p, keepsUpload(p.file) || !!db.select({ id: schema.items.id }).from(schema.items).where(sql\`\${schema.items.photos} like \${\`%"file":"\${p.file}"%\`}\`).get(), (file) => keepsUpload(file) || !!db.select({ id: schema.items.id }).from(schema.items).where(sql\`\${schema.items.photos} like \${\`%"file":"\${file}"%\`}\`).get());
+    for (const p of row.photos ?? []) if (!(changed.photos ?? []).map((p) => p.file).includes(p.file)) deletePicture(p, keepsUpload(p.file) || !!db.select({ id: schema.items.id }).from(schema.items).where(sql\`\${schema.items.photos} like \${\`%"file":"\${p.file}"%\`}\`).get(), (file) => keepsUpload(file) || !!db.select({ id: schema.items.id }).from(schema.items).where(sql\`\${schema.items.photos} like \${\`%"file":"\${file}"%\`}\`).get()); else dropCopies(p, (changed.photos ?? []).find((q) => q.file === p.file), (file) => keepsUpload(file) || !!db.select({ id: schema.items.id }).from(schema.items).where(sql\`\${schema.items.photos} like \${\`%"file":"\${file}"%\`}\`).get());
     });
     await afterChange("afterUpdate", "Item", changed, viewer);
     return changed;
@@ -72155,7 +72159,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/generated/item.import.server.ts": "0fe6563a generated",
   "src/generated/item.import.ts": "0cb7ece1 generated",
   "src/generated/item.schema.ts": "dffca266 generated",
-  "src/generated/item.server.ts": "db1c2284 generated",
+  "src/generated/item.server.ts": "419536a2 generated",
   "src/generated/item.ts": "9051834d generated",
   "src/generated/my-time.ts": "c315432b generated",
   "src/generated/pages.ts": "85e88911 generated",
@@ -72237,7 +72241,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "8c886a7b kit",
   "src/kit/unused-samples.ts": "860c6650 kit",
-  "src/kit/uploads.ts": "59161084 kit",
+  "src/kit/uploads.ts": "724b80f6 kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
@@ -98875,7 +98879,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "8c886a7b kit",
   "src/kit/unused-samples.ts": "860c6650 kit",
-  "src/kit/uploads.ts": "59161084 kit",
+  "src/kit/uploads.ts": "724b80f6 kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",

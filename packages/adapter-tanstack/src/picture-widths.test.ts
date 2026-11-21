@@ -15,6 +15,7 @@ const kit = (await import(uploadsPath)) as {
     main: { width: number; height: number; bytes: number },
   ): { file: string; width: number; height: number };
   deletePicture(picture: Stored, stillUsed: boolean, used?: (file: string) => boolean): void;
+  dropCopies(before: Stored | null, after: Stored | null, used: (file: string) => boolean): void;
   uploadResponse(
     request: Request,
     kind: "picture" | "file",
@@ -122,6 +123,26 @@ test("a removed picture's copies go unless a record still has them (T1054)", asy
   // No record does: it goes, and the picture, still shown, stays and is served in its place.
   kit.deletePicture(picture, true, () => false);
   expect(await served(picture, "?w=480")).toEqual(mainBytes);
+});
+
+test("an edit that keeps a picture but drops a smaller copy removes that copy's file (T1064)", async () => {
+  const keptBytes = webp(960, 640, 60, 7);
+  const droppedBytes = webp(480, 320, 30, 11);
+  const kept = kit.saveSmaller("post", keptBytes, shape);
+  const dropped = kit.saveSmaller("post", droppedBytes, shape);
+  const before = { ...main, alt: "", smaller: [kept, dropped] };
+  const after = { ...main, alt: "", smaller: [kept] };
+  // Another record still lists the dropped copy: it stays.
+  kit.dropCopies(before, after, () => true);
+  expect(await served(before, "?w=480")).toEqual(droppedBytes);
+  // A replaced picture is deletePicture's case: nothing here.
+  kit.dropCopies(before, { ...after, file: "post/000000000000000000000000.webp" }, () => false);
+  expect(await served(before, "?w=480")).toEqual(droppedBytes);
+  // No record does: the dropped copy goes, the kept copy and the picture stay.
+  kit.dropCopies(before, after, () => false);
+  expect(await served(before, "?w=480")).toEqual(mainBytes);
+  expect(await served(after, "?w=960")).toEqual(keptBytes);
+  kit.deletePicture(after, true, () => false);
 });
 
 test("an img's srcset lists each copy with its own tag and the picture at its width (T1054)", () => {

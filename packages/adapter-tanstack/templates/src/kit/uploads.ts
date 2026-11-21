@@ -163,6 +163,21 @@ export function deletePicture(
   removeStored(join(uploadsDir(), picture.file));
 }
 
+/**
+ * The smaller copies an edit took off a picture it kept: each one's file goes unless a record
+ * still lists it. Nothing when the picture itself was replaced or removed (deletePicture's case).
+ */
+export function dropCopies(
+  before: Picture | null | undefined,
+  after: Picture | null | undefined,
+  used: (file: string) => boolean,
+): void {
+  if (!before || !after || before.file !== after.file) return;
+  const kept = new Set((after.smaller ?? []).map((copy) => copy.file));
+  const dropped = (before.smaller ?? []).filter((copy) => !kept.has(copy.file));
+  if (dropped.length) deletePicture({ ...before, smaller: dropped }, true, used);
+}
+
 /** The ETag of a stored picture: its file name carries the content's hash. */
 export const pictureTag = (picture: Picture) => `"${picture.file.slice(-29, -5)}"`;
 
