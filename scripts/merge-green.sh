@@ -153,12 +153,15 @@ fi
 # the pull request is refused as before. During a rebase "theirs" is the branch's commit.
 rebase_generated() {
   [ ${#repo[@]} -eq 0 ] || return 1
-  local branch f files=() tests=() t
+  local branch start f files=() tests=() t
   branch=$(gh pr view "$pr" --json headRefName -q .headRefName)
-  [ "$(git rev-parse --abbrev-ref HEAD)" = "$branch" ] || return 1
-  [ -z "$(git status --porcelain)" ] || return 1
+  [ "$(git rev-parse --abbrev-ref HEAD)" = "$branch" ] || { echo "#$pr: run this in its own worktree, on $branch, to rebase it."; return 1; }
+  [ -z "$(git status --porcelain)" ] || { echo "#$pr: its worktree has changes: commit or drop them first."; return 1; }
   git fetch -q origin main "$branch"
-  [ "$(git rev-parse HEAD)" = "$(git rev-parse FETCH_HEAD)" ] || return 1
+  # FETCH_HEAD names main here (the first ref fetched), never the branch: compare with origin's
+  # branch, and go back to this commit on a failure, not to main.
+  start=$(git rev-parse HEAD)
+  [ "$start" = "$(git rev-parse "refs/remotes/origin/$branch")" ] || { echo "#$pr: the worktree is not at the branch's head on GitHub."; return 1; }
   echo "#$pr has conflicts: rebasing on main, where only generated files may clash."
   if ! git rebase -q origin/main >/dev/null 2>&1; then
     while :; do
@@ -177,13 +180,13 @@ rebase_generated() {
     done
     [ -z "$(git rev-parse -q --verify REBASE_HEAD 2>/dev/null)" ] || { git rebase --abort; echo "#$pr: the rebase did not finish."; return 1; }
   fi
-  pnpm build >/dev/null 2>&1 || { git reset -q --hard FETCH_HEAD; echo "#$pr: the build failed after the rebase."; return 1; }
+  pnpm build >/dev/null 2>&1 || { git reset -q --hard "$start"; echo "#$pr: the build failed after the rebase."; return 1; }
   for t in $(printf '%s\n' ${tests[@]+"${tests[@]}"} | sort -u); do
-    pnpm exec vitest run -u "$t" >/dev/null 2>&1 || { git reset -q --hard FETCH_HEAD; echo "#$pr: $t failed after the rebase."; return 1; }
+    pnpm exec vitest run -u "$t" >/dev/null 2>&1 || { git reset -q --hard "$start"; echo "#$pr: $t failed after the rebase."; return 1; }
   done
   if [ -n "$(git status --porcelain)" ]; then
     git add "packages/adapter-tanstack/src/templates.gen.ts" "packages/cli/src/starters.gen.ts" "packages/adapter-tanstack/src/__snapshots__/generate.test.ts.snap"
-    git commit -q -s -m "Rebased on main: generated files refreshed"
+    git commit -q -s -m "Rebased on main: generated files refreshed" --trailer "Co-Authored-By: Claude <noreply@anthropic.com>"
   fi
   git push -q --force-with-lease origin "$branch"
   echo "#$pr rebased and pushed ($(git rev-parse --short HEAD))."
