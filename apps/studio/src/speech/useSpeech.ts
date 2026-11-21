@@ -136,7 +136,8 @@ export function useSpeech(
   const browserProvider = providers.find((p) => p.name === "browser");
   const onDeviceOnly = Boolean(browserProvider?.onDeviceOnly);
   const browser: Browser = browserOf(navigator.userAgent);
-  const synth = typeof window !== "undefined" ? window.speechSynthesis : undefined;
+  const synth =
+    browserProvider && typeof window !== "undefined" ? window.speechSynthesis : undefined;
 
   // The voices the policy allows; the browser lists them late (voiceschanged).
   const [allVoices, setAllVoices] = useState<SpeechSynthesisVoice[]>([]);
