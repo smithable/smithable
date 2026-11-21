@@ -183,9 +183,14 @@ export function copyBack(from: string, to: string): void {
       throw new Error(`${from} is not a file the child made.`);
     const out = openSync(to, "wx", 0o600);
     try {
+      // The size it had when opened: a project process still holding it open cannot add to it.
       const buffer = Buffer.alloc(1 << 20);
-      for (let n = readSync(fd, buffer); n > 0; n = readSync(fd, buffer))
-        writeSync(out, buffer, 0, n);
+      for (let left = stat.size; left > 0; ) {
+        const n = readSync(fd, buffer, 0, Math.min(buffer.length, left), null);
+        if (n === 0) throw new Error(`${from} became shorter while it was copied.`);
+        for (let done = 0; done < n; ) done += writeSync(out, buffer, done, n - done);
+        left -= n;
+      }
     } finally {
       closeSync(out);
     }

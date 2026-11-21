@@ -107,15 +107,18 @@ export function restoreAt(
   const spec = ir;
   // The restored copy lives in a folder of its own, gone when this returns.
   const then = join(scratchDir("smithable-restore-", true), "then.db");
-  const past = join(mkdtempSync(join(tmpdir(), "smithable-past-")), "then.db");
   try {
-    return compare(then);
+    const past = join(mkdtempSync(join(tmpdir(), "smithable-past-")), "then.db");
+    try {
+      return compare(then, past);
+    } finally {
+      rmSync(dirname(past), { recursive: true, force: true });
+    }
   } finally {
     rmSync(dirname(then), { recursive: true, force: true });
-    rmSync(dirname(past), { recursive: true, force: true });
   }
 
-  function compare(then: string): number {
+  function compare(then: string, past: string): number {
     const restored = spawnSync(
       "litestream",
       [
