@@ -211,10 +211,10 @@ export function doorModule(
     const a = actionNames(action);
     if (action.custom && action.rows && m.model)
       return `  ${id}: async (viewer, move, body) => {
-    // Only rows the move is open to, as its list offers them.
+    // Only rows the move is open to, as its list offers them, each once.
     const open = new Set(await ${n(m.model).data}.candidateIds(viewer));
     const rows = body.records ?? [];
-    if (!rows.every((row) => open.has(row))) throw new AccessDenied(viewer !== null);
+    if (new Set(rows).size !== rows.length || !rows.every((row) => open.has(row))) throw new AccessDenied(viewer !== null);
     return ${a.run}(viewer, ${a.input}.parse({ ...stored(move.slots ?? [], body.values), ${action.rows.field}: rows }));
   },`;
     if (action.custom)

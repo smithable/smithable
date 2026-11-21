@@ -1,5 +1,5 @@
 id: dev-door-moves
-title: The development door could bring back a removed sample user, offer merges and splits by the model's access instead of the action's, take custom action rows it did not offer, and run two moves of the clock at once.
+title: The development door could bring back a removed sample user, offer merges and splits by the model's access instead of the action's, take custom action rows it did not offer or the same row twice, and run two moves of the clock at once.
 severity: fix
 exposure: Only in a development build or a demo with sample sign-in, through the owner's own Studio. No production app has the door.
 introduced: unknown

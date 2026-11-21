@@ -76,7 +76,7 @@ test("each move is the app's own function, as the viewer; the moves are data, ne
   );
   // Only rows the move is open to: any other id is refused before the action runs (T845).
   expect(door).toContain(
-    "if (!rows.every((row) => open.has(row))) throw new AccessDenied(viewer !== null);",
+    "if (new Set(rows).size !== rows.length || !rows.every((row) => open.has(row))) throw new AccessDenied(viewer !== null);",
   );
   // A reference is stored under its key.
   expect(door).toContain('{ session: "sessionId", note: "note" }');
