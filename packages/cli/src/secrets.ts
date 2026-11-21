@@ -2,7 +2,20 @@
 // starts, so no child it runs inherits them (pnpm and its scripts, git and its hooks, the
 // project's tests, the preview's dev server), and handed only to the engine's own calls that need
 // them. Every child's options are built by childOptions, which leaves both out whatever it is given.
-import { chmodSync, chownSync, mkdtempSync, readFileSync } from "node:fs";
+import {
+  chmodSync,
+  chownSync,
+  closeSync,
+  constants,
+  fstatSync,
+  lstatSync,
+  mkdirSync,
+  mkdtempSync,
+  openSync,
+  readdirSync,
+  readFileSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -129,17 +142,66 @@ export function childOptions(
 
 /**
  * A new temporary folder for this process and its children: where a project user is configured,
- * that user's group with mode 2770, so a child running as that user can enter and write it (a
- * plain mkdtemp is 0700, this process's alone).
+ * that user's group may enter and read it (2750), and write in it too (2770) only with
+ * `childWrites`, for a folder a child running as that user makes its files in (a plain mkdtemp is
+ * 0700, this process's alone). The temporary folder can be listed, so a project process may put a
+ * link in a writable one first: this process writes there only with `wx`, locks it with
+ * `sealScratch` once the child is done, and takes the child's files with `checkBack`, `readBack`
+ * or `takeBack`, never through a link.
  */
-export function scratchDir(prefix: string): string {
+export function scratchDir(prefix: string, childWrites = false): string {
   const made = mkdtempSync(join(tmpdir(), prefix));
   const user = projectUser();
   if (user) {
     chownSync(made, -1, user.gid);
-    chmodSync(made, 0o2770);
+    chmodSync(made, childWrites ? 0o2770 : 0o2750);
   }
   return made;
+}
+
+/** Locks a writable scratch folder once its child is done: the group may enter and read it, no more. */
+export function sealScratch(dir: string): void {
+  if (projectUser()) chmodSync(dir, 0o2750);
+}
+
+/** A child's file opened without following a link: a regular file of the project user's (this process's where none is configured), or an error. */
+function openBack(path: string): number {
+  const fd = openSync(path, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
+  const stat = fstatSync(fd);
+  if (stat.isFile() && stat.uid === (projectUser()?.uid ?? process.getuid?.() ?? stat.uid))
+    return fd;
+  closeSync(fd);
+  throw new Error(`${path} is not a file the child made.`);
+}
+
+/** Refuses a child's file that is a link, not a plain file, or another user's: in a sealed folder, it stays so. */
+export function checkBack(path: string): void {
+  closeSync(openBack(path));
+}
+
+/** A child's file's contents, refused as `checkBack` refuses. */
+export function readBack(path: string): Buffer {
+  const fd = openBack(path);
+  try {
+    return readFileSync(fd);
+  } finally {
+    closeSync(fd);
+  }
+}
+
+/**
+ * Copies what a child made in `from` into `to`, a folder of this process's: folders and plain
+ * files only, each file read as `readBack` reads it (a link or another user's file is refused,
+ * whatever a folder on the way was swapped for) and written new.
+ */
+export function takeBack(from: string, to: string): void {
+  for (const entry of readdirSync(from)) {
+    const [a, b] = [join(from, entry), join(to, entry)];
+    if (lstatSync(a).isDirectory()) {
+      mkdirSync(b);
+      takeBack(a, b);
+    } else writeFileSync(b, readBack(a), { flag: "wx" });
+  }
 }
 
 /** CAP_KILL, CAP_SETGID and CAP_SETUID: what starts and stops a child as the project user. */

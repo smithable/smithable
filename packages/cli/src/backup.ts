@@ -20,7 +20,7 @@ import { CAPTURE_MS, captureProgram, stopCaptureProgram } from "./backup-capture
 import { appName } from "./build.js";
 import type { Io } from "./io.js";
 import { S3 } from "./s3.js";
-import { childOptions, scratchDir } from "./secrets.js";
+import { childOptions, scratchDir, sealScratch, takeBack } from "./secrets.js";
 
 /**
  * Backups (ARCHITECTURE §12): what is irreplaceable in /data, the database (a consistent
@@ -217,7 +217,9 @@ export async function backup(
   options: { to: string; container?: string },
 ): Promise<number> {
   const app = appName(dir);
+  // The snapshot child writes in `out` as the project's user; this process keeps its own copy in `local`.
   const local = scratchDir("smithable-backup-");
+  const out = scratchDir("smithable-backup-out-", true);
   const name = `${app}/${stamp()}-${randomUUID().replaceAll("-", "").slice(0, 12)}`;
   try {
     if (options.container) {
@@ -266,7 +268,7 @@ export async function backup(
           ],
           "The snapshot",
         );
-        exec(["cp", `${options.container}:${inside}`, join(local, "app.db")], "The database copy");
+        exec(["cp", `${options.container}:${inside}`, join(out, "app.db")], "The database copy");
         // Exit 3 means confirmed absence. Exceptions and Docker errors must fail backup.
         const probe = exec(
           [
@@ -281,7 +283,7 @@ export async function backup(
         );
         if (probe.status === 0)
           exec(
-            ["cp", `${options.container}:${insideUploads}`, join(local, "uploads")],
+            ["cp", `${options.container}:${insideUploads}`, join(out, "uploads")],
             "The uploads copy",
           );
       } catch (error) {
@@ -319,9 +321,9 @@ export async function backup(
           "-e",
           captureProgram({
             from: db,
-            to: join(local, "app.db"),
+            to: join(out, "app.db"),
             uploads: join(dir, "data", "uploads"),
-            toUploads: join(local, "uploads"),
+            toUploads: join(out, "uploads"),
           }),
         ],
         { ...childOptions(), cwd: dir, encoding: "utf8", timeout: CAPTURE_MS + 5000 },
@@ -331,6 +333,8 @@ export async function backup(
           `The snapshot failed: ${snap.error?.message || snap.stderr || snap.signal || `exit status ${snap.status}`}`,
         );
     }
+    sealScratch(out);
+    takeBack(out, local);
     if (!existsSync(join(local, "app.db"))) throw new Error("The snapshot was not copied out.");
     manifest(local);
     await target(options.to).save(name, local);
@@ -343,6 +347,7 @@ export async function backup(
     return 1;
   } finally {
     rmSync(local, { recursive: true, force: true });
+    rmSync(out, { recursive: true, force: true });
   }
 }
 

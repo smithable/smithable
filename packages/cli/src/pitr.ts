@@ -11,7 +11,7 @@ import { dataKey, tableNames, titleField } from "@smithable/adapter-tanstack";
 import { dataDiffSql, type ModelIR, restoreOrder, snake } from "@smithable/core";
 import { BUSY_MS } from "./database.js";
 import type { Io } from "./io.js";
-import { childOptions, scratchDir } from "./secrets.js";
+import { checkBack, childOptions, scratchDir, sealScratch } from "./secrets.js";
 import { loadSpec } from "./validate.js";
 
 /** How long the stream keeps every second (the hosted service's window). */
@@ -47,6 +47,7 @@ export function backupContinuous(
   writeFileSync(
     config,
     `l0-retention: ${WINDOW}\nsnapshot:\n  interval: 24h\n  retention: ${WINDOW}\ndbs:\n  - path: ${JSON.stringify(db)}\n    replica:\n      url: ${JSON.stringify(replicaUrl(options.to))}\n`,
+    { flag: "wx" },
   );
   io.out(
     `Streaming ${db} to ${options.to}: every second of the last 30 days can be restored with restore --at.\n`,
@@ -104,7 +105,7 @@ export function restoreAt(
   }
   const spec = ir;
   // The restored copy lives in a folder of its own, gone when this returns.
-  const then = join(scratchDir("smithable-restore-"), "then.db");
+  const then = join(scratchDir("smithable-restore-", true), "then.db");
   try {
     return compare(then);
   } finally {
@@ -130,6 +131,9 @@ export function restoreAt(
       );
       return 1;
     }
+    // litestream wrote it as the project's user: the folder is locked, and the copy must be its plain file.
+    sealScratch(dirname(then));
+    checkBack(then);
     const writing = Boolean(options.bringBack?.length || options.undoChanges?.length);
     const live = new DatabaseSync(db, { readOnly: !writing || !options.yes, timeout: BUSY_MS });
     try {

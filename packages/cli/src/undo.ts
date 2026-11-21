@@ -249,9 +249,9 @@ export function revertedFiles(
     try {
       scratch = scratchDir("smithable-undo-");
       const names = ["ours", "base", "other"].map((n) => join(scratch as string, n));
-      writeFileSync(names[0] as string, ours);
-      writeFileSync(names[1] as string, base);
-      writeFileSync(names[2] as string, other);
+      writeFileSync(names[0] as string, ours, { flag: "wx" });
+      writeFileSync(names[1] as string, base, { flag: "wx" });
+      writeFileSync(names[2] as string, other, { flag: "wx" });
       const merged = spawnSync("git", ["merge-file", "-p", ...names], {
         ...childOptions(),
         cwd: dir,

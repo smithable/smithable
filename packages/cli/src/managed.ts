@@ -110,7 +110,7 @@ export function validateManaged(dir: string, files: Record<string, string | null
     for (const [path, text] of Object.entries(all)) {
       if (text === null) continue;
       mkdirSync(dirname(join(scratch, path)), { recursive: true });
-      writeFileSync(join(scratch, path), text);
+      writeFileSync(join(scratch, path), text, { flag: "wx" });
     }
     const plugins = join(dir, "smithable", "plugins");
     if (existsSync(plugins))

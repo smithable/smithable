@@ -1,4 +1,14 @@
-import { mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, expect, test } from "vitest";
@@ -6,14 +16,18 @@ import { git } from "./git.js";
 import { execQuiet } from "./io.js";
 import {
   capabilityFault,
+  checkBack,
   childOptions,
   forgetProjectUserForTests,
   holdSecrets,
   holdSecretsFromJson,
   modelKey,
+  readBack,
   releaseSecretsForTests,
   scratchDir,
+  sealScratch,
   studioToken,
+  takeBack,
 } from "./secrets.js";
 
 const NAMES = ["SMITHABLE_STUDIO_TOKEN", "SMITHABLE_MODEL_KEY"];
@@ -65,7 +79,7 @@ test("children may run under a configured uid, with that user's home and name, a
   }
 });
 
-test("a scratch folder is the project group's to enter where a project uid is configured", () => {
+test("a scratch folder is the project group's to enter, and to write only where a child writes", () => {
   const plain = scratchDir("smithable-scratch-test-");
   expect(statSync(plain).mode & 0o7777).toBe(0o700);
   rmSync(plain, { recursive: true });
@@ -76,9 +90,66 @@ test("a scratch folder is the project group's to enter where a project uid is co
   forgetProjectUserForTests();
   const shared = scratchDir("smithable-scratch-test-");
   const stat = statSync(shared);
-  expect(stat.mode & 0o7777).toBe(0o2770);
+  expect(stat.mode & 0o7777).toBe(0o2750);
   expect(stat.gid).toBe(process.getgid?.());
   rmSync(shared, { recursive: true });
+  const written = scratchDir("smithable-scratch-test-", true);
+  expect(statSync(written).mode & 0o7777).toBe(0o2770);
+  sealScratch(written);
+  expect(statSync(written).mode & 0o7777).toBe(0o2750);
+  rmSync(written, { recursive: true });
+});
+
+test("a link planted in a scratch folder makes the write or the taking back fail, not follow", () => {
+  const mine = mkdtempSync(join(tmpdir(), "smithable-own-"));
+  const scratch = mkdtempSync(join(tmpdir(), "smithable-scratch-test-"));
+  dirs.push(mine, scratch);
+  const secret = join(mine, "secret");
+  writeFileSync(secret, "this process's own");
+  // A write this process makes in a scratch folder is a new file: a link there fails it.
+  symlinkSync(secret, join(scratch, "input.json"));
+  expect(() => writeFileSync(join(scratch, "input.json"), "{}", { flag: "wx" })).toThrow(
+    expect.objectContaining({ code: "EEXIST" }),
+  );
+  expect(readFileSync(secret, "utf8")).toBe("this process's own");
+  // What a child made is taken only as its plain file: a link is refused.
+  expect(() => checkBack(join(scratch, "input.json"))).toThrow();
+  expect(() => readBack(join(scratch, "input.json"))).toThrow();
+  // takeBack copies folders and plain files, and stops at a link without writing through it.
+  const out = mkdtempSync(join(tmpdir(), "smithable-scratch-test-"));
+  const kept = mkdtempSync(join(tmpdir(), "smithable-scratch-test-"));
+  dirs.push(out, kept);
+  writeFileSync(join(out, "app.db"), "db");
+  mkdirSync(join(out, "uploads"));
+  writeFileSync(join(out, "uploads", "a.png"), "png");
+  takeBack(out, kept);
+  expect(readFileSync(join(kept, "uploads", "a.png"), "utf8")).toBe("png");
+  expect(readBack(join(kept, "app.db")).toString()).toBe("db");
+  symlinkSync(secret, join(out, "uploads", "b.png"));
+  const again = mkdtempSync(join(tmpdir(), "smithable-scratch-test-"));
+  dirs.push(again);
+  expect(() => takeBack(out, again)).toThrow();
+  expect(existsSync(join(again, "uploads", "b.png"))).toBe(false);
+  // A folder swapped for a link to this process's own: its files are not the project's.
+  if (process.platform !== "linux" || process.getuid?.() === 0) return;
+  process.env.SMITHABLE_PROJECT_UID = String((process.getuid?.() ?? 0) + 1);
+  process.env.SMITHABLE_PROJECT_GID = String(process.getgid?.());
+  forgetProjectUserForTests();
+  expect(() => readBack(secret)).toThrow("not a file the child made");
+});
+
+test("only the sites whose child writes in it have a writable scratch folder, and each locks it", () => {
+  const here = new URL(".", import.meta.url).pathname;
+  const sites = readdirSync(here)
+    .filter((f) => f.endsWith(".ts") && !f.endsWith(".test.ts") && f !== "secrets.ts")
+    .filter((f) => readFileSync(join(here, f), "utf8").includes("scratchDir("));
+  const writable = sites.filter((f) =>
+    /scratchDir\([^)]*, true\)/.test(readFileSync(join(here, f), "utf8")),
+  );
+  expect(writable.sort()).toEqual(["backup.ts", "pitr.ts", "theme-lab.ts"]);
+  // The lab's folder is its app, changed by the generator's child for as long as the lab runs.
+  for (const f of ["backup.ts", "pitr.ts"])
+    expect(readFileSync(join(here, f), "utf8")).toContain("sealScratch(");
 });
 
 test("a project uid given alone, or not a number, refuses rather than running children as this user", () => {

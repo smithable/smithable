@@ -57,6 +57,7 @@ export function bedrock(model: string, region: string, usageLog?: string): Provi
             },
             inferenceConfig: { maxTokens: maxOutputTokens ?? 16000, temperature: 0 },
           }),
+          { flag: "wx" },
         );
         const out = await new Promise<string>((resolve, reject) => {
           const child = spawn(
