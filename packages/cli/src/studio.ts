@@ -767,8 +767,13 @@ export async function studio(
   // The first operation then finds its tools loaded.
   void warmTools(dir);
 
-  /** The last proposal a model made, waiting to be applied or dropped. */
-  let pending: { id: string; request: string; proposal: Proposal; base?: string } | undefined;
+  // Each surface holds one pending proposal. Asking for help must leave the wizard's proposal usable.
+  const pending: Partial<
+    Record<
+      "standard" | "referenceHelp",
+      { id: string; request: string; proposal: Proposal; base?: string }
+    >
+  > = {};
   // An undo of the newest change (a revert and the snapshot put back) runs none of a change's
   // checks: its revision gets a result that says so, the spec checked (change-verified.md §7).
   // Written after the undo has answered and the preview has its database back: run inside the
@@ -984,7 +989,8 @@ export async function studio(
     // Refused (nothing was touched) or failed: it can be asked again.
     if (!result.ok) replaceable = true;
     writePreviewConfig();
-    pending = undefined;
+    delete pending.standard;
+    delete pending.referenceHelp;
     try {
       notice = readOwn(noticeFile)?.trim();
     } catch {
@@ -1623,7 +1629,8 @@ export async function studio(
       if (req.method === "POST" && url.pathname === "/api/ask") {
         // A model proposes; nothing changes until the proposal is applied. The conversation so
         // far and the docs' parts the page found go with the request (A 152), each cut short.
-        const { request, conversation, docs } = await body();
+        const { request, conversation, docs, scope } = await body();
+        const slot = scope === "reference-help" ? "referenceHelp" : "standard";
         const text = (value: unknown, max: number) =>
           typeof value === "string" ? value.slice(0, max) : undefined;
         const turns = (Array.isArray(conversation) ? conversation.slice(-6) : []).flatMap(
@@ -1651,7 +1658,8 @@ export async function studio(
         );
         const quiet = { out: () => {}, err: (t: string) => log(t) };
         // A proposal shown and never applied was declined.
-        if (pending) proposalOutcome(dir, pending.id, "declined");
+        const previous = pending[slot];
+        if (previous) proposalOutcome(dir, previous.id, "declined");
         const id = randomUUID();
         const proposal = await proposeFor(dir, quiet, String(request ?? ""), id, {
           conversation: turns,
@@ -1659,7 +1667,7 @@ export async function studio(
         });
         const before =
           proposal?.kind === "change" ? proposalVerification(proposal.operations) : undefined;
-        pending = proposal
+        pending[slot] = proposal
           ? { id, request: String(request), proposal, ...(before ? { base: before.base } : {}) }
           : undefined;
         if (!proposal)
@@ -1674,10 +1682,12 @@ export async function studio(
         });
       }
       if (req.method === "POST" && url.pathname === "/api/ask/apply") {
-        // Only the proposal the page was shown: not a newer one made in another tab.
-        const { id } = await body();
-        const confirmed = pending?.id === id ? pending : undefined;
-        if (confirmed) pending = undefined;
+        // The id must still be the latest proposal for the requesting surface.
+        const { id, scope } = await body();
+        const slot = scope === "reference-help" ? "referenceHelp" : "standard";
+        const current = pending[slot];
+        const confirmed = current?.id === id ? current : undefined;
+        if (confirmed) delete pending[slot];
         if (confirmed?.proposal.kind !== "change")
           return json({
             ok: false,
@@ -1688,7 +1698,7 @@ export async function studio(
         // its consequences are worked out again on the app as it is now, and asked again.
         if (confirmed.base && confirmed.base !== projectRevision(dir)) {
           const now = proposalVerification(proposal.operations);
-          pending = { ...confirmed, base: now.base };
+          pending[slot] = { ...confirmed, base: now.base };
           return json({
             ok: false,
             stale: true,

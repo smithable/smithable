@@ -297,6 +297,7 @@ export function Ask({
     }
     try {
       const next = await api.ask(text, {
+        scope: helpRequest !== undefined ? "reference-help" : undefined,
         conversation: [
           ...(trace
             ? threadLines(trace, said, words)
@@ -411,7 +412,10 @@ export function Ask({
     onApplyingChange?.(true);
     setBusy(true);
     try {
-      const result = await api.applyProposal(proposal.id);
+      const result = await api.applyProposal(
+        proposal.id,
+        helpRequest !== undefined ? "reference-help" : undefined,
+      );
       // The app moved since it was proposed: the same proposal, with what it does now, asked again.
       if (result.stale && proposal.kind === "change") {
         // What it did before is not what it does now: without a new answer, none is shown.

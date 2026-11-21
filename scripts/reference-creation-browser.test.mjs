@@ -46,6 +46,13 @@ test("complete creation returns a current reference and preserves its requesting
       ];
     if (request.includes("not a creation"))
       return [{ op: "setApp", args: { description: "A changed description" } }];
+    if (request.includes("original proposal"))
+      return [
+        {
+          op: "addModel",
+          args: { model: "OriginalProposalSupplier", fields: { name: "string!" } },
+        },
+      ];
     const model = request.includes("keep selection")
       ? "UnselectedSupplier"
       : request.includes("legacy model")
@@ -534,6 +541,14 @@ createRoot(document.getElementById('root')).render(<StrictMode><App/></StrictMod
     assert.match(project.files.spec, /EditedSupplier:/);
     assert.doesNotMatch(project.files.spec, /ProposedSupplier:/);
     assert.equal(await draft.inputValue(), "original");
+    await propose("model", "original proposal");
+    await helpButton.click();
+    await help.getByRole("button", { name: "Apply", exact: true }).waitFor();
+    await back.click();
+    await dialog.getByRole("button", { name: "Create", exact: true }).click();
+    await dialog.waitFor({ state: "detached" });
+    assert.equal(await result.textContent(), "OriginalProposalSupplier");
+    console.log("PASS the unchanged wizard proposal still applies after returning from help");
     await propose("model", "edited model for help");
     await modelName.fill("UnappliedSupplier");
     await helpButton.click();
@@ -547,7 +562,10 @@ createRoot(document.getElementById('root')).render(<StrictMode><App/></StrictMod
     assert.equal(await modelName.inputValue(), "UnappliedSupplier");
     await page.keyboard.press("Escape");
     await dialog.waitFor({ state: "detached" });
-    assert.equal(await form.getByLabel("Selected reference").textContent(), "RetrySupplier");
+    assert.equal(
+      await form.getByLabel("Selected reference").textContent(),
+      "OriginalProposalSupplier",
+    );
     console.log("PASS successful help Apply refreshes the project without selecting a reference");
   } catch (error) {
     if (page)

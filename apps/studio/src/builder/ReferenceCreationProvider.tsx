@@ -136,8 +136,17 @@ function CreationDialog({
   }, []);
   useEffect(() => {
     const element = dialog.current;
-    element?.showModal();
-    return () => element?.close();
+    if (!element) return;
+    const holdEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && committing.current) event.preventDefault();
+    };
+    element.showModal();
+    // Focus can leave the disabled Apply button before the change returns.
+    element.ownerDocument.addEventListener("keydown", holdEscape, true);
+    return () => {
+      element.ownerDocument.removeEventListener("keydown", holdEscape, true);
+      element.close();
+    };
   }, []);
   return (
     <dialog
@@ -148,9 +157,6 @@ function CreationDialog({
         if (committing.current) return;
         if (help !== undefined) setHelp(undefined);
         else onClose();
-      }}
-      onKeyDown={(event) => {
-        if (event.key === "Escape" && committing.current) event.preventDefault();
       }}
       className="m-auto max-h-[90vh] w-[min(42rem,92vw)] overflow-auto rounded-lg bg-panel text-fg shadow-xl backdrop:bg-black/40"
     >
