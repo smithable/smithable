@@ -227,7 +227,7 @@ test("Review and Publish use current evidence and preserve the release destinati
       run(process.execPath, [
         "--input-type=module",
         "-e",
-        `import {beginDeployment,recordDeployment,recordChecks,projectRevision} from ${JSON.stringify(module)};const dir=${JSON.stringify(dir)};${code}`,
+        `import {beginDeployment,recordDeployment,recordChecks,projectRevision,writerLock} from ${JSON.stringify(module)};const dir=${JSON.stringify(dir)};${code}`,
       ]);
     metadata(
       'recordDeployment(dir);recordChecks(dir,"release",[{what:"Synthetic fixture check",by:"fixture",ok:true,findings:[]}],projectRevision(dir));',
@@ -265,7 +265,7 @@ test("Review and Publish use current evidence and preserve the release destinati
     await close(dialog);
     metadata("recordDeployment(dir);");
     metadata(
-      'const fs=await import("node:fs");fs.writeFileSync(dir+"/data/.smithable/release-review/writer.lock","interrupted fixture");',
+      'const fs=await import("node:fs");fs.writeFileSync(writerLock(dir),"interrupted fixture");',
     );
     dialog = await open();
     await dialog
@@ -274,7 +274,7 @@ test("Review and Publish use current evidence and preserve the release destinati
     assert.match(await dialog.innerText(), /writer was interrupted/);
     await close(dialog);
     metadata(
-      'const fs=await import("node:fs");fs.unlinkSync(dir+"/data/.smithable/release-review/writer.lock");',
+      'const fs=await import("node:fs");fs.unlinkSync(writerLock(dir));',
     );
     run(process.execPath, [
       cli,
