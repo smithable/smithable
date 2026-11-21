@@ -298,12 +298,15 @@ export async function completeJson(
     throw new Error(
       `The request is too large for the model (about ${size} tokens; at most ${MAX_PROMPT_TOKENS}).`,
     );
+  let completion: Completion;
   let cutOff: CutOffAnswerError | undefined;
-  const completion = await provider.complete(request).catch((error) => {
+  try {
+    completion = await provider.complete(request);
+  } catch (error) {
     if (!(error instanceof CutOffAnswerError)) throw error;
     cutOff = error;
-    return error.completion;
-  });
+    completion = error.completion;
+  }
   usage.push({
     provider: provider.name,
     model: completion.model,

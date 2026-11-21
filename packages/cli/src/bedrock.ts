@@ -127,7 +127,11 @@ export function bedrock(model: string, region: string, usageLog?: string): Provi
               }
             : {}),
         };
-        if (result.stopReason === "max_tokens") throw new CutOffAnswerError(completion);
+        if (
+          result.stopReason === "max_tokens" ||
+          result.stopReason === "model_context_window_exceeded"
+        )
+          throw new CutOffAnswerError(completion);
         return completion;
       } finally {
         rmSync(dir, { recursive: true, force: true });

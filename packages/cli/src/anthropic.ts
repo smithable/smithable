@@ -108,7 +108,8 @@ export function anthropic(
             }
           : {}),
       };
-      if (body.stop_reason === "max_tokens") throw new CutOffAnswerError(completion);
+      if (body.stop_reason === "max_tokens" || body.stop_reason === "model_context_window_exceeded")
+        throw new CutOffAnswerError(completion);
       return completion;
     },
   };
