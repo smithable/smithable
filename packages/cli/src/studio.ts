@@ -525,7 +525,9 @@ export async function studio(
     return 1;
   }
   const previewPort = port + 1;
-  const preview = options.previewUrl ?? `http://localhost:${previewPort}`;
+  // The local Vite listener may resolve localhost to either loopback family.
+  const localPreview = `http://localhost:${previewPort}`;
+  const preview = options.previewUrl ?? localPreview;
   // Two identities for the look editor. The preview's, `previewId`, is fixed for this Studio run:
   // it goes in the preview's config and in its tickets, and the frame answers to it. The project's,
   // `lookProject`, is new every time the app is replaced by another (Smith's new draft): an Apply
@@ -594,7 +596,7 @@ export async function studio(
   /** The preview's failure to answer, recorded once until it answers (and its report sent once). */
   let stuck: { report?: "sent" | "offer" } | undefined;
   const previewAnswers = () =>
-    fetch(`http://localhost:${previewPort}/health`, {
+    fetch(`${localPreview}/health`, {
       headers: previewHeaders,
       signal: AbortSignal.timeout(2000),
     }).then(
@@ -611,7 +613,7 @@ export async function studio(
   const settled = () =>
     new Promise((r) => setTimeout(r, 800))
       .then(() =>
-        fetch(`http://127.0.0.1:${previewPort}/__smithable/settled`, {
+        fetch(`${localPreview}/__smithable/settled`, {
           headers: previewHeaders,
           signal: AbortSignal.timeout(5000),
         }),
@@ -630,7 +632,7 @@ export async function studio(
   const renders = async () => {
     const until = Date.now() + 20000;
     while (Date.now() < until) {
-      const clean = await fetch(`http://127.0.0.1:${previewPort}/`, {
+      const clean = await fetch(`${localPreview}/`, {
         headers: previewHeaders,
         signal: AbortSignal.timeout(5000),
       }).then(
@@ -645,7 +647,7 @@ export async function studio(
   const changed = (data: unknown) => void settled().then(() => send("changed", data));
   // The sample users (sample-users.md §4–§6), acting in the preview through its door.
   const people = sampleRunner({
-    door: doorAt(`http://127.0.0.1:${previewPort}`, doorSecret, previewHeaders),
+    door: doorAt(localPreview, doorSecret, previewHeaders),
     load: projectPeople(dir),
     providers: () => providersFor(),
     changed: (state) => send("people", state),
@@ -718,7 +720,7 @@ export async function studio(
       setTimeout(startApp, delay);
     });
     // Once it answers, a preview that is stuck again later is a new failure to report.
-    void warmPreview(previewPort, log, undefined, previewHeaders).then(async () => {
+    void warmPreview(localPreview, log, undefined, previewHeaders).then(async () => {
       if (await previewAnswers()) stuck = undefined;
     });
   };
@@ -1088,10 +1090,10 @@ export async function studio(
       }
       if (url.pathname === "/api/look-generation" && req.method === "GET") {
         try {
-          const response = await fetch(
-            `http://localhost:${previewPort}/__smithable/look/generation`,
-            { headers: previewHeaders, signal: AbortSignal.timeout(5000) },
-          );
+          const response = await fetch(`${localPreview}/__smithable/look/generation`, {
+            headers: previewHeaders,
+            signal: AbortSignal.timeout(5000),
+          });
           if (!response.ok) return json({ error: "Preview generation unavailable." }, 409);
           return json(await response.json());
         } catch {
@@ -1189,7 +1191,7 @@ export async function studio(
           }
           try {
             const address = open.url;
-            await warmPreview(open.port, log);
+            await warmPreview(address, log);
             // Another was asked for, or it was closed, while it started: not what is waited for.
             const gone = open.child.exitCode !== null || open.child.signalCode !== null;
             if (openVersion(dir)?.commit !== open.commit || gone)
