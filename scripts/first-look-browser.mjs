@@ -1,6 +1,6 @@
 // A focused real-daemon check, also included in test-studio.mjs. No model is configured.
 import { execFileSync, spawn } from "node:child_process";
-import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { appendFileSync, mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { chromium } from "playwright";
@@ -81,6 +81,20 @@ try {
         `${log}\n--- preview ---\n${JSON.stringify(logs, null, 1)}`,
       );
     } catch {}
+    // The app's routes as the dev server sees them (a preview that answers 404 everywhere).
+    try {
+      const routes = execFileSync("ls", ["-la", join(dir, "src", "routes")], { encoding: "utf8" });
+      const tree = execFileSync("grep", ["-c", "health", join(dir, "src", "routeTree.gen.ts")], {
+        encoding: "utf8",
+      });
+      const status = execFileSync("git", ["-C", dir, "status", "--short"], { encoding: "utf8" });
+      appendFileSync(
+        join(root, "server.log"),
+        `${routes}\nhealth in routeTree: ${tree}\n${status}`,
+      );
+    } catch (e) {
+      appendFileSync(join(root, "server.log"), String(e));
+    }
     console.error(`Studio smoke evidence: ${root}`);
   }
   throw error;
