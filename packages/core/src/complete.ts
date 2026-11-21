@@ -362,8 +362,11 @@ function companionNames(
   const [section, entry, part, fourth] = place.path;
   const depth = place.path.length;
   /** The fields of a page's model (every model's when the page names none). */
+  // A page's model: as the scan read it (one line or its own), else the first crud key after it.
   const pageModel = (page: string | undefined) => {
     const spec = known.spec ?? "";
+    const read = pages.get(page ?? "");
+    if (read) return read;
     return /^ {4}(?:crud|calendar|articles):\s*([A-Z][A-Za-z0-9]*)/m.exec(
       spec.slice(spec.indexOf(`\n  ${page}:`)),
     )?.[1];
@@ -421,7 +424,7 @@ function companionNames(
       if (part === "table" && ["columns", "sort", "below"].includes(key ?? "")) return fields;
       // A gallery's cover is one of the page model's picture fields.
       if (part === "table" && key === "cover") {
-        const model = pages.get(entry ?? "") ?? pageModel(entry);
+        const model = pageModel(entry);
         return fields.filter((f) => model && pictured.has(`${model}.${f}`));
       }
       if (part === "form" && key === "fieldOrder") return fields;
