@@ -134,6 +134,14 @@ export interface ContentImage {
   alt: string;
   /** Made by an AI (the image library's pictures): the app says so on pictures that could pass for photographs. */
   generated?: true;
+  /** The file's own width in pixels, so a screen may choose it among its copies. */
+  width?: number;
+  /**
+   * The widths in pixels of its copies, narrowest first, each a file beside it named by its width
+   * (`images/hero.webp` at 2400 is `images/hero-2400.webp`), so a wide screen loads a sharp
+   * picture and a phone a small one.
+   */
+  widths?: number[];
 }
 
 /** A picture's file, relative to the app's public/ folder. */
@@ -425,7 +433,7 @@ export function validateContent(
       content.languages = languages;
     }
     if (key === "logo") {
-      const { src, alt, generated } = readPicture(ctx, value, '"logo"');
+      const { src, alt, generated } = readPicture(ctx, value, '"logo"', false);
       if (!src || !LOGO_SRC.test(src))
         ctx.error(
           value,
@@ -885,21 +893,75 @@ function readPicture(
   ctx: ParseContext,
   node: ParsedNode | null,
   where: string,
-): { src?: string; alt?: string; generated?: true } {
+  sized = true,
+): { src?: string; alt?: string; generated?: true; width?: number; widths?: number[] } {
+  // A mark is shown small: one file.
   const entries = checkKeys(ctx, mapEntries(ctx, node, where) ?? [], where, {
-    allowed: ["src", "alt", "generated"],
+    allowed: ["src", "alt", "generated", ...(sized ? ["width", "widths"] : [])],
   });
   const flag = entries.find((e) => e.key === "generated");
+  const own = entries.find((e) => e.key === "width");
+  const copies = entries.find((e) => e.key === "widths");
   const texts = readTexts(
     ctx,
     node,
     where,
     ["src", "alt"],
-    entries.filter((e) => e !== flag),
+    entries.filter((e) => e !== flag && e !== own && e !== copies),
   );
-  return flag && readBoolean(ctx, flag.value, `"generated" of ${where}`) === true
-    ? { ...texts, generated: true }
-    : texts;
+  const width = own && readWidths(ctx, own.value, where, false)?.[0];
+  const widths = copies && readWidths(ctx, copies.value, where, true);
+  // The file itself is always offered, or a phone would load the smallest enlargement.
+  const misfit =
+    widths &&
+    (!width
+      ? `"widths" of ${where} needs "width", the file's own width, beside it.`
+      : widths.includes(width)
+        ? `"widths" of ${where} lists its copies' widths: the file's own (${width}) is not one of them.`
+        : texts.src && imageAt(texts.src, width) === texts.src
+          ? `"widths" of ${where} needs a file whose name ends in a lower-case extension (images/hero.webp): its copies are named after it.`
+          : undefined);
+  if (misfit) ctx.error(copies?.value ?? null, "invalid-value", misfit);
+  return {
+    ...texts,
+    ...(flag && readBoolean(ctx, flag.value, `"generated" of ${where}`) === true
+      ? { generated: true as const }
+      : {}),
+    ...(width ? { width } : {}),
+    ...(widths && !misfit ? { widths } : {}),
+  };
+}
+
+const PIXELS = (w: unknown): w is number =>
+  typeof w === "number" && Number.isInteger(w) && w >= 100 && w <= 4000;
+
+/**
+ * A picture's `width` (one number) or `widths` (one to six, each wider than the last), in whole
+ * pixels from 100 to 4000.
+ */
+function readWidths(
+  ctx: ParseContext,
+  node: ParsedNode | null,
+  where: string,
+  list: boolean,
+): number[] | undefined {
+  const values = list
+    ? (isSeq(node) ? node.items : []).map((i) => (isScalar(i) ? i.value : undefined))
+    : [isScalar(node) ? node.value : undefined];
+  if (
+    values.length >= 1 &&
+    values.length <= 6 &&
+    values.every((w, n): w is number => PIXELS(w) && (n === 0 || w > (values[n - 1] as number)))
+  )
+    return values as number[];
+  ctx.error(
+    node,
+    "invalid-value",
+    list
+      ? `"widths" of ${where} must list one to six widths in pixels (100 to 4000), narrowest first, e.g. [800, 2400]: its copies'.`
+      : `"width" of ${where} must be its width in pixels, a whole number from 100 to 4000.`,
+  );
+  return undefined;
 }
 
 /** A picture: `{ src: images/<file>, alt: <what it shows>, generated?: true }`. */
@@ -908,7 +970,7 @@ function readImage(
   node: ParsedNode | null,
   where: string,
 ): ContentImage | undefined {
-  const { src, alt, generated } = readPicture(ctx, node, where);
+  const { src, alt, generated, width, widths } = readPicture(ctx, node, where);
   // In a language file a picture says what it shows only: its file is the content file's.
   if (ctx.emptyTexts) return { alt: alt ?? "" } as ContentImage;
   if (!src || !IMAGE_SRC.test(src)) {
@@ -927,8 +989,24 @@ function readImage(
     );
     return undefined;
   }
-  return { src, alt, ...(generated ? { generated } : {}) };
+  return {
+    src,
+    alt,
+    ...(generated ? { generated } : {}),
+    ...(width ? { width } : {}),
+    ...(widths ? { widths } : {}),
+  };
 }
+
+/**
+ * The file of a picture's copy at a width: `images/hero.webp` at 2400 is `images/hero-2400.webp`.
+ * A preview's address tag (`?v=…`, which changes with the file) stays on it.
+ */
+export const imageAt = (src: string, width: number) => {
+  const at = src.indexOf("?");
+  const file = at < 0 ? src : src.slice(0, at);
+  return `${file.replace(/(\.[a-z0-9]+)$/, `-${width}$1`)}${at < 0 ? "" : src.slice(at)}`;
+};
 
 /** A list of items, each a mapping of texts; a pricing plan's features are a list of texts. */
 function readItems(

@@ -665,6 +665,20 @@ const section: JsonSchema = {
           description:
             "Made by an AI: the app marks it as such where it could pass for a photograph.",
         },
+        width: {
+          type: "integer",
+          description: "The file's own width in pixels.",
+          minimum: 100,
+          maximum: 4000,
+        },
+        widths: {
+          type: "array",
+          description:
+            "Its copies' widths in pixels, narrowest first, each a file beside it named by its width (images/hero-2400.webp).",
+          items: { type: "integer", minimum: 100, maximum: 4000 },
+          minItems: 1,
+          maxItems: 6,
+        },
       },
     },
     tiles: {
@@ -686,6 +700,20 @@ const section: JsonSchema = {
                 type: "boolean",
                 description:
                   "Made by an AI: the app marks it as such where it could pass for a photograph.",
+              },
+              width: {
+                type: "integer",
+                description: "The file's own width in pixels.",
+                minimum: 100,
+                maximum: 4000,
+              },
+              widths: {
+                type: "array",
+                description:
+                  "Its copies' widths in pixels, narrowest first, each a file beside it named by its width (images/hero-2400.webp).",
+                items: { type: "integer", minimum: 100, maximum: 4000 },
+                minItems: 1,
+                maxItems: 6,
               },
             },
           },
@@ -721,6 +749,20 @@ const section: JsonSchema = {
                 type: "boolean",
                 description:
                   "Made by an AI: the app marks it as such where it could pass for a photograph.",
+              },
+              width: {
+                type: "integer",
+                description: "The file's own width in pixels.",
+                minimum: 100,
+                maximum: 4000,
+              },
+              widths: {
+                type: "array",
+                description:
+                  "Its copies' widths in pixels, narrowest first, each a file beside it named by its width (images/hero-2400.webp).",
+                items: { type: "integer", minimum: 100, maximum: 4000 },
+                minItems: 1,
+                maxItems: 6,
               },
             },
           },

@@ -251,11 +251,13 @@ export async function addLibraryPictures(options: {
       // A landing section's texts are under the page by the section's name (pages.home.hero).
       const at = ["pages", landing.id, hero.name];
       if (!editor.has([...at, "image"])) {
+        const sizes = await heroCopies(picked.hero, fetchFn, written);
         // Said either way, so a photograph's `generated: false` is in the file, never left out.
         const image = {
           src: "images/hero.webp",
           alt: picked.hero.alt,
           generated: madeByAi(picked.hero),
+          ...sizes,
         };
         if (editor.has(at)) editor.add(at, "image", image);
         else if (editor.has(["pages", landing.id]))
@@ -299,7 +301,38 @@ export async function addLibraryPictures(options: {
   return written;
 }
 
-/** Writes the pictures under the project's public/images/. */
+/**
+ * The hero's copies at other widths (hero-2400.webp …) the library lists, fetched into `written`
+ * beside it, so a wide screen loads a sharp picture and a phone a small one: the content file's
+ * `width` and `widths`, or undefined when there are none or none could be fetched. A copy is the
+ * same picture resized: it has no record or credit of its own.
+ */
+async function heroCopies(
+  entry: PictureEntry,
+  fetchFn: Fetch,
+  written: PlacedPicture[],
+): Promise<{ width: number; widths: number[] } | undefined> {
+  const width = entry.width;
+  // The content file takes widths from 100 to 4000 pixels.
+  const fits = (w: number) => Number.isInteger(w) && w >= 100 && w <= 4000;
+  if (!width || !fits(width)) return undefined;
+  const widths: number[] = [];
+  // At most six tried, so a library listing many that fail is not fetched on and on.
+  const listed = (entry.widths ?? [])
+    .filter((c) => fits(c.width) && c.width !== width)
+    .sort((a, b) => a.width - b.width)
+    .filter((c, n, all) => n === 0 || c.width !== all[n - 1]?.width)
+    .slice(0, 6);
+  for (const copy of listed) {
+    const w = copy.width;
+    const bytes = await libraryBytes(copy.url, fetchFn);
+    if (!bytes) continue;
+    widths.push(w);
+    written.push({ file: `hero-${w}.webp`, alt: entry.alt, bytes });
+  }
+  return widths.length ? { width, widths } : undefined;
+}
+
 /**
  * A new project's pictures: the starter's own files first (base64, by path), then the pictures
  * picked for this app. The order matters: a starter's hero and the picked one share a file name

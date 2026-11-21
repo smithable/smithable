@@ -58,6 +58,7 @@ const setText: Operation<{ path: string[]; text: string; language?: string }> = 
         `The app is not in "${language}": add it first (smithable op addLanguage ${language}).`,
       );
     const parent = path.slice(0, -1);
+    const before = content.get(path);
     // An item of a plain list, e.g. one of a plan's features.
     if (Array.isArray(content.get(parent)) && typeof content.get(path) === "string") {
       if (text === "") throw new OperationError("A list's item has no default text.");
@@ -66,9 +67,11 @@ const setText: Operation<{ path: string[]; text: string; language?: string }> = 
       if (!content.has(path)) throw new OperationError(`${path.join(".")} has no text of its own.`);
       content.removeAndPrune(path, 0);
     } else put(content, path, text);
-    // Another file is not known to be made by an AI: the picture loses its mark.
-    if (path[path.length - 1] === "src" && content.has([...parent, "generated"]))
-      content.remove([...parent, "generated"]);
+    // Another file is not known to be made by an AI, nor to have the old one's smaller copies:
+    // the picture loses its mark and its widths, or wide screens would show the old picture.
+    if (path[path.length - 1] === "src" && before !== text)
+      for (const key of ["generated", "width", "widths"])
+        if (content.has([...parent, key])) content.remove([...parent, key]);
     return [];
   },
 };

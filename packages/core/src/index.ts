@@ -102,6 +102,7 @@ export {
   ASSISTANT_TEXTS,
   CONTENT_VERSION,
   emptyContent,
+  imageAt,
   LANGUAGES,
   type Language,
   LOGO_SRC,

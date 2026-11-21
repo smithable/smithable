@@ -464,8 +464,8 @@ export function creditsText(records: PictureRecords): string {
 }
 
 /**
- * The content file with the new hero's words and `generated` wherever an image names
- * images/hero.webp; undefined when nothing names it. Other images are the owner's.
+ * The content file with the new hero's words and `generated` (and no `width` or `widths`) wherever an image
+ * names images/hero.webp; undefined when nothing names it. Other images are the owner's.
  */
 function heroWords(dir: string, entry: VersionEntry): string | undefined {
   const path = join(dir, "smithable.content.yml");
@@ -485,6 +485,9 @@ function heroWords(dir: string, entry: VersionEntry): string | undefined {
   for (const at of found) {
     editor.set([...at, "alt"], entry.alt);
     editor.set([...at, "generated"], entry.generated ?? true);
+    // Its width and copies were the old picture's.
+    for (const key of ["width", "widths"])
+      if (editor.has([...at, key])) editor.remove([...at, key]);
   }
   return editor.text;
 }

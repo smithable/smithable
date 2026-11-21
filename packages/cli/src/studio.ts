@@ -178,6 +178,28 @@ export const ownFile = (path: string) => path in EDITABLE_FILES || path.startsWi
  * comments apart): formatting is never a change (docs/design/studio-v3.md §7), so the daemon
  * answers as if done and writes nothing; the formatted text reaches the file with the next edit.
  */
+/**
+ * Why a picture a change brings is refused, or undefined. Only the Look tab's logo brings one:
+ * under public/images/, at most 2 MB. The logo has no smaller copies, so a file written over one
+ * with the same name never leaves another picture's widths pointing at the old picture.
+ */
+export function pictureRefusal(
+  operation: string,
+  path: unknown,
+  bytes: Uint8Array | undefined,
+): string | undefined {
+  if (operation !== "setLogo") return "Only the logo is uploaded with a change.";
+  if (
+    typeof path !== "string" ||
+    !/^public\/images\/[\w-][\w.-]*\.(webp|avif|jpe?g|png|svg)$/.test(path) ||
+    !bytes ||
+    bytes.byteLength === 0 ||
+    bytes.byteLength > 2 * 1024 * 1024
+  )
+    return "A picture must be a webp, avif, jpg, png or svg file of at most 2 MB.";
+  return undefined;
+}
+
 export function unchangedEdit(dir: string, name: string, args: Record<string, unknown>): boolean {
   if (name !== "editSpec" || typeof args.text !== "string" || args.path) return false;
   const file = typeof args.file === "string" ? args.file : "smithable.yml";
@@ -1376,26 +1398,10 @@ export async function studio(
         // The editor's text that only formats the file (studio-v3.md §7): no change, silently.
         if (unchangedEdit(dir, String(name), (args ?? {}) as Record<string, unknown>))
           return json({ ok: true, output: "Nothing to change.", unchanged: true });
-        // A picture the change brings (the Look tab's logo): under public/images/, at most 2 MB.
         const given = file as { path?: unknown; data?: unknown } | undefined;
         let bytes = typeof given?.data === "string" ? Buffer.from(given.data, "base64") : undefined;
-
-        if (
-          given &&
-          (typeof given.path !== "string" ||
-            !/^public\/images\/[\w-][\w.-]*\.(webp|avif|jpe?g|png|svg)$/.test(given.path) ||
-            !bytes ||
-            bytes.byteLength === 0 ||
-            bytes.byteLength > 2 * 1024 * 1024)
-        ) {
-          return json(
-            {
-              ok: false,
-              output: "A picture must be a webp, avif, jpg, png or svg file of at most 2 MB.",
-            },
-            400,
-          );
-        }
+        const refused = given && pictureRefusal(String(name), given.path, bytes);
+        if (refused) return json({ ok: false, output: refused }, 400);
 
         if (given?.path && typeof given.path === "string" && given.path.endsWith(".svg") && bytes) {
           let text = bytes.toString("utf8");

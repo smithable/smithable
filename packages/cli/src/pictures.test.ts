@@ -125,6 +125,66 @@ pages:
   expect(readFileSync(join(dir, "public", "images", "samples", "0.webp"))).toHaveLength(4);
 });
 
+test("a hero the library has in several widths comes with its copies, and the content file says their widths", async () => {
+  const ir = validateSpec({
+    path: "smithable.yml",
+    text: "smithable: 0.1\napp: { name: Kaffe }\npages:\n  home: { route: /, landing: { hero: {} } }\n",
+  }).ir;
+  if (!ir) throw new Error("invalid");
+  const sized = [
+    {
+      ...index[0],
+      width: 1536,
+      // Out of order, one the same width as the file, one that cannot be fetched.
+      widths: [
+        { width: 2400, url: "https://x/hero/hero-cafe-2400.webp" },
+        { width: 1536, url: "https://x/hero/hero-cafe-1536.webp" },
+        { width: 800, url: "https://x/hero/far.webp" },
+        { width: 1600, url: "https://x/hero/hero-cafe-1600.webp" },
+      ],
+    },
+  ] as PictureEntry[];
+  const files: Record<string, string> = { "smithable.content.yml": "smithableContent: 0.1\n" };
+  const written = await addLibraryPictures({
+    description: "a café",
+    ir,
+    files,
+    io: { out: () => {}, err: () => {} } as never,
+    fetchFn: fakeFetch,
+    index: sized,
+  });
+  expect(written.map((w) => w.file).sort()).toEqual([
+    "hero-1600.webp",
+    "hero-2400.webp",
+    "hero.webp",
+  ]);
+  // A copy is the same picture: no record or credit of its own.
+  expect(written.find((w) => w.file === "hero-2400.webp")).toEqual({
+    file: "hero-2400.webp",
+    alt: "A café",
+    bytes: expect.anything(),
+  });
+  const text = files["smithable.content.yml"] ?? "";
+  const content = validateContent({ path: "smithable.content.yml", text }, ir);
+  expect(content.diagnostics.filter((d) => d.severity === "error")).toEqual([]);
+  expect(content.content?.pages.home?.sections?.hero?.image).toMatchObject({
+    width: 1536,
+    widths: [1600, 2400],
+  });
+  // A width the content file would refuse: the hero alone.
+  const wide: Record<string, string> = { "smithable.content.yml": "smithableContent: 0.1\n" };
+  const alone = await addLibraryPictures({
+    description: "a café",
+    ir,
+    files: wide,
+    io: { out: () => {}, err: () => {} } as never,
+    fetchFn: fakeFetch,
+    index: [{ ...sized[0], width: 4096 }] as PictureEntry[],
+  });
+  expect(alone.map((w) => w.file)).toEqual(["hero.webp"]);
+  expect(wide["smithable.content.yml"]).not.toContain("width");
+});
+
 test("a model with drafted records gets its own pictures, named in its sample file", async () => {
   const ir = validateSpec({
     path: "smithable.yml",

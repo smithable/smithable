@@ -162,3 +162,34 @@ test("a landing page's header look is the layout's header prop; without one the 
   );
   expect(route("")).not.toContain("header={{");
 });
+
+test("a picture in several widths gives the browser its files by width; one without, none", () => {
+  const ir = validateSpec({
+    path: "smithable.yml",
+    text: "smithable: 0.1\napp: { name: Site }\npages:\n  home:\n    route: /\n    landing:\n      hero:\n      gallery:\n",
+  }).ir as SpecIR;
+  const auth = validateAuth(
+    {
+      path: "smithable.auth.yml",
+      text: "smithableAuth: 0.1\nsignIn: none\npublic: { pages: [home] }\n",
+    },
+    ir,
+  ).auth as AuthIR;
+  const content = validateContent(
+    {
+      path: "smithable.content.yml",
+      text: "smithableContent: 0.1\npages:\n  home:\n    hero:\n      image: { src: images/hero.webp, alt: A harbour, width: 1536, widths: [800, 2400] }\n    gallery: { items: [{ image: { src: images/a.webp, alt: A table } }] }\n",
+    },
+    ir,
+  ).content;
+  if (!content) throw new Error("the files do not validate");
+  const route =
+    generateApp(ir, { smithableVersion: "0.0.0", auth, content }).find(
+      (f) => f.path === "src/routes/index.tsx",
+    )?.content ?? "";
+  expect(route).toContain(
+    'srcSet: "/images/hero-800.webp 800w, /images/hero.webp 1536w, /images/hero-2400.webp 2400w"',
+  );
+  // The gallery's picture has one width: no srcSet.
+  expect(route.match(/srcSet/g)).toHaveLength(1);
+});
