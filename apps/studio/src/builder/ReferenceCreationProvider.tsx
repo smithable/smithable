@@ -1,10 +1,13 @@
 import { humanize, type SpecIR } from "@smithable/core";
 import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
-import type { Words } from "./Ask";
+import type { Project } from "../api";
+import { Ask, type Words } from "./Ask";
 import type { Run } from "./ChangeForms";
 import { usePendingEdit } from "./pending-edit";
 import { type CreateReference, ReferenceCreation } from "./reference-creation";
 import { Wizard, type WizardKind } from "./Wizard";
+
+type ModelNotice = Pick<Project, "ai" | "aiEu" | "aiPrivacy">;
 
 interface Request {
   id: number;
@@ -20,6 +23,7 @@ export function ReferenceCreationProvider({
   run,
   words,
   onStart,
+  modelNotice,
   children,
 }: {
   project?: string;
@@ -27,6 +31,7 @@ export function ReferenceCreationProvider({
   run: Run;
   words?: Words;
   onStart: () => void;
+  modelNotice?: ModelNotice;
   children: ReactNode;
 }) {
   const [request, setRequest] = useState<Request>();
@@ -86,6 +91,7 @@ export function ReferenceCreationProvider({
           models={ir?.models ?? []}
           run={run}
           words={words}
+          modelNotice={modelNotice}
           onClose={() => finish(request)}
           onCreated={(name) => {
             if (active.current === request) setCreated(name);
@@ -102,6 +108,7 @@ function CreationDialog({
   models,
   run,
   words,
+  modelNotice,
   onClose,
   onCreated,
 }: {
@@ -110,11 +117,19 @@ function CreationDialog({
   models: SpecIR["models"];
   run: Run;
   words?: Words;
+  modelNotice?: ModelNotice;
   onClose: () => void;
   onCreated: (name: string) => void;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const committing = useRef(false);
+  const [help, setHelp] = useState<string>();
+  const helpLauncher = useRef<HTMLButtonElement>(null);
+  const back = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (help !== undefined) back.current?.focus();
+    else helpLauncher.current?.focus();
+  }, [help]);
   const onBusyChange = useCallback((value: boolean) => {
     committing.current = value;
   }, []);
@@ -129,7 +144,8 @@ function CreationDialog({
       aria-label="Create and select"
       onCancel={(event) => {
         event.preventDefault();
-        if (!committing.current) onClose();
+        if (help !== undefined) setHelp(undefined);
+        else if (!committing.current) onClose();
       }}
       className="m-auto max-h-[90vh] w-[min(42rem,92vw)] overflow-auto rounded-lg bg-panel text-fg shadow-xl backdrop:bg-black/40"
     >
@@ -141,15 +157,39 @@ function CreationDialog({
           </button>
         </div>
       ) : (
-        <Wizard
-          kind={kind}
-          models={models}
-          run={run}
-          words={words}
-          onClose={onClose}
-          onCreated={onCreated}
-          onBusyChange={onBusyChange}
-        />
+        <>
+          <div hidden={help !== undefined}>
+            <Wizard
+              kind={kind}
+              models={models}
+              run={run}
+              words={words}
+              onClose={onClose}
+              onCreated={onCreated}
+              onBusyChange={onBusyChange}
+              onAskForHelp={(text, button) => {
+                helpLauncher.current = button;
+                setHelp(text);
+              }}
+            />
+          </div>
+          {help !== undefined && (
+            <section aria-label="Smith help" className="flex h-[min(70dvh,36rem)] min-h-0 flex-col">
+              <div className="flex items-center justify-between border-b border-line px-3 py-2">
+                <h3 className="text-sm font-semibold">Ask Smith</h3>
+                <button
+                  ref={back}
+                  type="button"
+                  onClick={() => setHelp(undefined)}
+                  className="rounded border border-line px-3 py-1 text-sm hover:bg-subtle"
+                >
+                  Back to creation
+                </button>
+              </div>
+              <Ask {...modelNotice} helpRequest={help} words={words} />
+            </section>
+          )}
+        </>
       )}
     </dialog>
   );

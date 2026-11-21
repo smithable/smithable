@@ -223,6 +223,58 @@ createRoot(document.getElementById('root')).render(<StrictMode><App/></StrictMod
       await dialog.getByRole("button", { name: "Next", exact: true }).click();
       await dialog.getByRole("button", { name: "Create", exact: true }).waitFor();
     };
+    await page.evaluate(() => {
+      sessionStorage.setItem("smithable:ask-draft", "Existing Smith draft");
+    });
+    await propose("model", "edited model for help");
+    const modelName = dialog.getByLabel("Kind of record", { exact: true });
+    const helpButton = dialog.getByRole("button", { name: "Ask Smith for help", exact: true });
+    const help = dialog.getByRole("region", { name: "Smith help", exact: true });
+    const back = help.getByRole("button", { name: "Back to creation", exact: true });
+    await modelName.fill("UnappliedSupplier");
+    let helpCalls = 0;
+    const observeHelp = (request) => {
+      if (new URL(request.url()).pathname === "/api/ask") {
+        helpCalls++;
+        assert.equal(request.postDataJSON().request, "Add a kind of record: edited model for help");
+      }
+    };
+    page.on("request", observeHelp);
+    for (const returnByEscape of [true, false]) {
+      await helpButton.click();
+      await help.getByRole("button", { name: "Apply", exact: true }).waitFor();
+      assert.equal(await back.evaluate((element) => element === document.activeElement), true);
+      assert.equal(await modelName.isVisible(), false, "the wizard stayed visible behind help");
+      assert.equal(
+        await help
+          .getByRole("textbox", { name: "Describe a change, or ask a question", exact: true })
+          .inputValue(),
+        "Add a kind of record: edited model for help",
+      );
+      if (returnByEscape) await page.keyboard.press("Escape");
+      else await back.click();
+      await help.waitFor({ state: "detached" });
+      assert.equal(await modelName.inputValue(), "UnappliedSupplier");
+      assert.equal(
+        await helpButton.evaluate((element) => element === document.activeElement),
+        true,
+      );
+    }
+    page.off("request", observeHelp);
+    assert.equal(helpCalls, 2, "each help handoff should send exactly once");
+    assert.equal(
+      await page.evaluate(() => sessionStorage.getItem("smithable:ask-draft")),
+      "Existing Smith draft",
+    );
+    await page.evaluate(() => sessionStorage.removeItem("smithable:ask-draft"));
+    await page.keyboard.press("Escape");
+    await dialog.waitFor({ state: "detached" });
+    assert.equal(await draft.inputValue(), "preserved unsaved reference");
+    assert.equal(await form.getByLabel("Selected reference").textContent(), "Customer");
+    assert.equal((await (await fetch(`${base}/api/project`)).json()).trace.length, 0);
+    console.log(
+      "PASS modal Smith help responds in place and restores the wizard and requesting draft",
+    );
     let releaseAsk, askArrived;
     const askGate = new Promise((resolve) => {
       releaseAsk = resolve;

@@ -75,7 +75,10 @@ export function Ask({
   onFeedback,
   speech: speechProviders = [],
   onAudioActivity,
+  helpRequest,
 }: {
+  /** Initial words for Smith inside the reference creation dialog. Uses its own draft. */
+  helpRequest?: string;
   /** Where Smith may hear and speak, from the host's policy layer (smith-speech.md §3). */
   speech?: { name: "browser" | "service"; onDeviceOnly?: true }[];
   onAudioActivity?: (activity: AudioActivity | undefined) => void;
@@ -134,6 +137,7 @@ export function Ask({
   // A request half written stays when the person looks elsewhere (another tab, a mode) and
   // comes back: kept for the browser tab's session.
   const [request, setRequestState] = useState(() => {
+    if (helpRequest !== undefined) return helpRequest;
     try {
       return sessionStorage.getItem(DRAFT) ?? "";
     } catch {
@@ -144,6 +148,7 @@ export function Ask({
   const setRequest = (text: string) => {
     draftRevision.current++;
     setRequestState(text);
+    if (helpRequest !== undefined) return;
     try {
       if (text) sessionStorage.setItem(DRAFT, text);
       else sessionStorage.removeItem(DRAFT);
@@ -165,11 +170,12 @@ export function Ask({
   const last = useRef<{ text: string; at: number; question: boolean }>(undefined);
   const [said, setSaid] = useState<Said[]>([]);
   useEffect(() => {
+    if (helpRequest !== undefined) return;
     void api.said().then(
       (kept) => setSaid(kept.said),
       () => undefined,
     );
-  }, []);
+  }, [helpRequest]);
   const say = (request: string, reply: string) => {
     setSaid((list) => [...list, { at: new Date().toISOString(), request, reply }]);
     void api.said({ request, reply }).then(
@@ -203,8 +209,16 @@ export function Ask({
   // Words handed over by the creation wizard's "Ask Smith for help": said now, or kept until
   // this panel is on screen to take them.
   const proposeRef = useRef<(text: string) => void>(() => {});
+  const helpTaken = useRef(false);
   // biome-ignore lint/correctness/useExhaustiveDependencies: once, and when the making ends
   useEffect(() => {
+    if (helpRequest !== undefined) {
+      if (!helpTaken.current) {
+        helpTaken.current = true;
+        proposeRef.current(helpRequest);
+      }
+      return;
+    }
     const take = () => {
       // While the app is made the words wait for this panel's next turn.
       if (making) return;
@@ -220,7 +234,7 @@ export function Ask({
     take();
     window.addEventListener(ASK_SMITH, take);
     return () => window.removeEventListener(ASK_SMITH, take);
-  }, [making]);
+  }, [helpRequest, making]);
   const propose = async (text: string, revision = draftRevision.current) => {
     // The sample users are the preview's, not the spec's: "let them run" and "stop" are said
     // to Smith and done at once, with no change to confirm (sample-users.md §5).
@@ -377,6 +391,7 @@ export function Ask({
   useEffect(() => () => onAudioActivity?.(undefined), [onAudioActivity]);
   // Ctrl+Shift+Space toggles the mic from anywhere in Studio.
   useEffect(() => {
+    if (helpRequest !== undefined) return;
     const down = (e: KeyboardEvent) => {
       if (!(e.ctrlKey && e.shiftKey && e.code === "Space")) return;
       e.preventDefault();
@@ -384,7 +399,7 @@ export function Ask({
     };
     window.addEventListener("keydown", down);
     return () => window.removeEventListener("keydown", down);
-  }, []);
+  }, [helpRequest]);
   const apply = async () => {
     if (!proposal) return;
     const revision = proposalRevision.current;

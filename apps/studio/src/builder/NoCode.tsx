@@ -362,6 +362,7 @@ export function NoCode({
         ir={spec.ir}
         run={run}
         words={words}
+        modelNotice={{ ai: project.ai, aiEu: project.aiEu, aiPrivacy: project.aiPrivacy }}
         onStart={cancelFollow}
       >
         <div ref={root} className="h-full min-h-0" data-no-code>
