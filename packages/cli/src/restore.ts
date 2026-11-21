@@ -15,6 +15,7 @@ import {
   YamlEditor,
   type YamlValue,
 } from "@smithable/core";
+import { asProject } from "./as-project.js";
 import { BUSY_MS, countValue, countValues, databasePath } from "./database.js";
 import { git, isChangeMessage, ownRepository, trailer, uncommittedRefusal } from "./git.js";
 import type { Io } from "./io.js";
@@ -672,7 +673,7 @@ function shapeChange(dir: string, today: SpecIR, then: SpecIR, renames: Renames)
 }
 
 /** How many people hold each role in the development database (none when there is none). */
-export function roleHolders(dir: string): Map<string, number> | undefined {
+function roleHoldersHere(dir: string): Map<string, number> | undefined {
   const holders = new Map<string, number>();
   // No database, or an app without sign-in: nobody holds a role.
   if (!existsSync(databasePath(dir))) return holders;
@@ -741,3 +742,6 @@ export function accessBlock(
   }
   return lines;
 }
+
+// Run as the project's user where one is configured (as-project.ts).
+export const roleHolders = asProject("roleHolders", roleHoldersHere);

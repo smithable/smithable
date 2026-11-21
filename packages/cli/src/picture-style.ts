@@ -17,6 +17,7 @@ import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import type { PictureCredit, PictureEntry } from "@smithable/ai";
 import { YamlEditor } from "@smithable/core";
+import { asProject } from "./as-project.js";
 import { databasePath } from "./database.js";
 import { atLibrary, type Fetch, libraryBase } from "./pictures.js";
 
@@ -377,7 +378,7 @@ const plainFile = (path: string) => {
  * picture, one replaced by hand. Runs inside the operation's database snapshot; returns how many
  * records changed. A deployed app's data is never reached from here.
  */
-export function reseedPictures(dir: string, swaps: PlacedStyle["swaps"]): number {
+function reseedPicturesHere(dir: string, swaps: PlacedStyle["swaps"]): number {
   const path = databasePath(dir);
   if (!swaps.length || !existsSync(path)) return 0;
   const short = (bytes: Uint8Array) => sha256(bytes).slice(0, 24);
@@ -521,3 +522,6 @@ export function taggedContent<T>(dir: string, content: T): T {
   };
   return walk(content) as T;
 }
+
+// Run as the project's user where one is configured (as-project.ts).
+export const reseedPictures = asProject("reseedPictures", reseedPicturesHere);

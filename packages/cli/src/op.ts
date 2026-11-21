@@ -1,13 +1,4 @@
-import {
-  appendFileSync,
-  existsSync,
-  mkdirSync,
-  readFileSync,
-  renameSync,
-  rmSync,
-  statSync,
-  writeFileSync,
-} from "node:fs";
+import { existsSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { columnOf, plural } from "@smithable/adapter-tanstack";
 import {
@@ -71,6 +62,7 @@ import { projectRevision, sourceDigests } from "./project-revision.js";
 import { afterFailure, recordFailure } from "./report.js";
 import { recordRule } from "./rules.js";
 import { themeTransaction } from "./theme-transaction.js";
+import { changeTree, type TreeChange, writeTreeFile } from "./tree-files.js";
 import { projectThemeFiles, projectThemes, projectTranslations } from "./validate.js";
 import {
   browserNotRun,
@@ -690,29 +682,26 @@ async function applyAndCheckpoint(
   // From the first write to the commit: rollback only while no newer editor files would be lost.
   let committed = false;
   try {
-    writeFileSync(join(dir, SPEC), result.files.spec);
-    if (result.files.content !== undefined) writeFileSync(contentPath, result.files.content);
-    if (result.files.auth !== undefined) writeFileSync(authPath, result.files.auth);
-    if (result.files.ux !== undefined) writeFileSync(uxPath, result.files.ux);
-    if (result.files.context !== undefined) writeFileSync(contextPath, result.files.context);
-    if (result.files.people !== undefined) {
-      mkdirSync(dirname(peoplePath), { recursive: true });
-      writeFileSync(peoplePath, result.files.people);
-    }
+    const changes: TreeChange[] = [{ path: join(dir, SPEC), data: result.files.spec }];
+    const write = (path: string, data: string | Uint8Array | undefined) => {
+      if (data !== undefined) changes.push({ path, data });
+    };
+    write(contentPath, result.files.content);
+    write(authPath, result.files.auth);
+    write(uxPath, result.files.ux);
+    write(contextPath, result.files.context);
+    write(peoplePath, result.files.people);
     for (const [language, text] of Object.entries(result.files.translations ?? {}))
-      writeFileSync(join(dir, translationPath(language)), text);
-    for (const path of result.removed) rmSync(join(dir, path), { force: true });
-    for (const file of [...result.added, ...(flags.files ?? [])]) {
-      mkdirSync(dirname(join(dir, file.path)), { recursive: true });
-      writeFileSync(join(dir, file.path), "text" in file ? file.text : file.bytes);
-    }
+      write(join(dir, translationPath(language)), text);
+    for (const path of result.removed) changes.push({ path: join(dir, path), data: null });
+    for (const file of [...result.added, ...(flags.files ?? [])])
+      write(join(dir, file.path), "text" in file ? file.text : file.bytes);
+    for (const file of placed?.files ?? []) write(join(dir, file.path), file.bytes);
+    for (const file of placed?.texts ?? [])
+      changes.push({ path: join(dir, file.path), data: file.text || null });
+    // One child for all of them where the project has its own user.
+    changeTree(changes);
     if (placed) {
-      for (const file of placed.files) writeFileSync(join(dir, file.path), file.bytes);
-      for (const file of placed.texts)
-        if (file.text) {
-          mkdirSync(dirname(join(dir, file.path)), { recursive: true });
-          writeFileSync(join(dir, file.path), file.text);
-        } else rmSync(join(dir, file.path), { force: true });
       const reseeded = reseedPictures(dir, placed.swaps);
       io.out(
         `Pictures placed: ${placed.files.length ? placed.files.map((f) => f.path.replace("public/images/", "")).join(", ") : "none needed changing"}.${placed.kept.length ? ` Your own pictures stay: ${placed.kept.join(", ")}.` : ""}${reseeded ? ` Sample records with the new pictures: ${reseeded}.` : ""}\n`,
@@ -729,11 +718,13 @@ async function applyAndCheckpoint(
           ? { ...(args.file ? { file: args.file } : {}) }
           : args;
     const recordedName = plan ? plan.recorded.op : (operation?.name ?? name);
-    mkdirSync(join(dir, ".smithable"), { recursive: true });
-    appendFileSync(
-      join(dir, OPLOG),
-      `${JSON.stringify({ id, op: recordedName, args: recordedArgs, description: result.description })}\n`,
-    );
+    changeTree([
+      {
+        path: join(dir, OPLOG),
+        data: `${JSON.stringify({ id, op: recordedName, args: recordedArgs, description: result.description })}\n`,
+        append: true,
+      },
+    ]);
     // Only stored fields have a column to rename; a list of related records stores nothing.
     // A renamed model keeps its rows: its tables are renamed, never dropped and made anew.
     const models = result.effects.flatMap((e) =>
@@ -1058,7 +1049,8 @@ function followInSamples(dir: string, effects: Effect[]): void {
     // A sample file is named after its model.
     if (effect.kind === "rename-model") {
       const file = join(dir, "samples", `${effect.from}.yml`);
-      if (existsSync(file)) renameSync(file, join(dir, "samples", `${effect.to}.yml`));
+      if (existsSync(file))
+        changeTree([{ path: join(dir, "samples", `${effect.to}.yml`), from: file }]);
       continue;
     }
     // A choice value that goes: each sample holding it gets the new one, or loses it.
@@ -1075,7 +1067,7 @@ function followInSamples(dir: string, effects: Effect[]): void {
         if (to) editor.set(path, to);
         else editor.remove(path);
       }
-      writeFileSync(file, editor.text);
+      writeTreeFile(file, editor.text);
       continue;
     }
     if (effect.kind !== "rename-field" && effect.kind !== "remove-field") continue;
@@ -1089,7 +1081,7 @@ function followInSamples(dir: string, effects: Effect[]): void {
       if (effect.kind === "rename-field") editor.renameKey([String(i), key], effect.to);
       else editor.remove([String(i), key]);
     }
-    writeFileSync(file, editor.text);
+    writeTreeFile(file, editor.text);
   }
 }
 

@@ -4,14 +4,15 @@
 // changed and removed since, and on request brings back or undoes, in place. The same
 // statements as the hosted service (core's dataDiffSql and restoreOrder).
 import { spawn, spawnSync } from "node:child_process";
-import { existsSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { dataKey, tableNames, titleField } from "@smithable/adapter-tanstack";
 import { dataDiffSql, type ModelIR, restoreOrder, snake } from "@smithable/core";
 import { BUSY_MS } from "./database.js";
 import type { Io } from "./io.js";
-import { childOptions, scratchDir } from "./secrets.js";
+import { childOptions, copyBack, scratchDir, sealScratch } from "./secrets.js";
 import { loadSpec } from "./validate.js";
 
 /** How long the stream keeps every second (the hosted service's window). */
@@ -47,6 +48,7 @@ export function backupContinuous(
   writeFileSync(
     config,
     `l0-retention: ${WINDOW}\nsnapshot:\n  interval: 24h\n  retention: ${WINDOW}\ndbs:\n  - path: ${JSON.stringify(db)}\n    replica:\n      url: ${JSON.stringify(replicaUrl(options.to))}\n`,
+    { flag: "wx" },
   );
   io.out(
     `Streaming ${db} to ${options.to}: every second of the last 30 days can be restored with restore --at.\n`,
@@ -104,14 +106,19 @@ export function restoreAt(
   }
   const spec = ir;
   // The restored copy lives in a folder of its own, gone when this returns.
-  const then = join(scratchDir("smithable-restore-"), "then.db");
+  const then = join(scratchDir("smithable-restore-", true), "then.db");
   try {
-    return compare(then);
+    const past = join(mkdtempSync(join(tmpdir(), "smithable-past-")), "then.db");
+    try {
+      return compare(then, past);
+    } finally {
+      rmSync(dirname(past), { recursive: true, force: true });
+    }
   } finally {
     rmSync(dirname(then), { recursive: true, force: true });
   }
 
-  function compare(then: string): number {
+  function compare(then: string, past: string): number {
     const restored = spawnSync(
       "litestream",
       [
@@ -130,10 +137,14 @@ export function restoreAt(
       );
       return 1;
     }
+    // litestream wrote it as the project's user: the folder is locked, and SQLite opens this
+    // process's own copy of its plain file, with no journal or link of the project's beside it.
+    sealScratch(dirname(then));
+    copyBack(then, past);
     const writing = Boolean(options.bringBack?.length || options.undoChanges?.length);
     const live = new DatabaseSync(db, { readOnly: !writing || !options.yes, timeout: BUSY_MS });
     try {
-      live.exec(`ATTACH DATABASE '${then.replace(/'/g, "''")}' AS past`);
+      live.exec(`ATTACH DATABASE '${past.replace(/'/g, "''")}' AS past`);
       const has = (schema: string, name: string) =>
         Boolean(
           live

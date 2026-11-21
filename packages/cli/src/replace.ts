@@ -18,6 +18,7 @@ import {
 } from "node:fs";
 import { dirname, join, resolve, sep } from "node:path";
 import type { Assumption, Usage } from "@smithable/ai";
+import { asProject } from "./as-project.js";
 import { generate } from "./generate.js";
 import { ensureRepository } from "./git.js";
 import type { Io } from "./io.js";
@@ -29,6 +30,7 @@ import {
   withoutSampleDomains,
   withTimeZone,
 } from "./new.js";
+import { removeTree, writeTreeFile } from "./tree-files.js";
 import type { WebsiteGenerationInput, WebsiteGenerationOptions } from "./website-input.js";
 
 export interface Replacement {
@@ -122,7 +124,7 @@ export function arrival(paths: Iterable<string>): string[] {
  * one, never half of the new.
  */
 /** Writes `from` over `dir`: only what differs, each file by a rename over it; what `from` lacks goes. */
-export function sync(from: string, dir: string): void {
+function syncHere(from: string, dir: string): void {
   const wanted = new Set(filesOf(from));
   const before = filesOf(dir);
   // The new app's files are written first and the old app's own files removed after: the
@@ -240,7 +242,7 @@ export async function replaceProject(
     // against 3 to 4 s with the server started again; on a hosted workspace, where a start is
     // 15 s, the difference is the point (docs/design/fast-start.md).
     sync(from, dir);
-    if (!control) rmSync(join(dir, ".git"), { recursive: true, force: true });
+    if (!control) removeTree(join(dir, ".git"));
     // The person's name for the app and their own way in, as `smithable new` writes them; the
     // files that follow from the spec are generated again (no tool runs: the tables are the same).
     if (to.name?.trim() || to.admin?.trim() || to.timezone) {
@@ -253,7 +255,7 @@ export async function replaceProject(
       if (to.name?.trim()) files = named(files, to.name.trim());
       if (to.admin?.trim()) files = withoutSampleDomains(administered(files, to.admin.trim()), io);
       if (to.timezone) files = withTimeZone(files, to.timezone);
-      for (const [file, text] of Object.entries(files)) writeFileSync(join(dir, file), text);
+      for (const [file, text] of Object.entries(files)) writeTreeFile(join(dir, file), text);
       const code = await generate(dir, io, { tools: false, force: false });
       if (code !== 0) return code;
     }
@@ -376,10 +378,13 @@ export async function replaceProject(
     control?.beforeArrival();
     progress("arriving");
     sync(beside, dir);
-    if (!control) rmSync(join(dir, ".git"), { recursive: true, force: true });
+    if (!control) removeTree(join(dir, ".git"));
     reopenDatabase(dir);
     return 0;
   } finally {
     rmSync(beside, { recursive: true, force: true });
   }
 }
+
+// Run as the project's user where one is configured (as-project.ts).
+export const sync = asProject("sync", syncHere);

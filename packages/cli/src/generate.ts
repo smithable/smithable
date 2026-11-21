@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import {
   dropTakenColumn,
@@ -21,6 +21,7 @@ import { taggedContent } from "./picture-style.js";
 import { contextFacts } from "./privacy-review.js";
 import { stepsFor } from "./project-worker.js";
 import { valueSql } from "./tool-steps.js";
+import { changeTree, type TreeChange, writeTreeFile } from "./tree-files.js";
 import { loadSpec } from "./validate.js";
 import { VERSION } from "./version.js";
 import { installing } from "./vite-cache.js";
@@ -143,6 +144,7 @@ export async function generate(dir: string, io: Io, flags: GenerateFlags): Promi
   }
 
   const next: FileRecord = { files: {} };
+  const changes: TreeChange[] = [];
   let written = 0;
   const changed: string[] = [];
   for (const file of files) {
@@ -150,25 +152,24 @@ export async function generate(dir: string, io: Io, flags: GenerateFlags): Promi
     // Scaffold and custom files are created once and then belong to the project.
     if (file.zone === "scaffold" || file.zone === "custom") {
       if (existsSync(path)) continue;
-      mkdirSync(dirname(path), { recursive: true });
-      writeFileSync(path, file.content);
+      changes.push({ path, data: file.content });
       written++;
       changed.push(file.path);
       continue;
     }
     next.files[file.path] = hash(file.content);
     if (existsSync(path) && readFileSync(path, "utf8") === file.content) continue;
-    mkdirSync(dirname(path), { recursive: true });
-    writeFileSync(path, file.content);
+    changes.push({ path, data: file.content });
     written++;
     changed.push(file.path);
   }
   // Delete only what the generator no longer produces; scaffold files are never removed.
   const produced = new Set(files.map((f) => f.path));
   const removed = Object.keys(previous.files).filter((path) => !produced.has(path));
-  for (const path of removed) rmSync(join(dir, path), { force: true });
-  mkdirSync(join(dir, ".smithable"), { recursive: true });
-  writeFileSync(join(dir, RECORD), serializeRecord(next));
+  for (const path of removed) changes.push({ path: join(dir, path), data: null });
+  changes.push({ path: join(dir, RECORD), data: serializeRecord(next) });
+  // One child for all of them where the project has its own user.
+  changeTree(changes);
   if (applyOverrides(dir)) changed.push("pnpm-workspace.yaml");
   io.out(`Generated ${files.length} files (${written} changed, ${removed.length} removed).\n`);
 
@@ -200,7 +201,7 @@ function applyOverrides(dir: string): boolean {
     else workspace.add([], "overrides", { [dependency]: version });
   }
   if (workspace.text === readFileSync(path, "utf8")) return false;
-  writeFileSync(path, workspace.text);
+  writeTreeFile(path, workspace.text);
   return true;
 }
 
@@ -280,13 +281,13 @@ function migrate(
     // A newer model on the name goes first (an older version applied).
     const taken = dropTakenTablesSql(readFileSync(snapshot, "utf8"), renamed.from, renamed.to);
     const before = taken?.snapshot ?? readFileSync(snapshot, "utf8");
-    writeFileSync(
+    writeTreeFile(
       join(dir, "drizzle", `${tag}.sql`),
       [...(taken?.sql ?? []), ...renameModelSql(before, renamed.from, renamed.to)].join(
         "--> statement-breakpoint\n",
       ),
     );
-    writeFileSync(snapshot, renameModelInSnapshot(before, renamed.from, renamed.to));
+    writeTreeFile(snapshot, renameModelInSnapshot(before, renamed.from, renamed.to));
   }
   // A rename becomes a custom migration with RENAME COLUMN, so drizzle-kit never sees a
   // drop plus an add (which it would ask about) and the data is kept.
@@ -304,14 +305,14 @@ function migrate(
       rename.to,
       rename.reference,
     );
-    writeFileSync(
+    writeTreeFile(
       join(dir, "drizzle", `${tag}.sql`),
       [
         ...(taken?.sql ?? []),
         renameColumnSql(rename.model, rename.from, rename.to, rename.reference),
       ].join("--> statement-breakpoint\n"),
     );
-    writeFileSync(
+    writeTreeFile(
       snapshot,
       renameInSnapshot(
         taken?.snapshot ?? readFileSync(snapshot, "utf8"),
@@ -336,7 +337,7 @@ function migrate(
   let tag = newest();
   if (tag && tag !== before) {
     const file = join(dir, "drizzle", `${tag}.sql`);
-    writeFileSync(file, quoteReferences(readFileSync(file, "utf8")));
+    writeTreeFile(file, quoteReferences(readFileSync(file, "utf8")));
   }
   // Records holding a choice value that goes get the new one: in the new migration, or in one of
   // its own when the schema did not change (a choice is stored as text).
@@ -348,7 +349,7 @@ function migrate(
     }
     const file = join(dir, "drizzle", `${tag}.sql`);
     const sql = readFileSync(file, "utf8");
-    writeFileSync(
+    writeTreeFile(
       file,
       [sql.trim() ? sql.trimEnd() : "", ...updates]
         .filter(Boolean)

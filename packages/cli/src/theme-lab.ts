@@ -47,7 +47,7 @@ const quiet = (io: Io): Io => ({ ...io, out: () => {} });
 
 /** The lab's app: a starter's, and for booking a field for each control it has none for. */
 async function labApp(io: Io, starter: string): Promise<string | undefined> {
-  const dir = join(scratchDir("smithable-theme-lab-"), "app");
+  const dir = join(scratchDir("smithable-theme-lab-", true), "app");
   io.out(
     starter === "booking"
       ? "Making the lab's app (a booking app with every control)…\n"

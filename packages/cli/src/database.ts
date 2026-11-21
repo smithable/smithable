@@ -1,6 +1,7 @@
 import { copyFileSync, existsSync, mkdirSync, readdirSync, renameSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
+import { asProject } from "./as-project.js";
 
 /** The development database, as the app's src/db/index.ts opens it. */
 /**
@@ -23,7 +24,7 @@ export function hasSnapshot(dir: string, id: string): boolean {
 }
 
 /** Saves a consistent copy of the dev database (if there is one). Returns whether it did. */
-export function snapshotDatabase(dir: string, id: string): boolean {
+function snapshotDatabaseHere(dir: string, id: string): boolean {
   if (!existsSync(databasePath(dir))) return false;
   const target = snapshotPath(dir, id);
   mkdirSync(join(target, ".."), { recursive: true });
@@ -38,7 +39,7 @@ export function snapshotDatabase(dir: string, id: string): boolean {
 }
 
 /** Puts a snapshot back as the dev database. Returns whether the snapshot existed. */
-export function restoreDatabase(dir: string, id: string): boolean {
+function restoreDatabaseHere(dir: string, id: string): boolean {
   const source = snapshotPath(dir, id);
   if (!existsSync(source)) return false;
   const target = databasePath(dir);
@@ -55,7 +56,7 @@ export function restoreDatabase(dir: string, id: string): boolean {
  * the latest changes). The one kept while a held fix is open (fix-open.ts) is never one of them:
  * it is what the dev data goes back to. Returns how many it deleted.
  */
-export function pruneSnapshots(dir: string, keep: Set<string>): number {
+function pruneSnapshotsHere(dir: string, keep: Set<string>): number {
   const folder = join(dir, "data", ".smithable", "snapshots");
   if (!existsSync(folder)) return 0;
   const old = readdirSync(folder).filter(
@@ -67,7 +68,7 @@ export function pruneSnapshots(dir: string, keep: Set<string>): number {
 
 /** How many rows of a table have a value (or no value) in a column; undefined without a database. */
 /** How many records hold one value in a column; undefined without a database. */
-export function countValue(
+function countValueHere(
   dir: string,
   table: string,
   column: string,
@@ -87,7 +88,7 @@ export function countValue(
   }
 }
 
-export function countValues(
+function countValuesHere(
   dir: string,
   table: string,
   column: string,
@@ -110,7 +111,7 @@ export function countValues(
  * How many rows of a table have a column outside bounds, as a number or as a text's length;
  * undefined without a database. Bounds are given in the column's own units.
  */
-export function countOutside(
+function countOutsideHere(
   dir: string,
   table: string,
   column: string,
@@ -138,3 +139,11 @@ export function countOutside(
     db.close();
   }
 }
+
+// Run as the project's user where one is configured (as-project.ts).
+export const snapshotDatabase = asProject("snapshotDatabase", snapshotDatabaseHere);
+export const restoreDatabase = asProject("restoreDatabase", restoreDatabaseHere);
+export const pruneSnapshots = asProject("pruneSnapshots", pruneSnapshotsHere);
+export const countValue = asProject("countValue", countValueHere);
+export const countValues = asProject("countValues", countValuesHere);
+export const countOutside = asProject("countOutside", countOutsideHere);

@@ -2,7 +2,21 @@
 // starts, so no child it runs inherits them (pnpm and its scripts, git and its hooks, the
 // project's tests, the preview's dev server), and handed only to the engine's own calls that need
 // them. Every child's options are built by childOptions, which leaves both out whatever it is given.
-import { chmodSync, chownSync, mkdtempSync, readFileSync } from "node:fs";
+import {
+  chmodSync,
+  chownSync,
+  closeSync,
+  constants,
+  fstatSync,
+  lstatSync,
+  mkdirSync,
+  mkdtempSync,
+  openSync,
+  readdirSync,
+  readFileSync,
+  readSync,
+  writeSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -129,17 +143,75 @@ export function childOptions(
 
 /**
  * A new temporary folder for this process and its children: where a project user is configured,
- * that user's group with mode 2770, so a child running as that user can enter and write it (a
- * plain mkdtemp is 0700, this process's alone).
+ * that user's group may enter and read it (2750), and write in it too (2770) only with
+ * `childWrites`, for a folder a child running as that user makes its files in (a plain mkdtemp is
+ * 0700, this process's alone). The temporary folder can be listed, so a project process may put a
+ * link in a writable one first: this process writes there only with `wx`, locks it with
+ * `sealScratch` once the child is done, and takes the child's files with `checkBack`, `readBack`
+ * or `takeBack`, never through a link.
  */
-export function scratchDir(prefix: string): string {
+export function scratchDir(prefix: string, childWrites = false): string {
   const made = mkdtempSync(join(tmpdir(), prefix));
   const user = projectUser();
   if (user) {
     chownSync(made, -1, user.gid);
-    chmodSync(made, 0o2770);
+    chmodSync(made, childWrites ? 0o2770 : 0o2750);
   }
   return made;
+}
+
+/** Locks a writable scratch folder once its child is done: the group may enter and read it, no more. */
+export function sealScratch(dir: string): void {
+  if (projectUser()) chmodSync(dir, 0o2750);
+}
+
+/**
+ * Copies a file a child made into `to`, a new file in a folder of this process's, so that what
+ * is read or opened later is this process's own copy. The child's file is opened without following
+ * a link or waiting on a pipe, and must be a plain file with one name, of the project user's (this
+ * process's where none is configured); anything else is refused.
+ */
+export function copyBack(from: string, to: string): void {
+  const fd = openSync(
+    from,
+    constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0) | (constants.O_NONBLOCK ?? 0),
+  );
+  try {
+    const stat = fstatSync(fd);
+    const owner = projectUser()?.uid ?? process.getuid?.() ?? stat.uid;
+    if (!stat.isFile() || stat.nlink !== 1 || stat.uid !== owner)
+      throw new Error(`${from} is not a file the child made.`);
+    const out = openSync(to, "wx", 0o600);
+    try {
+      // The size it had when opened: a project process still holding it open cannot add to it.
+      const buffer = Buffer.alloc(1 << 20);
+      for (let left = stat.size; left > 0; ) {
+        const n = readSync(fd, buffer, 0, Math.min(buffer.length, left), null);
+        if (n === 0) throw new Error(`${from} became shorter while it was copied.`);
+        for (let done = 0; done < n; ) done += writeSync(out, buffer, done, n - done);
+        left -= n;
+      }
+    } finally {
+      closeSync(out);
+    }
+  } finally {
+    closeSync(fd);
+  }
+}
+
+/**
+ * Copies what a child made in `from` into `to`, a folder of this process's: folders and plain
+ * files only, each file as `copyBack` copies it (a link or another user's file is refused, so a
+ * folder on the way swapped for a link reaches only what the project could have put here itself).
+ */
+export function takeBack(from: string, to: string): void {
+  for (const entry of readdirSync(from)) {
+    const [a, b] = [join(from, entry), join(to, entry)];
+    if (lstatSync(a).isDirectory()) {
+      mkdirSync(b);
+      takeBack(a, b);
+    } else copyBack(a, b);
+  }
 }
 
 /** CAP_KILL, CAP_SETGID and CAP_SETUID: what starts and stops a child as the project user. */
