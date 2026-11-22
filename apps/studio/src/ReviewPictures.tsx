@@ -43,8 +43,11 @@ export function ReviewPictures({
       )
       .catch((e: Error) => ({ ok: false, output: e.message }));
     if (!result.ok) setRefused(result.output);
-    await reload();
-    setBusy(false);
+    try {
+      await reload();
+    } finally {
+      setBusy(false);
+    }
   };
   const replace = (picture: Picture, file: File | undefined) => {
     setRefused(undefined);

@@ -213,6 +213,16 @@ test("kept goes wherever another picture takes the place, whatever the operation
       }).content,
     ),
   ).toEqual(["images/jobs/a.webp", "images/jobs/b.webp"]);
+  // Nor is a file kept in the same gallery: the first item given the second's kept file asks
+  // again, and the second stays kept where it is (a second reviewer's point).
+  expect(
+    keptAt(
+      run(kept, "setText", {
+        text: "images/jobs/b.webp",
+        path: ["pages", "home", "jobs", "items", "0", "image", "src"],
+      }).content,
+    ),
+  ).toEqual(["images/hero.webp", "images/jobs/b.webp"]);
   // Studio's form tries a picture on (kept goes); its Cancel is undo, the files as they were,
   // where the picture the owner kept is back and still kept.
   const tried = run(kept, "setSectionPicture", { ...hero, src: "images/try.webp" });
