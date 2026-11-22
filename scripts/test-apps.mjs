@@ -6049,6 +6049,170 @@ async function refusalFlow(base) {
   }
 }
 
+/**
+ * A hero's film (section-film.md §3, T1278): it plays over its picture, the picture's mark giving
+ * way only while it plays; the visitor pauses it by touch and by key and it stays paused back in
+ * view; a film that cannot play, or a visitor who asked for less motion, gets the picture and
+ * fetches nothing; a film across the width plays under the hero's wash.
+ */
+async function filmFlow(dir, base) {
+  const browser = await chromium.launch();
+  const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  const film = join(dir, "public", "images", "hero-film.mp4");
+  let changed = 0;
+  const change = (...args) => {
+    const done = smithable(dir, "op", ...args);
+    if (done.code !== 0) throw new Error(`${args[0]}: ${done.out}`);
+    changed++;
+  };
+  // The app reloads itself after a change: a load it interrupts is one more try.
+  const until = async (url, ready, why) => {
+    for (let i = 0; ; i++) {
+      await open(page, url).catch(() => {});
+      if (await ready().catch(() => false)) return;
+      if (i === 40 * P) throw new Error(why);
+      await page.waitForTimeout(500);
+    }
+  };
+  const hero = page.locator("[data-hero]");
+  const playing = hero.locator("video[data-playing]");
+  const mark = hero.locator('[data-part="ai-mark"]').first();
+  try {
+    writeFileSync(film, readFileSync(join(repo, "scripts", "fixtures", "film.mp4")));
+    change("setSectionFilm", "home", "hero", "images/hero-film.mp4");
+    // The dev server answers a part of the file, as a player asks for it.
+    const part = await page.request.get(`${base}/images/hero-film.mp4`, {
+      headers: { range: "bytes=0-99" },
+    });
+    if (part.status() !== 206 || !/^bytes 0-99\//.test(part.headers()["content-range"] ?? ""))
+      throw new Error(`a range of the film is answered ${part.status()}, not 206`);
+
+    // Inset, then split: the picture is shown whole and its mark gives way while the film plays.
+    for (const layout of ["inset", "split"]) {
+      if (layout !== "inset") change("setSectionLook", "home", "hero", "layout", layout);
+      await until(
+        `${base}/`,
+        async () =>
+          (await hero.getAttribute("data-layout")) === layout && (await playing.count()) > 0,
+        `the ${layout} hero's film does not play`,
+      );
+      if (await mark.isVisible())
+        throw new Error(`the ${layout} picture's mark shows over its film`);
+    }
+    const pause = hero.getByRole("button", { name: "Pause the film", exact: true });
+    await pause.click();
+    const resume = hero.getByRole("button", { name: "Play the film", exact: true });
+    await resume.waitFor();
+    if (!(await playing.evaluate((v) => v.paused)))
+      throw new Error("the film plays on after Pause");
+    // Away and back: paused stays paused.
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    await page.waitForTimeout(300);
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await page.waitForTimeout(500);
+    if (!(await playing.evaluate((v) => v.paused)))
+      throw new Error("the film played again in view");
+    await resume.focus();
+    await page.keyboard.press("Enter");
+    await pause.waitFor();
+    await page.waitForFunction(() => !document.querySelector("[data-hero] video")?.paused);
+    console.log(
+      "  ✓ browser: a hero's film plays over its picture in inset and split, the picture's mark giving way; paused by key or click it stays paused back in view; a range of it is answered 206",
+    );
+
+    // By touch, on a phone.
+    const phone = await browser.newContext({
+      viewport: { width: 390, height: 844 },
+      hasTouch: true,
+      isMobile: true,
+    });
+    const tap = await phone.newPage();
+    await open(tap, `${base}/`);
+    await tap.locator("[data-hero] video[data-playing]").waitFor({ timeout: 20000 * P });
+    await tap
+      .locator("[data-hero]")
+      .getByRole("button", { name: "Pause the film", exact: true })
+      .tap();
+    await tap
+      .locator("[data-hero]")
+      .getByRole("button", { name: "Play the film", exact: true })
+      .waitFor();
+    await phone.close();
+
+    // Less motion, and a film that cannot play: the picture with its mark, nothing fetched.
+    for (const [why, setup] of [
+      ["less motion", (context) => context.newPage()],
+      [
+        "a film that cannot play",
+        async (context) => {
+          await context.route("**/*.mp4*", (route) =>
+            route.fulfill({ body: "not a film", contentType: "video/mp4" }),
+          );
+          return context.newPage();
+        },
+      ],
+    ]) {
+      const context = await browser.newContext({
+        viewport: { width: 1440, height: 900 },
+        reducedMotion: why === "less motion" ? "reduce" : "no-preference",
+      });
+      const other = await setup(context);
+      const asked = [];
+      other.on("request", (r) => r.url().includes(".mp4") && asked.push(r.url()));
+      await open(other, `${base}/`);
+      await other.waitForTimeout(2000);
+      const otherHero = other.locator("[data-hero]");
+      if (await otherHero.locator("video[data-playing]").count())
+        throw new Error(`a film plays for ${why}`);
+      if (!(await otherHero.locator('[data-part="ai-mark"]').first().isVisible()))
+        throw new Error(`the picture's mark is hidden for ${why}`);
+      if (why === "less motion" && asked.length)
+        throw new Error("the film was fetched for less motion");
+      await context.close();
+    }
+    console.log(
+      "  ✓ browser: a film pauses by touch; for less motion, or when it cannot play, the picture shows with its mark, and less motion fetches nothing",
+    );
+
+    // Across the width: the film under the wash, the text over both.
+    change("setSectionLook", "home", "hero", "layout", "photo");
+    await until(
+      `${base}/`,
+      async () =>
+        (await hero.getAttribute("data-layout")) === "photo" && (await playing.count()) > 0,
+      "the photo hero's film does not play",
+    );
+    const top = await hero.evaluate((section) => {
+      const box = section.getBoundingClientRect();
+      const at = (x, y) =>
+        document.elementFromPoint(box.left + x * box.width, box.top + y * box.height);
+      return [at(0.02, 0.5), at(0.5, 0.95), at(0.98, 0.05)].map((e) => e?.tagName);
+    });
+    if (top.includes("VIDEO")) throw new Error(`the film is over the hero's wash (${top})`);
+    const title = hero.getByRole("heading").first();
+    if (
+      !(await title.evaluate((h) => {
+        const r = h.getBoundingClientRect();
+        return h.contains(document.elementFromPoint(r.left + 4, r.top + r.height / 2));
+      }))
+    )
+      throw new Error("the hero's title is under its film");
+    console.log("  ✓ browser: a film across the width plays under the hero's wash and text");
+  } catch (error) {
+    console.log(
+      `  ✗ browser: ${error.message.split("\n")[0]}\n    at ${page.url()}, see ${await screenshot(page)}`,
+    );
+    failures.push("film flow");
+  } finally {
+    await browser.close();
+    for (; changed > 0; changed--) {
+      const back = smithable(dir, "undo");
+      if (back.code !== 0) failures.push(`film put back: ${back.out}`);
+    }
+    rmSync(film, { force: true });
+  }
+}
+
 async function landingFlow(dir, base) {
   const browser = await chromium.launch();
   const page = await browser.newPage();
@@ -10100,6 +10264,7 @@ test("the session cookie's name and attributes", async () => {
       }
       if (example === "booking") {
         await landingFlow(dir, base);
+        await filmFlow(dir, base);
         await calendarFlow(base);
         await bookingFlow(dir, base);
         await clockFlow(dir, base);
