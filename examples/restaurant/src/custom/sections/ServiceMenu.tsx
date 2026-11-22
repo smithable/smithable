@@ -11,7 +11,7 @@ import { Section } from "#/kit/Landing";
 import { now } from "#/kit/now";
 import { guardPage } from "#/kit/page-guard";
 import { currentViewer } from "#/lib/viewer.server";
-import { activeMenu, localServiceDay, serviceLabel, services } from "./service";
+import { activeMenu, dishSections, localServiceDay, serviceLabel, services } from "./service";
 
 const loadMenu = createServerFn().handler(async () => {
   guardPage(pageAccess.menu, await currentViewer(), "/menu");
@@ -27,6 +27,7 @@ const loadMenu = createServerFn().handler(async () => {
         id: dishes.id,
         name: dishes.name,
         service: dishes.service,
+        section: dishes.section,
         description: dishes.description,
         dietaryTags: dishes.dietaryTags,
         price: dishes.price,
@@ -51,14 +52,62 @@ const loadMenu = createServerFn().handler(async () => {
   });
 });
 
+type Dish = NonNullable<Awaited<ReturnType<typeof loadMenu>>>["dishes"][number];
+
+function DishList({ items, nested }: { items: Dish[]; nested?: boolean }) {
+  const Heading = nested ? "h5" : "h4";
+  return (
+    <ul className="mt-3 divide-y divide-border border-y border-border">
+      {items.map((dish) => (
+        <li key={dish.id} className="py-4">
+          <div className="flex items-baseline justify-between gap-3">
+            <Heading className="min-w-0 wrap-break-word font-semibold">{dish.name}</Heading>
+            <span className="shrink-0 font-medium tabular-nums">
+              {moneyText(dish.price, app.currency)}
+            </span>
+          </div>
+          {dish.description && (
+            <p className="mt-1 text-sm text-muted-foreground">{dish.description}</p>
+          )}
+          {dish.smallPrice !== null && (
+            <p className="mt-1 text-sm">Small portion {moneyText(dish.smallPrice, app.currency)}</p>
+          )}
+          {dish.dietaryTags.length > 0 && (
+            <p className="mt-2 text-sm font-medium text-primary-text">
+              {dish.dietaryTags.join(" · ")}
+            </p>
+          )}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 export function ServiceMenu({ name, texts, title, text }: CustomSectionProps) {
   const [menu, setMenu] = useState<Awaited<ReturnType<typeof loadMenu>>>();
   const [failed, setFailed] = useState(false);
   useEffect(() => {
     loadMenu().then(setMenu, () => setFailed(true));
   }, []);
+  useEffect(() => {
+    if (!menu || !window.location.hash.startsWith(`#${name}-`)) return;
+    document.getElementById(window.location.hash.slice(1))?.scrollIntoView();
+  }, [menu, name]);
 
   const heading = menu?.name ?? title ?? "On the menu";
+  const serviceMenus = services.map((service) => {
+    const items = menu?.dishes.filter((dish) => dish.service === service) ?? [];
+    const groups = dishSections(items);
+    const sections = groups.some(({ title }) => title !== null)
+      ? groups.map(({ title, items: dishes }) => ({
+          title: title ?? "Other dishes",
+          items: dishes,
+          id: `${name}-${service}-${dishes[0].id}`,
+        }))
+      : [];
+    return { service, items, sections };
+  });
+  const jumpMenus = serviceMenus.filter(({ sections }) => sections.length > 0);
   return (
     <Section id={name} texts={texts} title={heading} text={text}>
       <div aria-live="polite">
@@ -71,48 +120,48 @@ export function ServiceMenu({ name, texts, title, text }: CustomSectionProps) {
                 <time dateTime={menu.period.to}>{dayText(menu.period.to)}</time>
               </p>
             )}
+            {jumpMenus.length > 0 && (
+              <nav aria-label="Menu sections" className="mb-8 grid gap-x-14 gap-y-2 lg:grid-cols-2">
+                {jumpMenus.map(({ service, sections }) => (
+                  <div key={service}>
+                    <p className="text-sm font-semibold">{serviceLabel[service]}</p>
+                    <ul className="flex flex-wrap gap-x-4">
+                      {sections.map(({ id, title }) => (
+                        <li key={id}>
+                          <a
+                            href={`#${id}`}
+                            aria-label={`${serviceLabel[service]}: ${title}`}
+                            className="inline-flex min-h-11 items-center text-primary-text underline underline-offset-4"
+                          >
+                            {title}
+                          </a>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </nav>
+            )}
             <div className="grid gap-x-14 gap-y-9 lg:grid-cols-2">
-              {services.map((service) => {
-                const items = menu.dishes.filter((dish) => dish.service === service);
-                return (
-                  <section key={service} aria-label={serviceLabel[service]}>
-                    <h3 className="font-heading text-2xl font-semibold">{serviceLabel[service]}</h3>
-                    {items.length ? (
-                      <ul className="mt-3 divide-y divide-border border-y border-border">
-                        {items.map((dish) => (
-                          <li key={dish.id} className="py-4">
-                            <div className="flex items-baseline justify-between gap-3">
-                              <h4 className="min-w-0 wrap-break-word font-semibold">{dish.name}</h4>
-                              <span className="shrink-0 font-medium tabular-nums">
-                                {moneyText(dish.price, app.currency)}
-                              </span>
-                            </div>
-                            {dish.description && (
-                              <p className="mt-1 text-sm text-muted-foreground">
-                                {dish.description}
-                              </p>
-                            )}
-                            {dish.smallPrice !== null && (
-                              <p className="mt-1 text-sm">
-                                Small portion {moneyText(dish.smallPrice, app.currency)}
-                              </p>
-                            )}
-                            {dish.dietaryTags.length > 0 && (
-                              <p className="mt-2 text-sm font-medium text-primary-text">
-                                {dish.dietaryTags.join(" · ")}
-                              </p>
-                            )}
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p className="mt-3 text-muted-foreground">
-                        No dishes listed for this service.
-                      </p>
-                    )}
-                  </section>
-                );
-              })}
+              {serviceMenus.map(({ service, items, sections }) => (
+                <section key={service} aria-label={serviceLabel[service]}>
+                  <h3 className="font-heading text-2xl font-semibold">{serviceLabel[service]}</h3>
+                  {sections.length > 0 ? (
+                    sections.map(({ title, items, id }) => (
+                      <div key={id} className="mt-6">
+                        <h4 id={id} tabIndex={-1} className="scroll-mt-20 font-heading text-xl">
+                          {title}
+                        </h4>
+                        <DishList items={items} nested />
+                      </div>
+                    ))
+                  ) : items.length > 0 ? (
+                    <DishList items={items} />
+                  ) : (
+                    <p className="mt-3 text-muted-foreground">No dishes listed for this service.</p>
+                  )}
+                </section>
+              ))}
             </div>
           </>
         ) : (

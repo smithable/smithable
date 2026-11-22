@@ -5305,6 +5305,15 @@ exports[`valid specs > ../../../examples/restaurant/smithable.yml 1`] = `
           "unique": false,
         },
         {
+          "name": "section",
+          "required": false,
+          "type": {
+            "kind": "scalar",
+            "name": "string",
+          },
+          "unique": false,
+        },
+        {
           "name": "description",
           "required": false,
           "type": {
@@ -5421,6 +5430,15 @@ exports[`valid specs > ../../../examples/restaurant/smithable.yml 1`] = `
           "unique": false,
         },
         {
+          "name": "address",
+          "required": false,
+          "type": {
+            "kind": "scalar",
+            "name": "string",
+          },
+          "unique": false,
+        },
+        {
           "name": "bookingUrl",
           "required": false,
           "type": {
@@ -5435,6 +5453,15 @@ exports[`valid specs > ../../../examples/restaurant/smithable.yml 1`] = `
           "type": {
             "kind": "scalar",
             "name": "url",
+          },
+          "unique": false,
+        },
+        {
+          "name": "phone",
+          "required": false,
+          "type": {
+            "kind": "scalar",
+            "name": "phone",
           },
           "unique": false,
         },
@@ -5463,8 +5490,8 @@ exports[`valid specs > ../../../examples/restaurant/smithable.yml 1`] = `
         "kind": "landing",
         "sections": [
           {
-            "button": "menu",
-            "kind": "hero",
+            "component": "RestaurantHero",
+            "kind": "custom",
             "name": "hero",
           },
           {
@@ -5485,8 +5512,8 @@ exports[`valid specs > ../../../examples/restaurant/smithable.yml 1`] = `
       "route": "/",
       "sections": [
         {
-          "button": "menu",
-          "kind": "hero",
+          "component": "RestaurantHero",
+          "kind": "custom",
           "name": "hero",
         },
         {

@@ -21,6 +21,7 @@ models:
       name: string!
       menu: Menu!
       service: lunch | dinner
+      section: string
       description: text
       dietaryTags:
         type: string
@@ -37,14 +38,16 @@ models:
   Venue:
     fields:
       name: string!
+      address: string
       bookingUrl: url
       directionsUrl: url
+      phone: phone
 
 pages:
   home:
     route: /
     landing:
-      hero: { button: menu }
+      hero: { custom: RestaurantHero }
       visit: { custom: VisitToday }
       gallery:
       footer:

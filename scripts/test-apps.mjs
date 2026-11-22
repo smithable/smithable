@@ -4007,15 +4007,50 @@ async function restaurantFlow(base) {
     await page.getByRole("heading", { name: menu, exact: true }).waitFor();
   };
   try {
+    await open(page, base);
+    const hero = page.locator('[data-hero][data-layout="photo"]');
+    await hero.getByRole("link", { name: "See the menu", exact: true }).waitFor();
+    const reserve = hero.getByRole("link", { name: "Book a table", exact: true });
+    await reserve.waitFor();
+    if ((await reserve.getAttribute("href")) !== "https://example.com/reservations")
+      throw new Error("booking is missing beside the menu button");
+    if (
+      !(await hero.evaluate(
+        (element) =>
+          Math.abs(element.getBoundingClientRect().width - document.documentElement.clientWidth) <
+          1,
+      ))
+    )
+      throw new Error("the hero does not reach both sides of the screen");
+    await page.getByText("Alder Quay 1, Mariehamn, Åland", { exact: true }).waitFor();
+    await page.getByText("Hours for the week", { exact: true }).click();
+    await page.getByText("Sunday", { exact: true }).waitFor();
+
     await show("2026-12-23T21:59:59.000Z", "House menu");
     await page.getByRole("heading", { name: "Roasted leek and potato soup" }).waitFor();
     await page.getByText("11:30–14:30", { exact: true }).waitFor();
+    const sections = page.getByRole("navigation", { name: "Menu sections", exact: true });
+    const dessert = sections.getByRole("link", { name: "Lunch: Desserts", exact: true });
+    const target = await dessert.getAttribute("href");
+    if (!target?.startsWith("#")) throw new Error("the section link has no jump target");
+    await dessert.click();
+    await page.waitForURL((url) => url.hash === target);
+    const heading = page
+      .getByRole("heading", { name: "Desserts", exact: true })
+      .and(page.locator(target));
+    await heading.waitFor();
+    await page.reload();
+    await page.waitForFunction((hash) => {
+      const bounds = document.getElementById(hash.slice(1))?.getBoundingClientRect();
+      return bounds && bounds.top >= 0 && bounds.bottom <= window.innerHeight;
+    }, target);
 
     await show("2026-12-23T22:00:00.000Z", "Winter holiday menu");
     const dish = page.getByRole("listitem").filter({ hasText: "Celeriac and apple soup" });
     await dish.getByText("€14.00", { exact: true }).waitFor();
     await dish.getByText("Small portion €9.00", { exact: true }).waitFor();
     await dish.getByText("Vegan · Gluten-free", { exact: true }).waitFor();
+    if (await sections.count()) throw new Error("a menu without sections still shows jump links");
     const booking = page.getByRole("link", { name: "Book a table", exact: true });
     if ((await booking.getAttribute("href")) !== "https://example.com/reservations")
       throw new Error("the external booking link is missing");
@@ -6996,7 +7031,6 @@ async function aiMarkCheck(dir, base) {
   const sampled = samples.includes("generated: true");
   // Switched off by the owner (aiBadge: false), the theme hides every mark.
   if ((!gallery && !hero && !sampled) || /^aiBadge: false/m.test(ux)) return;
-  const veiled = /hero: \{[^}]*layout: (cover|centered|photo|tiles)/.test(ux);
   // The landing pages: the routes that use the kit's landing sections.
   const routes = [];
   const orderRoutes = [];
@@ -7036,7 +7070,7 @@ async function aiMarkCheck(dir, base) {
     }
   try {
     await asyncStep(
-      `pictures an AI made are marked: ${gallery} gallery picture(s), ${sampled ? "the sample records' cards, " : ""}${hero ? (veiled ? "not the hero under its wash" : "the hero") : "no hero"} (${routes.join(", ")})`,
+      `AI picture marks follow the layout: ${gallery} gallery picture(s), ${sampled ? "the sample records' cards, " : ""}${hero ? "the hero" : "no hero"} (${routes.join(", ")})`,
       async () => {
         const html = (
           await Promise.all(routes.map(async (r) => (await fetch(`${base}${r}`)).text()))
@@ -7050,6 +7084,8 @@ async function aiMarkCheck(dir, base) {
         // The hero, wherever its page comes among the routes (a page of sections may come first).
         const first = /<section[^>]*data-hero[\s\S]*?<\/section>/.exec(html)?.[0] ?? "";
         const marked = first.includes('data-part="ai-mark"');
+        // A starter can render its hero from a custom section without a layout in the ux file.
+        const veiled = /^<section[^>]*data-layout="(?:cover|centered|photo|tiles)"/.test(first);
         if (hero && veiled && marked) throw new Error("the hero under its wash is marked");
         const words = /data-part="ai-mark"[^>]*><svg[^>]*>[\s\S]*?<\/svg><span[^>]*>AI-generated</;
         if (hero && !veiled && !words.test(first))

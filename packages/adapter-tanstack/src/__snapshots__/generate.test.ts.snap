@@ -84621,6 +84621,7 @@ export const dishes = sqliteTable(
     name: text().notNull(),
     menuId: integer().notNull().references(() => menus.id, { onDelete: "restrict" }),
     service: text({ enum: ["lunch", "dinner"] }).notNull().default("lunch"),
+    section: text(),
     description: text(),
     dietaryTags: text(),
     price: integer().notNull(),
@@ -84657,8 +84658,10 @@ export const venues = sqliteTable(
   {
     id: integer().primaryKey({ autoIncrement: true }),
     name: text().notNull(),
+    address: text(),
     bookingUrl: text(),
     directionsUrl: text(),
+    phone: text(),
     ownerId: text().references(() => user.id, { onDelete: "set null" }),
     createdAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
     updatedAt: integer({ mode: "timestamp_ms" })
@@ -84703,14 +84706,14 @@ if (db.select().from(schema.menus).limit(1).all().length === 0) {
 if (db.select().from(schema.dishes).limit(1).all().length === 0) {
   db.insert(schema.dishes)
     .values([
-    { name: "Dish 1", menuId: 1, service: "lunch", description: "A short description of Dish 1.", dietaryTags: "dietary tags 1", price: 12000, smallPrice: 12000 },
-    { name: "Dish 2", menuId: 2, service: "dinner", description: "A short description of Dish 2.", dietaryTags: "dietary tags 2", price: 48000, smallPrice: 48000 },
-    { name: "Dish 3", menuId: 3, service: "lunch", description: "A short description of Dish 3.", dietaryTags: "dietary tags 3", price: 125000, smallPrice: 125000 },
-    { name: "Dish 4", menuId: 4, service: "dinner", description: "A short description of Dish 4.", dietaryTags: "dietary tags 4", price: 230000, smallPrice: 230000 },
-    { name: "Dish 5", menuId: 5, service: "lunch", description: "A short description of Dish 5.", dietaryTags: "dietary tags 5", price: 7500, smallPrice: 7500 },
-    { name: "Dish 6", menuId: 6, service: "dinner", description: "A short description of Dish 6.", dietaryTags: "dietary tags 6", price: 96000, smallPrice: 96000 },
-    { name: "Dish 7", menuId: 7, service: "lunch", description: "A short description of Dish 7.", dietaryTags: "dietary tags 7", price: 340000, smallPrice: 340000 },
-    { name: "Dish 8", menuId: 8, service: "dinner", description: "A short description of Dish 8.", dietaryTags: "dietary tags 8", price: 64000, smallPrice: 64000 },
+    { name: "Dish 1", menuId: 1, service: "lunch", section: "section 1", description: "A short description of Dish 1.", dietaryTags: "dietary tags 1", price: 12000, smallPrice: 12000 },
+    { name: "Dish 2", menuId: 2, service: "dinner", section: "section 2", description: "A short description of Dish 2.", dietaryTags: "dietary tags 2", price: 48000, smallPrice: 48000 },
+    { name: "Dish 3", menuId: 3, service: "lunch", section: "section 3", description: "A short description of Dish 3.", dietaryTags: "dietary tags 3", price: 125000, smallPrice: 125000 },
+    { name: "Dish 4", menuId: 4, service: "dinner", section: "section 4", description: "A short description of Dish 4.", dietaryTags: "dietary tags 4", price: 230000, smallPrice: 230000 },
+    { name: "Dish 5", menuId: 5, service: "lunch", section: "section 5", description: "A short description of Dish 5.", dietaryTags: "dietary tags 5", price: 7500, smallPrice: 7500 },
+    { name: "Dish 6", menuId: 6, service: "dinner", section: "section 6", description: "A short description of Dish 6.", dietaryTags: "dietary tags 6", price: 96000, smallPrice: 96000 },
+    { name: "Dish 7", menuId: 7, service: "lunch", section: "section 7", description: "A short description of Dish 7.", dietaryTags: "dietary tags 7", price: 340000, smallPrice: 340000 },
+    { name: "Dish 8", menuId: 8, service: "dinner", section: "section 8", description: "A short description of Dish 8.", dietaryTags: "dietary tags 8", price: 64000, smallPrice: 64000 },
     ])
     .run();
 }
@@ -84733,14 +84736,14 @@ if (db.select().from(schema.serviceHours).limit(1).all().length === 0) {
 if (db.select().from(schema.venues).limit(1).all().length === 0) {
   db.insert(schema.venues)
     .values([
-    { name: "Venue 1", bookingUrl: "https://example.com/venue/1", directionsUrl: "https://example.com/venue/1" },
-    { name: "Venue 2", bookingUrl: "https://example.com/venue/2", directionsUrl: "https://example.com/venue/2" },
-    { name: "Venue 3", bookingUrl: "https://example.com/venue/3", directionsUrl: "https://example.com/venue/3" },
-    { name: "Venue 4", bookingUrl: "https://example.com/venue/4", directionsUrl: "https://example.com/venue/4" },
-    { name: "Venue 5", bookingUrl: "https://example.com/venue/5", directionsUrl: "https://example.com/venue/5" },
-    { name: "Venue 6", bookingUrl: "https://example.com/venue/6", directionsUrl: "https://example.com/venue/6" },
-    { name: "Venue 7", bookingUrl: "https://example.com/venue/7", directionsUrl: "https://example.com/venue/7" },
-    { name: "Venue 8", bookingUrl: "https://example.com/venue/8", directionsUrl: "https://example.com/venue/8" },
+    { name: "Venue 1", address: "address 1", bookingUrl: "https://example.com/venue/1", directionsUrl: "https://example.com/venue/1", phone: "+358 40 120 1000" },
+    { name: "Venue 2", address: "address 2", bookingUrl: "https://example.com/venue/2", directionsUrl: "https://example.com/venue/2", phone: "+358 40 127 1037" },
+    { name: "Venue 3", address: "address 3", bookingUrl: "https://example.com/venue/3", directionsUrl: "https://example.com/venue/3", phone: "+358 40 134 1074" },
+    { name: "Venue 4", address: "address 4", bookingUrl: "https://example.com/venue/4", directionsUrl: "https://example.com/venue/4", phone: "+358 40 141 1111" },
+    { name: "Venue 5", address: "address 5", bookingUrl: "https://example.com/venue/5", directionsUrl: "https://example.com/venue/5", phone: "+358 40 148 1148" },
+    { name: "Venue 6", address: "address 6", bookingUrl: "https://example.com/venue/6", directionsUrl: "https://example.com/venue/6", phone: "+358 40 155 1185" },
+    { name: "Venue 7", address: "address 7", bookingUrl: "https://example.com/venue/7", directionsUrl: "https://example.com/venue/7", phone: "+358 40 162 1222" },
+    { name: "Venue 8", address: "address 8", bookingUrl: "https://example.com/venue/8", directionsUrl: "https://example.com/venue/8", phone: "+358 40 169 1259" },
     ])
     .run();
 }
@@ -84820,7 +84823,7 @@ function insertMenu(owner: string | null, values: Record<string, unknown> = {}) 
 
 function dishValues(owner: string | null) {
   const n = next();
-  return { name: \`Dish name \${n}\`, menuId: insertMenu(owner).id, service: "lunch", description: null, dietaryTags: null, price: 1000, smallPrice: null } as const;
+  return { name: \`Dish name \${n}\`, menuId: insertMenu(owner).id, service: "lunch", section: null, description: null, dietaryTags: null, price: 1000, smallPrice: null } as const;
 }
 
 function insertDish(owner: string | null, values: Record<string, unknown> = {}) {
@@ -84846,7 +84849,7 @@ function insertServiceHour(owner: string | null, values: Record<string, unknown>
 
 function venueValues(_owner: string | null) {
   const n = next();
-  return { name: \`Venue name \${n}\`, bookingUrl: null, directionsUrl: null } as const;
+  return { name: \`Venue name \${n}\`, address: null, bookingUrl: null, directionsUrl: null, phone: null } as const;
 }
 
 function insertVenue(owner: string | null, values: Record<string, unknown> = {}) {
@@ -85372,6 +85375,7 @@ export const CARDS: Record<string, CardFacts> = {
               required: true,
               choices: ["Lunch", "Dinner"],
             },
+            { name: "section", label: "Section", kind: "string", required: false },
             { name: "description", label: "Description", kind: "text", required: false },
             { name: "dietaryTags", label: "Dietary tags", kind: "string", required: false },
             { name: "price", label: "Price", kind: "money", required: true },
@@ -85408,8 +85412,10 @@ export const CARDS: Record<string, CardFacts> = {
           plural: "Venues",
           fields: [
             { name: "name", label: "Name", kind: "string", required: true },
+            { name: "address", label: "Address", kind: "string", required: false },
             { name: "bookingUrl", label: "Booking url", kind: "url", required: false },
             { name: "directionsUrl", label: "Directions url", kind: "url", required: false },
+            { name: "phone", label: "Phone", kind: "phone", required: false },
           ],
           unique: [],
         },
@@ -85446,7 +85452,7 @@ export const CARDS: Record<string, CardFacts> = {
     },
     people: {
       signIn: { providers: ["email"], invitedOnly: true, domains: [] },
-      records: [],
+      records: [{ model: "Venues", fields: ["Phone"], readers: "visitors", owner: false }],
       uploads: [],
       sensitive: [],
     },
@@ -85574,6 +85580,7 @@ export const CARDS: Record<string, CardFacts> = {
       customActions: [],
       customPages: [],
       customSections: [
+        { page: "home", section: "hero", component: "RestaurantHero" },
         { page: "home", section: "visit", component: "VisitToday" },
         { page: "menu", section: "visit", component: "VisitToday" },
         { page: "menu", section: "food", component: "ServiceMenu" },
@@ -85731,6 +85738,7 @@ const MOVES: Record<string, DoorMove[]> = {
           kind: "choice",
           values: ["lunch", "dinner"],
         },
+        { field: "section", required: false, kind: "text" },
         { field: "description", required: false, kind: "text" },
         { field: "dietaryTags", required: false, kind: "text" },
         { field: "price", required: true, kind: "money", min: 0 },
@@ -85750,6 +85758,7 @@ const MOVES: Record<string, DoorMove[]> = {
           kind: "choice",
           values: ["lunch", "dinner"],
         },
+        { field: "section", required: false, kind: "text" },
         { field: "description", required: false, kind: "text" },
         { field: "dietaryTags", required: false, kind: "text" },
         { field: "price", required: true, kind: "money", min: 0 },
@@ -85804,8 +85813,10 @@ const MOVES: Record<string, DoorMove[]> = {
       model: "Venue",
       slots: [
         { field: "name", required: true, kind: "text" },
+        { field: "address", required: false, kind: "text" },
         { field: "bookingUrl", required: false, kind: "url" },
         { field: "directionsUrl", required: false, kind: "url" },
+        { field: "phone", required: false, kind: "phone" },
       ],
     },
     {
@@ -85814,8 +85825,10 @@ const MOVES: Record<string, DoorMove[]> = {
       model: "Venue",
       slots: [
         { field: "name", required: true, kind: "text" },
+        { field: "address", required: false, kind: "text" },
         { field: "bookingUrl", required: false, kind: "url" },
         { field: "directionsUrl", required: false, kind: "url" },
+        { field: "phone", required: false, kind: "phone" },
       ],
     },
     { id: "delete:Venue", kind: "delete", model: "Venue" },
@@ -85890,6 +85903,7 @@ const MOVES: Record<string, DoorMove[]> = {
           kind: "choice",
           values: ["lunch", "dinner"],
         },
+        { field: "section", required: false, kind: "text" },
         { field: "description", required: false, kind: "text" },
         { field: "dietaryTags", required: false, kind: "text" },
         { field: "price", required: true, kind: "money", min: 0 },
@@ -85909,6 +85923,7 @@ const MOVES: Record<string, DoorMove[]> = {
           kind: "choice",
           values: ["lunch", "dinner"],
         },
+        { field: "section", required: false, kind: "text" },
         { field: "description", required: false, kind: "text" },
         { field: "dietaryTags", required: false, kind: "text" },
         { field: "price", required: true, kind: "money", min: 0 },
@@ -85963,8 +85978,10 @@ const MOVES: Record<string, DoorMove[]> = {
       model: "Venue",
       slots: [
         { field: "name", required: true, kind: "text" },
+        { field: "address", required: false, kind: "text" },
         { field: "bookingUrl", required: false, kind: "url" },
         { field: "directionsUrl", required: false, kind: "url" },
+        { field: "phone", required: false, kind: "phone" },
       ],
     },
     {
@@ -85973,8 +85990,10 @@ const MOVES: Record<string, DoorMove[]> = {
       model: "Venue",
       slots: [
         { field: "name", required: true, kind: "text" },
+        { field: "address", required: false, kind: "text" },
         { field: "bookingUrl", required: false, kind: "url" },
         { field: "directionsUrl", required: false, kind: "url" },
+        { field: "phone", required: false, kind: "phone" },
       ],
     },
     { id: "delete:Venue", kind: "delete", model: "Venue" },
@@ -86131,6 +86150,7 @@ const ACTS: Record<string, (viewer: Viewer | null, move: DoorMove, body: DoorBod
   name: "name",
   menu: "menuId",
   service: "service",
+  section: "section",
   description: "description",
   dietaryTags: "dietaryTags",
   price: "price",
@@ -86140,6 +86160,7 @@ const ACTS: Record<string, (viewer: Viewer | null, move: DoorMove, body: DoorBod
   name: "name",
   menu: "menuId",
   service: "service",
+  section: "section",
   description: "description",
   dietaryTags: "dietaryTags",
   price: "price",
@@ -86149,8 +86170,20 @@ const ACTS: Record<string, (viewer: Viewer | null, move: DoorMove, body: DoorBod
   "add:ServiceHour": async (viewer, move, body) => serviceHourData.create(viewer, serviceHourSchema.parse(stored(move.slots ?? [], body.values, { weekday: "weekday", service: "service", hours: "hours" }))),
   "change:ServiceHour": async (viewer, move, body) => serviceHourData.update(viewer, record(body), serviceHourSettable.partial().parse(stored(move.slots ?? [], body.values, { weekday: "weekday", service: "service", hours: "hours" }))),
   "delete:ServiceHour": async (viewer, _move, body) => serviceHourData.remove(viewer, record(body)),
-  "add:Venue": async (viewer, move, body) => venueData.create(viewer, venueSchema.parse(stored(move.slots ?? [], body.values, { name: "name", bookingUrl: "bookingUrl", directionsUrl: "directionsUrl" }))),
-  "change:Venue": async (viewer, move, body) => venueData.update(viewer, record(body), venueSettable.partial().parse(stored(move.slots ?? [], body.values, { name: "name", bookingUrl: "bookingUrl", directionsUrl: "directionsUrl" }))),
+  "add:Venue": async (viewer, move, body) => venueData.create(viewer, venueSchema.parse(stored(move.slots ?? [], body.values, {
+  name: "name",
+  address: "address",
+  bookingUrl: "bookingUrl",
+  directionsUrl: "directionsUrl",
+  phone: "phone",
+}))),
+  "change:Venue": async (viewer, move, body) => venueData.update(viewer, record(body), venueSettable.partial().parse(stored(move.slots ?? [], body.values, {
+  name: "name",
+  address: "address",
+  bookingUrl: "bookingUrl",
+  directionsUrl: "directionsUrl",
+  phone: "phone",
+}))),
   "delete:Venue": async (viewer, _move, body) => venueData.remove(viewer, record(body)),
 };
 
@@ -86290,6 +86323,7 @@ import { w } from "#/kit/words";
 /** What a dish may be given: a form's values and what the app fills (an action's set). */
 export const dishSettable = createInsertSchema(schema.dishes, {
   name: (s) => s.trim().min(1, w.required).max(200, w.atMostCharacters(200)),
+  section: (s) => s.max(200, w.atMostCharacters(200)),
   description: (s) => s.max(10000, w.atMostCharacters(10000)),
   dietaryTags: (s) => s.max(200, w.atMostCharacters(200)),
   price: (s) => s.min(0),
@@ -86626,7 +86660,7 @@ export const dishUi: RecordUi<DishRow> = {
   pluralLabel: "Dishes",
   titleField: "name",
   descriptionField: "description",
-  columns: ["name", "menuId", "service", "price", "dietaryTags"],
+  columns: ["name", "menuId", "service", "price", "section"],
   fields: [
     {
       name: "name",
@@ -86651,6 +86685,13 @@ export const dishUi: RecordUi<DishRow> = {
       choices: [{ value: "lunch", label: "Lunch" }, { value: "dinner", label: "Dinner" }],
       default: "lunch",
       get: (row) => row.service,
+    },
+    {
+      name: "section",
+      label: "Section",
+      kind: "string",
+      required: false,
+      get: (row) => row.section,
     },
     {
       name: "description",
@@ -88438,8 +88479,10 @@ import { w } from "#/kit/words";
 /** What a venue may be given: a form's values and what the app fills (an action's set). */
 export const venueSettable = createInsertSchema(schema.venues, {
   name: (s) => s.trim().min(1, w.required).max(200, w.atMostCharacters(200)),
+  address: (s) => s.max(200, w.atMostCharacters(200)),
   bookingUrl: z.url({ protocol: /^https?$/, error: w.enterValidUrl }).nullish(),
   directionsUrl: z.url({ protocol: /^https?$/, error: w.enterValidUrl }).nullish(),
+  phone: (s) => s.regex(/^\\+?[0-9 ()-]{5,20}$/, w.enterValidPhone),
 }).omit({ id: true, ownerId: true, createdAt: true, updatedAt: true });
 /** What a venue's form sends, checked. */
 export const venueSchema = venueSettable;
@@ -88730,7 +88773,7 @@ export const venueUi: RecordUi<VenueRow> = {
   label: "Venue",
   pluralLabel: "Venues",
   titleField: "name",
-  columns: ["name", "bookingUrl", "directionsUrl"],
+  columns: ["name", "address", "bookingUrl", "directionsUrl", "phone"],
   fields: [
     {
       name: "name",
@@ -88738,6 +88781,13 @@ export const venueUi: RecordUi<VenueRow> = {
       kind: "string",
       required: true,
       get: (row) => row.name,
+    },
+    {
+      name: "address",
+      label: "Address",
+      kind: "string",
+      required: false,
+      get: (row) => row.address,
     },
     {
       name: "bookingUrl",
@@ -88752,6 +88802,13 @@ export const venueUi: RecordUi<VenueRow> = {
       kind: "url",
       required: false,
       get: (row) => row.directionsUrl,
+    },
+    {
+      name: "phone",
+      label: "Phone",
+      kind: "phone",
+      required: false,
+      get: (row) => row.phone,
     },
   ],
 };
@@ -89692,9 +89749,10 @@ import { pageAccess, pageHead } from "#/generated/pages";
 import { guardPage } from "#/kit/page-guard";
 import { authClient } from "#/lib/auth-client";
 import { rememberPerson } from "#/kit/time-text";
-import { LandingLayout, Hero } from "#/kit/Landing";
+import { LandingLayout } from "#/kit/Landing";
 import { w } from "#/kit/words";
 import { site } from "#/generated/site";
+import { RestaurantHero } from "#/custom/sections/RestaurantHero";
 import { VisitToday } from "#/custom/sections/VisitToday";
 import { app } from "#/generated/app";
 
@@ -89714,12 +89772,9 @@ function HomePage() {
   };
   return (
     <LandingLayout appName={app.name} link={viewer ? { to: "/menu", label: w.openApp(app.name) } : { to: "/sign-in", label: w.signIn }} footer={{ links: [], texts: "pages.home.footer" }} site={site} viewer={viewer} onSignOut={viewer ? signOut : undefined}>
-      <Hero
+      <RestaurantHero
+          name="hero"
           texts="pages.home.hero"
-          title="Alder Quay"
-          subtitle="A restaurant with a public menu, service hours and table reservations."
-          link={{ to: "/menu", label: "Get started" }}
-          more
         />
       <VisitToday
           name="visit"
@@ -91161,6 +91216,7 @@ exports[`../../../examples/restaurant/smithable.yml > file list and generated co
   "kit: src/components/ui/input.tsx",
   "kit: src/components/ui/table.tsx",
   "custom: src/custom/hooks.ts",
+  "custom: src/custom/sections/RestaurantHero.tsx",
   "custom: src/custom/sections/ServiceMenu.tsx",
   "custom: src/custom/sections/VisitToday.tsx",
   "custom: src/custom/sections/VisitToday.tsx",
@@ -91329,24 +91385,25 @@ exports[`../../../examples/restaurant/smithable.yml > the generated files are as
   "src/components/ui/input.tsx": "bf810eb3 kit",
   "src/components/ui/table.tsx": "8fd4f831 kit",
   "src/custom/hooks.ts": "4247261f custom",
+  "src/custom/sections/RestaurantHero.tsx": "ff254b7a custom",
   "src/custom/sections/ServiceMenu.tsx": "00470a46 custom",
   "src/custom/sections/VisitToday.tsx": "b4b9672e custom",
   "src/custom/styles.css": "87d7c518 custom",
   "src/db/index.ts": "ba378d34 kit",
-  "src/db/schema.ts": "2f8da1d6 generated",
-  "src/db/seed.ts": "5a9cf2f0 generated",
-  "src/generated/access.test.ts": "363ca689 generated",
+  "src/db/schema.ts": "97d5231d generated",
+  "src/db/seed.ts": "5c4bd419 generated",
+  "src/generated/access.test.ts": "3cb9bbf1 generated",
   "src/generated/activity.server.ts": "1c3531e4 generated",
   "src/generated/app.ts": "460919da generated",
-  "src/generated/card.server.ts": "7348d596 generated",
+  "src/generated/card.server.ts": "4e0e6697 generated",
   "src/generated/card.ts": "5cab12e4 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
-  "src/generated/dev-door.server.ts": "9ec56e66 generated",
+  "src/generated/dev-door.server.ts": "0c8d62da generated",
   "src/generated/dish.import.server.ts": "76a8902e generated",
   "src/generated/dish.import.ts": "44be2252 generated",
-  "src/generated/dish.schema.ts": "76f288f1 generated",
+  "src/generated/dish.schema.ts": "bbb03cb1 generated",
   "src/generated/dish.server.ts": "c56b4fdb generated",
-  "src/generated/dish.ts": "ad19bbed generated",
+  "src/generated/dish.ts": "c4e72faa generated",
   "src/generated/hooks.ts": "f0f6cf2f generated",
   "src/generated/menu.import.server.ts": "b249159e generated",
   "src/generated/menu.import.ts": "92ea81bd generated",
@@ -91365,9 +91422,9 @@ exports[`../../../examples/restaurant/smithable.yml > the generated files are as
   "src/generated/site.ts": "e883f312 generated",
   "src/generated/users.server.ts": "f378fedd generated",
   "src/generated/users.test.ts": "5b234f2d generated",
-  "src/generated/venue.schema.ts": "99bf5dc5 generated",
+  "src/generated/venue.schema.ts": "14b2684a generated",
   "src/generated/venue.server.ts": "46652476 generated",
-  "src/generated/venue.ts": "11b3e68e generated",
+  "src/generated/venue.ts": "813c9669 generated",
   "src/kit/ActionButton.tsx": "6a3b0c0a kit",
   "src/kit/ActivityLog.tsx": "e53a5289 kit",
   "src/kit/AiMark.tsx": "2dd9487f kit",
@@ -91445,7 +91502,7 @@ exports[`../../../examples/restaurant/smithable.yml > the generated files are as
   "src/routes/dishes/index.tsx": "b6f7a07a generated",
   "src/routes/dishes/new.tsx": "eb5a9a82 generated",
   "src/routes/health.ts": "362c9904 kit",
-  "src/routes/index.tsx": "c2918826 generated",
+  "src/routes/index.tsx": "22e416c5 generated",
   "src/routes/menu/index.tsx": "e68100b9 generated",
   "src/routes/menus/$id.tsx": "4f4ae484 generated",
   "src/routes/menus/index.tsx": "8acbe075 generated",
