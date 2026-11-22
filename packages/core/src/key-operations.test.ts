@@ -122,6 +122,14 @@ test("the keys left to editSpec, as reviewed: every other key has its operation"
   expect(left.sort()).toMatchSnapshot();
 });
 
+test("no operation takes an argument named confirm: an MCP tool adds its own, for a change that loses data", () => {
+  expect(
+    OPERATIONS.filter((op) => Object.hasOwn(op.schema.properties ?? {}, "confirm")).map(
+      (op) => op.name,
+    ),
+  ).toEqual([]);
+});
+
 test("an exception is a key the schemas have that no operation reaches", () => {
   for (const key of Object.keys(EXCEPTIONS)) {
     const [file = "", dotted = ""] = key.split(":");

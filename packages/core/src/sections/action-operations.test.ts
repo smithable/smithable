@@ -165,7 +165,7 @@ describe("setAction", () => {
     expect(run(status, "setAction", ["resolve"])).toMatchObject({
       ok: false,
       message:
-        "Say what to change: --intent, --when, --set, --confirm, --reads, --writes, --triggers or --touches none.",
+        "Say what to change: --intent, --when, --set, --ask-first, --reads, --writes, --triggers or --touches none.",
     });
     expect(run(status, "setAction", ["resolve", "--set", "status=gone"])).toMatchObject({
       ok: false,
@@ -182,20 +182,20 @@ describe("setAction", () => {
     ).toMatchObject({ ok: true });
   });
 
-  test("--confirm asks before a standard action runs, and false removes it; custom code has its own", () => {
-    const asked = run(status, "setAction", ["resolve", "--confirm", "true"]);
+  test("--ask-first asks before a standard action runs, and false removes it; custom code has its own", () => {
+    const asked = run(status, "setAction", ["resolve", "--ask-first", "true"]);
     if (!asked.ok) throw new Error(asked.message);
     expect(asked.description).toBe("Change whether it asks first of the action resolve");
     expect(resolveOf(asked.files.spec)).toEqual({ ...resolveOf(status.spec), confirm: true });
     const back = run({ ...status, spec: asked.files.spec }, "setAction", [
       "resolve",
-      "--confirm",
+      "--ask-first",
       "false",
     ]);
     if (!back.ok) throw new Error(back.message);
     expect(back.files.spec).toBe(status.spec);
     expect(
-      run({ spec, auth }, "setAction", ["scheduleFollowUps", "--confirm", "true"]),
+      run({ spec, auth }, "setAction", ["scheduleFollowUps", "--ask-first", "true"]),
     ).toMatchObject({ ok: false, message: expect.stringContaining("own dialog") });
   });
 });
