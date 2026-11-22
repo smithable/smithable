@@ -7106,10 +7106,9 @@ async function aiMarkCheck(dir, base) {
         const html = (
           await Promise.all(routes.map(async (r) => (await fetch(`${base}${r}`)).text()))
         ).join("");
-        // The small icon has a square view box. The English hero label is a wider SVG.
-        const icon =
-          /data-part="ai-mark"[^>]*><svg[^>]*viewBox="89\.28 100\.72 365\.49 365\.49"[^>]*\baria-label="/g;
-        const small = (html.match(icon) ?? []).length;
+        // The EU's icon alone, named for a screen reader (AiMark.tsx); on a hero it comes with words.
+        const small = (html.match(/data-part="ai-mark"[^>]*><svg[^>]*\baria-label="/g) ?? [])
+          .length;
         const cards = sampled && html.includes('src="/files/') ? 1 : 0;
         if (small < gallery + cards)
           throw new Error(`${small} "AI" mark(s), expected at least ${gallery + cards}`);
@@ -7119,8 +7118,10 @@ async function aiMarkCheck(dir, base) {
         // A starter can render its hero from a custom section without a layout in the ux file.
         const veiled = /^<section[^>]*data-layout="(?:cover|centered|photo|tiles)"/.test(first);
         if (hero && veiled && marked) throw new Error("the hero under its wash is marked");
+        // In English the EU's worded label, one drawing named for a screen reader; elsewhere the
+        // icon with the app's words beside it (AiMark.tsx).
         const words =
-          /data-part="ai-mark"[^>]*><svg[^>]*viewBox="207\.3 144\.36 1384\.24 266\.41"[^>]*\baria-label="AI-generated"/;
+          /data-part="ai-mark"[^>]*>(?:<svg[^>]*\baria-label="AI-generated"|<span[^>]*><svg[^>]*>[\s\S]*?<\/svg>AI-generated<)/;
         if (hero && !veiled && !words.test(first))
           throw new Error("the hero is not marked AI-generated");
       },

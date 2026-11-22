@@ -11,6 +11,9 @@ export async function checkStudioLayout(browser, base, pictures) {
   ]) {
     const page = await browser.newPage({ viewport, deviceScaleFactor: 2 });
     try {
+      // The desktop tour checks all four stops, including the docked Changes pane.
+      if (viewport.width === 1600)
+        await page.addInitScript(() => localStorage.setItem("smithable:changes-beside-smith", "1"));
       await page.goto(base);
       const overlay = page.getByRole("dialog", { name: /^Smith presents / });
       await overlay.getByRole("button", { name: "Skip", exact: true }).click();
@@ -111,6 +114,7 @@ export async function checkStudioLayout(browser, base, pictures) {
         await smith.waitFor();
         await smith.getByRole("button", { name: "Dock", exact: true }).click();
         await page.setViewportSize({ width: 1600, height: 900 });
+        await page.locator('[data-guide="changes"]:visible').waitFor();
         await openStudioGuide(page);
         const card = page.locator("[data-guide-card]:visible");
         await card.waitFor();
@@ -121,6 +125,7 @@ export async function checkStudioLayout(browser, base, pictures) {
           stops.push(anchor);
           const done = card.getByRole("button", { name: "Done", exact: true });
           if (await done.count()) {
+            assert.equal(anchor, "changes", `tour ended early at ${anchor}`);
             await done.click();
             break;
           }
