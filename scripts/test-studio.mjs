@@ -194,8 +194,8 @@ const page = await browser.newPage({ viewport: { width: 1920, height: 1000 } });
  * (it shows once per browser, kept in localStorage, first-look.ts), as a returning person's do.
  * The picker's own checks (checkFirstLook, the guide's first visit) use `browser` itself.
  */
-const seenContext = async (options) => {
-  const context = await browser.newContext(options);
+const seenContext = async (options, source = browser) => {
+  const context = await source.newContext(options);
   await context.addInitScript(() => {
     const get = Storage.prototype.getItem;
     Storage.prototype.getItem = function (key) {
@@ -2453,16 +2453,23 @@ try {
         args: ["--use-fake-device-for-media-stream", "--use-fake-ui-for-media-stream"],
       });
       try {
-        const listener = await ears.newPage();
-        // Headless Chromium may have no system voices. Keep the real microphone and detector.
+        const context = await seenContext({}, ears);
+        const listener = await context.newPage();
+        // Headless Chromium may have no system voices. Stub playback and keep real capture and detection.
         await listener.addInitScript(() => {
           window.speechSynthesis.getVoices = () => [
             { name: "Fixture voice", lang: "en-US", localService: true },
           ];
+          window.speechSynthesis.speak = (utterance) => queueMicrotask(() => utterance.onend?.());
+          window.SpeechSynthesisUtterance = class {
+            constructor(text) {
+              this.text = text;
+            }
+          };
         });
         await listener.route("https://docs.smithable.ai/vad/**", (route) => {
           const path = new URL(route.request().url()).pathname;
-          route.fulfill({
+          return route.fulfill({
             body: readFileSync(join(repo, "site", path)),
             headers: { "access-control-allow-origin": "*" },
           });
