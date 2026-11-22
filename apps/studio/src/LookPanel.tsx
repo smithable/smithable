@@ -206,7 +206,7 @@ export function LookPanel({
         : api.lookChange("setTheme", { [key]: value }, revision, lookProject),
     );
   const close = async (keep: boolean, customize = false) => {
-    if (closing || applying.current) return;
+    if (closed.current || applying.current) return;
     // X and Escape apply a theme only tried on; a refused one keeps the panel open, still tried.
     if (keep && !customize && triedNow.current && !(await applyTried())) return;
     closed.current = true;
@@ -438,7 +438,8 @@ function ThemeList({ count, children }: { count: number; children: React.ReactNo
     const el = box.current;
     if (el) setMore(el.scrollTop + el.clientHeight < el.scrollHeight - 4);
   };
-  useLayoutEffect(measure, []);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: a new count of themes changes what lies below
+  useLayoutEffect(measure, [count]);
   return (
     <div className="relative">
       <div
