@@ -15,6 +15,14 @@ import { type LookPreviewConfig, lookPreviewHandler } from "./look-preview.js";
 import { RECORD_PROBE } from "./preview-discovery.js";
 import { writeTreeFile } from "./tree-files.js";
 
+/**
+ * Studio's preview shows no AI badge (picture-kinds.md §3): a rule in the app's own stylesheet,
+ * so it holds before the first paint, until the maker switches "Show AI badges here" on. The
+ * app's own builds, and an app run in development outside Studio, never have it.
+ */
+export const BADGES_HIDDEN =
+  'html:not([data-sm-badges]) [data-part="ai-mark"] { display: none !important; }';
+
 /** The runtime, run in the preview page inside Studio's iframe. */
 export const RUNTIME = `
 if (typeof window !== "undefined" && window.parent !== window) {
@@ -67,6 +75,12 @@ if (typeof window !== "undefined" && window.parent !== window) {
     if (!trusted(event.origin) || !Number.isSafeInteger(event.data.context) || event.data.context < followContext) return;
     studio = event.origin;
     followContext = event.data.context;
+  });
+  // "Show AI badges here" (picture-kinds.md §3): the stylesheet hides the badge (BADGES_HIDDEN);
+  // shown, the page keeps the published rule, so the maker sees what will be published.
+  window.addEventListener("message", (event) => {
+    if (event.source !== window.parent || event.data?.type !== "smithable:show-badges" || !trusted(event.origin)) return;
+    document.documentElement.toggleAttribute("data-sm-badges", event.data.on === true);
   });
   const markedAt = (element) => (element instanceof Element ? element.closest("[data-sm-concept]") : null);
   // A landing section (the kit's data-kit="section"), named by its texts' place in the content
@@ -1041,8 +1055,8 @@ if (typeof window !== "undefined") {
             : "")
         : undefined,
     transform: (code: string, id: string) => {
-      if (look && id.split("?")[0]?.endsWith("/src/styles.css") && !id.includes("?url"))
-        return `${code}\n:root { --sm-look-generation: "${lookGeneration(dir, boot)}"; }\n`;
+      if (id.split("?")[0]?.endsWith("/src/styles.css") && !id.includes("?url"))
+        return `${code}\n${BADGES_HIDDEN}\n${look ? `:root { --sm-look-generation: "${lookGeneration(dir, boot)}"; }\n` : ""}`;
       return id.endsWith("/src/router.tsx") ? `${code}\nimport "${ID}";\n` : undefined;
     },
   };
