@@ -1,6 +1,7 @@
 # Theme-coloured pictures: drawn library pictures in the app's own colours
 
-Status: the host can select the tint rule. Rendering and offers are pending. The design follows the
+Status: the host can select the tint rule and render a picture. Studio offers and applying a tinted
+set are pending. The design follows the
 trial of 2026-11-20/21, two rounds of sheets on contrasting themes, where Johan chose variant B
 ("light, keep hues, 25% back toward the original"). It builds on first-look.md §4: image styles,
 the record in `pictures.json`, and the host's `place-pictures` effect.

@@ -5,6 +5,7 @@ const toLinear = (v: number) => (v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055
 const fromLinear = (v: number) => (v <= 0.0031308 ? 12.92 * v : 1.055 * v ** (1 / 2.4) - 0.055);
 
 export type Oklch = [l: number, c: number, h: number];
+export type Oklab = [l: number, a: number, b: number];
 export type Rgb = [r: number, g: number, b: number];
 
 export function hexToRgb(hex: string): Rgb {
@@ -21,7 +22,7 @@ export function rgbToHex(rgb: Rgb): string {
     .join("")}`;
 }
 
-export function rgbToOklch([r, g, b]: Rgb): Oklch {
+export function rgbToOklab([r, g, b]: Rgb): Oklab {
   const [lr, lg, lb] = [toLinear(r), toLinear(g), toLinear(b)];
   const l = Math.cbrt(0.4122214708 * lr + 0.5363325363 * lg + 0.0514459929 * lb);
   const m = Math.cbrt(0.2119034982 * lr + 0.6806995451 * lg + 0.1073969566 * lb);
@@ -29,6 +30,11 @@ export function rgbToOklch([r, g, b]: Rgb): Oklch {
   const L = 0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s;
   const A = 1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s;
   const B = 0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s;
+  return [L, A, B];
+}
+
+export function rgbToOklch(rgb: Rgb): Oklch {
+  const [L, A, B] = rgbToOklab(rgb);
   const C = Math.sqrt(A * A + B * B);
   const H = (Math.atan2(B, A) * 180) / Math.PI;
   return [L, C, C < 0.0001 ? 0 : H < 0 ? H + 360 : H];
@@ -38,6 +44,10 @@ export function rgbToOklch([r, g, b]: Rgb): Oklch {
 export function oklchToLinear([L, C, H]: Oklch): Rgb {
   const a = C * Math.cos((H * Math.PI) / 180);
   const b = C * Math.sin((H * Math.PI) / 180);
+  return oklabToLinear([L, a, b]);
+}
+
+function oklabToLinear([L, a, b]: Oklab): Rgb {
   const l = (L + 0.3963377774 * a + 0.2158037573 * b) ** 3;
   const m = (L - 0.1055613458 * a - 0.0638541728 * b) ** 3;
   const s = (L - 0.0894841775 * a - 1.291485548 * b) ** 3;
@@ -46,6 +56,11 @@ export function oklchToLinear([L, C, H]: Oklch): Rgb {
     -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
     -0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s,
   ];
+}
+
+/** Into sRGB, clipping each channel at the gamut boundaries. */
+export function oklabToRgb(lab: Oklab): Rgb {
+  return oklabToLinear(lab).map((v) => fromLinear(clamp(v, 0, 1))) as Rgb;
 }
 
 /** Into sRGB without changing lightness or hue: chroma shrinks by 3% until it fits. */
