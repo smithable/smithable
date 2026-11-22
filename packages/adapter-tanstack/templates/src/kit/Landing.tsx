@@ -221,12 +221,16 @@ function LandingLayoutView({
               </ul>
             </nav>
           )}
-          <div className="flex items-center gap-2">
+          <div className="flex min-w-0 items-center gap-2">
             {link && (
               <Link
                 to={link.to}
                 className={cn(
                   buttonVariants({ variant: "outline" }),
+                  // On a phone with a menu the link is in the menu; without one, a long app name in
+                  // "Open …" gives way rather than push the bar wider than the screen.
+                  "min-w-0 shrink",
+                  menu.length > 0 && "hidden md:inline-flex",
                   // On the hero's wash the button keeps only its outline, in the wash's text color.
                   clear &&
                     (over === "dark"
@@ -234,7 +238,7 @@ function LandingLayoutView({
                       : "border-primary-foreground/70 bg-transparent! text-primary-foreground! hover:bg-primary-foreground/10! dark:border-foreground/70 dark:text-foreground! dark:hover:bg-foreground/10!"),
                 )}
               >
-                {link.label}
+                <span className="truncate">{link.label}</span>
               </Link>
             )}
             {onSignOut && (
@@ -274,6 +278,17 @@ function LandingLayoutView({
                   </Link>
                 </li>
               ))}
+              {link && (
+                <li>
+                  <Link
+                    to={link.to}
+                    onClick={() => setOpen(false)}
+                    className="block py-3 font-medium"
+                  >
+                    {link.label}
+                  </Link>
+                </li>
+              )}
             </ul>
           </nav>
         )}
