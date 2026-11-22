@@ -15,6 +15,11 @@ function exampleTarget(
   of: string,
 ): { path: string[]; examples: number; calculator?: CalculatorIR } {
   const [kind, name = ""] = of.split(/:(.*)/);
+  // Model.field, page or page.section: a part more is a typo, not a shorter name.
+  if (name.split(".").length > 2)
+    throw new OperationError(
+      `"${of}" names too much: say field:Model.field or calculator:<page>[.<section>].`,
+    );
   if (kind === "field") {
     const [model = "", field = ""] = name.split(".");
     const m = ir.models.find((x) => x.name === model);
@@ -125,8 +130,8 @@ const addFormulaExample: Operation<{
     if (!target.calculator && map)
       throw new OperationError("A field's example expects one value: the formula's result.");
     const item: YamlValue = { input, expected } as YamlValue;
-    // The list is written whole: a block item cannot go into a list inside { … }.
-    if (target.examples) spec.set(target.path, [...(spec.get(target.path) as YamlValue[]), item]);
+    if (spec.has(target.path))
+      spec.set(target.path, [...((spec.get(target.path) as YamlValue[] | null) ?? []), item]);
     else spec.add(target.path.slice(0, -1), "examples", [item]);
     return [];
   },

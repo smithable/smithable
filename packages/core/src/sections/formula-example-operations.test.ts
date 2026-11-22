@@ -97,3 +97,47 @@ test("addFormulaExample gives a calculator page and a section's calculator their
     /has 0 example/,
   );
 });
+
+test("a section's examples are taken away one by one, under landing or sections, and a name too long is refused", () => {
+  const two = ok(
+    "addFormulaExample",
+    { of: "calculator:home.estimate", input: { guests: 3 }, expected: { total: 75 } },
+    ok("addFormulaExample", {
+      of: "calculator:home.estimate",
+      input: { guests: 2 },
+      expected: { total: 50 },
+    }).files,
+  );
+  const one = ok(
+    "removeFormulaExample",
+    { of: "calculator:home.estimate", number: "1" },
+    two.files,
+  );
+  expect(parse(one.files.spec).pages.home.landing.estimate.calculator.examples).toEqual([
+    { input: { guests: 3 }, expected: { total: 75 } },
+  ]);
+  const sections = spec
+    .split("  lines: { crud: Line }\n")
+    .join(
+      "  lines:\n    crud: Line\n    sections:\n      cost: { calculator: { fields: { n: int, total: { type: money, formula: n * 2 } } } }\n",
+    );
+  const added = ok(
+    "addFormulaExample",
+    { of: "calculator:lines.cost", input: { n: 2 }, expected: { total: 4 } },
+    { spec: sections },
+  );
+  expect(parse(added.files.spec).pages.lines.sections.cost.calculator.examples).toHaveLength(1);
+  expect(refused("removeFormulaExample", { of: "field:Line.amount.typo", number: "1" })).toMatch(
+    /names too much/,
+  );
+  // An empty list is added to.
+  const empty = spec
+    .split("        monthly: { type: money, formula: price / 12 }\n")
+    .join("        monthly: { type: money, formula: price / 12 }\n      examples: []\n");
+  const first = ok(
+    "addFormulaExample",
+    { of: "calculator:mortgage", input: { price: 12 }, expected: { monthly: 1 } },
+    { spec: empty },
+  );
+  expect(parse(first.files.spec).pages.mortgage.calculator.examples).toHaveLength(1);
+});
