@@ -77,7 +77,7 @@ export function readFilm(bytes: Uint8Array): FilmReading {
     box !== undefined && box.start + from + length <= box.end;
   const mvhd = child(bytes, index, "mvhd");
   let seconds: number | undefined;
-  const v1 = mvhd !== undefined && bytes[mvhd.start] === 1;
+  const v1 = holds(mvhd, 0, 1) && bytes[mvhd.start] === 1;
   if (holds(mvhd, 0, v1 ? 32 : 20)) {
     const scale = view.getUint32(mvhd.start + (v1 ? 20 : 12));
     const length = v1
@@ -102,10 +102,13 @@ export function readFilm(bytes: Uint8Array): FilmReading {
     // Every picture track, and every sample description in it, is H.264.
     const stsd = child(bytes, child(bytes, child(bytes, mdia, "minf"), "stbl"), "stsd");
     const entries = holds(stsd, 8, 0) ? boxes(bytes, stsd.start + 8, stsd.end) : [];
-    codecs.push(...(entries.length ? entries.map((e) => e.type) : ["an unreadable kind"]));
+    // As many descriptions as it declares, each whole; otherwise its picture cannot be read.
+    if (!entries.length || view.getUint32((stsd as Box).start + 4) !== entries.length)
+      codecs.push("an unreadable kind");
+    else for (const entry of entries) codecs.push(entry.type);
     const tkhd = child(bytes, trak, "tkhd");
     // The matrix, then the width and height after it (16.16 each).
-    const at = tkhd ? (bytes[tkhd.start] === 1 ? 52 : 40) : 0;
+    const at = holds(tkhd, 0, 1) && bytes[tkhd.start] === 1 ? 52 : 40;
     if (!holds(tkhd, at, 44)) {
       unmeasured = true;
       continue;

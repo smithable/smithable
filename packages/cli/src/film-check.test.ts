@@ -133,6 +133,14 @@ test("each rule broken is named (section-film.md §2)", () => {
     expect.stringMatching(/^Format: its picture is hvc1/),
   ]);
   expect(first({ noTkhd: true })).toEqual(["Picture size: its shown size could not be read."]);
+  // A track declaring two descriptions with one whole is not read as H.264.
+  const one = mp4();
+  const declared = Buffer.from(one).indexOf("stsd") + 8;
+  const twice = Uint8Array.from(one);
+  new DataView(twice.buffer).setUint32(declared, 2);
+  expect(readFilm(twice).problems).toEqual([
+    "Format: its picture is an unreadable kind, not H.264; save it again with H.264 (AVC) picture.",
+  ]);
   // A header too short for its fields is unreadable, never read past its end.
   expect(first({ shortHeader: true })).toEqual(["Length: its length could not be read."]);
   // Several at once, each named.
