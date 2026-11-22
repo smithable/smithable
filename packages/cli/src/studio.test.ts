@@ -209,6 +209,11 @@ test("a section's picture comes as a new picture file named as its src", () => {
   expect(ok("public/images/hero-mine.png", png)).toBeUndefined();
   expect(ok("public/images/hero-mine.jpg", jpeg)).toBeUndefined();
   expect(ok("public/images/hero-mine.avif", avif)).toBeUndefined();
+  // A brand past the box it claims, or a box longer than the file, is no AVIF.
+  const cut = new TextEncoder().encode("\0\0\0\x10ftypmif1\0\0\0\0avifmiaf\0\0\0\0");
+  expect(ok("public/images/hero-mine.avif", cut)).toMatch(/at most 2 MB/);
+  const long = new TextEncoder().encode("\0\0\x01\0ftypavif\0\0\0\0mif1miaf\0\0\0\0");
+  expect(ok("public/images/hero-mine.avif", long)).toMatch(/at most 2 MB/);
   // The header must be the extension's kind, and a whole one.
   expect(ok("public/images/hero-mine.png", jpeg)).toMatch(/at most 2 MB/);
   expect(ok("public/images/hero-mine.jpg", new Uint8Array([0xff, 0xd8, 0xff, 0xe0]))).toMatch(

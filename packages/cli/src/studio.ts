@@ -196,13 +196,11 @@ export function pictureBytes(bytes: Uint8Array, ext: string): boolean {
   if (ext === "jpg" || ext === "jpeg")
     return bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
   if (ext !== "avif" || ascii(4, 8) !== "ftyp") return false;
-  const box = Math.min(
-    bytes.byteLength,
-    (bytes[0] ?? 0) * 2 ** 24 + ((bytes[1] ?? 0) << 16) + ((bytes[2] ?? 0) << 8) + (bytes[3] ?? 0),
-    64,
-  );
-  for (let at = 8; at + 4 <= box; at += 4) if (/^avi[fs]$/.test(ascii(at, at + 4))) return true;
-  return false;
+  // The ftyp box: its length, the major brand at 8, the minor version at 12, other brands from 16.
+  const box = new DataView(bytes.buffer, bytes.byteOffset).getUint32(0);
+  if (box < 16 || box > bytes.byteLength || box % 4) return false;
+  const brands = [8, ...Array.from({ length: (box - 16) / 4 }, (_, k) => 16 + 4 * k)];
+  return brands.some((at) => /^avi[fs]$/.test(ascii(at, at + 4)));
 }
 
 /**
