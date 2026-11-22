@@ -8,7 +8,7 @@ export function ThemeCards({
   preset,
   inUse = preset,
   onChoose,
-  onCustomise,
+  onCustomize,
 }: {
   themes: Project["themes"];
   /** The card shown pressed: the app's theme, or one only tried on in the preview. */
@@ -16,7 +16,7 @@ export function ThemeCards({
   /** The app's own theme, when another is only tried on. */
   inUse?: string;
   onChoose: (preset: string) => void;
-  onCustomise?: (preset: string) => void;
+  onCustomize?: (preset: string) => void;
 }) {
   return (
     <ul aria-label="Themes" className="grid grid-cols-2 gap-2">
@@ -54,14 +54,14 @@ export function ThemeCards({
                 </span>
               </span>
             </button>
-            {onCustomise && (
+            {onCustomize && (
               <button
                 type="button"
                 className="mt-1 rounded border border-line px-2 py-1 text-xs"
-                aria-label={`Customise ${humanize(t.name)}`}
-                onClick={() => onCustomise(t.name)}
+                aria-label={`Customize ${humanize(t.name)}`}
+                onClick={() => onCustomize(t.name)}
               >
-                Customise this
+                Customize this
               </button>
             )}
           </li>

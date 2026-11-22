@@ -1457,9 +1457,14 @@ export async function studio(
             onResult: (result) => {
               if (!result.ok && result.diagnostics.length) diagnostics = result.diagnostics;
               if (
-                ["setTheme", "resetThemeOverride", "setPictureStyle", "setAiBadge"].includes(
-                  String(name),
-                ) &&
+                // Look's and a section form's try-on (T1196): the change, so Cancel can undo it.
+                [
+                  "setTheme",
+                  "resetThemeOverride",
+                  "setPictureStyle",
+                  "setAiBadge",
+                  "setSectionLook",
+                ].includes(String(name)) &&
                 result.ok &&
                 result.verification?.revision
               )

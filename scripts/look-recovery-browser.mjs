@@ -104,14 +104,14 @@ try {
     await route.continue();
   });
   await page.getByRole("button", { name: "Look", exact: true }).click();
-  await page.getByRole("button", { name: "Customise", exact: true }).click();
+  await page.getByRole("button", { name: "Customize", exact: true }).click();
   await page
     .getByRole("dialog", { name: "Look", exact: true })
     .getByLabel("Theme selection target", { exact: true })
     .selectOption("welcome");
   await page
     .getByRole("dialog", { name: "Look", exact: true })
-    .getByRole("tab", { name: "Customise", exact: true })
+    .getByRole("tab", { name: "Customize", exact: true })
     .click();
   await started;
   await stopServer();
@@ -201,14 +201,14 @@ try {
     route.fulfill({ status: 503, json: { error: "The connection is temporarily unavailable." } }),
   );
   await page.getByRole("button", { name: "Look", exact: true }).click();
-  await page.getByRole("button", { name: "Customise", exact: true }).click();
+  await page.getByRole("button", { name: "Customize", exact: true }).click();
   await page
     .getByRole("dialog", { name: "Look", exact: true })
     .getByLabel("Theme selection target", { exact: true })
     .selectOption("welcome");
   await page
     .getByRole("dialog", { name: "Look", exact: true })
-    .getByRole("tab", { name: "Customise", exact: true })
+    .getByRole("tab", { name: "Customize", exact: true })
     .click();
   await dialog.getByRole("heading", { name: "Preview unavailable", exact: true }).waitFor();
   await dialog.getByLabel("Name", { exact: true }).fill("offline-retry");
@@ -244,14 +244,14 @@ try {
     route.fulfill({ status: 503, json: { error: "The connection is temporarily unavailable." } }),
   );
   await page.getByRole("button", { name: "Look", exact: true }).click();
-  await page.getByRole("button", { name: "Customise", exact: true }).click();
+  await page.getByRole("button", { name: "Customize", exact: true }).click();
   await page
     .getByRole("dialog", { name: "Look", exact: true })
     .getByLabel("Theme selection target", { exact: true })
     .selectOption("welcome");
   await page
     .getByRole("dialog", { name: "Look", exact: true })
-    .getByRole("tab", { name: "Customise", exact: true })
+    .getByRole("tab", { name: "Customize", exact: true })
     .click();
   await dialog.getByRole("heading", { name: "Preview unavailable", exact: true }).waitFor();
   await page.unroute("**/api/look?*");

@@ -128,17 +128,17 @@ export async function checkFirstLook(browser, base) {
     // The tried card says so; "In use" stays with the app's theme until Apply.
     await panel.getByText("· Trying on", { exact: true }).waitFor();
     assert.equal(await panel.getByText("· In use", { exact: true }).count(), 1);
-    const apply = panel.getByRole("button", { name: "Apply theme", exact: true });
-    // Its Apply is in view above the panel's foot, on a phone's short sheet too.
-    const [row, foot] = await apply.evaluate((button) => [
-      button.getBoundingClientRect().bottom,
-      button.closest(".look-panel").querySelector(".overflow-auto").getBoundingClientRect().bottom,
+    // Its Apply comes up in the panel's foot, right of Customize (T1195), on a phone's sheet too.
+    const apply = panel.getByRole("button", { name: "Apply", exact: true });
+    const [applyAt, customizeAt] = await Promise.all([
+      apply.boundingBox(),
+      panel.getByRole("button", { name: "Customize", exact: true }).boundingBox(),
     ]);
-    assert.ok(row <= foot + 1, `Apply theme is hidden under the panel's foot (${row} > ${foot})`);
-    return waitChoice(
-      panel.getByRole("button", { name: "Apply theme", exact: true }),
-      ".look-panel",
+    assert.ok(
+      applyAt && customizeAt && applyAt.x > customizeAt.x && applyAt.y >= customizeAt.y - 1,
+      "Apply is not right of Customize in the panel's foot",
     );
+    return waitChoice(apply, ".look-panel");
   };
   try {
     await page.goto(base);
@@ -176,6 +176,11 @@ export async function checkFirstLook(browser, base) {
     await look.click();
     assert.equal(await look.getAttribute("aria-pressed"), "true");
     await panel.getByRole("button", { name: alternativeName, pressed: true }).waitFor();
+    // The theme in use leads the list; the rest are a scroll away, and the list says so.
+    const cards = panel.getByRole("list", { name: "Themes", exact: true }).getByRole("button");
+    assert.equal(await cards.first().getAttribute("aria-label"), alternativeName);
+    assert.ok((await cards.count()) > 8, "Look lists only a few themes");
+    await panel.locator("[data-more-themes]").waitFor();
     const opened = await panel.boundingBox();
     const preview = await page.locator("[data-guide-view]").boundingBox();
     assert.ok(
@@ -203,16 +208,27 @@ export async function checkFirstLook(browser, base) {
     await panel.getByRole("button", { name: "Close Look", exact: true }).click();
     await panel.waitFor({ state: "detached" });
     assert.equal((await project()).files.ux, chosen.files.ux, "Close did not keep the change");
-    // A theme only tried on is taken off by Close, and nothing is written.
+    // A theme only tried on is applied by Close, one setTheme (one Undo away), and comes off.
     await look.click();
     await panel.getByRole("button", { name: alternativeName, exact: true }).click();
     await tried.waitFor({ state: "attached" });
+    const closing = operations(page);
     await panel.getByRole("button", { name: "Close Look", exact: true }).click();
     await panel.waitFor({ state: "detached" });
     await tried.waitFor({ state: "detached" });
-    assert.equal((await project()).files.ux, chosen.files.ux, "a tried theme was kept by Close");
+    assert.deepEqual(closing, ["setTheme"], "Close made other changes than one setTheme");
+    const closedWith = await project();
+    assert.notEqual(closedWith.files.ux, chosen.files.ux, "Close did not apply the tried theme");
+    // Cancel takes a theme only tried on off, and writes nothing.
     await look.click();
-    await applyCard(alternativeName);
+    await panel.getByRole("button", { name: current, exact: true }).click();
+    await tried.waitFor({ state: "attached" });
+    await panel.getByRole("button", { name: "Cancel", exact: true }).click();
+    await panel.waitFor({ state: "detached" });
+    await tried.waitFor({ state: "detached" });
+    assert.equal((await project()).files.ux, closedWith.files.ux, "Cancel kept a tried theme");
+    await look.click();
+    await applyCard(current);
     // A second writer's operation runs through the daemon, as another browser or CLI would.
     const other = await write("setTheme", { density: "compact" });
     assert.ok(other.ok, other.output);
@@ -239,11 +255,31 @@ export async function checkFirstLook(browser, base) {
     await sheet.waitFor();
     const box = await sheet.boundingBox();
     assert.ok(box && box.y > 250 && box.height < 550, "phone Look is not a lower sheet");
-    await panel.getByRole("button", { name: "Customise", exact: true }).click();
-    await page.getByRole("dialog", { name: "Look", exact: true }).waitFor();
+    // Customize starts the lab from the tried theme; Cancel there undoes Look's changes too.
+    const beforeCustomize = await project();
+    await panel.getByLabel("Density", { exact: true }).selectOption("comfortable");
+    await page.waitForFunction(() => document.querySelector('.look-panel[aria-busy="false"]'));
+    assert.notEqual((await project()).files.ux, beforeCustomize.files.ux);
+    await panel
+      .getByRole("list", { name: "Themes", exact: true })
+      .locator('button[aria-pressed="false"]')
+      .first()
+      .click();
+    await tried.waitFor({ state: "attached" });
+    await panel.getByRole("button", { name: "Apply", exact: true }).waitFor();
+    await panel.getByRole("button", { name: "Customize", exact: true }).click();
+    const lab = page.getByRole("dialog", { name: "Look", exact: true });
+    await lab.getByRole("tab", { name: "Customize", exact: true, selected: true }).waitFor();
     assert.equal(await page.getByRole("dialog", { name: /^Smith presents / }).count(), 0);
+    await lab.getByRole("button", { name: "Cancel", exact: true }).click();
+    await lab.waitFor({ state: "detached" });
+    assert.equal(
+      (await project()).files.ux,
+      beforeCustomize.files.ux,
+      "the lab's Cancel did not undo Look's changes",
+    );
     console.log(
-      "  ✓ first look and Look panel: a tried theme writes nothing (picker and Look cards), Apply one setTheme, Close takes a tried one off, Keep one setTheme before presentation, Cancel exact own changes, Close keeps, refuse intervening change, phone sheet, Customise",
+      "  ✓ first look and Look panel: a tried theme writes nothing (picker and Look cards), Apply at the foot one setTheme, in-use first and more by scrolling, Close applies a tried one, Cancel takes it off, Keep one setTheme before presentation, Cancel exact own changes, Close keeps, refuse intervening change, phone sheet, Customize from the tried theme and its Cancel undoes all",
     );
   } finally {
     await context.close();
