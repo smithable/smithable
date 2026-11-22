@@ -7,7 +7,7 @@ original"). It builds on first-look.md §4: image styles, the record in `picture
 
 **Changed 2026-11-22, after Johan saw the second round of sheets: recolouring is an offer, not a rule
 applied at every theme change. Calm themes are offered the chosen rule, strong themes a light tint, and
-greyscale themes nothing. §10 says how; where it differs from §1, §5, §6 and §9, §10 holds.**
+greyscale themes nothing. §10 says how; where it differs from §1, §2, §4, §5, §6, §7 and §9, §10 holds.**
 
 ## 1 What changes for the user
 
@@ -225,8 +225,13 @@ recolouring is never applied by itself, and how far it goes depends on the theme
   | calm | 0.02 to 0.12 | §3 as chosen, 25% back toward the drawing | `ink-wash-b25` |
   | strong | above 0.12 | a light tint, 90% back toward the drawing | `ink-wash-b90` |
 
-  The cut-offs are proposals. The sheet script (§7) prints each built-in theme's class beside its sheet,
-  and Johan reads those sheets before the offer ships. §6's fallbacks still apply within a class.
+  The colour read is the primary in force, after a brand colour has replaced the theme's own, not the
+  theme's chroma cap. A value exactly on a cut-off belongs to the calmer class. The cut-offs are
+  proposals: of the built-in themes today about a tenth are greyscale, a third calm and more than half
+  strong, several sit within 0.01 of 0.12, and the calmest of the calm are close to grey. The sheet
+  script (§7) prints each built-in theme's chroma and class beside its sheet, and Johan reads those
+  sheets and sets the cut-offs before the offer ships. §6's fallbacks still apply within a class, and
+  §7's contrast bound is set per rule.
 - **The host prepares the set in the background** after the theme is applied, from the originals, into
   a folder outside the project's files. Nothing in the project changes while it works. A newer theme
   change discards a set still being prepared for the older one.

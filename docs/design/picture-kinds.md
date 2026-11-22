@@ -30,7 +30,7 @@ The hero with the app's name and icon on it is a separate section, not written y
   style's name.
 - The kind is not a new key in the app's spec. `pictures.style` already names the style, and the style
   has one kind. Studio's choice of a kind only narrows the list of styles shown next. A kind with one
-  style on offer applies that style at once.
+  style on offer selects that style at once; it is applied, as today, when the look is kept.
 - **Real photographs** is the kind's name in Studio. Its card carries the licence line (CC0: free to use,
   no credit required), and the app keeps its credits file as today.
 - **Stock pictures** (a bought licence) are used only in Smithable's own showcase starters. They are
@@ -42,9 +42,12 @@ The hero with the app's name and icon on it is a separate section, not written y
   hero. For almost every app the realistic kind is the sensible one for these, since the samples stand
   for photographs the owner's users will upload. They exist in the preview, and on staging when the
   owner copies the preview's data there (§5). Live never gets them.
-- **Each placed picture records its own kind.** `pictures.json` gets `kind` per file beside `generated`,
-  written when the picture is placed, from the library's entry. So the app's own files say what each
-  picture is, and neither generation nor the built app ever asks the library.
+- **Each placed picture records its own kind**, written by the host when the picture is placed, from the
+  library's entry, in every place that records `generated` today: the content file for the hero and
+  landing pictures, `pictures.json` for samples, and the seeded records' picture values. That is a small
+  addition to the content file's grammar and goes in the spec reference. So the app's own files say what
+  each picture is, and neither generation nor the built app ever asks the library; core never reads the
+  index.
 - The Photographs style may hold a few generated pictures where no photograph was found. The library
   marks such an entry `ai-realistic`, and it is recorded so. A style's kind is therefore what most of
   its pictures are and what the picker shows; the badge always follows the picture's own record. The
@@ -82,15 +85,18 @@ Studio's preview stands apart. The columns are each picture's recorded kind (§2
   `ai-realistic`). Identical files give identical output, and nothing of Smithable's is read at run time.
 - `smithable explain` and Studio's settings show the state in force and, when it is the default, how
   many pictures of each kind it badges.
-- **Studio's preview.** The app always works out the published rule. Studio's preview frame asks it to
-  hide the badges, and "Show AI badges here" stops asking, so the maker then sees exactly what will be
-  published. It is a way of looking, kept per person in Studio: no operation, no commit. The request
-  travels the channel that already carries selection and a theme being tried, is honoured only in a
-  development build, and is known before the first paint so no badge flashes. An app run in development
-  outside Studio gets no such request and shows the published rule.
+- **Studio's preview.** The app always works out the published rule and knows nothing of Studio. The
+  runtime that Studio's preview server injects into the page (the one that carries selection and a theme
+  being tried; the app's own builds never include it) adds one style rule hiding the badge's part.
+  "Show AI badges here" leaves that rule out, so the maker then sees exactly what will be published. It
+  is a way of looking, kept per person in Studio: no operation, no commit, no change to the kit. The
+  rule is in place before the first paint. An app run in development outside Studio, a self-hoster's or
+  a test's, shows the published rule. The hosted workspace's preview is Studio's preview.
 - The badge itself is unchanged: the EU's label for AI-generated content, as the kit draws it today,
   with the smaller disc alone on small pictures. A logo is never badged.
-- Pictures a person uploads carry no badge. Smithable does not know how they were made.
+- Pictures a person uploads carry no badge, since Smithable does not know how they were made, unless the
+  maker marks one as generated, which stays possible as today. A picture marked so by its maker has no
+  kind and is treated as `ai-realistic`: badged while the key is absent.
 
 ## 4 The overlay behind the question mark
 
@@ -130,7 +136,9 @@ picture is still in place at a later publish, the review lists them.
 - **Per picture:** its thumbnail, where it shows, and the choices: replace it (the owner's own picture,
   which then carries no badge), keep it, or, where the slot is optional in the page's spec, remove it.
   The trade starters are built so a page reads well with text-only references.
-- **Each choice is an operation**, so it is in the history and can be undone. Keep writes `kept` on that
+- **Each choice is an operation**, so it is in the history and can be undone. Replace and remove are the
+  operations that already set and clear a slot's picture; replace clears `generated` and `kind` with the
+  file. Keep writes `kept` on that
   placement in `pictures.json`, with the hash of the library original, so a recoloured copy of the same
   picture does not ask again and a different picture in the slot does.
 - **The review never blocks publishing.** An item left unanswered is published as it is and listed again
@@ -149,9 +157,8 @@ The visible badge can be switched off. The statement in the file cannot be, from
 - **An image model's own invisible watermark is not relied on.** Whether it survives enlarging a hero,
   cropping and re-encoding depends on the model and is not something the library can promise. The
   library's check reports what it finds on a sample of files today, as information.
-- The engine and the kit never strip metadata from a placed picture. The kit's responsive sizes, where a
-  host produces them, are derived files; they keep the statement where the tool can, and the original
-  placed file always has it.
+- The engine and the kit never strip metadata from a placed picture and never encode one again. The
+  smaller copies of a library picture are made by the library's pipeline and carry the statement too.
 - An owner's uploaded picture is passed through as it is; nothing is added or removed.
 - `pictures.json` already records `generated` per file, so the app's repository says the same thing in
   plain text.
@@ -172,8 +179,10 @@ The visible badge can be switched off. The statement in the file cannot be, from
 2. **The host:** `kind` per file in `pictures.json` at placement, and filled in once for older apps.
 3. **Core and the kit:** `setAiBadge` with its three states and the acknowledgement; the absent key's
    meaning by each picture's kind, said by `explain`; the role `work` and `kept`; the kit's rule per
-   picture and the preview's request to hide; the spec reference.
-4. **Studio:** the choice of kind before the style; the line and its overlay; "Show AI badges here"; the
-   badge switch with its confirmation.
+   picture; the spec reference, ARCHITECTURE.md's paragraph on the badge and the site's pages on
+   pictures and self-hosting, which all say "on by default" today.
+4. **Studio:** the choice of kind before the style; the line and its overlay; the preview's hiding rule
+   and "Show AI badges here"; the badge switch with its confirmation; the checks that look for a badge
+   in a preview.
 5. **The publish review:** the list of generated stand-in pictures, with replace, keep and remove.
 6. **The service:** the copy of the preview's data to staging, its own task.
