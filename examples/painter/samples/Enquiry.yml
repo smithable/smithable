@@ -1,0 +1,7 @@
+# Enquiries at each step, as the painter follows them up on the enquiries page.
+- { job: Red farmhouse in linseed oil paint, name: Maria Söderlund, email: maria@example.ax, phone: "+358 40 512 3301", message: "Our house in Kumlinge needs the south and west walls painted next summer. The paint is flaking badly.", status: new, followUpOn: 2026-11-24 }
+- { job: Tin roof on a summer house, name: Peter Lindholm, email: peter.lindholm@example.fi, message: A tin roof of about ninety square metres with some rust at the edges., status: contacted, followUpOn: 2026-11-26 }
+- { job: Twelve windows from a villa in town, name: Anna Karlsson, email: anna.k@example.se, phone: "+46 70 214 8812", message: Eight old windows in a house in Vårdö. Could they be done over the winter?, status: visited, followUpOn: 2026-11-28 }
+- { job: Living room and hall in a 1930s flat, name: Erik Mattsson, email: erik@example.ax, message: "Three rooms and a kitchen in a flat, walls and ceilings.", status: quoted, followUpOn: 2026-12-03 }
+- { job: Yellow cladding facing the sea, name: Sofia Nordström, email: sofia.nordstrom@example.ax, phone: "+358 40 778 0042", message: "A summer house facade on the shore, about a hundred and fifty square metres.", status: won }
+- { job: Pine floor painted grey, name: Henrik Wiklund, email: henrik.w@example.fi, message: A kitchen floor in a cottage., status: lost }

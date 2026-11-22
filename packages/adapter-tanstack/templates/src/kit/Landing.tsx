@@ -221,12 +221,16 @@ function LandingLayoutView({
               </ul>
             </nav>
           )}
-          <div className="flex items-center gap-2">
+          <div className="flex min-w-0 items-center gap-2">
             {link && (
               <Link
                 to={link.to}
                 className={cn(
                   buttonVariants({ variant: "outline" }),
+                  // On a phone with a menu the link is in the menu; without one, a long app name in
+                  // "Open …" gives way rather than push the bar wider than the screen.
+                  "min-w-0 shrink",
+                  menu.length > 0 && "hidden md:inline-flex",
                   // On the hero's wash the button keeps only its outline, in the wash's text color.
                   clear &&
                     (over === "dark"
@@ -234,7 +238,7 @@ function LandingLayoutView({
                       : "border-primary-foreground/70 bg-transparent! text-primary-foreground! hover:bg-primary-foreground/10! dark:border-foreground/70 dark:text-foreground! dark:hover:bg-foreground/10!"),
                 )}
               >
-                {link.label}
+                <span className="truncate">{link.label}</span>
               </Link>
             )}
             {onSignOut && (
@@ -266,7 +270,7 @@ function LandingLayoutView({
         </div>
         {open && menu.length > 0 && (
           <nav id="site-menu" aria-label={w.site} className="border-t md:hidden">
-            <ul className="mx-auto max-w-(--landing-width) px-5 py-2">
+            <ul className="mx-auto max-w-(--landing-width) px-5 py-2 [overflow-wrap:anywhere]">
               {menu.map((m) => (
                 <li key={String(m.to)}>
                   <Link to={m.to} onClick={() => setOpen(false)} className="block py-3 font-medium">
@@ -274,6 +278,17 @@ function LandingLayoutView({
                   </Link>
                 </li>
               ))}
+              {link && (
+                <li>
+                  <Link
+                    to={link.to}
+                    onClick={() => setOpen(false)}
+                    className="block py-3 font-medium"
+                  >
+                    {link.label}
+                  </Link>
+                </li>
+              )}
             </ul>
           </nav>
         )}
@@ -1233,10 +1248,12 @@ function RecordCardsView({
       card.title
     );
   // A record without a picture gets the placeholder when its model has pictures (it is given
-  // an icon then), so the cards stay even; a model without pictures keeps text cards.
+  // an icon then) and another card shown has one, so the cards stay even; a model without
+  // pictures, or a section of records without any, keeps text cards.
+  const pictured = cards.some((card) => card.picture);
   const picture = (card: CardItem, className: string) =>
     !card.picture ? (
-      icon && <PicturePlaceholder icon={icon} className={className} />
+      icon && pictured && <PicturePlaceholder icon={icon} className={className} />
     ) : (
       <AiMarked generated={card.picture.generated} className="shrink-0">
         <img

@@ -1,0 +1,8 @@
+id: landing-header-phone-width
+title: On a phone, a landing page's header with a site menu, a long app name and a signed-in visitor was wider than the screen, so the page scrolled sideways and the menu button sat off the edge.
+severity: fix
+exposure: none
+introduced: unknown
+affects:
+  kit: [src/kit/Landing.tsx]
+migration: none

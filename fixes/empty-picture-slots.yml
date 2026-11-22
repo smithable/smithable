@@ -1,0 +1,9 @@
+id: empty-picture-slots
+title: A cards view or a landing page's cards drew an empty picture slot on every card when no record shown had a picture.
+severity: fix
+exposure: none
+introduced: unknown
+affects:
+  kit: [src/kit/ModelTable.tsx, src/kit/Landing.tsx]
+  features: [field:picture, field:pictures]
+migration: none

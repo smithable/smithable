@@ -22,6 +22,8 @@ The entries are filled in from the merged pull requests at each release. A fix t
 
 ### Fixes
 
+- Generated apps: on a phone, a landing page's header puts its "Open …" link in the site menu when there is one, and otherwise lets it shorten, so a long app name no longer makes the page scroll sideways (`fixes/landing-header-phone-width.yml`).
+- Generated apps: a cards view, and a landing page's cards, draw the picture placeholder only when a record shown has a picture; records without any show as text cards, not a row of empty slots (`fixes/empty-picture-slots.yml`).
 - Generated apps: a picture an AI made carries one badge, the EU's worded label "AI GENERATED" in English, the EU's icon joined to the app's own words in other languages, the icon alone on small pictures; photographs under a strong-colour theme keep their own colours (`fixes/ai-badge-one-mark.yml`).
 - Generated apps: a record page's contact block that keeps its messages in a model with fields of its own asks those fields in the model's form, and its texts can be set in the content file (`fixes/contact-block-kept-fields.yml`).
 - Generated apps: a refused change is said in words on every surface that changes records (rows edited in place, actions, the selection bar, merge and split, replies, restore, API keys, the contact form), not only in the record form; a mail with nobody to send to no longer refuses a change over a value it cannot work out (`fixes/kit-refusal-words.yml`).
