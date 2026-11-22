@@ -14,20 +14,31 @@ import { tempDir } from "./test-dir.js";
 import { assetReview } from "./website-assets.js";
 import { digest, installWebsiteInputCommand, parseWebsiteInput } from "./website-input.js";
 
-const state = vi.hoisted(() => ({ descriptions: [] as string[], artifact: "", personalEmail: "" }));
+const state = vi.hoisted(() => ({
+  descriptions: [] as string[],
+  artifact: "",
+  personalEmail: "",
+  draftLanguage: undefined as string | undefined,
+  copiedText: "",
+}));
 vi.mock("@smithable/ai", async (original) => ({
   ...(await original<object>()),
   clarifyProject: async (options: { description: string }) => {
     state.descriptions.push(options.description);
     return { starter: "barbers", questions: [], usage: [] };
   },
-  draftProject: async (options: { description: string; starter: Record<string, string> }) => {
+  draftProject: async (options: {
+    description: string;
+    starter: Record<string, string>;
+    language?: string;
+  }) => {
     state.descriptions.push(options.description);
+    state.draftLanguage = options.language;
     const files = { ...options.starter };
     const content = new YamlEditor(files["smithable.content.yml"] ?? "");
     content.set(
       ["pages", "home", "hero", "subtitle"],
-      "These ten very familiar words are copied from our website.",
+      state.copiedText || "These ten very familiar words are copied from our website.",
     );
     files["smithable.content.yml"] = content.text;
     if (state.personalEmail) {
@@ -257,13 +268,13 @@ test("the existing hosted replacement enables library selection only for website
   }
 });
 
-test("explicit full-content input carries source prose and retains requested copied text", async () => {
-  const text = "These ten very familiar words are copied from our website.";
+test("explicit full-content input preserves the source language and requested copy", async () => {
+  const text = "Välkommen till vår lilla salong vid hamnen.";
   const source = parseWebsiteInput({
     version: 1,
     options: { contentMode: "full" },
     facts: extractSiteFacts(
-      '<meta property="og:site_name" content="Harbour"><a href="tel:+3581812345">Call</a><a href="mailto:hello@example.test">Email</a>',
+      '<html lang="sv-FI"><head><meta property="og:site_name" content="Harbour"></head><body><a href="tel:+3581812345">Ring</a><a href="mailto:hello@example.test">Skriv till oss</a></body></html>',
       "https://business.example/",
     ),
     images: [],
@@ -274,6 +285,7 @@ test("explicit full-content input carries source prose and retains requested cop
   const dir = join(tempDir("website-full-build-"), "app");
   vi.stubEnv("SMITHABLE_DRAFT", "files");
   vi.stubEnv("SMITHABLE_NO_PICTURES", "1");
+  state.copiedText = text;
   try {
     vi.stubEnv("SMITHABLE_HOSTED_LEVEL", "normal");
     const calls = state.descriptions.length;
@@ -296,12 +308,16 @@ test("explicit full-content input carries source prose and retains requested cop
         installed: true,
       }),
     ).toBe(0);
+    expect(state.draftLanguage).toBe("sv");
     expect(state.descriptions.at(-1)).toContain(text);
-    expect(readFileSync(join(dir, "smithable.content.yml"), "utf8")).toContain(text);
-    expect(readFileSync(join(dir, "smithable.content.yml"), "utf8")).not.toContain(
-      "People and contact details are samples",
-    );
+    expect(state.descriptions.at(-1)).toContain("actual items as inline content");
+    expect(state.descriptions.at(-1)).not.toContain("write new prose");
+    const content = readFileSync(join(dir, "smithable.content.yml"), "utf8");
+    expect(new YamlEditor(content).get(["language"])).toBe("sv");
+    expect(content).toContain(text);
+    expect(content).not.toContain("People and contact details are samples");
   } finally {
+    state.copiedText = "";
     vi.unstubAllEnvs();
   }
 });

@@ -374,7 +374,10 @@ export async function create(
     if (asked.starter && starter === undefined) name = asked.starter;
     // Who it is for weighed against a public starter, whoever picked it (T767).
     if (starter === undefined && description) name = starterFor(description, name).name;
-    const questions = withLanguage(asked.questions, description);
+    const questions =
+      website?.contentMode === "full"
+        ? asked.questions
+        : withLanguage(asked.questions, description);
     if (options.unattended && questions.length) {
       const assumptions = defaultAssumptions(name, questions);
       options.onAssumptions?.(assumptions);
@@ -441,10 +444,17 @@ export async function create(
           ],
         }
       : process.env.SMITHABLE_DRAFT === "files"
-        ? await draftProject({ description, starter: files, providers })
+        ? await draftProject({
+            description,
+            starter: files,
+            providers,
+            language: website?.language,
+          })
         : await draftProjectByOperations({
             description,
             providers,
+            language: website?.language,
+            preserveSourceCopy: website?.contentMode === "full",
             starter: { name, files },
             // The bench's harness switches (backlog Experiments 7); unset, the draft is made as always.
             ...(/^\d+$/.test(process.env.SMITHABLE_REPAIRS ?? "")
@@ -476,6 +486,23 @@ export async function create(
     )
       throw new Error("Website drafting returned an unexpected source file.");
     files = website ? replaceWebsitePersonalFiles(draft.files, website) : draft.files;
+    if (website?.language) {
+      const language = applyOperations(
+        {
+          spec: files["smithable.yml"] ?? "",
+          auth: files["smithable.auth.yml"],
+          content: files["smithable.content.yml"],
+          ux: files["smithable.ux.yml"],
+        },
+        [{ op: "setLanguage", args: { language: website.language } }],
+      );
+      if (!language.ok) {
+        io.err(`Could not set the website's language: ${language.message}\n`);
+        return 1;
+      }
+      if (language.files.content !== undefined)
+        files = { ...files, "smithable.content.yml": language.files.content };
+    }
     // Kept private where the description names no visitors, whatever the draft kept (T767).
     if (!website && description) {
       const kept = keptPrivate(files, description, STARTERS[name] as Record<string, string>);
