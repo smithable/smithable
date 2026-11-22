@@ -1,9 +1,10 @@
-import { humanize, SECTION_LOOKS } from "@smithable/core";
+import { humanize, SECTION_LOOKS, sectionTakesPicture } from "@smithable/core";
 import { type CSSProperties, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import type { Spec } from "../engine";
 import type { Selection } from "../preview";
 import { useMedia } from "../ui";
 import type { Run } from "./ChangeForms";
+import { SectionPicture } from "./SectionPicture";
 
 /** A hero's layouts by what they look like (docs/spec/v0.1.md, sections); the two across the width say so. */
 const HERO_LAYOUTS: Record<string, string> = {
@@ -66,6 +67,10 @@ export function selectedSection(selection: Selection | undefined, spec: Spec) {
     kind: section.kind,
     label: selection?.label?.trim() || humanize(name),
     choices,
+    // A section with a picture of its own, and the one it has (none: the section shows its text).
+    picture: sectionTakesPicture(section.kind)
+      ? { image: spec.content?.pages[page]?.sections?.[name]?.image }
+      : undefined,
   };
 }
 
@@ -171,7 +176,7 @@ export function SelectedSection({
           <span aria-hidden="true">×</span>
         </button>
       </header>
-      {section.choices.length === 0 && (
+      {section.choices.length === 0 && !section.picture && (
         <p className="text-sm text-muted">
           This section has no arrangement to choose. Ask Smith to change it.
         </p>
@@ -195,6 +200,16 @@ export function SelectedSection({
           </div>
         </fieldset>
       ))}
+      {section.picture && (
+        <SectionPicture
+          key={section.picture.image?.src}
+          page={section.page}
+          section={section.section}
+          image={section.picture.image}
+          run={run}
+          busy={busy}
+        />
+      )}
     </div>
   );
 }
