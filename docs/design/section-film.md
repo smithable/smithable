@@ -8,8 +8,8 @@ picture (`setSectionPicture`, spec "Landing pages") and on [picture-kinds.md](pi
 
 - A hero's or a media-and-text section's picture may **move**: a short, silent loop plays where the
   picture is. Nothing else about the section changes: same crop, same wash under the text, same words.
-- The picture stays. It is what shows first, what a phone on a slow link, a visitor who asked for
-  less motion, a printed page and a shared link get. A film without a picture cannot be set.
+- The picture stays. It is what shows first, and all that a visitor who asked for less motion or for
+  data saving, a printed page and a shared link get (§4). A film without a picture cannot be set.
 - In Studio the section's form has one more row under the picture, "Film", with the owner's own file.
   No new control at the top level.
 - A gallery's pictures and a record's pictures do not get film in this step.
@@ -57,8 +57,9 @@ pages:
 - **The film has its own origin.** A photograph may carry a film a model made, or the reverse, so
   `film` takes the same origin keys a picture has (picture-kinds.md) and inherits nothing from the
   picture. An owner's upload is recorded as an owner's file, as an uploaded picture is.
-- The badge follows what is seen: it shows when the picture or the film asks for it, and an owner's
-  switch for the picture's badge covers the section, film included. The publish review lists the film
+- The badge follows what is seen at that moment: the picture's origin decides while the picture
+  shows (before the film starts, and for a visitor who never gets the film), the film's while the film
+  plays. An owner's switch for the section's badge covers both. The publish review lists the film
   as its own item, by its file; a "keep" given to the picture does not cover it, and a film that is
   replaced is reviewed again.
 - A film plays only over the picture it was set with. A language whose file names its own picture
@@ -80,8 +81,10 @@ pages:
    and publish review, which custom code would have to copy.
 
 It is off unless written. The film's code is a kit file of its own that the generator writes only
-into an app that has a film, so every starter and every app made before stays byte-identical
-(rule 6), and the operation without a file undoes it and takes the kit file out again.
+into an app that has a film, and the page that has the film hands it to the section. The kit's
+landing file gains one optional place for it, a plain property that an app without a film never
+fills; it is not cut into variants by the generator. So an app without a film gets the same pages
+as today and no film code, and the operation without a file undoes it and takes the kit file out.
 
 ## 4 What the generated app does
 
@@ -102,8 +105,9 @@ into an app that has a film, so every starter and every app made before stays by
 - Reduced motion is listened to, not only read at the start: switched on while the film plays, the
   film stops and the picture shows.
 - The wash, the section's text and the badge lie above the video, as they lie above the picture. The
-  wash is the same over every frame; a film whose frames are far lighter than its picture is the
-  owner's to judge in Studio's try-on, where the loop plays under the real text.
+  wash is the same over every frame, and strong enough for the section's text over a white frame, as
+  it is over a white picture; the tests check the text's contrast on a film with a bright frame as
+  well as on the picture.
 - The picture loads first, with its widths, as today, and is meant to stay the page's largest paint.
   That is measured in the tests (paint and bytes fetched), not assumed.
 - The static frames of a page (`smithable static`, which have no scripts) leave the video out; the
@@ -135,11 +139,12 @@ The builder never adds a film by itself in the first step: an app's first look d
 3. Media-and-text sections (the same code path; a separate check of the layouts).
 4. Library loops and the starters that use them.
 
-Tests with the first two steps: an app without a film is byte-identical to today's; a three-second
+Tests with the first two steps: an app without a film has today's pages and no film file; a three-second
 loop; pause by touch and by keyboard; coming back into view after a pause (it stays paused); a start
 that is blocked and a file that does not decode (the picture shows); reduced motion and data saving
 from the start (no film request at all) and reduced motion switched on mid-play; a photograph with a
-generated film (badge and review); a film replaced (reviewed again); a film removed (the output is
+generated film and the reverse, playing and not (badge and review); a bright frame under the
+text (contrast); a film replaced (reviewed again); a film removed (the output is
 what it was before); each refusal of §2 on a file built by hand for the test.
 
 ## 7 Not decided
