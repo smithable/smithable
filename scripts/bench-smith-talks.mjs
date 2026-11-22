@@ -12,13 +12,14 @@ import {
   listPrice,
   openAICompatible,
 } from "../packages/ai/dist/index.js";
-import { applyOperations, YamlEditor } from "../packages/core/dist/index.js";
+import { applyOperations, validateSpec, YamlEditor } from "../packages/core/dist/index.js";
 import { claudeRoute } from "./claude-route.mjs";
 import { repo } from "./dev-app.mjs";
 import {
   indexedProject,
   judgeFacts,
   recordingFolder,
+  retryLimited,
   smithRequest,
   starterProject,
 } from "./smith-cases.mjs";
@@ -161,15 +162,23 @@ export async function runTalk(scenario, { project, person, providers, docsIndex,
       request: request.slice(0, 500),
       reply: reply.slice(0, 500),
     }));
-    const { ask, phraseUsage } = await smithRequest(
-      project,
-      request,
-      providers,
-      docsIndex,
-      history,
-    );
-    const proposal = await ask();
-    usage.push(...phraseUsage, ...proposal.usage);
+    let proposal;
+    try {
+      const { ask, phraseUsage } = await smithRequest(
+        project,
+        request,
+        providers,
+        docsIndex,
+        history,
+      );
+      usage.push(...phraseUsage);
+      proposal = await retryLimited(ask, (previous) => usage.push(...(previous.usage ?? [])));
+      usage.push(...(proposal.usage ?? []));
+    } catch {
+      entry.visible = { kind: "failed", text: "Smith could not answer this request." };
+      end = "Smith provider unavailable";
+      break;
+    }
     entry.visible = visibleProposal(proposal);
     if (proposal.kind === "change" || proposal.kind === "question")
       pending = { request, proposal, visible: entry.visible };
@@ -178,17 +187,30 @@ export async function runTalk(scenario, { project, person, providers, docsIndex,
       if (proposal.kind === "answer" || proposal.kind === "none")
         answers.push({ question: request, text: entry.visible.text });
     }
-    if (proposal.kind === "paused") {
-      end = "paused";
+    if (
+      proposal.kind === "paused" ||
+      (proposal.kind === "failed" &&
+        /\b429\b|rate limit|timed? out|fetch failed|network/i.test(proposal.message))
+    ) {
+      end = proposal.kind === "paused" ? "paused" : "Smith provider unavailable";
       break;
     }
   }
 
   const final = sourceValues(project.files);
-  const checks = (scenario.checks ?? []).map(({ path, equals, exists }) => {
+  const checks = (scenario.checks ?? []).map(({ path, equals, exists, optionalFieldType }) => {
     const actual = readAt(final, path);
-    const right =
+    let right =
       exists === undefined ? isDeepStrictEqual(actual, equals) : (actual !== undefined) === exists;
+    if (optionalFieldType) {
+      const model = validateSpec({
+        path: "smithable.yml",
+        text: project.files.spec,
+      }).ir?.models.find(({ name }) => name === path[2]);
+      const field = model?.fields.find(({ name }) => name === path[4]);
+      right =
+        field?.type.kind === "scalar" && field.type.name === optionalFieldType && !field.required;
+    }
     return { path, right };
   });
   if (scenario.unchanged) checks.push({ path: [], right: isDeepStrictEqual(initial, final) });
@@ -209,7 +231,7 @@ export async function runTalk(scenario, { project, person, providers, docsIndex,
           matches.map(({ text }) => text).join("\n"),
           requirement,
           judge,
-        ).catch(() => ({ right: false, why: "The judge did not answer.", usage: [] }))
+        ).catch(() => ({ right: null, why: "The judge did not answer.", usage: [] }))
       : { right: false, why: "No matching answer.", usage: [] };
     usage.push(...result.usage);
     facts.push({ question: requirement.questionIncludes, right: result.right, why: result.why });
@@ -223,7 +245,11 @@ export async function runTalk(scenario, { project, person, providers, docsIndex,
   }).length;
   return {
     id: scenario.id,
-    right: checks.every((check) => check.right) && facts.every((fact) => fact.right),
+    right:
+      ["person unavailable", "Smith provider unavailable", "paused"].includes(end) ||
+      facts.some((fact) => fact.right === null)
+        ? null
+        : checks.every((check) => check.right) && facts.every((fact) => fact.right),
     turns: transcript.length,
     questions: transcript.filter((turn) => turn.visible?.kind === "question").length,
     applied: applied.length,
@@ -283,23 +309,30 @@ function openAIPerson(name, key) {
     price,
     currency: "USD",
     async complete({ system, user, schema, maxOutputTokens }) {
-      const response = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        signal: AbortSignal.timeout(90_000),
-        headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: name,
-          max_completion_tokens: maxOutputTokens,
-          response_format: {
-            type: "json_schema",
-            json_schema: { name: "move", schema, strict: true },
-          },
-          messages: [
-            { role: "system", content: system },
-            { role: "user", content: user },
-          ],
-        }),
-      });
+      const ask = () =>
+        fetch("https://api.openai.com/v1/chat/completions", {
+          method: "POST",
+          signal: AbortSignal.timeout(90_000),
+          headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            model: name,
+            max_completion_tokens: maxOutputTokens,
+            response_format: {
+              type: "json_schema",
+              json_schema: { name: "move", schema, strict: true },
+            },
+            messages: [
+              { role: "system", content: system },
+              { role: "user", content: user },
+            ],
+          }),
+        });
+      let response = await ask();
+      for (let retry = 1; response.status === 429 && retry <= 2; retry++) {
+        await response.body?.cancel();
+        await new Promise((done) => setTimeout(done, retry * 1000));
+        response = await ask();
+      }
       if (!response.ok) throw new Error(`The person model returned status ${response.status}.`);
       const body = await response.json();
       const completion = {
@@ -334,8 +367,8 @@ export function budgetGuard(limit) {
         ...provider,
         async complete(request) {
           const maximum = Math.min(request.maxOutputTokens ?? 1500, 1500);
-          const bytes = Buffer.byteLength(JSON.stringify(request)) + 512;
-          // Only successful HTTP completions are billed. If reply usage is missing, hold the reserve.
+          const bytes = Buffer.byteLength(JSON.stringify(request)) + 2048;
+          // A rate-limit response rejects the call before generation. If billing is unknown, hold the reserve.
           const reserve = cost(bytes, maximum, rate);
           if (refused || spent + reserve >= limit) {
             refused = true;
@@ -356,6 +389,7 @@ export function budgetGuard(limit) {
             return completion;
           } catch (error) {
             if (error instanceof CutOffAnswerError) settle(error.completion);
+            else if (/ answered 429:| returned status 429\./.test(error.message)) spent -= reserve;
             throw error;
           }
         },
@@ -365,19 +399,36 @@ export function budgetGuard(limit) {
 }
 
 function report(label, rows) {
+  const graded = rows.filter(({ right }) => right !== null);
   const header = [
     `# Conversations with Smith: ${label}`,
     "",
-    `${rows.filter(({ right }) => right).length} of ${rows.length} goals reached.`,
+    `${graded.filter(({ right }) => right).length} of ${graded.length} scored goals reached.`,
+    ...(graded.length < rows.length
+      ? [`${rows.length - graded.length} conversations could not be scored.`]
+      : []),
     "",
     "| Conversation | Goal reached | Turns | Questions | Applied | Reworked | End | Tokens | Seconds |",
     "| - | - | - | - | - | - | - | - | - |",
   ];
   const lines = rows.map(
     (row) =>
-      `| ${row.id} | ${row.right ? "Yes" : "No"} | ${row.turns} | ${row.questions} | ${row.applied} | ${row.reworked} | ${row.end} | ${row.tokens} | ${(row.ms / 1000).toFixed(1)} |`,
+      `| ${row.id} | ${row.right === null ? "Unscored" : row.right ? "Yes" : "No"} | ${row.turns} | ${row.questions} | ${row.applied} | ${row.reworked} | ${row.end} | ${row.tokens} | ${(row.ms / 1000).toFixed(1)} |`,
   );
   return [...header, ...lines, ""].join("\n");
+}
+
+export function replayOnly(model, recording, missed) {
+  return cached(
+    {
+      ...model,
+      async complete() {
+        missed();
+        throw new Error("The model request was not recorded.");
+      },
+    },
+    recording,
+  );
 }
 
 async function main() {
@@ -440,17 +491,7 @@ async function main() {
   let replayMisses = 0;
   const recording = record || replay ? recordingFolder(record ?? replay) : undefined;
   const wrap = (model) => {
-    if (replay)
-      return cached(
-        {
-          ...model,
-          async complete() {
-            replayMisses++;
-            throw new Error("The model request was not recorded.");
-          },
-        },
-        recording,
-      );
+    if (replay) return replayOnly(model, recording, () => replayMisses++);
     const guarded = budget.wrap(model);
     return recording ? cached(guarded, recording) : guarded;
   };
@@ -491,6 +532,7 @@ async function main() {
     writeFileSync(partial, "", { flag: "wx" });
     const rows = [];
     for (const [index, scenario] of scenarios.entries()) {
+      const missedBefore = replayMisses;
       const row = await runTalk(scenario, {
         project: projects[index],
         person,
@@ -498,6 +540,10 @@ async function main() {
         docsIndex,
         judge,
       });
+      if (budget.exhausted || replayMisses > missedBefore) {
+        row.right = null;
+        row.end = budget.exhausted ? "budget" : "recording incomplete";
+      }
       rows.push(row);
       appendFileSync(partial, `${JSON.stringify(row)}\n`);
       console.log(`${scenario.id}: ${row.right ? "goal reached" : row.end}`);

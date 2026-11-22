@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { test } from "node:test";
-import { openAICompatible } from "../packages/ai/dist/index.js";
-import { budgetGuard, runTalk } from "./bench-smith-talks.mjs";
+import { cached, openAICompatible } from "../packages/ai/dist/index.js";
+import { budgetGuard, replayOnly, runTalk } from "./bench-smith-talks.mjs";
 import { repo } from "./dev-app.mjs";
 import { startFakeModel } from "./fake-model.mjs";
 import { starterProject } from "./smith-cases.mjs";
@@ -59,7 +61,7 @@ test("a person reads Smith's answers, applies a real proposal and undoes it", as
 });
 
 test("a budget refusal does not issue a provider request", async () => {
-  const budget = budgetGuard(0.001);
+  const budget = budgetGuard(0.003);
   let calls = 0;
   const provider = budget.wrap({
     name: "Metered fixture",
@@ -76,4 +78,51 @@ test("a budget refusal does not issue a provider request", async () => {
   await assert.rejects(provider.complete({ system: "x".repeat(1000) }), /request budget/);
   assert.equal(calls, 1);
   assert.equal(budget.exhausted, true);
+});
+
+test("replay returns the recording and refuses a miss without hitting the provider", async () => {
+  const stored = new Map();
+  const store = {
+    async get(key) {
+      return stored.get(key);
+    },
+    async set(key, value) {
+      stored.set(key, value);
+    },
+  };
+  const request = { system: "Fixture", user: "This is recorded", schema: {} };
+  let calls = 0;
+  const provider = {
+    name: "recorded-model",
+    async complete() {
+      calls++;
+      return { text: "{}", model: "recorded-model", inputTokens: 5, outputTokens: 1 };
+    },
+  };
+  await cached(provider, store).complete(request);
+  let misses = 0;
+  const replay = replayOnly(provider, store, () => misses++);
+  assert.equal((await replay.complete(request)).text, "{}");
+  await assert.rejects(replay.complete({ ...request, user: "This is absent" }), /not recorded/);
+  assert.equal(calls, 1);
+  assert.equal(misses, 1);
+});
+
+test("the labelled source checks distinguish untouched starters from applied changes", async () => {
+  const { conversations } = JSON.parse(
+    readFileSync(join(repo, "docs", "benchmarks", "smith-talks.json"), "utf8"),
+  );
+  assert.equal(new Set(conversations.map(({ id }) => id)).size, 12);
+  for (const scenario of conversations) {
+    const result = await runTalk(
+      { ...scenario, answers: [] },
+      {
+        project: starterProject(repo, scenario.starter),
+        person: async () => ({ action: "done" }),
+        providers: [],
+        docsIndex: { pages: [], parts: [] },
+      },
+    );
+    assert.equal(result.right, Boolean(scenario.unchanged && !scenario.undo), scenario.id);
+  }
 });

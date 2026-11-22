@@ -42,7 +42,7 @@
       "id": "mobile-correction",
       "starter": "crm",
       "persona": "A sales manager who changes their mind and says so directly.",
-      "goal": "Ask for an office phone field on customers. If a change is proposed, then say you meant a separate mobile number. Keep the separate mobile field and no office phone field.",
+      "goal": "Ask for an Office phone field on customers. If a change is proposed, then say you meant a separate phone field named Mobile. Keep Mobile and no Office phone field.",
       "checks": [
         {
           "path": [
@@ -70,7 +70,7 @@
       "id": "customers-access-then-note",
       "starter": "crm",
       "persona": "A cautious sales assistant. You ask who can see information before adding any.",
-      "goal": "First ask who can open the customers page. Once you know, add a preferred contact field to customer records. Do not open any page to the public.",
+      "goal": "First ask who can open the customers page. Once you know, add a field named Preferred contact to customer records. Do not open any page to the public.",
       "authUnchanged": true,
       "checks": [
         {
@@ -255,7 +255,7 @@
             "fields",
             "deliveryDate"
           ],
-          "equals": "date"
+          "optionalFieldType": "date"
         },
         {
           "path": [
@@ -273,7 +273,7 @@
       "id": "booking-staff-reception-note",
       "starter": "booking",
       "persona": "A reception lead who is precise when checking privacy and otherwise writes in fragments.",
-      "goal": "Add a reception note field to booking records. Get Smith to confirm public visitors cannot read booking records. Do not change any access rules.",
+      "goal": "Add a field named Reception note to booking records. Get Smith to confirm public visitors cannot read booking records. Do not change any access rules.",
       "authUnchanged": true,
       "checks": [
         {

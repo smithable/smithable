@@ -72,6 +72,20 @@ export async function smithRequest(project, request, providers, docsIndex, conve
   return { ask, docs, phraseUsage };
 }
 
+export async function retryLimited(ask, beforeRetry = () => {}) {
+  let proposal = await ask();
+  for (
+    let wait = 10;
+    proposal.kind === "failed" && /\b429\b|rate limit/i.test(proposal.message) && wait <= 80;
+    wait *= 2
+  ) {
+    beforeRetry(proposal);
+    await new Promise((done) => setTimeout(done, wait * 1000));
+    proposal = await ask();
+  }
+  return proposal;
+}
+
 export async function judgeFacts(question, answer, facts, provider) {
   const { must = [], mustNot = [] } = facts;
   if (!must.length && !mustNot.length) return { right: true, usage: [] };

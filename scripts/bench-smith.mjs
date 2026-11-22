@@ -26,6 +26,7 @@ import {
   judgeFacts,
   recordingFolder,
   requestProject,
+  retryLimited,
   smithRequest,
   starterProject,
 } from "./smith-cases.mjs";
@@ -301,16 +302,7 @@ for (const setup of rulesOnly ? ["rules"] : setups) {
     misses = [];
     // A provider's rate limit (429) is the bench's pace, not the model's answer: the request is
     // asked again after a wait, up to four times (2026-11-13: 119 of small's 275 hit it).
-    let p = await ask();
-    for (
-      let wait = 10;
-      p.kind === "failed" && /\b429\b|rate limit/i.test(JSON.stringify(p));
-      wait *= 2
-    ) {
-      if (wait > 80) break;
-      await new Promise((done) => setTimeout(done, wait * 1000));
-      p = await ask();
-    }
+    const p = await retryLimited(ask);
     const byRule = !p.usage.length && p.kind !== "failed";
     // --rules is free: a rule's answer is scored by its kind, as the unit test does, no judge.
     const score = !rulesOnly
