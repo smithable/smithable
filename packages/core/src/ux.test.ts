@@ -11,23 +11,53 @@ const crm = Object.values(
     eager: true,
   }),
 )[0] as string;
+const records = Object.values(
+  import.meta.glob("../../../examples/records/smithable.yml", {
+    query: "?raw",
+    import: "default",
+    eager: true,
+  }),
+)[0] as string;
 const ir = validateSpec({ path: "smithable.yml", text: crm }).ir;
 if (!ir) throw new Error("invalid spec");
 const codes = (text: string) =>
   validateUx({ path: "smithable.ux.yml", text }, ir).diagnostics.map((d) => d.code);
 
 describe("smithable.ux.yml", () => {
-  test("the AI badge is on unless the owner switches it off", () => {
+  test("the AI badge: unsaid (by each picture's kind), on, or off", () => {
     const read = (text: string) => validateUx({ path: "smithable.ux.yml", text }, ir);
-    expect(read("smithableUx: 0.1\n").ux?.aiBadge).toBe(true);
+    expect(read("smithableUx: 0.1\n").ux?.aiBadge).toBeUndefined();
+    expect(read("smithableUx: 0.1\naiBadge: true\n").ux?.aiBadge).toBe(true);
     expect(read("smithableUx: 0.1\naiBadge: false\n").ux?.aiBadge).toBe(false);
     expect(codes("smithableUx: 0.1\naiBadge: maybe\n")).not.toEqual([]);
-    const off = applyOperation({ spec: crm, ux: "smithableUx: 0.1\n" }, "setAiBadge", {
-      shown: "false",
-    });
+    const set = (ux: string, args: Record<string, unknown>, content?: string) =>
+      applyOperation({ spec: crm, ux, ...(content ? { content } : {}) }, "setAiBadge", args);
+    const on = set("smithableUx: 0.1\n", { value: "on" });
+    expect(on.ok && on.files.ux).toContain("aiBadge: true");
+    const off = set("smithableUx: 0.1\n", { value: "off" });
     expect(off.ok && off.files.ux).toContain("aiBadge: false");
-    const on = off.ok && applyOperation({ spec: crm, ux: off.files.ux }, "setAiBadge", {});
-    expect(on && on.ok && on.files.ux).not.toContain("aiBadge");
+    // Off without the acknowledgement asks the host to look at the placed pictures.
+    expect(off.ok && off.effects).toContainEqual({ kind: "ai-badge-off" });
+    const back = off.ok && set(off.files.ux ?? "", { value: "default" });
+    expect(back && back.ok && back.files.ux).not.toContain("aiBadge");
+    expect(set("smithableUx: 0.1\n", { value: "maybe" }).ok).toBe(false);
+  });
+
+  test("switching the badge off is refused while a realistic picture is placed, unless acknowledged", () => {
+    const content = (kind: string) =>
+      `smithableContent: 0.1\npages:\n  home:\n    hero:\n      title: Hi\n      image: { src: images/hero.webp, alt: A room, width: 1600, generated: true${kind} }\n`;
+    const set = (c: string, args: Record<string, unknown>) =>
+      applyOperation({ spec: records, ux: "smithableUx: 0.1\n", content: c }, "setAiBadge", args);
+    for (const kind of ["", ", kind: ai-realistic"]) {
+      const refused = set(content(kind), { value: "off" });
+      expect(refused.ok).toBe(false);
+      expect(!refused.ok && refused.message).toContain("acknowledged");
+      const said = set(content(kind), { value: "off", acknowledged: true });
+      expect(said.ok && said.files.ux).toContain("aiBadge: false");
+      expect(said.ok && said.effects).not.toContainEqual({ kind: "ai-badge-off" });
+    }
+    // A drawn picture needs no acknowledgement.
+    expect(set(content(", kind: ai-drawn"), { value: "off" }).ok).toBe(true);
   });
 
   test("the pictures' style: unsaid unless set; setting it reports the pictures to place", () => {
@@ -110,7 +140,6 @@ tones:
       pages: {
         customers: { columns: ["name", "segment", "email"], fieldOrder: ["name", "email"] },
       },
-      aiBadge: true,
       assistant: { voice: "plain" },
       tones: { "Order.status": { shipped: "success", canceled: "danger" } },
     });

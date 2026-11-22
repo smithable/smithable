@@ -4,7 +4,7 @@
 // editor offers their keys and explains them from the descriptions here. The validators stay
 // the judges: a schema says what may stand where, not every rule between the files.
 import { AUTH_VERSION, PROVIDERS } from "./auth.js";
-import { CONTENT_VERSION, LANGUAGES } from "./content.js";
+import { CONTENT_VERSION, LANGUAGES, PICTURE_KINDS } from "./content.js";
 import { CONTEXT_SCHEMA } from "./context-file.js";
 import type { JsonSchema } from "./section.js";
 import { FONTS } from "./theme.js";
@@ -608,7 +608,7 @@ export const UX_SCHEMA: JsonSchema = {
     aiBadge: {
       type: "boolean",
       description:
-        "Whether pictures an AI made carry the badge (the EU’s common icon for AI-generated content): on unless you switch it off; whether your audience needs it is your responsibility.",
+        "Whether pictures an AI made carry the badge (the EU’s common icon for AI-generated content). Unsaid, each picture by its kind: on for an ai-realistic one (or one without a kind), off for an ai-drawn one; true puts it on every picture an AI made, false on none. A photograph never has it. Whether your audience needs it is your responsibility.",
     },
     tones: {
       type: "object",
@@ -665,6 +665,11 @@ const section: JsonSchema = {
           description:
             "Made by an AI: the app marks it as such where it could pass for a photograph.",
         },
+        kind: {
+          enum: [...PICTURE_KINDS],
+          description:
+            "What the picture is, as the image library said when it was placed: an AI picture that looks real, a drawn AI picture, or a photograph. The badge's default follows it.",
+        },
         width: {
           type: "integer",
           description: "The file's own width in pixels.",
@@ -700,6 +705,11 @@ const section: JsonSchema = {
                 type: "boolean",
                 description:
                   "Made by an AI: the app marks it as such where it could pass for a photograph.",
+              },
+              kind: {
+                enum: [...PICTURE_KINDS],
+                description:
+                  "What the picture is, as the image library said when it was placed: an AI picture that looks real, a drawn AI picture, or a photograph. The badge's default follows it.",
               },
               width: {
                 type: "integer",
@@ -749,6 +759,11 @@ const section: JsonSchema = {
                 type: "boolean",
                 description:
                   "Made by an AI: the app marks it as such where it could pass for a photograph.",
+              },
+              kind: {
+                enum: [...PICTURE_KINDS],
+                description:
+                  "What the picture is, as the image library said when it was placed: an AI picture that looks real, a drawn AI picture, or a photograph. The badge's default follows it.",
               },
               width: {
                 type: "integer",

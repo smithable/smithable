@@ -13707,6 +13707,11 @@ exports[`../../../examples/api/smithable.yml > file list and generated code > sr
   --primary-hover: color-mix(in oklch, var(--primary), white 30%);
   --destructive-hover: color-mix(in oklch, var(--destructive), white 30%);
 }
+
+/* The badge by each picture's kind (aiBadge unsaid): none on a drawn one (src/kit/AiMark.tsx). */
+[data-part="ai-mark"][data-kind="ai-drawn"] {
+  display: none;
+}
 "
 `;
 
@@ -14117,7 +14122,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/generated/users.test.ts": "8ad7ab74 generated",
   "src/generated/users.ts": "f77bb99b generated",
   "src/kit/ActivityLog.tsx": "e53a5289 kit",
-  "src/kit/AiMark.tsx": "2dd9487f kit",
+  "src/kit/AiMark.tsx": "f9eb07a2 kit",
   "src/kit/AppCard.tsx": "76e8455d kit",
   "src/kit/AppLink.tsx": "841a9af0 kit",
   "src/kit/AppShell.tsx": "fda2cf43 kit",
@@ -14131,12 +14136,12 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/InlineRows.tsx": "5a097006 kit",
   "src/kit/Inspector.tsx": "2425cac5 kit",
   "src/kit/Keys.tsx": "f32c246d kit",
-  "src/kit/ModelForm.tsx": "b857b574 kit",
-  "src/kit/ModelTable.tsx": "0213cf74 kit",
+  "src/kit/ModelForm.tsx": "f90ea7e8 kit",
+  "src/kit/ModelTable.tsx": "5252e1d6 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "fb5e87dc kit",
-  "src/kit/PictureDialog.tsx": "1495b136 kit",
-  "src/kit/PictureInput.tsx": "993db3fb kit",
+  "src/kit/PictureDialog.tsx": "c482ecbe kit",
+  "src/kit/PictureInput.tsx": "e0362347 kit",
   "src/kit/RecordSummary.tsx": "f0415723 kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
   "src/kit/SignIn.tsx": "21a3d26d kit",
@@ -14185,7 +14190,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "8c886a7b kit",
   "src/kit/unused-samples.ts": "860c6650 kit",
-  "src/kit/uploads.ts": "724b80f6 kit",
+  "src/kit/uploads.ts": "118c5b96 kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
@@ -14243,7 +14248,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/routes/team/index.tsx": "c1b1e9fc generated",
   "src/start.ts": "6b874d2d kit",
   "src/styles.css": "706d757b kit",
-  "src/theme.css": "2c20fc19 generated",
+  "src/theme.css": "1fd40aa1 generated",
   "tests/smoke.spec.ts": "24a5a8cb generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "3ee61b99 kit",
@@ -16539,7 +16544,7 @@ import { w } from "#/kit/words";
 export const barberSettable = createInsertSchema(schema.barbers, {
   name: (s) => s.trim().min(1, w.required).max(200, w.atMostCharacters(200)),
   bio: (s) => s.max(10000, w.atMostCharacters(10000)),
-  portrait: z.object({ file: z.string().regex(/^barber\\/[a-f0-9]{24}\\.webp$/), alt: z.string().trim().max(200), width: z.int().positive(), height: z.int().positive(), generated: z.literal(true).optional(), smaller: z.array(z.object({ file: z.string().regex(/^barber\\/[a-f0-9]{24}\\.webp$/), width: z.union([z.literal(480), z.literal(960)]), height: z.int().positive() })).max(2).optional(), receipt: z.string().max(64).optional() }).nullish(),
+  portrait: z.object({ file: z.string().regex(/^barber\\/[a-f0-9]{24}\\.webp$/), alt: z.string().trim().max(200), width: z.int().positive(), height: z.int().positive(), generated: z.literal(true).optional(), kind: z.enum(["ai-realistic", "ai-drawn", "photograph"]).optional(), smaller: z.array(z.object({ file: z.string().regex(/^barber\\/[a-f0-9]{24}\\.webp$/), width: z.union([z.literal(480), z.literal(960)]), height: z.int().positive() })).max(2).optional(), receipt: z.string().max(64).optional() }).nullish(),
 }).omit({ id: true, ownerId: true, createdAt: true, updatedAt: true });
 /** What a barber's form sends, checked. */
 export const barberSchema = barberSettable;
@@ -20656,7 +20661,7 @@ function HomePage() {
           cards={data["barbers"].map((row) => ({
             key: row.id,
             title: String(row.name),
-            picture: row.portrait ? { src: \`/files/barber/\${row.id}/portrait?v=\${row.portrait.file.slice(-29, -5)}\`, alt: row.portrait.alt, width: row.portrait.width, height: row.portrait.height, generated: row.portrait.generated } : undefined,
+            picture: row.portrait ? { src: \`/files/barber/\${row.id}/portrait?v=\${row.portrait.file.slice(-29, -5)}\`, alt: row.portrait.alt, width: row.portrait.width, height: row.portrait.height, generated: row.portrait.generated, kind: row.portrait.kind } : undefined,
             text: row.bio ?? undefined,
           }))}
         />
@@ -21493,6 +21498,11 @@ exports[`../../../examples/barbers/smithable.yml > file list and generated code 
   --primary-hover: color-mix(in oklch, var(--primary), white 30%);
   --destructive-hover: color-mix(in oklch, var(--destructive), white 30%);
 }
+
+/* The badge by each picture's kind (aiBadge unsaid): none on a drawn one (src/kit/AiMark.tsx). */
+[data-part="ai-mark"][data-kind="ai-drawn"] {
+  display: none;
+}
 "
 `;
 
@@ -21895,7 +21905,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/generated/appointment.ts": "1e72ecc9 generated",
   "src/generated/barber.import.server.ts": "ba93731a generated",
   "src/generated/barber.import.ts": "76b4b2ca generated",
-  "src/generated/barber.schema.ts": "4e204ae0 generated",
+  "src/generated/barber.schema.ts": "4548571f generated",
   "src/generated/barber.server.ts": "aa2e295a generated",
   "src/generated/barber.ts": "dcdf162d generated",
   "src/generated/card.server.ts": "86f8f526 generated",
@@ -21921,7 +21931,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/generated/uploads.ts": "40a253ac generated",
   "src/kit/ActionButton.tsx": "6a3b0c0a kit",
   "src/kit/ActivityLog.tsx": "e53a5289 kit",
-  "src/kit/AiMark.tsx": "2dd9487f kit",
+  "src/kit/AiMark.tsx": "f9eb07a2 kit",
   "src/kit/AppCard.tsx": "76e8455d kit",
   "src/kit/AppLink.tsx": "841a9af0 kit",
   "src/kit/AppShell.tsx": "fda2cf43 kit",
@@ -21931,18 +21941,18 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/Consent.tsx": "c5ee7e50 kit",
   "src/kit/FieldInput.tsx": "39e40fcb kit",
   "src/kit/FileInput.tsx": "5d567f82 kit",
-  "src/kit/Filters.tsx": "ceea52dc kit",
+  "src/kit/Filters.tsx": "0f5bfdfd kit",
   "src/kit/ImportDialog.tsx": "d65da47a kit",
   "src/kit/InlineRows.tsx": "5a097006 kit",
-  "src/kit/Landing.tsx": "6cf7b213 kit",
+  "src/kit/Landing.tsx": "2bcf13ff kit",
   "src/kit/LegalPage.tsx": "f9a9df1e kit",
   "src/kit/Live.tsx": "fbaa47cd kit",
-  "src/kit/ModelForm.tsx": "b857b574 kit",
-  "src/kit/ModelTable.tsx": "0213cf74 kit",
+  "src/kit/ModelForm.tsx": "f90ea7e8 kit",
+  "src/kit/ModelTable.tsx": "5252e1d6 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "fb5e87dc kit",
-  "src/kit/PictureDialog.tsx": "1495b136 kit",
-  "src/kit/PictureInput.tsx": "993db3fb kit",
+  "src/kit/PictureDialog.tsx": "c482ecbe kit",
+  "src/kit/PictureInput.tsx": "e0362347 kit",
   "src/kit/RecordSummary.tsx": "f0415723 kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
   "src/kit/SelectionBar.tsx": "97aa9165 kit",
@@ -21989,7 +21999,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/time-text.ts": "eb8db028 kit",
   "src/kit/trace.server.ts": "8c886a7b kit",
   "src/kit/unused-samples.ts": "860c6650 kit",
-  "src/kit/uploads.ts": "724b80f6 kit",
+  "src/kit/uploads.ts": "118c5b96 kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/words.ts": "dd75b285 kit",
   "src/kit/words/en.ts": "a509a677 kit",
@@ -22017,7 +22027,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/routes/files/$model.$id.$field.$n.ts": "5288014d kit",
   "src/routes/files/$model.$id.$field.ts": "93378bd7 kit",
   "src/routes/health.ts": "362c9904 kit",
-  "src/routes/index.tsx": "a0d184af generated",
+  "src/routes/index.tsx": "20a37bae generated",
   "src/routes/privacy/index.tsx": "9fcb262e generated",
   "src/routes/robots[.]txt.ts": "a6b36402 generated",
   "src/routes/services/$id.tsx": "bddd0cd6 generated",
@@ -22030,7 +22040,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/routes/time-off/new.tsx": "007c55c8 generated",
   "src/start.ts": "6b874d2d kit",
   "src/styles.css": "706d757b kit",
-  "src/theme.css": "2c20fc19 generated",
+  "src/theme.css": "1fd40aa1 generated",
   "tests/smoke.spec.ts": "dabb9af3 generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "3ee61b99 kit",
@@ -27999,7 +28009,7 @@ import { w } from "#/kit/words";
 export const instructorSettable = createInsertSchema(schema.instructors, {
   name: (s) => s.trim().min(1, w.required).max(200, w.atMostCharacters(200)),
   bio: (s) => s.max(50000, w.atMostCharacters(50000)),
-  portrait: z.object({ file: z.string().regex(/^instructor\\/[a-f0-9]{24}\\.webp$/), alt: z.string().trim().max(200), width: z.int().positive(), height: z.int().positive(), generated: z.literal(true).optional(), smaller: z.array(z.object({ file: z.string().regex(/^instructor\\/[a-f0-9]{24}\\.webp$/), width: z.union([z.literal(480), z.literal(960)]), height: z.int().positive() })).max(2).optional(), receipt: z.string().max(64).optional() }).nullish(),
+  portrait: z.object({ file: z.string().regex(/^instructor\\/[a-f0-9]{24}\\.webp$/), alt: z.string().trim().max(200), width: z.int().positive(), height: z.int().positive(), generated: z.literal(true).optional(), kind: z.enum(["ai-realistic", "ai-drawn", "photograph"]).optional(), smaller: z.array(z.object({ file: z.string().regex(/^instructor\\/[a-f0-9]{24}\\.webp$/), width: z.union([z.literal(480), z.literal(960)]), height: z.int().positive() })).max(2).optional(), receipt: z.string().max(64).optional() }).nullish(),
 }).omit({ id: true, ownerId: true, createdAt: true, updatedAt: true });
 /** What a instructor's form sends, checked. */
 export const instructorSchema = instructorSettable;
@@ -29850,7 +29860,7 @@ export const postSettable = createInsertSchema(schema.posts, {
   title: (s) => s.trim().min(1, w.required).max(200, w.atMostCharacters(200)),
   address: (s) => s.max(200, w.atMostCharacters(200)),
   summary: (s) => s.max(10000, w.atMostCharacters(10000)),
-  cover: z.object({ file: z.string().regex(/^post\\/[a-f0-9]{24}\\.webp$/), alt: z.string().trim().max(200), width: z.int().positive(), height: z.int().positive(), generated: z.literal(true).optional(), smaller: z.array(z.object({ file: z.string().regex(/^post\\/[a-f0-9]{24}\\.webp$/), width: z.union([z.literal(480), z.literal(960)]), height: z.int().positive() })).max(2).optional(), receipt: z.string().max(64).optional() }).nullish(),
+  cover: z.object({ file: z.string().regex(/^post\\/[a-f0-9]{24}\\.webp$/), alt: z.string().trim().max(200), width: z.int().positive(), height: z.int().positive(), generated: z.literal(true).optional(), kind: z.enum(["ai-realistic", "ai-drawn", "photograph"]).optional(), smaller: z.array(z.object({ file: z.string().regex(/^post\\/[a-f0-9]{24}\\.webp$/), width: z.union([z.literal(480), z.literal(960)]), height: z.int().positive() })).max(2).optional(), receipt: z.string().max(64).optional() }).nullish(),
   body: (s) => s.trim().min(1, w.required).max(50000, w.atMostCharacters(50000)),
   publishedOn: (s) => s.regex(/^\\d{4}-\\d{2}-\\d{2}$/, w.enterValidDate),
 }).omit({ id: true, ownerId: true, createdAt: true, updatedAt: true });
@@ -32466,7 +32476,7 @@ function AboutPage() {
           cards={data["team"].map((row) => ({
             key: row.id,
             title: String(row.name),
-            picture: row.portrait ? { src: \`/files/instructor/\${row.id}/portrait?v=\${row.portrait.file.slice(-29, -5)}\`, alt: row.portrait.alt, width: row.portrait.width, height: row.portrait.height, generated: row.portrait.generated } : undefined,
+            picture: row.portrait ? { src: \`/files/instructor/\${row.id}/portrait?v=\${row.portrait.file.slice(-29, -5)}\`, alt: row.portrait.alt, width: row.portrait.width, height: row.portrait.height, generated: row.portrait.generated, kind: row.portrait.kind } : undefined,
           }))}
         />
     </div>
@@ -33932,7 +33942,7 @@ const cardOf = (row: Row) => ({
   title: String(row.title ?? ""),
   summary: summaryOf(row),
   date: dateText(row),
-  picture: row.cover ? { src: \`/files/post/\${row.id}/cover?v=\${row.cover.file.slice(-29, -5)}\`, alt: row.cover.alt, width: row.cover.width, height: row.cover.height, generated: row.cover.generated } : undefined,
+  picture: row.cover ? { src: \`/files/post/\${row.id}/cover?v=\${row.cover.file.slice(-29, -5)}\`, alt: row.cover.alt, width: row.cover.width, height: row.cover.height, generated: row.cover.generated, kind: row.cover.kind } : undefined,
 });
 
 const getArticle = createServerFn()
@@ -34045,7 +34055,7 @@ const cardOf = (row: Row) => ({
   title: String(row.title ?? ""),
   summary: summaryOf(row),
   date: dateText(row),
-  picture: row.cover ? { src: \`/files/post/\${row.id}/cover?v=\${row.cover.file.slice(-29, -5)}\`, alt: row.cover.alt, width: row.cover.width, height: row.cover.height, generated: row.cover.generated } : undefined,
+  picture: row.cover ? { src: \`/files/post/\${row.id}/cover?v=\${row.cover.file.slice(-29, -5)}\`, alt: row.cover.alt, width: row.cover.width, height: row.cover.height, generated: row.cover.generated, kind: row.cover.kind } : undefined,
 });
 
 const getArticles = createServerFn()
@@ -34794,7 +34804,7 @@ function HomePage() {
             key: row.id,
             title: String(row.title),
             href: \`/blog/\${encodeURIComponent(row.address || String(row.id))}\`,
-            picture: row.cover ? { src: \`/files/post/\${row.id}/cover?v=\${row.cover.file.slice(-29, -5)}\`, alt: row.cover.alt, width: row.cover.width, height: row.cover.height, generated: row.cover.generated } : undefined,
+            picture: row.cover ? { src: \`/files/post/\${row.id}/cover?v=\${row.cover.file.slice(-29, -5)}\`, alt: row.cover.alt, width: row.cover.width, height: row.cover.height, generated: row.cover.generated, kind: row.cover.kind } : undefined,
             text: row.summary ?? undefined,
             badge: postUi.fields.find((f) => f.name === "status")?.choices?.find((c) => c.value === row.status)?.label,
           }))}
@@ -36716,6 +36726,11 @@ exports[`../../../examples/booking/smithable.yml > file list and generated code 
   --primary-hover: color-mix(in oklch, var(--primary), white 30%);
   --destructive-hover: color-mix(in oklch, var(--destructive), white 30%);
 }
+
+/* The badge by each picture's kind (aiBadge unsaid): none on a drawn one (src/kit/AiMark.tsx). */
+[data-part="ai-mark"][data-kind="ai-drawn"] {
+  display: none;
+}
 "
 `;
 
@@ -37228,7 +37243,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/hooks.ts": "dad75c4a generated",
   "src/generated/instructor.import.server.ts": "fccf980a generated",
   "src/generated/instructor.import.ts": "73c07c95 generated",
-  "src/generated/instructor.schema.ts": "6e0adbca generated",
+  "src/generated/instructor.schema.ts": "8a3547d1 generated",
   "src/generated/instructor.server.ts": "431932c6 generated",
   "src/generated/instructor.ts": "f02243c8 generated",
   "src/generated/message.import.server.ts": "529f366e generated",
@@ -37241,7 +37256,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/pages.ts": "c08f710d generated",
   "src/generated/post.import.server.ts": "779addc6 generated",
   "src/generated/post.import.ts": "d5299966 generated",
-  "src/generated/post.schema.ts": "67ddc9a8 generated",
+  "src/generated/post.schema.ts": "ee860383 generated",
   "src/generated/post.server.ts": "9ec32b97 generated",
   "src/generated/post.ts": "3b8935b4 generated",
   "src/generated/roles.ts": "12ea3da4 generated",
@@ -37259,12 +37274,12 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/users.ts": "f77bb99b generated",
   "src/kit/ActionButton.tsx": "6a3b0c0a kit",
   "src/kit/ActivityLog.tsx": "e53a5289 kit",
-  "src/kit/AiMark.tsx": "2dd9487f kit",
+  "src/kit/AiMark.tsx": "f9eb07a2 kit",
   "src/kit/AppCard.tsx": "76e8455d kit",
   "src/kit/AppLink.tsx": "841a9af0 kit",
   "src/kit/AppShell.tsx": "fda2cf43 kit",
   "src/kit/AppearancePicker.tsx": "0cd564d2 kit",
-  "src/kit/Articles.tsx": "72359ede kit",
+  "src/kit/Articles.tsx": "f3fb4114 kit",
   "src/kit/Ask.tsx": "e5277427 kit",
   "src/kit/Calculator.tsx": "590a4703 kit",
   "src/kit/Calendar.tsx": "5f787e2e kit",
@@ -37272,21 +37287,21 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/Consent.tsx": "c5ee7e50 kit",
   "src/kit/FieldInput.tsx": "39e40fcb kit",
   "src/kit/FileInput.tsx": "5d567f82 kit",
-  "src/kit/Filters.tsx": "ceea52dc kit",
+  "src/kit/Filters.tsx": "0f5bfdfd kit",
   "src/kit/ImportDialog.tsx": "d65da47a kit",
   "src/kit/InlineRows.tsx": "5a097006 kit",
   "src/kit/Inspector.tsx": "2425cac5 kit",
-  "src/kit/Landing.tsx": "6cf7b213 kit",
+  "src/kit/Landing.tsx": "2bcf13ff kit",
   "src/kit/LegalPage.tsx": "f9a9df1e kit",
   "src/kit/Live.tsx": "fbaa47cd kit",
   "src/kit/Markdown.tsx": "24e2fcd2 kit",
   "src/kit/MarkdownFormatted.tsx": "300ef9a1 kit",
-  "src/kit/ModelForm.tsx": "b857b574 kit",
-  "src/kit/ModelTable.tsx": "0213cf74 kit",
+  "src/kit/ModelForm.tsx": "f90ea7e8 kit",
+  "src/kit/ModelTable.tsx": "5252e1d6 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "fb5e87dc kit",
-  "src/kit/PictureDialog.tsx": "1495b136 kit",
-  "src/kit/PictureInput.tsx": "993db3fb kit",
+  "src/kit/PictureDialog.tsx": "c482ecbe kit",
+  "src/kit/PictureInput.tsx": "e0362347 kit",
   "src/kit/RecordSummary.tsx": "f0415723 kit",
   "src/kit/Reserve.tsx": "0fdf155f kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
@@ -37341,7 +37356,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "8c886a7b kit",
   "src/kit/unused-samples.ts": "860c6650 kit",
-  "src/kit/uploads.ts": "724b80f6 kit",
+  "src/kit/uploads.ts": "118c5b96 kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
@@ -37357,7 +37372,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/[_dev]/clock.ts": "72446040 generated",
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
   "src/routes/__root.tsx": "9d801633 generated",
-  "src/routes/about/index.tsx": "88b46859 generated",
+  "src/routes/about/index.tsx": "43aa18d2 generated",
   "src/routes/admin/activity.tsx": "dc7f9a31 generated",
   "src/routes/admin/bookings/$id.tsx": "3343f459 generated",
   "src/routes/admin/bookings/index.tsx": "3cede361 generated",
@@ -37380,8 +37395,8 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/admin/sessions/new.tsx": "bdc24b1c generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/app-card.tsx": "48827720 generated",
-  "src/routes/blog/$address.tsx": "48c2279f generated",
-  "src/routes/blog/index.tsx": "15054652 generated",
+  "src/routes/blog/$address.tsx": "0fa31fdc generated",
+  "src/routes/blog/index.tsx": "9ff11305 generated",
   "src/routes/bookings/$id.tsx": "28c46fa8 generated",
   "src/routes/bookings/index.tsx": "5ab565dd generated",
   "src/routes/bookings/new.tsx": "09aebe1c generated",
@@ -37393,7 +37408,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/files/$model.$id.$field.$n.ts": "5288014d kit",
   "src/routes/files/$model.$id.$field.ts": "93378bd7 kit",
   "src/routes/health.ts": "362c9904 kit",
-  "src/routes/index.tsx": "e8397b32 generated",
+  "src/routes/index.tsx": "d2646c1f generated",
   "src/routes/instructors/$id.tsx": "edc5cce4 generated",
   "src/routes/instructors/index.tsx": "856face6 generated",
   "src/routes/instructors/new.tsx": "8bd30440 generated",
@@ -37417,7 +37432,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/sitemap[.]xml.ts": "018df36b generated",
   "src/start.ts": "6b874d2d kit",
   "src/styles.css": "706d757b kit",
-  "src/theme.css": "2c20fc19 generated",
+  "src/theme.css": "1fd40aa1 generated",
   "tests/smoke.spec.ts": "c6858e63 generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "3ee61b99 kit",
@@ -40893,7 +40908,7 @@ export const projectSettable = createInsertSchema(schema.projects, {
   place: (s) => s.max(200, w.atMostCharacters(200)),
   year: (s) => s.max(200, w.atMostCharacters(200)),
   summary: (s) => s.max(10000, w.atMostCharacters(10000)),
-  photos: z.array(z.object({ file: z.string().regex(/^project\\/[a-f0-9]{24}\\.webp$/), alt: z.string().trim().max(200), width: z.int().positive(), height: z.int().positive(), generated: z.literal(true).optional(), smaller: z.array(z.object({ file: z.string().regex(/^project\\/[a-f0-9]{24}\\.webp$/), width: z.union([z.literal(480), z.literal(960)]), height: z.int().positive() })).max(2).optional(), receipt: z.string().max(64).optional() })).max(10).nullish(),
+  photos: z.array(z.object({ file: z.string().regex(/^project\\/[a-f0-9]{24}\\.webp$/), alt: z.string().trim().max(200), width: z.int().positive(), height: z.int().positive(), generated: z.literal(true).optional(), kind: z.enum(["ai-realistic", "ai-drawn", "photograph"]).optional(), smaller: z.array(z.object({ file: z.string().regex(/^project\\/[a-f0-9]{24}\\.webp$/), width: z.union([z.literal(480), z.literal(960)]), height: z.int().positive() })).max(2).optional(), receipt: z.string().max(64).optional() })).max(10).nullish(),
 }).omit({ id: true, ownerId: true, createdAt: true, updatedAt: true });
 /** What a project's form sends, checked. */
 export const projectSchema = projectSettable;
@@ -43492,7 +43507,7 @@ function HomePage() {
             key: row.id,
             title: String(row.title),
             href: \`/projects/\${row.id}\`,
-            picture: row.photos?.[0] ? { src: \`/files/project/\${row.id}/photos/0?v=\${row.photos[0].file.slice(-29, -5)}\`, alt: row.photos[0].alt, width: row.photos[0].width, height: row.photos[0].height, generated: row.photos[0].generated } : undefined,
+            picture: row.photos?.[0] ? { src: \`/files/project/\${row.id}/photos/0?v=\${row.photos[0].file.slice(-29, -5)}\`, alt: row.photos[0].alt, width: row.photos[0].width, height: row.photos[0].height, generated: row.photos[0].generated, kind: row.photos[0].kind } : undefined,
             text: row.summary ?? undefined,
           }))}
         />
@@ -44784,6 +44799,11 @@ exports[`../../../examples/builder/smithable.yml > file list and generated code 
   --primary-hover: color-mix(in oklch, var(--primary), white 30%);
   --destructive-hover: color-mix(in oklch, var(--destructive), white 30%);
 }
+
+/* The badge by each picture's kind (aiBadge unsaid): none on a drawn one (src/kit/AiMark.tsx). */
+[data-part="ai-mark"][data-kind="ai-drawn"] {
+  display: none;
+}
 "
 `;
 
@@ -45182,7 +45202,7 @@ exports[`../../../examples/builder/smithable.yml > the generated files are as re
   "src/generated/pages.ts": "d3e2e1f0 generated",
   "src/generated/project.import.server.ts": "36667ca1 generated",
   "src/generated/project.import.ts": "972cb779 generated",
-  "src/generated/project.schema.ts": "17205929 generated",
+  "src/generated/project.schema.ts": "8d736d38 generated",
   "src/generated/project.server.ts": "a4735ae5 generated",
   "src/generated/project.ts": "6c1b414c generated",
   "src/generated/roles.ts": "2040923c generated",
@@ -45197,7 +45217,7 @@ exports[`../../../examples/builder/smithable.yml > the generated files are as re
   "src/generated/users.test.ts": "76509344 generated",
   "src/kit/ActionButton.tsx": "6a3b0c0a kit",
   "src/kit/ActivityLog.tsx": "e53a5289 kit",
-  "src/kit/AiMark.tsx": "2dd9487f kit",
+  "src/kit/AiMark.tsx": "f9eb07a2 kit",
   "src/kit/AppCard.tsx": "76e8455d kit",
   "src/kit/AppLink.tsx": "841a9af0 kit",
   "src/kit/AppShell.tsx": "fda2cf43 kit",
@@ -45208,17 +45228,17 @@ exports[`../../../examples/builder/smithable.yml > the generated files are as re
   "src/kit/Dashboard.tsx": "98bcd927 kit",
   "src/kit/FieldInput.tsx": "39e40fcb kit",
   "src/kit/FileInput.tsx": "5d567f82 kit",
-  "src/kit/Filters.tsx": "ceea52dc kit",
+  "src/kit/Filters.tsx": "0f5bfdfd kit",
   "src/kit/ImportDialog.tsx": "d65da47a kit",
   "src/kit/InlineRows.tsx": "5a097006 kit",
-  "src/kit/Landing.tsx": "6cf7b213 kit",
+  "src/kit/Landing.tsx": "2bcf13ff kit",
   "src/kit/LegalPage.tsx": "f9a9df1e kit",
-  "src/kit/ModelForm.tsx": "b857b574 kit",
-  "src/kit/ModelTable.tsx": "0213cf74 kit",
+  "src/kit/ModelForm.tsx": "f90ea7e8 kit",
+  "src/kit/ModelTable.tsx": "5252e1d6 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "fb5e87dc kit",
-  "src/kit/PictureDialog.tsx": "1495b136 kit",
-  "src/kit/PictureInput.tsx": "993db3fb kit",
+  "src/kit/PictureDialog.tsx": "c482ecbe kit",
+  "src/kit/PictureInput.tsx": "e0362347 kit",
   "src/kit/RecordSummary.tsx": "f0415723 kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
   "src/kit/SelectionBar.tsx": "97aa9165 kit",
@@ -45260,7 +45280,7 @@ exports[`../../../examples/builder/smithable.yml > the generated files are as re
   "src/kit/time-text.ts": "eb8db028 kit",
   "src/kit/trace.server.ts": "8c886a7b kit",
   "src/kit/unused-samples.ts": "860c6650 kit",
-  "src/kit/uploads.ts": "724b80f6 kit",
+  "src/kit/uploads.ts": "118c5b96 kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/words.ts": "dd75b285 kit",
   "src/kit/words/en.ts": "a509a677 kit",
@@ -45283,7 +45303,7 @@ exports[`../../../examples/builder/smithable.yml > the generated files are as re
   "src/routes/files/$model.$id.$field.$n.ts": "5288014d kit",
   "src/routes/files/$model.$id.$field.ts": "93378bd7 kit",
   "src/routes/health.ts": "362c9904 kit",
-  "src/routes/index.tsx": "574963c9 generated",
+  "src/routes/index.tsx": "29750d80 generated",
   "src/routes/privacy/index.tsx": "66a357d1 generated",
   "src/routes/projects/$id.tsx": "b413344a generated",
   "src/routes/projects/index.tsx": "07e25658 generated",
@@ -45299,7 +45319,7 @@ exports[`../../../examples/builder/smithable.yml > the generated files are as re
   "src/routes/team/index.tsx": "66862ce0 generated",
   "src/start.ts": "6b874d2d kit",
   "src/styles.css": "706d757b kit",
-  "src/theme.css": "2c20fc19 generated",
+  "src/theme.css": "1fd40aa1 generated",
   "tests/smoke.spec.ts": "8b39da31 generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "3ee61b99 kit",
@@ -54683,6 +54703,11 @@ exports[`../../../examples/crm/smithable.yml > file list and generated code > sr
   --primary-hover: color-mix(in oklch, var(--primary), white 30%);
   --destructive-hover: color-mix(in oklch, var(--destructive), white 30%);
 }
+
+/* The badge by each picture's kind (aiBadge unsaid): none on a drawn one (src/kit/AiMark.tsx). */
+[data-part="ai-mark"][data-kind="ai-drawn"] {
+  display: none;
+}
 "
 `;
 
@@ -55104,7 +55129,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/generated/users.ts": "f77bb99b generated",
   "src/kit/ActionButton.tsx": "6a3b0c0a kit",
   "src/kit/ActivityLog.tsx": "e53a5289 kit",
-  "src/kit/AiMark.tsx": "2dd9487f kit",
+  "src/kit/AiMark.tsx": "f9eb07a2 kit",
   "src/kit/AppCard.tsx": "76e8455d kit",
   "src/kit/AppLink.tsx": "841a9af0 kit",
   "src/kit/AppShell.tsx": "fda2cf43 kit",
@@ -55114,17 +55139,17 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/Consent.tsx": "c5ee7e50 kit",
   "src/kit/Dashboard.tsx": "98bcd927 kit",
   "src/kit/FieldInput.tsx": "39e40fcb kit",
-  "src/kit/Filters.tsx": "ceea52dc kit",
+  "src/kit/Filters.tsx": "0f5bfdfd kit",
   "src/kit/ImportDialog.tsx": "d65da47a kit",
   "src/kit/InlineRows.tsx": "5a097006 kit",
   "src/kit/Inspector.tsx": "2425cac5 kit",
-  "src/kit/Landing.tsx": "6cf7b213 kit",
+  "src/kit/Landing.tsx": "2bcf13ff kit",
   "src/kit/MergeDialog.tsx": "9794e745 kit",
-  "src/kit/ModelForm.tsx": "b857b574 kit",
-  "src/kit/ModelTable.tsx": "0213cf74 kit",
+  "src/kit/ModelForm.tsx": "f90ea7e8 kit",
+  "src/kit/ModelTable.tsx": "5252e1d6 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "fb5e87dc kit",
-  "src/kit/PictureDialog.tsx": "1495b136 kit",
+  "src/kit/PictureDialog.tsx": "c482ecbe kit",
   "src/kit/RecordSummary.tsx": "f0415723 kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
   "src/kit/SelectionBar.tsx": "97aa9165 kit",
@@ -55214,7 +55239,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/routes/team/trash.tsx": "bbce40d6 generated",
   "src/start.ts": "6b874d2d kit",
   "src/styles.css": "706d757b kit",
-  "src/theme.css": "2c20fc19 generated",
+  "src/theme.css": "1fd40aa1 generated",
   "tests/smoke.spec.ts": "cd6797d3 generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "3ee61b99 kit",
@@ -64880,6 +64905,11 @@ exports[`../../../examples/invoicing/smithable.yml > file list and generated cod
   --primary-hover: color-mix(in oklch, var(--primary), white 30%);
   --destructive-hover: color-mix(in oklch, var(--destructive), white 30%);
 }
+
+/* The badge by each picture's kind (aiBadge unsaid): none on a drawn one (src/kit/AiMark.tsx). */
+[data-part="ai-mark"][data-kind="ai-drawn"] {
+  display: none;
+}
 "
 `;
 
@@ -65327,7 +65357,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/generated/uploads.ts": "a6f745ae generated",
   "src/kit/ActionButton.tsx": "6a3b0c0a kit",
   "src/kit/ActivityLog.tsx": "e53a5289 kit",
-  "src/kit/AiMark.tsx": "2dd9487f kit",
+  "src/kit/AiMark.tsx": "f9eb07a2 kit",
   "src/kit/AppCard.tsx": "76e8455d kit",
   "src/kit/AppLink.tsx": "841a9af0 kit",
   "src/kit/AppShell.tsx": "fda2cf43 kit",
@@ -65339,20 +65369,20 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/Document.tsx": "697cd7bc kit",
   "src/kit/FieldInput.tsx": "39e40fcb kit",
   "src/kit/FileInput.tsx": "5d567f82 kit",
-  "src/kit/Filters.tsx": "ceea52dc kit",
+  "src/kit/Filters.tsx": "0f5bfdfd kit",
   "src/kit/ImportDialog.tsx": "d65da47a kit",
   "src/kit/InlineRows.tsx": "5a097006 kit",
   "src/kit/Inspector.tsx": "2425cac5 kit",
-  "src/kit/Landing.tsx": "6cf7b213 kit",
+  "src/kit/Landing.tsx": "2bcf13ff kit",
   "src/kit/LegalPage.tsx": "f9a9df1e kit",
   "src/kit/Live.tsx": "fbaa47cd kit",
-  "src/kit/ModelForm.tsx": "b857b574 kit",
-  "src/kit/ModelTable.tsx": "0213cf74 kit",
+  "src/kit/ModelForm.tsx": "f90ea7e8 kit",
+  "src/kit/ModelTable.tsx": "5252e1d6 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Onboarding.tsx": "b68216f0 kit",
   "src/kit/Overflow.tsx": "fb5e87dc kit",
-  "src/kit/PictureDialog.tsx": "1495b136 kit",
-  "src/kit/PictureInput.tsx": "993db3fb kit",
+  "src/kit/PictureDialog.tsx": "c482ecbe kit",
+  "src/kit/PictureInput.tsx": "e0362347 kit",
   "src/kit/RecordSummary.tsx": "f0415723 kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
   "src/kit/SelectionBar.tsx": "97aa9165 kit",
@@ -65407,7 +65437,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "8c886a7b kit",
   "src/kit/unused-samples.ts": "860c6650 kit",
-  "src/kit/uploads.ts": "724b80f6 kit",
+  "src/kit/uploads.ts": "118c5b96 kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
@@ -65447,7 +65477,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/routes/welcome/index.tsx": "ad2a6a87 generated",
   "src/start.ts": "6b874d2d kit",
   "src/styles.css": "706d757b kit",
-  "src/theme.css": "2c20fc19 generated",
+  "src/theme.css": "1fd40aa1 generated",
   "tests/smoke.spec.ts": "dadec54d generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "3ee61b99 kit",
@@ -68944,7 +68974,7 @@ import { w } from "#/kit/words";
 export const dishSettable = createInsertSchema(schema.dishes, {
   name: (s) => s.trim().min(1, w.required).max(200, w.atMostCharacters(200)),
   description: (s) => s.max(10000, w.atMostCharacters(10000)),
-  picture: z.object({ file: z.string().regex(/^dish\\/[a-f0-9]{24}\\.webp$/), alt: z.string().trim().max(200), width: z.int().positive(), height: z.int().positive(), generated: z.literal(true).optional(), smaller: z.array(z.object({ file: z.string().regex(/^dish\\/[a-f0-9]{24}\\.webp$/), width: z.union([z.literal(480), z.literal(960)]), height: z.int().positive() })).max(2).optional(), receipt: z.string().max(64).optional() }).nullish(),
+  picture: z.object({ file: z.string().regex(/^dish\\/[a-f0-9]{24}\\.webp$/), alt: z.string().trim().max(200), width: z.int().positive(), height: z.int().positive(), generated: z.literal(true).optional(), kind: z.enum(["ai-realistic", "ai-drawn", "photograph"]).optional(), smaller: z.array(z.object({ file: z.string().regex(/^dish\\/[a-f0-9]{24}\\.webp$/), width: z.union([z.literal(480), z.literal(960)]), height: z.int().positive() })).max(2).optional(), receipt: z.string().max(64).optional() }).nullish(),
   allergens: (s) => s.max(200, w.atMostCharacters(200)),
 }).omit({ id: true, ownerId: true, createdAt: true, updatedAt: true });
 /** What a dish's form sends, checked. */
@@ -72892,7 +72922,7 @@ const readMenu = createServerFn().handler(async (): Promise<Menu> => {
       price: Number(r.price ?? 0),
       section: r.section ?? null,
       description: r.description ?? null,
-      picture: r.picture ? { src: \`/files/dish/\${r.id}/picture?v=\${r.picture.file.slice(-29, -5)}\`, alt: r.picture.alt, generated: r.picture.generated === true } : null,
+      picture: r.picture ? { src: \`/files/dish/\${r.id}/picture?v=\${r.picture.file.slice(-29, -5)}\`, alt: r.picture.alt, generated: r.picture.generated === true, kind: r.picture.kind } : null,
       available: r.available !== false,
     })),
     open: HOURS ? openAt(HOURS, now, app.timeZone) : true,
@@ -74261,6 +74291,11 @@ exports[`../../../examples/kiosk/smithable.yml > file list and generated code > 
   --primary-hover: color-mix(in oklch, var(--primary), white 30%);
   --destructive-hover: color-mix(in oklch, var(--destructive), white 30%);
 }
+
+/* The badge by each picture's kind (aiBadge unsaid): none on a drawn one (src/kit/AiMark.tsx). */
+[data-part="ai-mark"][data-kind="ai-drawn"] {
+  display: none;
+}
 "
 `;
 
@@ -74662,7 +74697,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/generated/dev-door.server.ts": "45e8136d generated",
   "src/generated/dish.import.server.ts": "aee46d8b generated",
   "src/generated/dish.import.ts": "44be2252 generated",
-  "src/generated/dish.schema.ts": "134b49aa generated",
+  "src/generated/dish.schema.ts": "95d2ee27 generated",
   "src/generated/dish.server.ts": "c54fc9a1 generated",
   "src/generated/dish.ts": "3b947d71 generated",
   "src/generated/hooks.ts": "5c440337 generated",
@@ -74692,7 +74727,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/generated/users.test.ts": "7acaec15 generated",
   "src/kit/ActionButton.tsx": "6a3b0c0a kit",
   "src/kit/ActivityLog.tsx": "e53a5289 kit",
-  "src/kit/AiMark.tsx": "2dd9487f kit",
+  "src/kit/AiMark.tsx": "f9eb07a2 kit",
   "src/kit/AppCard.tsx": "76e8455d kit",
   "src/kit/AppLink.tsx": "841a9af0 kit",
   "src/kit/AppShell.tsx": "fda2cf43 kit",
@@ -74701,18 +74736,18 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/Consent.tsx": "c5ee7e50 kit",
   "src/kit/FieldInput.tsx": "39e40fcb kit",
   "src/kit/FileInput.tsx": "5d567f82 kit",
-  "src/kit/Filters.tsx": "ceea52dc kit",
+  "src/kit/Filters.tsx": "0f5bfdfd kit",
   "src/kit/ImportDialog.tsx": "d65da47a kit",
   "src/kit/InlineRows.tsx": "5a097006 kit",
-  "src/kit/Landing.tsx": "6cf7b213 kit",
+  "src/kit/Landing.tsx": "2bcf13ff kit",
   "src/kit/Live.tsx": "fbaa47cd kit",
-  "src/kit/ModelForm.tsx": "b857b574 kit",
-  "src/kit/ModelTable.tsx": "0213cf74 kit",
+  "src/kit/ModelForm.tsx": "f90ea7e8 kit",
+  "src/kit/ModelTable.tsx": "5252e1d6 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
-  "src/kit/OrderPage.tsx": "d4a74208 kit",
+  "src/kit/OrderPage.tsx": "247ffe56 kit",
   "src/kit/Overflow.tsx": "fb5e87dc kit",
-  "src/kit/PictureDialog.tsx": "1495b136 kit",
-  "src/kit/PictureInput.tsx": "993db3fb kit",
+  "src/kit/PictureDialog.tsx": "c482ecbe kit",
+  "src/kit/PictureInput.tsx": "e0362347 kit",
   "src/kit/PushChoices.tsx": "ec2ec02f kit",
   "src/kit/RecordSummary.tsx": "f0415723 kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
@@ -74763,7 +74798,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/time-text.ts": "eb8db028 kit",
   "src/kit/trace.server.ts": "8c886a7b kit",
   "src/kit/unused-samples.ts": "860c6650 kit",
-  "src/kit/uploads.ts": "724b80f6 kit",
+  "src/kit/uploads.ts": "118c5b96 kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/words.ts": "dd75b285 kit",
   "src/kit/words/en.ts": "a509a677 kit",
@@ -74787,7 +74822,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/routes/files/$model.$id.$field.$n.ts": "5288014d kit",
   "src/routes/files/$model.$id.$field.ts": "93378bd7 kit",
   "src/routes/health.ts": "362c9904 kit",
-  "src/routes/index.tsx": "b35033a8 generated",
+  "src/routes/index.tsx": "f89691ae generated",
   "src/routes/orders/$id.tsx": "eb8a58da generated",
   "src/routes/orders/index.tsx": "4fb12d6e generated",
   "src/routes/orders/new.tsx": "1739d5ad generated",
@@ -74802,7 +74837,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/routes/where/index.tsx": "55545172 generated",
   "src/start.ts": "6b874d2d kit",
   "src/styles.css": "706d757b kit",
-  "src/theme.css": "2c20fc19 generated",
+  "src/theme.css": "1fd40aa1 generated",
   "tests/smoke.spec.ts": "7a8dce6a generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "3ee61b99 kit",
@@ -76676,7 +76711,7 @@ import { w } from "#/kit/words";
 /** What a item may be given: a form's values and what the app fills (an action's set). */
 export const itemSettable = createInsertSchema(schema.items, {
   title: (s) => s.trim().min(1, w.required).max(200, w.atMostCharacters(200)),
-  photos: z.array(z.object({ file: z.string().regex(/^item\\/[a-f0-9]{24}\\.webp$/), alt: z.string().trim().max(200), width: z.int().positive(), height: z.int().positive(), generated: z.literal(true).optional(), smaller: z.array(z.object({ file: z.string().regex(/^item\\/[a-f0-9]{24}\\.webp$/), width: z.union([z.literal(480), z.literal(960)]), height: z.int().positive() })).max(2).optional(), receipt: z.string().max(64).optional() })).max(10),
+  photos: z.array(z.object({ file: z.string().regex(/^item\\/[a-f0-9]{24}\\.webp$/), alt: z.string().trim().max(200), width: z.int().positive(), height: z.int().positive(), generated: z.literal(true).optional(), kind: z.enum(["ai-realistic", "ai-drawn", "photograph"]).optional(), smaller: z.array(z.object({ file: z.string().regex(/^item\\/[a-f0-9]{24}\\.webp$/), width: z.union([z.literal(480), z.literal(960)]), height: z.int().positive() })).max(2).optional(), receipt: z.string().max(64).optional() })).max(10),
   description: (s) => s.trim().min(1, w.required).max(10000, w.atMostCharacters(10000)),
   place: (s) => s.max(200, w.atMostCharacters(200)),
 }).omit({ id: true, ownerId: true, createdAt: true, updatedAt: true });
@@ -79616,7 +79651,7 @@ function HomePage() {
             key: row.id,
             title: String(row.title),
             href: \`/\${row.id}\`,
-            picture: row.photos?.[0] ? { src: \`/files/item/\${row.id}/photos/0?v=\${row.photos[0].file.slice(-29, -5)}\`, alt: row.photos[0].alt, width: row.photos[0].width, height: row.photos[0].height, generated: row.photos[0].generated } : undefined,
+            picture: row.photos?.[0] ? { src: \`/files/item/\${row.id}/photos/0?v=\${row.photos[0].file.slice(-29, -5)}\`, alt: row.photos[0].alt, width: row.photos[0].width, height: row.photos[0].height, generated: row.photos[0].generated, kind: row.photos[0].kind } : undefined,
             text: row.description ?? undefined,
             badge: itemUi.fields.find((f) => f.name === "category")?.choices?.find((c) => c.value === row.category)?.label,
             amount: row.price == null ? undefined : moneyText(row.price, app.currency),
@@ -79762,6 +79797,11 @@ exports[`../../../examples/marketplace/smithable.yml > file list and generated c
   --hover: color-mix(in oklab, var(--foreground) 10%, transparent);
   --primary-hover: color-mix(in oklch, var(--primary), white 30%);
   --destructive-hover: color-mix(in oklch, var(--destructive), white 30%);
+}
+
+/* The badge by each picture's kind (aiBadge unsaid): none on a drawn one (src/kit/AiMark.tsx). */
+[data-part="ai-mark"][data-kind="ai-drawn"] {
+  display: none;
 }
 "
 `;
@@ -80119,7 +80159,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/generated/hooks.ts": "e268b462 generated",
   "src/generated/item.import.server.ts": "0fe6563a generated",
   "src/generated/item.import.ts": "0cb7ece1 generated",
-  "src/generated/item.schema.ts": "dffca266 generated",
+  "src/generated/item.schema.ts": "b554672d generated",
   "src/generated/item.server.ts": "419536a2 generated",
   "src/generated/item.ts": "9051834d generated",
   "src/generated/my-time.ts": "c315432b generated",
@@ -80131,7 +80171,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/generated/uploads.ts": "ca55296a generated",
   "src/kit/ActionButton.tsx": "6a3b0c0a kit",
   "src/kit/ActivityLog.tsx": "e53a5289 kit",
-  "src/kit/AiMark.tsx": "2dd9487f kit",
+  "src/kit/AiMark.tsx": "f9eb07a2 kit",
   "src/kit/AppCard.tsx": "76e8455d kit",
   "src/kit/AppLink.tsx": "841a9af0 kit",
   "src/kit/AppShell.tsx": "fda2cf43 kit",
@@ -80142,17 +80182,17 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/ContactOwner.tsx": "77a395cc kit",
   "src/kit/FieldInput.tsx": "39e40fcb kit",
   "src/kit/FileInput.tsx": "5d567f82 kit",
-  "src/kit/Filters.tsx": "ceea52dc kit",
+  "src/kit/Filters.tsx": "0f5bfdfd kit",
   "src/kit/ImportDialog.tsx": "d65da47a kit",
   "src/kit/InlineRows.tsx": "5a097006 kit",
   "src/kit/Inspector.tsx": "2425cac5 kit",
-  "src/kit/Landing.tsx": "6cf7b213 kit",
-  "src/kit/ModelForm.tsx": "b857b574 kit",
-  "src/kit/ModelTable.tsx": "0213cf74 kit",
+  "src/kit/Landing.tsx": "2bcf13ff kit",
+  "src/kit/ModelForm.tsx": "f90ea7e8 kit",
+  "src/kit/ModelTable.tsx": "5252e1d6 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "fb5e87dc kit",
-  "src/kit/PictureDialog.tsx": "1495b136 kit",
-  "src/kit/PictureInput.tsx": "993db3fb kit",
+  "src/kit/PictureDialog.tsx": "c482ecbe kit",
+  "src/kit/PictureInput.tsx": "e0362347 kit",
   "src/kit/RecordSummary.tsx": "f0415723 kit",
   "src/kit/Review.tsx": "3dc198b3 kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
@@ -80202,7 +80242,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "8c886a7b kit",
   "src/kit/unused-samples.ts": "860c6650 kit",
-  "src/kit/uploads.ts": "724b80f6 kit",
+  "src/kit/uploads.ts": "118c5b96 kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
@@ -80238,10 +80278,10 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/routes/saved/new.tsx": "6599de80 generated",
   "src/routes/sign-in.tsx": "563d1820 generated",
   "src/routes/sitemap[.]xml.ts": "abb491ed generated",
-  "src/routes/welcome/index.tsx": "a572d932 generated",
+  "src/routes/welcome/index.tsx": "80907333 generated",
   "src/start.ts": "6b874d2d kit",
   "src/styles.css": "706d757b kit",
-  "src/theme.css": "2c20fc19 generated",
+  "src/theme.css": "1fd40aa1 generated",
   "tests/smoke.spec.ts": "dcf4060e generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "3ee61b99 kit",
@@ -83408,8 +83448,8 @@ export const jobSettable = createInsertSchema(schema.jobs, {
   place: (s) => s.max(200, w.atMostCharacters(200)),
   year: (s) => s.max(200, w.atMostCharacters(200)),
   summary: (s) => s.max(10000, w.atMostCharacters(10000)),
-  photos: z.array(z.object({ file: z.string().regex(/^job\\/[a-f0-9]{24}\\.webp$/), alt: z.string().trim().max(200), width: z.int().positive(), height: z.int().positive(), generated: z.literal(true).optional(), smaller: z.array(z.object({ file: z.string().regex(/^job\\/[a-f0-9]{24}\\.webp$/), width: z.union([z.literal(480), z.literal(960)]), height: z.int().positive() })).max(2).optional(), receipt: z.string().max(64).optional() })).max(10).nullish(),
-  before: z.array(z.object({ file: z.string().regex(/^job\\/[a-f0-9]{24}\\.webp$/), alt: z.string().trim().max(200), width: z.int().positive(), height: z.int().positive(), generated: z.literal(true).optional(), smaller: z.array(z.object({ file: z.string().regex(/^job\\/[a-f0-9]{24}\\.webp$/), width: z.union([z.literal(480), z.literal(960)]), height: z.int().positive() })).max(2).optional(), receipt: z.string().max(64).optional() })).max(10).nullish(),
+  photos: z.array(z.object({ file: z.string().regex(/^job\\/[a-f0-9]{24}\\.webp$/), alt: z.string().trim().max(200), width: z.int().positive(), height: z.int().positive(), generated: z.literal(true).optional(), kind: z.enum(["ai-realistic", "ai-drawn", "photograph"]).optional(), smaller: z.array(z.object({ file: z.string().regex(/^job\\/[a-f0-9]{24}\\.webp$/), width: z.union([z.literal(480), z.literal(960)]), height: z.int().positive() })).max(2).optional(), receipt: z.string().max(64).optional() })).max(10).nullish(),
+  before: z.array(z.object({ file: z.string().regex(/^job\\/[a-f0-9]{24}\\.webp$/), alt: z.string().trim().max(200), width: z.int().positive(), height: z.int().positive(), generated: z.literal(true).optional(), kind: z.enum(["ai-realistic", "ai-drawn", "photograph"]).optional(), smaller: z.array(z.object({ file: z.string().regex(/^job\\/[a-f0-9]{24}\\.webp$/), width: z.union([z.literal(480), z.literal(960)]), height: z.int().positive() })).max(2).optional(), receipt: z.string().max(64).optional() })).max(10).nullish(),
 }).omit({ id: true, ownerId: true, createdAt: true, updatedAt: true });
 /** What a job's form sends, checked. */
 export const jobSchema = jobSettable;
@@ -85530,7 +85570,7 @@ function HomePage() {
             key: row.id,
             title: String(row.title),
             href: \`/jobs/\${row.id}\`,
-            picture: row.photos?.[0] ? { src: \`/files/job/\${row.id}/photos/0?v=\${row.photos[0].file.slice(-29, -5)}\`, alt: row.photos[0].alt, width: row.photos[0].width, height: row.photos[0].height, generated: row.photos[0].generated } : undefined,
+            picture: row.photos?.[0] ? { src: \`/files/job/\${row.id}/photos/0?v=\${row.photos[0].file.slice(-29, -5)}\`, alt: row.photos[0].alt, width: row.photos[0].width, height: row.photos[0].height, generated: row.photos[0].generated, kind: row.photos[0].kind } : undefined,
             text: row.summary ?? undefined,
             badge: jobUi.fields.find((f) => f.name === "surface")?.choices?.find((c) => c.value === row.surface)?.label,
           }))}
@@ -86544,6 +86584,11 @@ exports[`../../../examples/painter/smithable.yml > file list and generated code 
   --primary-hover: color-mix(in oklch, var(--primary), white 30%);
   --destructive-hover: color-mix(in oklch, var(--destructive), white 30%);
 }
+
+/* The badge by each picture's kind (aiBadge unsaid): none on a drawn one (src/kit/AiMark.tsx). */
+[data-part="ai-mark"][data-kind="ai-drawn"] {
+  display: none;
+}
 "
 `;
 
@@ -86922,7 +86967,7 @@ exports[`../../../examples/painter/smithable.yml > the generated files are as re
   "src/generated/hooks.ts": "8a1f7baf generated",
   "src/generated/job.import.server.ts": "1cd5fe7e generated",
   "src/generated/job.import.ts": "96b96a57 generated",
-  "src/generated/job.schema.ts": "240602d0 generated",
+  "src/generated/job.schema.ts": "4fde69c0 generated",
   "src/generated/job.server.ts": "334bef34 generated",
   "src/generated/job.ts": "2ce0ebd9 generated",
   "src/generated/my-time.ts": "c315432b generated",
@@ -86934,7 +86979,7 @@ exports[`../../../examples/painter/smithable.yml > the generated files are as re
   "src/generated/users.test.ts": "ec49197c generated",
   "src/kit/ActionButton.tsx": "6a3b0c0a kit",
   "src/kit/ActivityLog.tsx": "e53a5289 kit",
-  "src/kit/AiMark.tsx": "2dd9487f kit",
+  "src/kit/AiMark.tsx": "f9eb07a2 kit",
   "src/kit/AppCard.tsx": "76e8455d kit",
   "src/kit/AppLink.tsx": "841a9af0 kit",
   "src/kit/AppShell.tsx": "fda2cf43 kit",
@@ -86945,17 +86990,17 @@ exports[`../../../examples/painter/smithable.yml > the generated files are as re
   "src/kit/Dashboard.tsx": "98bcd927 kit",
   "src/kit/FieldInput.tsx": "39e40fcb kit",
   "src/kit/FileInput.tsx": "5d567f82 kit",
-  "src/kit/Filters.tsx": "ceea52dc kit",
+  "src/kit/Filters.tsx": "0f5bfdfd kit",
   "src/kit/ImportDialog.tsx": "d65da47a kit",
   "src/kit/InlineRows.tsx": "5a097006 kit",
-  "src/kit/Landing.tsx": "6cf7b213 kit",
+  "src/kit/Landing.tsx": "2bcf13ff kit",
   "src/kit/LegalPage.tsx": "f9a9df1e kit",
-  "src/kit/ModelForm.tsx": "b857b574 kit",
-  "src/kit/ModelTable.tsx": "0213cf74 kit",
+  "src/kit/ModelForm.tsx": "f90ea7e8 kit",
+  "src/kit/ModelTable.tsx": "5252e1d6 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "fb5e87dc kit",
-  "src/kit/PictureDialog.tsx": "1495b136 kit",
-  "src/kit/PictureInput.tsx": "993db3fb kit",
+  "src/kit/PictureDialog.tsx": "c482ecbe kit",
+  "src/kit/PictureInput.tsx": "e0362347 kit",
   "src/kit/RecordSummary.tsx": "f0415723 kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
   "src/kit/SelectionBar.tsx": "97aa9165 kit",
@@ -86997,7 +87042,7 @@ exports[`../../../examples/painter/smithable.yml > the generated files are as re
   "src/kit/time-text.ts": "eb8db028 kit",
   "src/kit/trace.server.ts": "8c886a7b kit",
   "src/kit/unused-samples.ts": "860c6650 kit",
-  "src/kit/uploads.ts": "724b80f6 kit",
+  "src/kit/uploads.ts": "118c5b96 kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/words.ts": "dd75b285 kit",
   "src/kit/words/en.ts": "a509a677 kit",
@@ -87020,7 +87065,7 @@ exports[`../../../examples/painter/smithable.yml > the generated files are as re
   "src/routes/files/$model.$id.$field.$n.ts": "5288014d kit",
   "src/routes/files/$model.$id.$field.ts": "93378bd7 kit",
   "src/routes/health.ts": "362c9904 kit",
-  "src/routes/index.tsx": "571f91ed generated",
+  "src/routes/index.tsx": "eebec976 generated",
   "src/routes/jobs/$id.tsx": "0e5a54dd generated",
   "src/routes/jobs/index.tsx": "631b8020 generated",
   "src/routes/jobs/new.tsx": "65893714 generated",
@@ -87033,7 +87078,7 @@ exports[`../../../examples/painter/smithable.yml > the generated files are as re
   "src/routes/team/index.tsx": "a6bc2c30 generated",
   "src/start.ts": "6b874d2d kit",
   "src/styles.css": "706d757b kit",
-  "src/theme.css": "2c20fc19 generated",
+  "src/theme.css": "1fd40aa1 generated",
   "tests/smoke.spec.ts": "6b877684 generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "3ee61b99 kit",
@@ -90706,6 +90751,11 @@ exports[`../../../examples/records/smithable.yml > file list and generated code 
   --primary-hover: color-mix(in oklch, var(--primary), white 30%);
   --destructive-hover: color-mix(in oklch, var(--destructive), white 30%);
 }
+
+/* The badge by each picture's kind (aiBadge unsaid): none on a drawn one (src/kit/AiMark.tsx). */
+[data-part="ai-mark"][data-kind="ai-drawn"] {
+  display: none;
+}
 "
 `;
 
@@ -91024,7 +91074,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/generated/site.ts": "307674d6 generated",
   "src/kit/ActionButton.tsx": "6a3b0c0a kit",
   "src/kit/ActivityLog.tsx": "e53a5289 kit",
-  "src/kit/AiMark.tsx": "2dd9487f kit",
+  "src/kit/AiMark.tsx": "f9eb07a2 kit",
   "src/kit/AppCard.tsx": "76e8455d kit",
   "src/kit/AppLink.tsx": "841a9af0 kit",
   "src/kit/AppShell.tsx": "fda2cf43 kit",
@@ -91033,16 +91083,16 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/Combobox.tsx": "c3a18c75 kit",
   "src/kit/Consent.tsx": "c5ee7e50 kit",
   "src/kit/FieldInput.tsx": "39e40fcb kit",
-  "src/kit/Filters.tsx": "ceea52dc kit",
+  "src/kit/Filters.tsx": "0f5bfdfd kit",
   "src/kit/ImportDialog.tsx": "d65da47a kit",
   "src/kit/InlineRows.tsx": "5a097006 kit",
   "src/kit/Inspector.tsx": "2425cac5 kit",
-  "src/kit/Landing.tsx": "6cf7b213 kit",
-  "src/kit/ModelForm.tsx": "b857b574 kit",
-  "src/kit/ModelTable.tsx": "0213cf74 kit",
+  "src/kit/Landing.tsx": "2bcf13ff kit",
+  "src/kit/ModelForm.tsx": "f90ea7e8 kit",
+  "src/kit/ModelTable.tsx": "5252e1d6 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "fb5e87dc kit",
-  "src/kit/PictureDialog.tsx": "1495b136 kit",
+  "src/kit/PictureDialog.tsx": "c482ecbe kit",
   "src/kit/RecordSummary.tsx": "f0415723 kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
   "src/kit/SelectionBar.tsx": "97aa9165 kit",
@@ -91116,7 +91166,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/routes/sitemap[.]xml.ts": "8c1882fb generated",
   "src/start.ts": "6b874d2d kit",
   "src/styles.css": "706d757b kit",
-  "src/theme.css": "2c20fc19 generated",
+  "src/theme.css": "1fd40aa1 generated",
   "tests/smoke.spec.ts": "b04668e0 generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "3ee61b99 kit",
@@ -97847,6 +97897,11 @@ exports[`../../../examples/restaurant/smithable.yml > file list and generated co
   --primary-hover: color-mix(in oklch, var(--primary), white 30%);
   --destructive-hover: color-mix(in oklch, var(--destructive), white 30%);
 }
+
+/* The badge by each picture's kind (aiBadge unsaid): none on a drawn one (src/kit/AiMark.tsx). */
+[data-part="ai-mark"][data-kind="ai-drawn"] {
+  display: none;
+}
 "
 `;
 
@@ -98247,7 +98302,7 @@ exports[`../../../examples/restaurant/smithable.yml > the generated files are as
   "src/generated/venue.ts": "813c9669 generated",
   "src/kit/ActionButton.tsx": "6a3b0c0a kit",
   "src/kit/ActivityLog.tsx": "e53a5289 kit",
-  "src/kit/AiMark.tsx": "2dd9487f kit",
+  "src/kit/AiMark.tsx": "f9eb07a2 kit",
   "src/kit/AppCard.tsx": "76e8455d kit",
   "src/kit/AppLink.tsx": "841a9af0 kit",
   "src/kit/AppShell.tsx": "fda2cf43 kit",
@@ -98255,15 +98310,15 @@ exports[`../../../examples/restaurant/smithable.yml > the generated files are as
   "src/kit/Combobox.tsx": "c3a18c75 kit",
   "src/kit/Consent.tsx": "c5ee7e50 kit",
   "src/kit/FieldInput.tsx": "39e40fcb kit",
-  "src/kit/Filters.tsx": "ceea52dc kit",
+  "src/kit/Filters.tsx": "0f5bfdfd kit",
   "src/kit/ImportDialog.tsx": "d65da47a kit",
   "src/kit/InlineRows.tsx": "5a097006 kit",
-  "src/kit/Landing.tsx": "6cf7b213 kit",
-  "src/kit/ModelForm.tsx": "b857b574 kit",
-  "src/kit/ModelTable.tsx": "0213cf74 kit",
+  "src/kit/Landing.tsx": "2bcf13ff kit",
+  "src/kit/ModelForm.tsx": "f90ea7e8 kit",
+  "src/kit/ModelTable.tsx": "5252e1d6 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "fb5e87dc kit",
-  "src/kit/PictureDialog.tsx": "1495b136 kit",
+  "src/kit/PictureDialog.tsx": "c482ecbe kit",
   "src/kit/RecordSummary.tsx": "f0415723 kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
   "src/kit/SelectionBar.tsx": "97aa9165 kit",
@@ -98338,7 +98393,7 @@ exports[`../../../examples/restaurant/smithable.yml > the generated files are as
   "src/routes/venue/index.tsx": "d91537a5 generated",
   "src/start.ts": "6b874d2d kit",
   "src/styles.css": "706d757b kit",
-  "src/theme.css": "2c20fc19 generated",
+  "src/theme.css": "1fd40aa1 generated",
   "tests/smoke.spec.ts": "3a404ee7 generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "3ee61b99 kit",
@@ -112269,6 +112324,11 @@ exports[`../../../examples/status/smithable.yml > file list and generated code >
   --primary-hover: color-mix(in oklch, var(--primary), white 30%);
   --destructive-hover: color-mix(in oklch, var(--destructive), white 30%);
 }
+
+/* The badge by each picture's kind (aiBadge unsaid): none on a drawn one (src/kit/AiMark.tsx). */
+[data-part="ai-mark"][data-kind="ai-drawn"] {
+  display: none;
+}
 "
 `;
 
@@ -112731,30 +112791,30 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/generated/users.test.ts": "253c266e generated",
   "src/kit/ActionButton.tsx": "6a3b0c0a kit",
   "src/kit/ActivityLog.tsx": "e53a5289 kit",
-  "src/kit/AiMark.tsx": "2dd9487f kit",
+  "src/kit/AiMark.tsx": "f9eb07a2 kit",
   "src/kit/AppCard.tsx": "76e8455d kit",
   "src/kit/AppLink.tsx": "841a9af0 kit",
   "src/kit/AppShell.tsx": "fda2cf43 kit",
   "src/kit/AppearancePicker.tsx": "0cd564d2 kit",
-  "src/kit/Articles.tsx": "72359ede kit",
+  "src/kit/Articles.tsx": "f3fb4114 kit",
   "src/kit/Ask.tsx": "e5277427 kit",
   "src/kit/Combobox.tsx": "c3a18c75 kit",
   "src/kit/Consent.tsx": "c5ee7e50 kit",
   "src/kit/Dashboard.tsx": "98bcd927 kit",
   "src/kit/FieldInput.tsx": "39e40fcb kit",
-  "src/kit/Filters.tsx": "ceea52dc kit",
+  "src/kit/Filters.tsx": "0f5bfdfd kit",
   "src/kit/ImportDialog.tsx": "d65da47a kit",
   "src/kit/InlineRows.tsx": "5a097006 kit",
   "src/kit/Inspector.tsx": "2425cac5 kit",
   "src/kit/Keys.tsx": "f32c246d kit",
-  "src/kit/Landing.tsx": "6cf7b213 kit",
+  "src/kit/Landing.tsx": "2bcf13ff kit",
   "src/kit/Markdown.tsx": "24e2fcd2 kit",
   "src/kit/MarkdownFormatted.tsx": "300ef9a1 kit",
-  "src/kit/ModelForm.tsx": "b857b574 kit",
-  "src/kit/ModelTable.tsx": "0213cf74 kit",
+  "src/kit/ModelForm.tsx": "f90ea7e8 kit",
+  "src/kit/ModelTable.tsx": "5252e1d6 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "fb5e87dc kit",
-  "src/kit/PictureDialog.tsx": "1495b136 kit",
+  "src/kit/PictureDialog.tsx": "c482ecbe kit",
   "src/kit/RecordSummary.tsx": "f0415723 kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
   "src/kit/SelectionBar.tsx": "97aa9165 kit",
@@ -112858,7 +112918,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/routes/updates/new.tsx": "ac78941b generated",
   "src/start.ts": "6b874d2d kit",
   "src/styles.css": "706d757b kit",
-  "src/theme.css": "2c20fc19 generated",
+  "src/theme.css": "1fd40aa1 generated",
   "tests/smoke.spec.ts": "5de3170c generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "3ee61b99 kit",
@@ -120434,6 +120494,11 @@ exports[`../../../examples/support/smithable.yml > file list and generated code 
   --primary-hover: color-mix(in oklch, var(--primary), white 30%);
   --destructive-hover: color-mix(in oklch, var(--destructive), white 30%);
 }
+
+/* The badge by each picture's kind (aiBadge unsaid): none on a drawn one (src/kit/AiMark.tsx). */
+[data-part="ai-mark"][data-kind="ai-drawn"] {
+  display: none;
+}
 "
 `;
 
@@ -120813,7 +120878,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/generated/users.ts": "f77bb99b generated",
   "src/kit/ActionButton.tsx": "6a3b0c0a kit",
   "src/kit/ActivityLog.tsx": "e53a5289 kit",
-  "src/kit/AiMark.tsx": "2dd9487f kit",
+  "src/kit/AiMark.tsx": "f9eb07a2 kit",
   "src/kit/AppCard.tsx": "76e8455d kit",
   "src/kit/AppLink.tsx": "841a9af0 kit",
   "src/kit/AppShell.tsx": "fda2cf43 kit",
@@ -120823,17 +120888,17 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/Consent.tsx": "c5ee7e50 kit",
   "src/kit/FieldInput.tsx": "39e40fcb kit",
   "src/kit/FileInput.tsx": "5d567f82 kit",
-  "src/kit/Filters.tsx": "ceea52dc kit",
+  "src/kit/Filters.tsx": "0f5bfdfd kit",
   "src/kit/ImportDialog.tsx": "d65da47a kit",
   "src/kit/InlineRows.tsx": "5a097006 kit",
   "src/kit/Inspector.tsx": "2425cac5 kit",
   "src/kit/Live.tsx": "fbaa47cd kit",
-  "src/kit/ModelForm.tsx": "b857b574 kit",
-  "src/kit/ModelTable.tsx": "0213cf74 kit",
+  "src/kit/ModelForm.tsx": "f90ea7e8 kit",
+  "src/kit/ModelTable.tsx": "5252e1d6 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "fb5e87dc kit",
-  "src/kit/PictureDialog.tsx": "1495b136 kit",
-  "src/kit/PictureInput.tsx": "993db3fb kit",
+  "src/kit/PictureDialog.tsx": "c482ecbe kit",
+  "src/kit/PictureInput.tsx": "e0362347 kit",
   "src/kit/RecordSummary.tsx": "f0415723 kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
   "src/kit/SelectionBar.tsx": "97aa9165 kit",
@@ -120887,7 +120952,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "8c886a7b kit",
   "src/kit/unused-samples.ts": "860c6650 kit",
-  "src/kit/uploads.ts": "724b80f6 kit",
+  "src/kit/uploads.ts": "118c5b96 kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
@@ -120921,7 +120986,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/routes/team/index.tsx": "b9305ec9 generated",
   "src/start.ts": "6b874d2d kit",
   "src/styles.css": "706d757b kit",
-  "src/theme.css": "2c20fc19 generated",
+  "src/theme.css": "1fd40aa1 generated",
   "tests/smoke.spec.ts": "ed46d289 generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "3ee61b99 kit",

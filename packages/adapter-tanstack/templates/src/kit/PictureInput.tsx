@@ -7,7 +7,7 @@ import { ChevronLeft, ChevronRight, ImagePlus, X } from "lucide-react";
 import { useId, useRef, useState } from "react";
 import { Button } from "#/components/ui/button";
 import { Input, Label } from "#/components/ui/input";
-import { AiMarked } from "./AiMark";
+import { AiMarked, type PictureKind } from "./AiMark";
 import { versioned } from "./file-address";
 import type { FieldControlProps } from "./model";
 import { w } from "./words";
@@ -19,6 +19,8 @@ export interface PictureValue {
   height: number;
   /** Made by an AI (a sample record's picture from the image library): marked where shown. */
   generated?: true;
+  /** What it is (picture-kinds.md §2): the badge's default follows it. */
+  kind?: PictureKind;
   /** The same picture narrower, each its own file (src/kit/uploads.ts, SmallerPicture). */
   smaller?: { file: string; width: number; height: number }[];
 }
@@ -146,7 +148,7 @@ export function PictureInput({
       {picture ? (
         <div className="flex flex-wrap items-start gap-4">
           {src ? (
-            <AiMarked generated={picture.generated} className="shrink-0">
+            <AiMarked generated={picture.generated} kind={picture.kind} className="shrink-0">
               <img
                 src={src}
                 alt={picture.alt}
@@ -312,7 +314,7 @@ export function PicturesInput({
                 {src(p) ? (
                   // Opens large: a link, so it works where the form is read only.
                   <a href={src(p)} target="_blank" rel="noreferrer">
-                    <AiMarked generated={p.generated}>
+                    <AiMarked generated={p.generated} kind={p.kind}>
                       <img
                         src={src(p)}
                         alt={p.alt}

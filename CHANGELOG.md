@@ -12,6 +12,8 @@ The entries are filled in from the merged pull requests at each release. A fix t
 
 ### Breaking
 
+- **The engine**: `setAiBadge` takes `on`, `off` or `default` (it took `shown: true|false`), and switching the badge off while a realistic AI picture is placed needs `--acknowledged`. **The spec**: `aiBadge` unsaid no longer means on: it means by each picture's `kind` (a drawn picture is not badged); an app that wants every AI picture badged says `aiBadge: true`. Pictures without a `kind`, every app's today, are badged as before.
+
 - **The engine**: `smithable report --always` and Studio's Always send are gone: every error report is shown in full and sent by hand. Someone who chose always before is asked again.
 
 - **The spec**: a name, a label, a title or a subject is one line, in every spec file; the longer texts (descriptions, intents, rules, a section's text, help, answers, quotes) may still run over several. Control characters, the line breaks U+2028, U+2029 and U+0085, and the characters that reverse text's direction are refused anywhere.

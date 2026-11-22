@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { expect, test } from "vitest";
@@ -40,6 +40,30 @@ test("an operation refused because its result would not validate says why, and o
     expect(code).toBe(1);
     expect(io.stderr).toContain("editSpec would make smithable.yml invalid.");
     expect(io.stderr).not.toContain("smithable report");
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("switching the AI badge off is refused while a realistic placed picture would lose it", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "smithable-op-badge-"));
+  try {
+    writeFileSync(
+      join(dir, "smithable.yml"),
+      "smithable: 0.1\napp: { name: Shop }\nmodels:\n  Item: { fields: { name: string! } }\npages:\n  items: { crud: Item }\n",
+    );
+    writeFileSync(join(dir, "smithable.ux.yml"), "smithableUx: 0.1\n");
+    mkdirSync(join(dir, "public", "images"), { recursive: true });
+    writeFileSync(
+      join(dir, "public", "images", "pictures.json"),
+      JSON.stringify({
+        "samples/0.webp": { generated: true, role: "sample", kind: "ai-realistic" },
+      }),
+    );
+    const io = captureIo();
+    expect(await op(dir, io, "setAiBadge", ["off"], { yes: false })).toBe(1);
+    expect(io.stderr).toContain("--acknowledged");
+    expect(readFileSync(join(dir, "smithable.ux.yml"), "utf8")).toBe("smithableUx: 0.1\n");
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

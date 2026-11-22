@@ -48,7 +48,7 @@ import {
 } from "@smithable/core";
 import { hostedLevel, levelWarnings } from "./hosted-level.js";
 import type { Io } from "./io.js";
-import { readRecords, sha256 } from "./picture-style.js";
+import { badgeExplained, readRecords, sha256 } from "./picture-style.js";
 import { loadPlugins } from "./plugins.js";
 import { contextFacts, reviewsFor } from "./privacy-review.js";
 import { readTreeText, treeText } from "./secrets.js";
@@ -332,8 +332,12 @@ export function validate(
       if (again.ir) shown = { ir: again.ir, auth: again.auth, ux: again.ux };
     } else io.out("\nNothing was left to the rules; the spec says it all.\n");
   }
-  if (explain && shown.auth)
+  if (explain && shown.auth) {
     io.out(`\n${explainSpec(shown.ir, shown.auth, shown.ux, content?.language)}`);
+    io.out(
+      `${badgeExplained(isDirectory(target) ? target : dirname(target), shown.ux?.aiBadge)}\n`,
+    );
+  }
   // Advice, after the verdict: what the app would gain, each with the operation that does it.
   const notes = found.filter((d) => d.severity === "note");
   if (notes.length) {

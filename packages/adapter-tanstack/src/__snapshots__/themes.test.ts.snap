@@ -140,6 +140,11 @@ exports[`the style layer's new fields render, in the combinations where misses w
 [data-part="appearance"] {
   display: none;
 }
+
+/* The badge by each picture's kind (aiBadge unsaid): none on a drawn one (src/kit/AiMark.tsx). */
+[data-part="ai-mark"][data-kind="ai-drawn"] {
+  display: none;
+}
 "
 `;
 
@@ -277,6 +282,11 @@ exports[`the style layer's new fields render, in the combinations where misses w
   --hover: color-mix(in oklab, var(--foreground) 10%, transparent);
   --primary-hover: color-mix(in oklch, var(--primary), white 30%);
   --destructive-hover: color-mix(in oklch, var(--destructive), white 30%);
+}
+
+/* The badge by each picture's kind (aiBadge unsaid): none on a drawn one (src/kit/AiMark.tsx). */
+[data-part="ai-mark"][data-kind="ai-drawn"] {
+  display: none;
 }
 "
 `;
@@ -419,6 +429,11 @@ exports[`the style layer's new fields render, in the combinations where misses w
   --primary-hover: color-mix(in oklch, var(--primary), white 30%);
   --destructive-hover: color-mix(in oklch, var(--destructive), white 30%);
 }
+
+/* The badge by each picture's kind (aiBadge unsaid): none on a drawn one (src/kit/AiMark.tsx). */
+[data-part="ai-mark"][data-kind="ai-drawn"] {
+  display: none;
+}
 "
 `;
 
@@ -556,6 +571,11 @@ exports[`the style layer's new fields render, in the combinations where misses w
   --hover: color-mix(in oklab, var(--foreground) 10%, transparent);
   --primary-hover: color-mix(in oklch, var(--primary), white 30%);
   --destructive-hover: color-mix(in oklch, var(--destructive), white 30%);
+}
+
+/* The badge by each picture's kind (aiBadge unsaid): none on a drawn one (src/kit/AiMark.tsx). */
+[data-part="ai-mark"][data-kind="ai-drawn"] {
+  display: none;
 }
 "
 `;

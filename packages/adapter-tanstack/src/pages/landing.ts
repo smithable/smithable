@@ -58,6 +58,7 @@ const picture = (image: ContentImage) => {
     src: `/${image.src}`,
     alt: image.alt,
     ...(image.generated ? { generated: true } : {}),
+    ...(image.kind ? { kind: image.kind } : {}),
     ...(srcSet ? { srcSet } : {}),
   };
 };
@@ -258,7 +259,7 @@ export function landingRoute(
           }${
             own.image
               ? `
-          image={{ src: ${JSON.stringify(`/${own.image.src}`)}, alt: ${JSON.stringify(own.image.alt)}${own.image.generated ? ", generated: true" : ""}${srcSetOf(own.image) ? `, srcSet: ${JSON.stringify(srcSetOf(own.image))}` : ""} }}`
+          image={{ src: ${JSON.stringify(`/${own.image.src}`)}, alt: ${JSON.stringify(own.image.alt)}${own.image.generated ? ", generated: true" : ""}${own.image.kind ? `, kind: ${JSON.stringify(own.image.kind)}` : ""}${srcSetOf(own.image) ? `, srcSet: ${JSON.stringify(srcSetOf(own.image))}` : ""} }}`
               : ""
           }${
             section.shortcuts?.length
@@ -280,7 +281,7 @@ export function landingRoute(
                     ).image
                   : undefined;
               const picture = dress?.image ?? borrowed;
-              const shortcut = `{ to: ${JSON.stringify(target.route)}, label: ${dress?.label ? JSON.stringify(dress.label) : t.pageTitleOf(id)}, icon: ${icon}${picture ? `, image: { src: ${JSON.stringify(`/${picture.src}`)}, alt: ${JSON.stringify(picture.alt)}${picture.generated ? ", generated: true" : ""}${srcSetOf(picture) ? `, srcSet: ${JSON.stringify(srcSetOf(picture))}` : ""} }` : ""} }`;
+              const shortcut = `{ to: ${JSON.stringify(target.route)}, label: ${dress?.label ? JSON.stringify(dress.label) : t.pageTitleOf(id)}, icon: ${icon}${picture ? `, image: { src: ${JSON.stringify(`/${picture.src}`)}, alt: ${JSON.stringify(picture.alt)}${picture.generated ? ", generated: true" : ""}${picture.kind ? `, kind: ${JSON.stringify(picture.kind)}` : ""}${srcSetOf(picture) ? `, srcSet: ${JSON.stringify(srcSetOf(picture))}` : ""} }` : ""} }`;
               // A page behind sign-in is a shortcut only for those who may open it.
               if (!hasSignIn(auth) || auth.public.pages.includes(id)) return shortcut;
               imports.add("#/kit/access", "allows");
@@ -433,8 +434,8 @@ export function landingRoute(
             picture: ${
               isPictures(picture)
                 ? // Several pictures: the cover, the first.
-                  `row.${picture.name}?.[0] ? { src: \`/files/${kebab(model.name)}/\${row.id}/${picture.name}/0?v=\${row.${picture.name}[0].file.slice(-29, -5)}\`, alt: row.${picture.name}[0].alt, width: row.${picture.name}[0].width, height: row.${picture.name}[0].height, generated: row.${picture.name}[0].generated } : undefined`
-                : `row.${picture.name} ? { src: \`/files/${kebab(model.name)}/\${row.id}/${picture.name}?v=\${row.${picture.name}.file.slice(-29, -5)}\`, alt: row.${picture.name}.alt, width: row.${picture.name}.width, height: row.${picture.name}.height, generated: row.${picture.name}.generated } : undefined`
+                  `row.${picture.name}?.[0] ? { src: \`/files/${kebab(model.name)}/\${row.id}/${picture.name}/0?v=\${row.${picture.name}[0].file.slice(-29, -5)}\`, alt: row.${picture.name}[0].alt, width: row.${picture.name}[0].width, height: row.${picture.name}[0].height, generated: row.${picture.name}[0].generated, kind: row.${picture.name}[0].kind } : undefined`
+                : `row.${picture.name} ? { src: \`/files/${kebab(model.name)}/\${row.id}/${picture.name}?v=\${row.${picture.name}.file.slice(-29, -5)}\`, alt: row.${picture.name}.alt, width: row.${picture.name}.width, height: row.${picture.name}.height, generated: row.${picture.name}.generated, kind: row.${picture.name}.kind } : undefined`
             },`
                 : ""
             }${

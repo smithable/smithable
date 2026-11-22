@@ -444,7 +444,7 @@ export function operationFor(
     const where = path.join(".");
     const text = typeof value === "string" ? value : undefined;
     if (where === "aiBadge" && typeof value !== "string")
-      return ["setAiBadge", { shown: String(value ?? true) }];
+      return ["setAiBadge", { value: value === undefined ? "default" : value ? "on" : "off" }];
     if (where === "menuActive" && value !== true && value !== false)
       return ["setMenuActive", { active: text ?? "inherit" }];
     if (where === "chrome" && value !== true && value !== false)

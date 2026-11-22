@@ -177,6 +177,17 @@ pages:
     },
   });
   expect(hero("{ src: images/hero.webp, alt: x, generated: yes }").diagnostics).not.toEqual([]);
+  // And what it is (picture-kinds.md §2), one of three kinds.
+  expect(
+    hero("{ src: images/hero.webp, alt: x, generated: true, kind: ai-drawn }").content?.pages.home,
+  ).toEqual({
+    sections: {
+      hero: { image: { src: "images/hero.webp", alt: "x", generated: true, kind: "ai-drawn" } },
+    },
+  });
+  expect(hero("{ src: images/hero.webp, alt: x, kind: sketch }").diagnostics[0]?.message).toContain(
+    "ai-realistic, ai-drawn, photograph",
+  );
   expect(hero("{ src: ../secret.webp, alt: x }").diagnostics[0]?.message).toContain(
     "public/images/",
   );

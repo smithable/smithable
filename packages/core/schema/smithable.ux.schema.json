@@ -1011,7 +1011,7 @@
     },
     "aiBadge": {
       "type": "boolean",
-      "description": "Whether pictures an AI made carry the badge (the EU’s common icon for AI-generated content): on unless you switch it off; whether your audience needs it is your responsibility."
+      "description": "Whether pictures an AI made carry the badge (the EU’s common icon for AI-generated content). Unsaid, each picture by its kind: on for an ai-realistic one (or one without a kind), off for an ai-drawn one; true puts it on every picture an AI made, false on none. A photograph never has it. Whether your audience needs it is your responsibility."
     },
     "tones": {
       "type": "object",

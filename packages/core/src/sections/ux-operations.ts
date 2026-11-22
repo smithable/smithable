@@ -1,3 +1,4 @@
+import { AI_BADGE_OFF_REFUSAL, badgedByDefault, type PictureKind } from "../content.js";
 import { formatDiagnostic } from "../diagnostics.js";
 import type { SpecIR } from "../ir.js";
 import { LOOK_KEYS, type LookKey, type LookReset, sameLookTheme } from "../look.js";
@@ -1081,33 +1082,60 @@ const setView: Operation<{ page: string; view: "table" | "cards" }> = {
 };
 
 /**
- * Whether the app marks the pictures an AI made (the AI-generated badge, on by default). The
- * app's owner decides whether their audience needs it; the engine has one default everywhere.
+ * Whether the app marks the pictures an AI made (docs/design/picture-kinds.md §3): on for every
+ * one, off for none, or default (the key removed: each by its kind, on where it looks real).
+ * Switching it off while a realistic one is placed needs the owner's acknowledgement; core checks
+ * the content file's pictures and the host the placed ones (the ai-badge-off effect).
  */
-const setAiBadge: Operation<{ shown?: "true" | "false" }> = {
+const setAiBadge: Operation<{ value?: "on" | "off" | "default"; acknowledged?: boolean }> = {
   name: "setAiBadge",
   sets: ["smithable.ux.yml:aiBadge"],
   summary:
-    "Mark pictures an AI made with the EU’s common icon for AI-generated content (true, the default) or not (false): whether your audience needs it is your responsibility.",
+    "Mark pictures an AI made with the EU’s common icon for AI-generated content: on for every one, off for none, or default (on for pictures that look real, off for drawn ones). Off with realistic AI pictures needs acknowledged: whether your audience must be told is your responsibility.",
   schema: {
     type: "object",
+    required: ["value"],
     additionalProperties: false,
     properties: {
-      shown: { type: "string", enum: ["true", "false"], description: "true (default) or false." },
+      value: {
+        type: "string",
+        enum: ["on", "off", "default"],
+        description: "on, off, or default (each picture by its kind).",
+      },
+      acknowledged: {
+        type: "boolean",
+        description:
+          "Needed to switch it off while a realistic AI picture is placed: you answer for whether your audience must be told.",
+      },
     },
   },
-  positional: ["shown"],
-  describe: ({ shown = "true" }) =>
-    shown === "false"
+  positional: ["value"],
+  describe: ({ value }) =>
+    value === "off"
       ? "Show no badge on pictures an AI made"
-      : "Mark pictures an AI made with a badge",
+      : value === "on"
+        ? "Mark every picture an AI made with a badge"
+        : "Mark pictures an AI made by their kind",
   destructive: () => false,
-  apply(editors, { shown = "true" }) {
-    // On is the default, so it is written only when off.
-    put(editors.ux, ["aiBadge"], shown === "false" ? false : undefined);
-    return [];
+  apply(editors, { value, acknowledged }) {
+    if (value !== "on" && value !== "off" && value !== "default")
+      throw new OperationError(`"${String(value)}" is not on, off or default.`);
+    if (value === "off" && !acknowledged && realisticIn(editors.content.get(["pages"])))
+      throw new OperationError(AI_BADGE_OFF_REFUSAL);
+    put(editors.ux, ["aiBadge"], value === "default" ? undefined : value === "on");
+    return value === "off" && !acknowledged ? [{ kind: "ai-badge-off" }] : [];
   },
 };
+
+/** Whether a content file's pages hold a picture an AI made that looks real (a mark is never one). */
+function realisticIn(node: unknown): boolean {
+  if (Array.isArray(node)) return node.some(realisticIn);
+  if (!node || typeof node !== "object") return false;
+  const o = node as Record<string, unknown>;
+  if (typeof o.src === "string" && o.generated === true)
+    return badgedByDefault(o.kind as PictureKind | undefined);
+  return Object.values(o).some(realisticIn);
+}
 
 /**
  * The image style of the app's library pictures (first-look.md §4.3). Core writes the key and

@@ -368,11 +368,18 @@ ${
 }
 `
 }${
-  ux.aiBadge
+  ux.aiBadge === true
     ? ""
-    : `
+    : ux.aiBadge === false
+      ? `
 /* The owner switched the badge on pictures an AI made off (aiBadge: false; src/kit/AiMark.tsx). */
 [data-part="ai-mark"] {
+  display: none;
+}
+`
+      : `
+/* The badge by each picture's kind (aiBadge unsaid): none on a drawn one (src/kit/AiMark.tsx). */
+[data-part="ai-mark"][data-kind="ai-drawn"] {
   display: none;
 }
 `

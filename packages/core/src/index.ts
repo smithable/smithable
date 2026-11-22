@@ -99,13 +99,17 @@ export type {
   SectionContent,
 } from "./content.js";
 export {
+  AI_BADGE_OFF_REFUSAL,
   ASSISTANT_TEXTS,
+  badgedByDefault,
   CONTENT_VERSION,
   emptyContent,
   imageAt,
   LANGUAGES,
   type Language,
   LOGO_SRC,
+  PICTURE_KINDS,
+  type PictureKind,
   placeholderProblem,
   RESERVE_TEXTS,
   textPaths,
