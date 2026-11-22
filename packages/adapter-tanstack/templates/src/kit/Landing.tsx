@@ -270,7 +270,7 @@ function LandingLayoutView({
         </div>
         {open && menu.length > 0 && (
           <nav id="site-menu" aria-label={w.site} className="border-t md:hidden">
-            <ul className="mx-auto max-w-(--landing-width) px-5 py-2">
+            <ul className="mx-auto max-w-(--landing-width) px-5 py-2 [overflow-wrap:anywhere]">
               {menu.map((m) => (
                 <li key={String(m.to)}>
                   <Link to={m.to} onClick={() => setOpen(false)} className="block py-3 font-medium">
