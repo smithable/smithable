@@ -446,7 +446,7 @@ export interface ReviewPicture {
 export function picturesToReview(
   ir: SpecIR,
   content: ContentIR | undefined,
-  ux?: UxIR,
+  ux: UxIR | undefined,
 ): ReviewPicture[] {
   const found: ReviewPicture[] = [];
   for (const page of ir.pages)

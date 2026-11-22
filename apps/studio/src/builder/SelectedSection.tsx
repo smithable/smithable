@@ -77,6 +77,8 @@ export function selectedSection(selection: Selection | undefined, spec: Spec) {
     )
       return layout === "contactBand" ? [{ key, values: ["standard"], current: layout }] : [];
     const values = all.filter((value) => applies(key, String(value)));
+    // A collage stacks its pictures under the text.
+    if (section.kind === "mediaText" && key === "image" && layout === "collage") return [];
     // A hero's picture has a side only beside its text.
     if (section.kind === "hero" && key === "image" && !["split", "inset"].includes(layout))
       return [];

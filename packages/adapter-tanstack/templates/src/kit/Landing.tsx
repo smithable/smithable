@@ -2223,7 +2223,12 @@ function MediaTextView({
           )}
         </div>
         {collage && pictures.length > 0 && (
-          <ul className="grid grid-cols-2 gap-3 sm:flex sm:items-start sm:gap-0 sm:pb-4">
+          <ul
+            className={cn(
+              "grid gap-3 sm:flex sm:items-start sm:gap-0 sm:pb-4",
+              pictures.length > 1 && "grid-cols-2",
+            )}
+          >
             {pictures.map(({ image: photo, caption: note }, index) => (
               <li
                 key={`${index}:${photo.src}`}
