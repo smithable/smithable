@@ -533,9 +533,7 @@ const setSectionPicture: Operation<{
     let append = false;
     if (item !== undefined) {
       if (!["gallery", "features", "mediaText"].includes(found.kind))
-        throw new OperationError(
-          `A ${found.kind} section's pictures cannot be set by place.`,
-        );
+        throw new OperationError(`A ${found.kind} section's pictures cannot be set by place.`);
       const list = content.get(items);
       const length = Array.isArray(list) ? list.length : 0;
       append = found.kind === "mediaText" && src !== undefined && item === length && item < 3;
@@ -658,10 +656,8 @@ const keepPicture: Operation<{
       throw new OperationError(
         `The picture there is no longer ${was}: another change came between. Look again.`,
       );
-    if (item !== undefined && found.kind !== "gallery")
-      throw new OperationError(
-        `Only a gallery's pictures are given by their place; ${section} is a ${found.kind} section.`,
-      );
+    if (item !== undefined && found.kind !== "gallery" && found.kind !== "mediaText")
+      throw new OperationError(`A ${found.kind} section's pictures cannot be kept by place.`);
     const path =
       item === undefined
         ? ["pages", page, section, "image"]

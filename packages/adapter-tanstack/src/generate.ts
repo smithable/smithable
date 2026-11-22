@@ -160,6 +160,7 @@ const LANDING_KIT = "src/kit/Landing.tsx";
 const LANDING_KIT_MARKERS = {
   "section-pictures": "sectionPictures",
   "contact-footer": "contactFooter",
+  "media-collage": "mediaCollage",
 } as const;
 export type LandingKitFeature = keyof typeof LANDING_KIT_MARKERS;
 export const LANDING_KIT_FEATURES = Object.keys(LANDING_KIT_MARKERS) as LandingKitFeature[];
@@ -236,6 +237,16 @@ export function generateApp(spec: SpecIR, options: GenerateOptions): GeneratedFi
   if (sectionPictures) landingFeatures.push("section-pictures");
   if (ir.pages.some((page) => contactFooterEnabled(ir, ctx.auth, ctx.ux, ctx.t, page)))
     landingFeatures.push("contact-footer");
+  if (
+    ir.pages.some((page) =>
+      page.sections.some(
+        (section) =>
+          section.kind === "mediaText" &&
+          ctx.ux.pages[page.id]?.looks?.[section.name]?.layout === "collage",
+      ),
+    )
+  )
+    landingFeatures.push("media-collage");
   const landing = landingFeatures.length
     ? landingKitSource(landingFeatures)
     : baselineKitSources[LANDING_KIT];

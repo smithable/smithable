@@ -529,11 +529,19 @@ export function landingRoute(
         ];
       }
       case "mediaText": {
-        if (!own.title && !own.text && !own.image) return [];
+        const extra =
+          given.layout === "collage"
+            ? (own.items ?? []).flatMap(({ image }) =>
+                typeof image === "object" && !Array.isArray(image)
+                  ? [{ image: picture(image) }]
+                  : [],
+              )
+            : [];
+        if (!own.title && !own.text && !own.image && !extra.length) return [];
         imports.add("#/kit/Landing", "MediaText");
         return [
           `${open("MediaText")}
-          id=${attr(section.name)}${own.title ? `\n          title=${attr(own.title)}` : ""}${own.text ? `\n          text=${attr(own.text)}` : ""}${own.caption ? `\n          caption=${attr(own.caption)}` : ""}${own.image ? `\n          image={${literal(picture(own.image))}}` : ""}${section.button ? `\n          link=${link(routeOf(section.button), own.button ?? t.pageTitleOf(section.button))}` : ""}
+          id=${attr(section.name)}${own.title ? `\n          title=${attr(own.title)}` : ""}${own.text ? `\n          text=${attr(own.text)}` : ""}${own.caption ? `\n          caption=${attr(own.caption)}` : ""}${own.image ? `\n          image={${literal(picture(own.image))}}` : ""}${extra.length ? `\n          items={${literal(extra)}}` : ""}${section.button ? `\n          link=${link(routeOf(section.button), own.button ?? t.pageTitleOf(section.button))}` : ""}
         />`,
         ];
       }

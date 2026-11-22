@@ -28,6 +28,7 @@ import {
   modelAccess,
   pageAccess,
   type SpecIR,
+  type UxIR,
   validateAuth,
   validateSpec,
 } from "@smithable/core";
@@ -430,7 +431,7 @@ function accessFacts(ir: SpecIR, auth: AuthIR) {
 export interface ReviewPicture {
   page: string;
   section: string;
-  /** The gallery item's place, for a gallery's picture. */
+  /** An item's place, for gallery and media collage pictures. */
   item?: number;
   src: string;
   alt: string;
@@ -442,7 +443,11 @@ export interface ReviewPicture {
  * present work nobody did. One the owner kept is not listed again (keepPicture). Decoration
  * elsewhere is never listed, and the list never stops a release.
  */
-export function picturesToReview(ir: SpecIR, content: ContentIR | undefined): ReviewPicture[] {
+export function picturesToReview(
+  ir: SpecIR,
+  content: ContentIR | undefined,
+  ux?: UxIR,
+): ReviewPicture[] {
   const found: ReviewPicture[] = [];
   for (const page of ir.pages)
     for (const section of page.sections) {
@@ -459,7 +464,10 @@ export function picturesToReview(ir: SpecIR, content: ContentIR | undefined): Re
           });
       };
       look(texts?.image);
-      if (section.kind === "gallery")
+      const collage =
+        section.kind === "mediaText" &&
+        ux?.pages[page.id]?.looks?.[section.name]?.layout === "collage";
+      if (section.kind === "gallery" || collage)
         texts?.items?.forEach((entry, i) => {
           look(
             typeof entry.image === "object" && !Array.isArray(entry.image)
@@ -612,7 +620,7 @@ export function releaseReview(dir: string, options: { hosted?: boolean } = {}) {
         : [],
     assets: assetReview(dir),
     // Generated pictures that would present the owner's work, each with a choice (§6 of picture-kinds.md).
-    pictures: current.ir ? picturesToReview(current.ir, current.content) : [],
+    pictures: current.ir ? picturesToReview(current.ir, current.content, current.ux) : [],
     // The privacy page: reviewed, changed since its review (and what), or never (§6.4).
     privacy: privacyStates(dir),
     baseline: baseline?.at,

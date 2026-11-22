@@ -93,15 +93,23 @@ export function selectedSection(selection: Selection | undefined, spec: Spec) {
     return [{ key, values: values.map(String), current: String(current) }];
   });
   const content = spec.content?.pages[page]?.sections?.[sectionName];
-  const itemPictures =
-    section.kind === "features"
-      ? (content?.items ?? []).map((item, index) => ({
-          index,
-          label: typeof item.title === "string" ? item.title : `Feature ${index + 1}`,
-          image:
-            typeof item.image === "object" && !Array.isArray(item.image) ? item.image : undefined,
-        }))
-      : [];
+  const collage = section.kind === "mediaText" && layout === "collage";
+  const entries = section.kind === "features" || collage ? (content?.items ?? []) : [];
+  const itemPictures = entries.map((item, index) => ({
+    index,
+    label: collage
+      ? `Extra picture ${index + 1}`
+      : typeof item.title === "string"
+        ? `${item.title} picture`
+        : `Feature ${index + 1} picture`,
+    image: typeof item.image === "object" && !Array.isArray(item.image) ? item.image : undefined,
+  }));
+  if (collage && entries.length < 3)
+    itemPictures.push({
+      index: entries.length,
+      label: `Extra picture ${entries.length + 1}`,
+      image: undefined,
+    });
   return {
     page,
     section: sectionName,
@@ -374,7 +382,7 @@ export function SelectedSection({
             key={`${index}:${pictureValue(image)}`}
             page={section.page}
             section={`${section.section}-${index + 1}`}
-            label={`${label} picture`}
+            label={label}
             image={image}
             change={(args, file) => void choosePicture(args, file, index)}
             busy={busy}
