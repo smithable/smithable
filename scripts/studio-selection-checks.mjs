@@ -159,6 +159,26 @@ export async function checkStudioSelection(browser, base) {
     await sectionForm.waitFor({ state: "hidden" });
     await frame.locator('[data-hero][data-layout="centered"]').waitFor({ state: "hidden" });
     await frame.locator("[data-hero]").first().waitFor();
+    // Its picture (T1183): Remove is tried on like a layout, and Cancel brings the picture back.
+    const heroPicture = frame.locator("[data-hero] img").first();
+    await heroPicture.waitFor();
+    await select.click();
+    await hero.click({ position: { x: 4, y: 4 } });
+    await sectionForm.waitFor();
+    const removed = page.waitForResponse(
+      (response) =>
+        response.url() === `${base}/api/op` &&
+        response.request().postDataJSON()?.name === "setSectionPicture",
+    );
+    await sectionForm
+      .locator("[data-section-picture]")
+      .getByRole("button", { name: "Remove", exact: true })
+      .click();
+    assert.equal((await (await removed).json()).ok, true);
+    await heroPicture.waitFor({ state: "detached" });
+    await sectionForm.getByRole("button", { name: "Cancel", exact: true }).click();
+    await sectionForm.waitFor({ state: "hidden" });
+    await frame.locator("[data-hero] img").first().waitFor();
     await select.click();
     await hero.click({ position: { x: 4, y: 4 } });
     await sectionForm.waitFor();
