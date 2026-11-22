@@ -202,7 +202,7 @@ export function SelectedSection({
       ))}
       {section.picture && (
         <SectionPicture
-          key={section.picture.image?.src}
+          key={`${section.picture.image?.src ?? ""}\n${section.picture.image?.alt ?? ""}`}
           page={section.page}
           section={section.section}
           image={section.picture.image}

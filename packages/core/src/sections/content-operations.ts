@@ -504,7 +504,7 @@ const setSectionPicture: Operation<{ page: string; section: string; src?: string
       if (!sectionTakesPicture(found.kind))
         throw new OperationError(`A ${found.kind} section has no picture of its own.`);
       const path = ["pages", page, section, "image"];
-      if (!src) {
+      if (src === undefined) {
         if (!content.has(path)) throw new OperationError(`The ${section} section has no picture.`);
         content.removeAndPrune(path, 0);
         for (const language of (content.get(["languages"]) as string[] | undefined) ?? []) {
@@ -522,12 +522,19 @@ const setSectionPicture: Operation<{ page: string; section: string; src?: string
       if (!text)
         throw new OperationError("Say what the picture shows (alt), for people who cannot see it.");
       const before = content.get(path);
-      const image: Record<string, YamlValue> =
-        before && typeof before === "object" && (before as { src?: unknown }).src === src
-          ? { ...(before as Record<string, YamlValue>), alt: text }
-          : { src, alt: text };
+      const same =
+        !!before && typeof before === "object" && (before as { src?: unknown }).src === src;
+      const image: Record<string, YamlValue> = same
+        ? { ...(before as Record<string, YamlValue>), alt: text }
+        : { src, alt: text };
       if (content.has(path)) content.set(path, image);
       else put(content, path, image);
+      // Another language's words for the old picture say nothing of a new one: the main alt stands in.
+      if (!same)
+        for (const language of (content.get(["languages"]) as string[] | undefined) ?? []) {
+          const other = translations.get(language);
+          if (other?.has(path)) other.removeAndPrune(path, 0);
+        }
       return [];
     },
   };
