@@ -93,8 +93,7 @@ if (typeof window !== "undefined" && window.parent !== window) {
       const navigation = footer.parentElement.querySelector(":scope > [data-sm-concept^='navigation:landing.']");
       const page = navigation?.dataset.smConcept.split(".")[1];
       if (!page) return null;
-      const section = footer.dataset.section ?? "@footer";
-      return { element: footer, concept: "section:" + page + "." + section };
+      return { element: footer, concept: "section:" + page + ".@footer" };
     }
     const section = element.closest("[data-kit=section][data-section]");
     const name = section?.dataset.section;

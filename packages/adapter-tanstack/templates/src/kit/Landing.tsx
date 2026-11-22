@@ -317,8 +317,10 @@ function LandingLayoutView({
       <main className="flex-1">{children}</main>
       <footer
         data-part="footer"
-        className={cn("border-t", contactBand && "bg-muted text-foreground")}
-        {...(contactBand && footer?.texts ? sectionHooks(footer.texts) : {})}
+        className={cn(
+          "border-t",
+          contactBand && "bg-muted text-foreground [&_.text-muted-foreground]:text-foreground",
+        )}
       >
         {columns ? (
           <div className="mx-auto max-w-(--landing-width) px-5 py-12 text-sm">
