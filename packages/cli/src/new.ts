@@ -413,6 +413,17 @@ export async function create(
   if (website?.contentMode === "sample" && description)
     description = replaceSitePersonalText(description, website.personalMap, { context: "text" });
   let files = prepared ?? (STARTERS[name] as Record<string, string>);
+  const fullWebsiteImport = website?.contentMode === "full" && !options.websiteOwnerDescription;
+  const rejectInvalidWebsite = (draft: Record<string, string>): boolean => {
+    if (!fullWebsiteImport) return false;
+    const problem = websiteDraftProblem({
+      spec: draft["smithable.yml"] ?? "",
+      auth: draft["smithable.auth.yml"],
+    });
+    if (!problem) return false;
+    io.err(`${problem} No app was created.\n`);
+    return true;
+  };
   // Prepared dependencies (node_modules, possibly a link, and the lockfile they were installed
   // from, as hosted workspaces provide) do not count: the install then has little to do.
   const PREPARED = ["node_modules", "pnpm-lock.yaml"];
@@ -440,7 +451,6 @@ export async function create(
     // Drafting as operations (an empty app, one checked operation at a time; the default, see
     // docs/benchmarks/draft-modes-*.md) or as whole files adapted from the starter.
     options.onStage?.("drafting");
-    const fullWebsiteImport = website?.contentMode === "full" && !options.websiteOwnerDescription;
     const draft: Awaited<ReturnType<typeof draftProject>> = starterOnly
       ? {
           kind: "draft",
@@ -565,16 +575,7 @@ export async function create(
       path: "smithable.auth.yml",
       text: files["smithable.auth.yml"] ?? "",
     }).auth;
-    if (fullWebsiteImport) {
-      const problem = websiteDraftProblem({
-        spec: files["smithable.yml"] ?? "",
-        auth: files["smithable.auth.yml"],
-      });
-      if (problem) {
-        io.err(`${problem} No app was created.\n`);
-        return 1;
-      }
-    }
+    if (rejectInvalidWebsite(files)) return 1;
     const ir = validateSpec({ path: "smithable.yml", text: files["smithable.yml"] ?? "" }).ir;
     const content = files["smithable.content.yml"];
     if (ir) {
@@ -699,6 +700,7 @@ export async function create(
     }
     fromPage = false;
   }
+  if (rejectInvalidWebsite(files)) return 1;
   mkdirSync(dir, { recursive: true });
   for (const [file, text] of Object.entries(files)) writeFileSync(join(dir, file), text);
   for (const { path, text } of websiteTheme) {
