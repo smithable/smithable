@@ -12,7 +12,7 @@ import {
   parseDocument,
   stringify,
 } from "yaml";
-import type { ContentIR } from "./content.js";
+import { type ContentIR, PICTURE_KINDS, type PictureKind } from "./content.js";
 import { ParseContext } from "./context.js";
 import type { Diagnostic } from "./diagnostics.js";
 import { type FieldIR, type ModelIR, PICTURES_MAX, type SpecIR } from "./ir.js";
@@ -26,6 +26,8 @@ export interface SamplePicture {
   alt: string;
   /** Made by an AI (the image library's): the app marks it where it is shown. */
   generated?: true;
+  /** What it is (picture-kinds.md §2): the badge's default follows it. */
+  kind?: PictureKind;
 }
 /**
  * A sample record's values as the seed writes them: money in cents, a reference as the
@@ -262,11 +264,17 @@ function samplePicture(
     const file = node.get("file");
     const alt = node.get("alt");
     const generated: unknown = node.get("generated");
-    if (typeof file === "string" && typeof alt === "string" && generated !== undefined)
-      return typeof generated === "boolean"
-        ? { picture: file, alt, ...(generated ? { generated } : {}) }
-        : undefined;
-    if (typeof file === "string" && typeof alt === "string") return { picture: file, alt };
+    const kind: unknown = node.get("kind");
+    if (typeof file !== "string" || typeof alt !== "string") return undefined;
+    if (generated !== undefined && typeof generated !== "boolean") return undefined;
+    if (kind !== undefined && !(PICTURE_KINDS as readonly unknown[]).includes(kind))
+      return undefined;
+    return {
+      picture: file,
+      alt,
+      ...(generated ? { generated: true } : {}),
+      ...(kind ? { kind: kind as PictureKind } : {}),
+    };
   }
   return undefined;
 }

@@ -2,7 +2,7 @@
 // picture, date, author and formatted body, and links to the ones before and after it.
 // To change them, copy this file into src/custom/components/ and edit the copy.
 import { Card } from "#/components/ui/card";
-import { AiMarked } from "./AiMark";
+import { AiMarked, type PictureKind } from "./AiMark";
 import { AppLink } from "./AppLink";
 import { MarkdownText } from "./Markdown";
 import { w } from "./words";
@@ -12,7 +12,14 @@ export interface ArticleCard {
   title: string;
   summary?: string;
   date?: string;
-  picture?: { src: string; alt: string; width: number; height: number; generated?: boolean };
+  picture?: {
+    src: string;
+    alt: string;
+    width: number;
+    height: number;
+    generated?: boolean;
+    kind?: PictureKind;
+  };
 }
 
 export function ArticleList({
@@ -33,7 +40,7 @@ export function ArticleList({
           <li key={item.href} data-part="row">
             <Card className="relative h-full overflow-hidden hover:bg-hover">
               {item.picture && (
-                <AiMarked generated={item.picture.generated}>
+                <AiMarked generated={item.picture.generated} kind={item.picture.kind}>
                   <img
                     src={item.picture.src}
                     alt={item.picture.alt}
@@ -105,7 +112,7 @@ export function ArticleView({
   return (
     <article data-kit="article" className="mx-auto max-w-3xl space-y-6">
       {picture && (
-        <AiMarked generated={picture.generated} full>
+        <AiMarked generated={picture.generated} kind={picture.kind} full>
           <img
             src={picture.src}
             alt={picture.alt}

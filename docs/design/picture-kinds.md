@@ -77,7 +77,7 @@ Studio's preview stands apart. The columns are each picture's recorded kind (§2
 - **Switching off with realistic generated pictures present needs an acknowledgement.** The operation
   takes `acknowledged: true`; without it, when any placed picture is `ai-realistic`, it is refused with
   the one line: whether the app's audience must be told is the owner's responsibility. Studio shows that
-  line as a confirmation and the command line takes `--acknowledge`, so both record the same thing in
+  line as a confirmation and the command line takes `--acknowledged`, so both record the same thing in
   the operation's history.
 - **How the app knows:** generation writes each picture's `generated` and `kind` where the app already
   reads `generated`, and the setting's state, all from the project's own files. The kit decides per

@@ -737,13 +737,14 @@ export function seedModule(
       const entries = storedFields(model).map((field) => {
         // A sample file's picture: its file under public/images/samples/, and its description.
         const own = row[field.name];
-        // A sample file's picture an AI made says so (generated: true); the numbered ones are.
-        const sample = (picture: string | number, alt: string, generated?: true) =>
-          `samplePicture(${JSON.stringify(kebab(model.name))}, ${JSON.stringify(picture)}, ${JSON.stringify(alt)}${generated ? ", true" : ""})`;
+        // A sample file's picture an AI made says so (generated: true), and may say its kind
+        // (picture-kinds.md §2); the numbered ones are, by pictures.json.
+        const sample = (picture: string | number, alt: string, generated?: true, kind?: string) =>
+          `samplePicture(${JSON.stringify(kebab(model.name))}, ${JSON.stringify(picture)}, ${JSON.stringify(alt)}${generated ? ", true" : kind ? ", undefined" : ""}${kind ? `, ${JSON.stringify(kind)}` : ""})`;
         if (isPicture(field) && own && typeof own === "object" && "picture" in own)
-          return `${dataKey(field)}: ${sample(own.picture, own.alt, own.generated)}`;
+          return `${dataKey(field)}: ${sample(own.picture, own.alt, own.generated, own.kind)}`;
         if (isPictures(field) && Array.isArray(own))
-          return `${dataKey(field)}: [${own.map((p) => sample(p.picture, p.alt, p.generated)).join(", ")}].filter((p) => p !== null)`;
+          return `${dataKey(field)}: [${own.map((p) => sample(p.picture, p.alt, p.generated, p.kind)).join(", ")}].filter((p) => p !== null)`;
         // A sample file's row without a field that has a default (one added since) gets the
         // default, as the form would: a required choice cannot be empty.
         const filled =

@@ -3,7 +3,7 @@
 // and edit the copy.
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import { buttonVariants } from "#/components/ui/button";
-import { AiMarked } from "./AiMark";
+import { AiMarked, type PictureKind } from "./AiMark";
 import { w } from "./words";
 
 /** Shared full-image view: native focus/Escape plus gallery previous/next. */
@@ -14,7 +14,10 @@ export function PictureDialog({
   show,
 }: {
   dialog: React.RefObject<HTMLDialogElement | null>;
-  pictures: { image: { src: string; alt: string; generated?: boolean }; caption?: string }[];
+  pictures: {
+    image: { src: string; alt: string; generated?: boolean; kind?: PictureKind };
+    caption?: string;
+  }[];
   open: number;
   show: (index: number) => void;
 }) {
@@ -33,7 +36,12 @@ export function PictureDialog({
       {current && (
         <figure className="relative">
           {/* As wide as the picture, so the mark sits on its corner. */}
-          <AiMarked generated={current.image.generated} full className="mx-auto w-fit">
+          <AiMarked
+            generated={current.image.generated}
+            kind={current.image.kind}
+            full
+            className="mx-auto w-fit"
+          >
             <img
               src={current.image.src}
               alt={current.image.alt}

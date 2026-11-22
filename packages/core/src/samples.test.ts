@@ -160,6 +160,16 @@ pages:
     run("- { title: Bike, photos: [{ file: c.webp, alt: A bike, generated: maybe }] }\n")
       .diagnostics,
   ).not.toEqual([]);
+  // And its kind (picture-kinds.md §2), which the badge's default follows.
+  const drawn = run(
+    "- { title: Bike, photos: [{ file: c.webp, alt: A bike, generated: true, kind: ai-drawn }] }\n",
+  );
+  expect(drawn.samples.Item?.[0]?.photos).toEqual([
+    { picture: "c.webp", alt: "A bike", generated: true, kind: "ai-drawn" },
+  ]);
+  expect(
+    run("- { title: Bike, photos: [{ file: c.webp, alt: A bike, kind: sketch }] }\n").diagnostics,
+  ).not.toEqual([]);
   const messages = (items: string) => run(items).diagnostics.map((d) => d.message);
   const eleven = Array.from({ length: 11 }, (_, i) => `p${i}.webp`).join(", ");
   expect(messages(`- { title: Bike, photos: [${eleven}] }\n`)[0]).toContain("at most 10 pictures");

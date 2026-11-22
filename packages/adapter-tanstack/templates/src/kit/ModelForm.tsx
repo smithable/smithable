@@ -8,7 +8,7 @@ import { Button } from "#/components/ui/button";
 import { Card } from "#/components/ui/card";
 import { Label } from "#/components/ui/input";
 import { cn } from "#/lib/utils";
-import { AiMarked } from "./AiMark";
+import { AiMarked, type PictureKind } from "./AiMark";
 import { FieldInput } from "./FieldInput";
 import { pictureSet, versioned } from "./file-address";
 import { fileSize, formatValue, fromInput, toInput } from "./format";
@@ -854,6 +854,7 @@ function picturesOf(ui: ModelUi, field: FieldUi, record: Record<string, unknown>
   ) as ({
     alt?: string;
     generated?: boolean;
+    kind?: PictureKind;
   } & Parameters<typeof pictureSet>[1] & {})[];
   return list.map((p, i) => {
     const address = field.kind === "picture" ? base : `${base}/${i}`;
@@ -862,6 +863,7 @@ function picturesOf(ui: ModelUi, field: FieldUi, record: Record<string, unknown>
       srcSet: pictureSet(address, p),
       alt: p.alt ?? "",
       generated: p.generated,
+      kind: p.kind,
     };
   });
 }
@@ -883,7 +885,7 @@ function Gallery({ pictures }: { pictures: Picture[] }) {
         onClick={() => dialog.current?.showModal()}
         className="block w-full rounded-[var(--picture-radius,var(--radius-lg))] outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
-        <AiMarked generated={shownPicture.generated} full>
+        <AiMarked generated={shownPicture.generated} kind={shownPicture.kind} full>
           <img
             src={shownPicture.src}
             srcSet={shownPicture.srcSet}
@@ -907,7 +909,7 @@ function Gallery({ pictures }: { pictures: Picture[] }) {
                   i === at ? "ring-2 ring-primary" : "opacity-80 hover:opacity-100",
                 )}
               >
-                <AiMarked generated={p.generated} tiny>
+                <AiMarked generated={p.generated} kind={p.kind} tiny>
                   <img
                     src={p.src}
                     srcSet={p.srcSet}
@@ -937,6 +939,7 @@ type Picture = {
   srcSet?: string | undefined;
   alt: string;
   generated?: boolean | undefined;
+  kind?: PictureKind | undefined;
 };
 
 /**
@@ -971,7 +974,7 @@ function PictureRow({ pictures, single }: { pictures: Picture[]; single: boolean
               }}
               className="block w-full rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring sm:w-fit"
             >
-              <AiMarked generated={p.generated} className="w-full sm:w-fit">
+              <AiMarked generated={p.generated} kind={p.kind} className="w-full sm:w-fit">
                 <img
                   src={p.src}
                   srcSet={p.srcSet}
