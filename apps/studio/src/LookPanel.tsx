@@ -132,7 +132,8 @@ export function LookPanel({
     let active = true;
     adapter.then(
       (loaded) => {
-        if (!active || closed.current || applying.current) return;
+        // Not after Apply: the refresh inside it re-renders while `tried` is still set.
+        if (!active || closed.current || applying.current || triedNow.current !== tried) return;
         try {
           tryThemeInPreview(triedThemeCss(loaded, spec, project, tried));
         } catch (reason) {
@@ -157,12 +158,15 @@ export function LookPanel({
     const theme = triedNow.current;
     if (!theme || applying.current) return;
     applying.current = true;
-    // This page keeps the tried look until the new one, with the real theme, replaces it.
+    // This page keeps the tried look until the theme is written.
     letGoTriedTheme(false);
     try {
       if (await setTheme("preset", theme)) {
         triedNow.current = undefined;
         setTried(undefined);
+        // The preview may take the new stylesheet without a new page: the tried CSS comes off,
+        // or it would hide every later change.
+        letGoTriedTheme(true);
         return;
       }
     } finally {
