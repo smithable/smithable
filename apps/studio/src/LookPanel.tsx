@@ -35,7 +35,7 @@ export function LookPanel({
   spec: Spec;
   place: "left" | "right" | "sheet";
   onRefresh: () => Promise<void>;
-  onClose: (options: { error?: string; customize?: boolean }) => void;
+  onClose: (options: { error?: string; customize?: boolean; kept?: boolean }) => void;
 }) {
   const lookProject = project.lookProject ?? "";
   const authored = (text: string | undefined, setting: Setting) => {
@@ -203,7 +203,7 @@ export function LookPanel({
       refusal = `Cancel could not restore the opening look: ${(reason as Error).message} Review the changes in Changes.`;
     }
     await onRefresh();
-    onClose({ ...(refusal ? { error: refusal } : {}), customize });
+    onClose({ ...(refusal ? { error: refusal } : {}), customize, kept: keep && session.changed });
   };
   const id = useId();
   const ux = project.files.ux;

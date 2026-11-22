@@ -138,7 +138,7 @@ export async function checkStudioLayout(browser, base, pictures) {
           );
         }
         await card.waitFor({ state: "detached" });
-        assert.ok(stops.includes("publish"), `tour did not reach publishing: ${stops.join()}`);
+        assert.deepEqual(stops, ["preview", "behavior", "change", "changes"]);
       }
       console.log(
         `  ✓ Studio ${viewport.width}×${viewport.height} at 2×: one guide, one scroll region, reachable input and controls`,

@@ -754,7 +754,7 @@ try {
         // Smith's line for the stop, in his thread (smith-first.md §7).
         const card = fresh.locator("[data-guide-card]");
         const seen = [];
-        for (let i = 0; i < 7; i++) {
+        for (let i = 0; i < 4; i++) {
           await card.waitFor({ timeout: 20000 * P });
           const at = await card.getAttribute("data-guide-card");
           seen.push(at);
@@ -800,7 +800,7 @@ try {
           }
           if ((await fresh.locator("[data-guide-card]:visible").count()) !== 1)
             throw new Error(`the guide for ${at} is shown more than once`);
-          await card.getByRole("button", { name: i === 6 ? "Done" : "Next", exact: true }).click();
+          await card.getByRole("button", { name: i === 3 ? "Done" : "Next", exact: true }).click();
           if (at === "change") {
             // One change shown three ways (§12.5): Smith adds a notes field, then it is shown by
             // hand and in the text, and undone at the end.
@@ -823,7 +823,7 @@ try {
               await fresh.waitForTimeout(200);
             }
           }
-          if (i < 6)
+          if (i < 3)
             await fresh.waitForFunction(
               (seen) =>
                 document.querySelector("[data-guide-card]")?.getAttribute("data-guide-card") !==
@@ -832,8 +832,7 @@ try {
               { timeout: 20000 * P },
             );
         }
-        if (seen.join() !== "preview,manual,behavior,change,changes,look,publish")
-          throw new Error(seen.join());
+        if (seen.join() !== "preview,behavior,change,changes") throw new Error(seen.join());
         await card.waitFor({ state: "detached" });
         // Floating, the tour gives back the screen it found: the preview alone (§12.3).
         await fresh.getByRole("tab", { name: "Code", exact: true }).waitFor({ state: "detached" });

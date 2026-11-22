@@ -62,7 +62,7 @@ import { plainRefusal } from "./refusal";
 import { needsLook, releaseProgress, trustedRelease } from "./release-review";
 import { type Bounds, type LayerMode, SmithLayer, sideFor, useSmithPlace } from "./SmithLayer";
 import { StudioHelp } from "./StudioHelp";
-import { StudioHint, useStudioHint } from "./StudioHints";
+import { type Hint, StudioHint, useStudioHint } from "./StudioHints";
 import { StudioOverlay } from "./StudioOverlay";
 import { keptPage, Preview, Trace } from "./shared";
 import { useStudioQuestion } from "./studio-questions";
@@ -125,6 +125,9 @@ function keepWaiting(shown: Project | undefined, next: Project): Project {
 
 export function App() {
   const [project, setProject] = useState<Project>();
+  const hint = useStudioHint();
+  const { reveal } = hint;
+  const [lookWasKept, setLookWasKept] = useState(false);
   const [releaseView, setReleaseView] = useState<
     "review" | { revision: string; projectId?: string }
   >();
@@ -133,6 +136,7 @@ export function App() {
   const publishCheck = useRef(0);
   const release = useReleaseReview(project, Boolean(project && !project.making));
   const closeRelease = () => {
+    hint.dismiss("publish-opened");
     publishCheck.current++;
     setCheckingPublish(false);
     setReleaseView(undefined);
@@ -145,6 +149,7 @@ export function App() {
     const backToReview = (notice: string) => {
       setReleaseNotice(notice);
       setReleaseView("review");
+      if (!confirmed) reveal("publish-opened");
     };
     try {
       const before = await api.project();
@@ -175,6 +180,7 @@ export function App() {
       if (!confirmed) {
         setReleaseNotice(undefined);
         setReleaseView({ revision: before.revision, projectId: before.lookProject });
+        reveal("publish-opened");
         return;
       }
       const saved = trustedRelease(after.beta?.release, after.home);
@@ -365,7 +371,6 @@ export function App() {
   const floating = !narrow && smithAt === "floating";
   const [panelOpen, setPanelOpen] = useState(false);
   const [smithHidden, setSmithHidden] = useState(false);
-  const hint = useStudioHint();
   const [audio, setAudio] = useState<AudioActivity>();
   const smithFace = useRef<HTMLButtonElement>(null);
   // The preview's edges on the screen, which the floating panel hangs between.
@@ -405,6 +410,7 @@ export function App() {
         : "preview";
   const [phoneSmithSheet, setPhoneSmithSheet] = useState(false);
   const showWindow = (window: WindowId | PhoneWindow) => {
+    if (narrow && window !== "manual" && !isManualView(window)) hint.dismiss("settings-opened");
     setPhoneSmithSheet(false);
     if (window === "changes" && !phone.changesUnderSmith) {
       setChangesView("details");
@@ -564,6 +570,7 @@ export function App() {
       hint.reveal("smith-hidden");
     }
     showWindow(window);
+    if (window === "manual" && phoneWindow !== "manual") reveal("settings-opened");
   };
   const rowPan = usePan({
     enabled: narrow && !project?.making && !lookAlone,
@@ -595,9 +602,7 @@ export function App() {
             ? "changes"
             : anchor === "behavior"
               ? "nocode"
-              : anchor === "manual"
-                ? manual
-                : undefined;
+              : undefined;
     if (floating && window === "smith") return setPanelOpen(true);
     if (!window || slotOf(window) !== undefined) return;
     if (narrow) showWindow(window);
@@ -710,16 +715,17 @@ export function App() {
         setSelectedPart((part) => part && { ...part, anchor });
       }
       if (
-        !selectingCode &&
         event.data.type === "select" &&
         typeof event.data.concept === "string" &&
         /^(action|field|model|page|section|text):[\w.-]+$/.test(event.data.concept)
-      )
-        setSelectedPart(event.data);
+      ) {
+        if (!selectingCode) setSelectedPart(event.data);
+        reveal("selection");
+      }
     };
     window.addEventListener("message", receiveSelection);
     return () => window.removeEventListener("message", receiveSelection);
-  }, [clearSelection, selectingCode]);
+  }, [clearSelection, reveal, selectingCode]);
   const lookApp = project?.localDir ?? project?.name ?? "";
   const initialLook = Boolean(
     project &&
@@ -783,6 +789,10 @@ export function App() {
       }
       setProject((p) => keepWaiting(p, next));
     }
+    return next;
+  };
+  const refreshLook = async () => {
+    await catchUp();
   };
 
   // Changes go one after the other: one made while another is still being applied (two Look
@@ -824,6 +834,7 @@ export function App() {
       if (old?.commit === commit) await backToCurrent(true);
       await catchUp();
       setMessage({ ok: true, text: "Applied the version.", change: true });
+      reveal("change-applied");
     } finally {
       setApplyingVersion(false);
       setBusy(false);
@@ -840,6 +851,7 @@ export function App() {
       fromGuide = false,
     ) => {
       if (!fromGuide) pauseGuide();
+      const before = project?.trace[0]?.id;
       setBusy(true);
       setMessage(undefined);
       let result: Awaited<ReturnType<typeof api.operation>>;
@@ -860,7 +872,11 @@ export function App() {
         return false;
       }
       setPending(undefined);
-      if (result.ok) await catchUp();
+      if (result.ok) {
+        const last = (await catchUp())?.trace[0];
+        if (!fromGuide && last && !last.isUndo && !last.undone && last.id !== before)
+          reveal("change-applied");
+      }
       // The last line says what happened; the rest is tool output.
       const lines = result.output.split("\n").filter((l) => l.trim());
       const summary = result.ok
@@ -1173,6 +1189,28 @@ export function App() {
         : slotOf("smith") === undefined);
   const show = usePresentation(parts, assumptions, layer === "overlay");
   const [presented, setPresented] = useState(false);
+  useEffect(() => {
+    if (
+      !lookWasKept ||
+      pickingLook ||
+      editingLook ||
+      overlaid ||
+      (firstVisit && (!presented || guiding || !guideStarted))
+    )
+      return;
+    setLookWasKept(false);
+    reveal("look-kept");
+  }, [
+    lookWasKept,
+    pickingLook,
+    editingLook,
+    overlaid,
+    firstVisit,
+    presented,
+    guiding,
+    guideStarted,
+    reveal,
+  ]);
   const decided = useRef(false);
   // biome-ignore lint/correctness/useExhaustiveDependencies: once, when the app is read
   useEffect(() => {
@@ -1330,6 +1368,7 @@ export function App() {
         onAudioActivity={setAudio}
         // A milestone named or an undo from Smith: the windows read the history again.
         onDone={() => void refresh()}
+        onChangeApplied={() => reveal("change-applied")}
         onBeginChange={pauseGuide}
         studioQuestion={studioQuestion}
         questionVisible={stage === "overlay" || smithVisible}
@@ -1374,7 +1413,7 @@ export function App() {
       hideSmith();
       return;
     }
-    hint.dismiss();
+    hint.dismiss("smith-hidden");
     if (floating) {
       setPanelOpen(true);
     } else if (narrow) {
@@ -1457,15 +1496,20 @@ export function App() {
   };
   // Look opens on the left, or on the right when Smith is docked as the left window.
   const lookRight = !narrow && !floating && slotOf("smith") === 0;
+  const hintAt = (at: Hint | readonly Hint[]) => (
+    <StudioHint at={at} active={hint.active} dismiss={hint.dismiss} />
+  );
+  const publishHint = hint.active === "publish-opened" ? hintAt("publish-opened") : undefined;
   const lookAction = project.lookProject && (
     <ToolbarButton
       label="Look"
-      data-guide="look"
+      hint={!narrow ? hintAt("look-kept") : undefined}
       text={narrow}
       pressed={lookOpen}
       disabled={!lookOpen && (busy || Boolean(pickingLook) || !spec.plugins)}
       onClick={() => {
         if (lookOpen) return setLookOpen(false);
+        hint.dismiss("look-kept");
         pauseGuide();
         showWindow("preview");
         if (spec.ux) setLookOpen(true);
@@ -1489,16 +1533,26 @@ export function App() {
   const releaseStep = trustedRelease(project.beta?.release, project.home);
   const openPreviewWindow = () => (narrow ? showWindow("preview") : workIn("preview"));
   const openSettings = () => {
-    if (narrow) showWindow(phoneWindow === "manual" ? "preview" : "nocode");
-    else if (settingsOpen) setSettingsOpen(false);
+    if (narrow ? phoneWindow === "manual" : settingsOpen) {
+      hint.dismiss("settings-opened");
+      if (narrow) showWindow("preview");
+      else setSettingsOpen(false);
+      return;
+    }
+    if (narrow) showWindow("nocode");
     else workIn("nocode");
+    reveal("settings-opened");
   };
   const undoArrow = <path d="M4 10a8 8 0 1 1 1 8M4 4v6h6" />;
   const undoHistory = (
     <>
       <ToolbarButton
         label="Undo"
-        onClick={() => void undo()}
+        hint={!narrow ? hintAt("change-applied") : undefined}
+        onClick={() => {
+          hint.dismiss("change-applied");
+          void undo();
+        }}
         disabled={
           busy || Boolean(project.making) || !project.trace.some((t) => !t.undone && !t.isUndo)
         }
@@ -1568,6 +1622,7 @@ export function App() {
   const settingsAction = (
     <ToolbarButton
       label="All settings"
+      hint={!narrow ? hintAt("selection") : undefined}
       pressed={slotOf(manual) !== undefined}
       disabled={lookAlone}
       onClick={openSettings}
@@ -1669,7 +1724,6 @@ export function App() {
                 </Button>
                 <Button
                   variant="ghost"
-                  data-guide="publish"
                   aria-label="Publish"
                   title="Publish"
                   className="px-2"
@@ -1687,7 +1741,9 @@ export function App() {
                     {lookAction}
                   </>
                 )}
-                <ToolbarMore lookInMenu={narrow && Boolean(project.lookProject)}>
+                <ToolbarMore
+                  hint={narrow ? hintAt(["selection", "change-applied", "look-kept"]) : undefined}
+                >
                   {narrow && (
                     <>
                       {undoHistory}
@@ -1773,7 +1829,7 @@ export function App() {
                             onClick={() => {
                               if (onCall) audio.endCall();
                               else audio.stopListening();
-                              hint.dismiss();
+                              hint.dismiss("smith-hidden");
                               smithFace.current?.focus();
                             }}
                           >
@@ -1783,6 +1839,7 @@ export function App() {
                       </div>
                     )}
                     <StudioHint
+                      at="smith-hidden"
                       active={hint.active}
                       dismiss={hint.dismiss}
                       returnFocus={() => smithFace.current?.focus()}
@@ -2114,7 +2171,7 @@ export function App() {
                     }}
                     right={{
                       hidden: !settingsOpen,
-                      toggle: () => setSettingsOpen(!settingsOpen),
+                      toggle: openSettings,
                     }}
                   />
                 )}
@@ -2177,7 +2234,7 @@ export function App() {
                     {content === "manual" && (
                       // No code and Code: the view's two sub-tabs (smith-first.md §6).
                       <div
-                        data-guide="manual"
+                        data-studio-hint-anchor
                         data-subtabs
                         className="shrink-0 border-b border-line bg-panel px-3 py-1.5"
                       >
@@ -2189,6 +2246,11 @@ export function App() {
                           value={manual}
                           onChange={setManual}
                         />
+                        {slotOf(manual) !== undefined && (
+                          <div className="relative z-40">
+                            <div className="absolute top-2 left-0">{hintAt("settings-opened")}</div>
+                          </div>
+                        )}
                       </div>
                     )}
                     {windows.map((w) => {
@@ -2362,14 +2424,15 @@ export function App() {
           spec={spec}
           preset={pickingLook.preset}
           aiBadge={spec.ux?.aiBadge ?? true}
-          onRefresh={catchUp}
-          onClose={({ error }) => {
+          onRefresh={refreshLook}
+          onClose={({ error, kept }) => {
             const finishedApp = pickingLook.project.localDir ?? pickingLook.project.name;
             try {
               localStorage.setItem(lookSeenKey(finishedApp), "1");
             } catch {}
             setLookFinished(finishedApp);
             setPickingLook(undefined);
+            if (kept) setLookWasKept(true);
             if (error) setMessage({ ok: false, text: error });
           }}
         />
@@ -2380,9 +2443,13 @@ export function App() {
           project={project}
           spec={spec}
           place={narrow ? "sheet" : lookRight ? "right" : "left"}
-          onRefresh={catchUp}
-          onClose={({ error, customize }) => {
+          onRefresh={refreshLook}
+          onClose={({ error, customize, kept }) => {
             setLookOpen(false);
+            if (kept) {
+              if (customize) setLookWasKept(true);
+              else reveal("look-kept");
+            }
             if (error) setMessage({ ok: false, text: error });
             if (customize) setEditingLook({ project, path: keptPage() });
           }}
@@ -2443,6 +2510,7 @@ export function App() {
           reload={release.reload}
           home={project.home}
           notice={releaseNotice}
+          publishHint={publishHint}
           onClose={closeRelease}
           summary={
             <SummaryTab
@@ -2485,6 +2553,7 @@ export function App() {
           testHosting={Boolean(project.home) && project.beta?.data === "test"}
           busy={checkingPublish}
           progress={releaseStep ? releaseProgress(releaseStep).line : undefined}
+          publishHint={publishHint}
           onConfirm={() => void checkPublish(releaseView)}
           onClose={closeRelease}
         />
@@ -2539,7 +2608,7 @@ function ToolbarButton({
   text,
   disabled,
   pressed,
-  "data-guide": guide,
+  hint,
 }: {
   label: string;
   onClick: () => void;
@@ -2547,12 +2616,11 @@ function ToolbarButton({
   text?: boolean;
   disabled?: boolean;
   pressed?: boolean;
-  /** The guide stop beside it, as data-guide. */
-  "data-guide"?: string;
+  hint?: React.ReactNode;
 }) {
-  return (
+  const button = (
     <Button
-      data-guide={guide}
+      data-studio-hint-target={hint ? "" : undefined}
       variant={pressed ? "primary" : "ghost"}
       aria-label={label}
       aria-pressed={pressed}
@@ -2565,9 +2633,17 @@ function ToolbarButton({
       {text && label}
     </Button>
   );
+  return hint ? (
+    <div className="relative" data-studio-hint-anchor>
+      {button}
+      <div className="absolute top-full right-0 z-[65] mt-2">{hint}</div>
+    </div>
+  ) : (
+    button
+  );
 }
 
-function ToolbarMore({ children, lookInMenu }: { children: React.ReactNode; lookInMenu: boolean }) {
+function ToolbarMore({ children, hint }: { children: React.ReactNode; hint?: React.ReactNode }) {
   const [open, setOpen] = useState(false);
   const root = useRef<HTMLDivElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
@@ -2600,11 +2676,11 @@ function ToolbarMore({ children, lookInMenu }: { children: React.ReactNode; look
     };
   }, [open]);
   return (
-    <div ref={root} className="relative">
+    <div ref={root} className="relative" data-studio-hint-anchor>
       <button
         ref={trigger}
         type="button"
-        data-guide={lookInMenu ? "look" : undefined}
+        data-studio-hint-target
         aria-expanded={open}
         aria-controls={panelId}
         onClick={() => setOpen(!open)}
@@ -2612,6 +2688,9 @@ function ToolbarMore({ children, lookInMenu }: { children: React.ReactNode; look
       >
         More
       </button>
+      <div className="absolute top-full right-0 z-[65] mt-2" hidden={open}>
+        {hint}
+      </div>
       <fieldset
         ref={panel}
         id={panelId}
