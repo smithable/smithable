@@ -160,6 +160,8 @@ export interface Project {
   plugins: { name: string; version: number }[];
   concepts: ConceptInfo[];
   trace: TraceEntry[];
+  /** The app is as it was made, with no change since (first-look.md §1): the look picker opens by itself. */
+  asMade?: true;
   /** Redo would make again the last change undone (none made since). */
   canRedo?: boolean;
   preview: string;
@@ -492,6 +494,13 @@ export const api = {
         lookProject,
       }),
     ),
+  /** One change of the Look panel, made against the exact revision it was chosen on. */
+  lookChange: (
+    name: string,
+    args: Record<string, unknown>,
+    revision: string,
+    lookProject: string,
+  ) => changing(call<Result>("/api/op", { name, args, expectedRevision: revision, lookProject })),
   undoThemeChoice: (change: string, revision: string, lookProject: string) =>
     changing(
       call<Result>("/api/undo", {

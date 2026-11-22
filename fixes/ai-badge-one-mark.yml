@@ -1,0 +1,9 @@
+id: ai-badge-one-mark
+title: Pictures an AI made carry one badge (the EU's worded label in English), and photographs under a strong-colour theme keep their own colours.
+severity: fix
+exposure: none
+introduced: unknown
+affects:
+  kit: [src/kit/AiMark.tsx]
+  features: [theme:arcade, theme:ultraviolet, theme:riso, theme:manifesto, theme:sport, theme:grid, theme:broadside, theme:specimen, theme:terminal, theme:hallmark-midnight]
+migration: none

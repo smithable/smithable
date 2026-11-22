@@ -17,6 +17,7 @@
     "@codemirror/view": "6.43.13",
     "@dagrejs/dagre": "3.1.1",
     "@lezer/highlight": "1.2.5",
+    "@smithable/adapter-tanstack": "workspace:*",
     "@smithable/core": "workspace:*",
     "@smithable/index": "workspace:*",
     "@xyflow/react": "12.12.0",

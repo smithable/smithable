@@ -78,7 +78,16 @@ function page(
         head.push(element);
       },
     },
-    createElement: () => ({ id: "", textContent: "" }),
+    createElement: () => {
+      const element = {
+        id: "",
+        textContent: "",
+        remove: () => {
+          if (head.includes(element)) head.splice(head.indexOf(element), 1);
+        },
+      };
+      return element;
+    },
     getElementById: (id: string) => head.find((e) => e.id === id) ?? null,
     addEventListener: (type: string, listener: (event: unknown) => void) =>
       type === "click" && clicks.push(listener),
@@ -277,6 +286,17 @@ test("the preview signs in whenever it shows the sign-in page, until the owner s
   const after = page("/sign-in", storage);
   after.tick();
   expect(after.clicked).toEqual([]);
+});
+
+test("an empty theme CSS takes a tried theme off again (the first-look picker's Cancel)", () => {
+  const { send, theme } = page();
+  send({ type: "smithable:theme-css", css: ":root { --radius: 0; }" });
+  expect(theme()).toContain("--radius: 0;");
+  send({ type: "smithable:theme-css", css: "" });
+  expect(theme()).toBeUndefined();
+  // Nothing tried on: still nothing.
+  send({ type: "smithable:theme-css", css: "" });
+  expect(theme()).toBeUndefined();
 });
 
 test("a theme's CSS from the lab replaces the app's until reload, its fonts at Vite's paths", () => {

@@ -31,7 +31,7 @@ export async function checkStudioLook(page, dir) {
   try {
     const savedPath = await page.getByLabel("Preview address", { exact: true }).inputValue();
     await launch.click();
-    await page.getByRole("button", { name: "More look settings", exact: true }).click();
+    await page.getByRole("button", { name: "Customise", exact: true }).click();
     const dialog = page.getByRole("dialog", { name: "Look", exact: true });
     await dialog.getByRole("tab", { name: "Customise", exact: true }).click();
     await dialog.getByLabel("radius", { exact: true }).waitFor();
@@ -115,7 +115,7 @@ export async function checkStudioLook(page, dir) {
 
 export async function checkStudioLookApply(page, dir) {
   await (await toolbarAction(page, "Look")).click();
-  await page.getByRole("button", { name: "More look settings", exact: true }).click();
+  await page.getByRole("button", { name: "Customise", exact: true }).click();
   const dialog = page.getByRole("dialog", { name: "Look", exact: true });
   await dialog.getByRole("tab", { name: "Customise", exact: true }).click();
   const ready = () =>
@@ -213,7 +213,7 @@ export async function checkStudioViewer(page, dir) {
     );
   const before = domain();
   await (await toolbarAction(page, "Look")).click();
-  await page.getByRole("button", { name: "More look settings", exact: true }).click();
+  await page.getByRole("button", { name: "Customise", exact: true }).click();
   const dialog = page.getByRole("dialog", { name: "Look", exact: true });
   await dialog.getByRole("tab", { name: "Customise", exact: true }).click();
   const pages = dialog.getByRole("group", { name: "Page", exact: true });
@@ -292,7 +292,7 @@ export async function checkStudioLookTimeout(page, dir) {
       (request) => new URL(request.url()).pathname === "/api/look",
     );
     await (await toolbarAction(page, "Look")).click();
-    await page.getByRole("button", { name: "More look settings", exact: true }).click();
+    await page.getByRole("button", { name: "Customise", exact: true }).click();
     await dialog.getByRole("tab", { name: "Customise", exact: true }).click();
     await loading;
     await dialog.getByText("Show the look as a file", { exact: true }).click();
@@ -380,7 +380,7 @@ export async function checkStudioLookGallery(page, dir) {
   try {
     const cold = Date.now();
     await (await toolbarAction(page, "Look")).click();
-    await page.getByRole("button", { name: "More look settings", exact: true }).click();
+    await page.getByRole("button", { name: "Customise", exact: true }).click();
     const dialog = page.getByRole("dialog", { name: "Look", exact: true });
     await dialog.getByRole("tab", { name: "Customise", exact: true }).click();
     const textarea = dialog.locator("textarea:visible");
@@ -455,7 +455,7 @@ export async function checkStudioLookGallery(page, dir) {
 export async function checkStudioDefaultsApply(page, dir) {
   const baseline = projectRevision(dir, false);
   await (await toolbarAction(page, "Look")).click();
-  await page.getByRole("button", { name: "More look settings", exact: true }).click();
+  await page.getByRole("button", { name: "Customise", exact: true }).click();
   const dialog = page.getByRole("dialog", { name: "Look", exact: true });
   await dialog.getByRole("tab", { name: "Customise", exact: true }).click();
   await dialog
@@ -498,7 +498,7 @@ export async function checkStudioDefaultsApply(page, dir) {
   await dialog.waitFor({ state: "detached" });
   await openSettings(page);
   await (await toolbarAction(page, "Look")).click();
-  await page.getByRole("button", { name: "More look settings", exact: true }).click();
+  await page.getByRole("button", { name: "Customise", exact: true }).click();
   const settings = page.getByRole("dialog", { name: "Look", exact: true });
   const menu = settings.getByLabel("Menu layout", { exact: true });
   assert.equal(

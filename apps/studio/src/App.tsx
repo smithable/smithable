@@ -38,6 +38,7 @@ import { FirstLook } from "./FirstLook";
 import { lookSeenKey, seenLook } from "./first-look";
 import { doneKey, guideOff, presentedKey, TOURS } from "./guide";
 import { entryText, grouped, line } from "./history";
+import { LookPanel } from "./LookPanel";
 import { logStore } from "./logs";
 import { Making } from "./Making";
 import { ApplyVersionDialog, OldVersion, type OpenOld, openOldTab } from "./OldVersion";
@@ -239,9 +240,10 @@ export function App() {
   const [pickingLook, setPickingLook] = useState<{
     project: Project;
     preset: string;
-    automatic: boolean;
   }>();
   const [lookFinished, setLookFinished] = useState<string>();
+  // The Look panel (T1145): the whole app's look beside the preview, opened from the toolbar.
+  const [lookOpen, setLookOpen] = useState(false);
   const [troubleshooting, setTroubleshooting] = useState(false);
   const wakingNow = useSyncExternalStore(waking.subscribe, waking.get);
   const [outbox, setOutbox] = useState(false);
@@ -527,6 +529,8 @@ export function App() {
     ? [0, 1, 2]
     : [...(leftVisible ? ([0] as const) : []), 1, ...(settingsOpen ? ([2] as const) : [])];
   const mountedSlots: (0 | 1 | 2)[] = !narrow && !floating && !leftVisible ? [0, ...shown] : shown;
+  // The first-look picker leaves the other panes mounted and shows only the preview.
+  const lookAlone = Boolean(pickingLook);
   const phoneIndex = Math.max(0, phoneList.indexOf(phoneWindow));
   /**
    * The slot a window is drawn in among those shown (the first that names it), or none. No code
@@ -560,7 +564,7 @@ export function App() {
     showWindow(window);
   };
   const rowPan = usePan({
-    enabled: narrow && !project?.making,
+    enabled: narrow && !project?.making && !lookAlone,
     follows: () => !phoneSmithSheet,
     onRelease: (direction) => showPhonePane(phoneNeighbor(direction)),
   });
@@ -710,6 +714,8 @@ export function App() {
       !project.making &&
       project.lookProject &&
       project.revision &&
+      // Only a new app, read from its history: never an app changed since it was made (T1163).
+      project.asMade &&
       !guideOff() &&
       !seenLook(lookApp) &&
       lookFinished !== lookApp,
@@ -719,7 +725,7 @@ export function App() {
   useEffect(() => {
     if (initialLook && !pickingLook && !editingLook && spec.ux && project) {
       showLookPreview.current("preview");
-      setPickingLook({ project, preset: spec.ux.theme.preset, automatic: true });
+      setPickingLook({ project, preset: spec.ux.theme.preset });
     }
   }, [initialLook, pickingLook, editingLook, spec.ux, project]);
   const messageErrors = (message?.diagnostics ?? []).filter((d) => d.severity === "error");
@@ -1299,12 +1305,14 @@ export function App() {
     guiding && !narrow
       ? sideFor(lit?.anchor, lit?.box, window.innerWidth, window.innerHeight, over)
       : "right";
-  const smithVisible = floating
-    ? panelOpen && side !== "fold"
-    : narrow
-      ? phoneSmithSheet ||
-        (phoneWindow === "smith" && (!phone.changesUnderSmith || phoneSub === "smith"))
-      : slotOf("smith") !== undefined;
+  const smithVisible = lookAlone
+    ? false
+    : floating
+      ? panelOpen && side !== "fold"
+      : narrow
+        ? phoneSmithSheet ||
+          (phoneWindow === "smith" && (!phone.changesUnderSmith || phoneSub === "smith"))
+        : slotOf("smith") !== undefined;
   const onCall = Boolean(audio && audio.call !== "idle");
   const listening = Boolean(audio && (audio.listening || audio.call === "active"));
   const speakingHidden = !smithVisible && Boolean(audio?.speaking);
@@ -1401,21 +1409,26 @@ export function App() {
     if (narrow) showWindow("smith");
     else workIn("smith");
   };
+  // Look opens on the left, or on the right when Smith is docked as the left window.
+  const lookRight = !narrow && !floating && slotOf("smith") === 0;
   const lookAction = project.lookProject && (
-    <Button
-      variant="ghost"
-      className="justify-start px-2"
+    <ToolbarButton
+      label="Look"
       data-guide="look"
-      disabled={busy || Boolean(pickingLook) || !spec.plugins}
+      text={narrow}
+      pressed={lookOpen}
+      disabled={!lookOpen && (busy || Boolean(pickingLook) || !spec.plugins)}
       onClick={() => {
+        if (lookOpen) return setLookOpen(false);
         pauseGuide();
         showWindow("preview");
-        if (spec.ux) setPickingLook({ project, preset: spec.ux.theme.preset, automatic: false });
+        if (spec.ux) setLookOpen(true);
         else setEditingLook({ project, path: keptPage() });
       }}
     >
-      Look
-    </Button>
+      <path d="M12 3a9 9 0 1 0 0 18c.9 0 1.5-.7 1.5-1.5 0-.4-.1-.7-.4-1-.2-.3-.4-.6-.4-1 0-.8.7-1.5 1.5-1.5H16a5 5 0 0 0 5-5c0-4.4-4-8-9-8Z" />
+      <path d="M7.5 11.5h.01M10 7.5h.01M15 7.5h.01" strokeWidth="2.6" />
+    </ToolbarButton>
   );
   const reviewCount = release.review
     ? needsLook(release.review, { hosted: Boolean(project.home) })
@@ -1999,7 +2012,13 @@ export function App() {
                       transform: `translateX(calc(${(-phoneIndex * 100) / slots.length}% + ${rowPan.dx}px))`,
                       transition: rowPan.dx ? "none" : "transform 250ms ease-out",
                     }
-                  : gridOf(shown, slots)
+                  : {
+                      ...gridOf(lookAlone ? [1] : shown, slots),
+                      // The windows make room for Look beside them (T1145).
+                      ...(lookOpen && spec.ux
+                        ? { [lookRight ? "marginRight" : "marginLeft"]: "var(--look-width)" }
+                        : {}),
+                    }
               }
             >
               <div
@@ -2034,7 +2053,7 @@ export function App() {
                       : undefined
                   }
                 />
-                {!narrow && (
+                {!narrow && !lookAlone && (
                   <PreviewArrows
                     left={{
                       hidden: !leftVisible,
@@ -2078,7 +2097,11 @@ export function App() {
                     )}
                     style={{
                       gridArea: area(smithSheet ? placed("preview") : s),
-                      display: !narrow && smithHidden && content === "smith" ? "none" : undefined,
+                      display:
+                        (!narrow && smithHidden && content === "smith") ||
+                        (lookAlone && (!narrow || smithSheet))
+                          ? "none"
+                          : undefined,
                     }}
                   >
                     {smithSheet && (
@@ -2227,7 +2250,7 @@ export function App() {
                 );
               })}
             </main>
-            {narrow && (
+            {narrow && !lookAlone && (
               <>
                 <PhoneArrow side="left" window={phoneNeighbor(-1)} show={showPhonePane} />
                 <PhoneArrow side="right" window={phoneNeighbor(1)} show={showPhonePane} />
@@ -2288,11 +2311,11 @@ export function App() {
       {pickingLook && (
         <FirstLook
           project={pickingLook.project}
+          spec={spec}
           preset={pickingLook.preset}
-          automatic={pickingLook.automatic}
           aiBadge={spec.ux?.aiBadge ?? true}
           onRefresh={catchUp}
-          onClose={({ error, settings }) => {
+          onClose={({ error }) => {
             const finishedApp = pickingLook.project.localDir ?? pickingLook.project.name;
             try {
               localStorage.setItem(lookSeenKey(finishedApp), "1");
@@ -2300,8 +2323,20 @@ export function App() {
             setLookFinished(finishedApp);
             setPickingLook(undefined);
             if (error) setMessage({ ok: false, text: error });
-            if (settings && pickingLook.project.lookProject === project.lookProject)
-              setEditingLook({ project, path: keptPage() });
+          }}
+        />
+      )}
+      {lookOpen && spec.ux && (
+        <LookPanel
+          key={project.lookProject}
+          project={project}
+          spec={spec}
+          place={narrow ? "sheet" : lookRight ? "right" : "left"}
+          onRefresh={catchUp}
+          onClose={({ error, customize }) => {
+            setLookOpen(false);
+            if (error) setMessage({ ok: false, text: error });
+            if (customize) setEditingLook({ project, path: keptPage() });
           }}
         />
       )}
@@ -2320,32 +2355,37 @@ export function App() {
         </Suspense>
       )}
       {layerOn && (
-        <SmithLayer
-          mode={layer ?? "panel"}
-          appName={project.name}
-          lighter={previewRuns}
-          phone={narrow}
-          motion={motion}
-          movable={floating && !guiding}
-          open={panelOpen && side !== "fold"}
-          {...(over ? { over } : {})}
-          side={side === "left" ? "left" : "right"}
-          {...(layer === "closing" && !floating ? { target: narrow ? undefined : dockedAt() } : {})}
-          {...(guided && !guiding && !show.going ? { foldAfter: 90_000 } : {})}
-          activity={project.trace.length}
-          onNext={() => (show.said >= parts.length ? previewRuns && closeOverlay() : show.next())}
-          onSkip={closeOverlay}
-          onClosed={() => {
-            setLayer(floating ? "panel" : undefined);
-            setPresented(true);
-            if (narrow) showWindow("smith");
-          }}
-          onFold={() => setPanelOpen(false)}
-          onHide={hideSmith}
-          onDock={dock}
-        >
-          {smith(layer === "overlay" ? "overlay" : "panel")}
-        </SmithLayer>
+        // Hidden, not taken away, while the look picker is open (T1163): his thread stays.
+        <div className={lookAlone ? "hidden" : "contents"}>
+          <SmithLayer
+            mode={layer ?? "panel"}
+            appName={project.name}
+            lighter={previewRuns}
+            phone={narrow}
+            motion={motion}
+            movable={floating && !guiding}
+            open={panelOpen && side !== "fold"}
+            {...(over ? { over } : {})}
+            side={side === "left" ? "left" : "right"}
+            {...(layer === "closing" && !floating
+              ? { target: narrow ? undefined : dockedAt() }
+              : {})}
+            {...(guided && !guiding && !show.going ? { foldAfter: 90_000 } : {})}
+            activity={project.trace.length}
+            onNext={() => (show.said >= parts.length ? previewRuns && closeOverlay() : show.next())}
+            onSkip={closeOverlay}
+            onClosed={() => {
+              setLayer(floating ? "panel" : undefined);
+              setPresented(true);
+              if (narrow) showWindow("smith");
+            }}
+            onFold={() => setPanelOpen(false)}
+            onHide={hideSmith}
+            onDock={dock}
+          >
+            {smith(layer === "overlay" ? "overlay" : "panel")}
+          </SmithLayer>
+        </div>
       )}
       {releaseView === "review" && (
         <ReleaseReview
@@ -2440,6 +2480,7 @@ function ToolbarButton({
   text,
   disabled,
   pressed,
+  "data-guide": guide,
 }: {
   label: string;
   onClick: () => void;
@@ -2447,9 +2488,12 @@ function ToolbarButton({
   text?: boolean;
   disabled?: boolean;
   pressed?: boolean;
+  /** The guide stop beside it, as data-guide. */
+  "data-guide"?: string;
 }) {
   return (
     <Button
+      data-guide={guide}
       variant={pressed ? "primary" : "ghost"}
       aria-label={label}
       aria-pressed={pressed}
