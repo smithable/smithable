@@ -1,13 +1,13 @@
 # Theme-coloured pictures: drawn library pictures in the app's own colours
 
-Status: proposed 2026-11-21, not built. Design only. It follows the trial of 2026-11-20/21, two rounds of
-sheets on two contrasting themes, where Johan chose variant B ("light, keep hues, 25% back toward the
-original"). It builds on first-look.md §4: image styles, the record in `pictures.json`, and the host's
-`place-pictures` effect.
+Status: the host can select the tint rule. Rendering and offers are pending. The design follows the
+trial of 2026-11-20/21, two rounds of sheets on contrasting themes, where Johan chose variant B
+("light, keep hues, 25% back toward the original"). It builds on first-look.md §4: image styles,
+the record in `pictures.json`, and the host's `place-pictures` effect.
 
-**Changed 2026-11-22, after Johan saw the second round of sheets: recolouring is an offer, not a rule
-applied at every theme change. Calm themes are offered the chosen rule, strong themes a light tint, and
-greyscale themes nothing. §10 says how; where it differs from §1, §2, §4, §5, §6, §7 and §9, §10 holds.**
+**Changed 2026-11-22 after the comparison sheets: a theme change keeps the current pictures. Coloured
+themes qualify for a light tint and greyscale themes use the original drawings. §10 supersedes the
+earlier design where they differ.**
 
 ## 1 What changes for the user
 
@@ -210,34 +210,33 @@ commit either way.
    and the operations page say so.
 4. **The theme sheet script** for the pictures. Johan reads the sheets before the change merges.
 
-## 10 An offer, by how strong the theme's colour is (2026-11-22)
+## 10 A light tint for coloured themes (2026-11-22)
 
-Johan's review of the sheets: the recoloured pictures are not always better than the drawing. So the
-recolouring is never applied by itself, and how far it goes depends on the theme.
+The 2026-11-22 comparison sheets favoured a light tint across the coloured themes sampled. The
+design adopted one tint and one greyscale cutoff. Applying a theme leaves the pictures in place
+and the person decides whether to use the offered set.
 
 - **A theme change changes the theme only.** `setTheme` reports no `place-pictures` effect and waits for
   no pictures. The app keeps the pictures it has. This replaces §5 points 1, 5 and 7.
 - **Which rule a theme gets**, read from the theme's light primary in OKLCH, never from its name:
 
-  | Class | Primary's chroma | Offer | Rule recorded |
-  | - | - | - | - |
-  | greyscale | below 0.02 | the drawings as drawn | `none` |
-  | calm | 0.02 to 0.12 | §3 as chosen, 25% back toward the drawing | `ink-wash-b25` |
-  | strong | above 0.12 | a light tint, 90% back toward the drawing | `ink-wash-b90` |
+  | Primary's chroma | Offer | Rule recorded |
+  | - | - | - |
+  | At or below 0.02 | the original drawings | `none` |
+  | Above 0.02 | a light tint, 90% back toward the drawing | `ink-wash-b90` |
 
-  The colour read is the primary in force, after a brand colour has replaced the theme's own, not the
-  theme's chroma cap. A value exactly on a cut-off belongs to the calmer class. The cut-offs are
-  proposals: of the built-in themes today about a tenth are greyscale, a third calm and more than half
-  strong, several sit within 0.01 of 0.12, and the calmest of the calm are close to grey. The sheet
-  script (§7) prints each built-in theme's chroma and class beside its sheet, and Johan reads those
-  sheets and sets the cut-offs before the offer ships. §6's fallbacks still apply within a class, and
-  §7's contrast bound is set per rule.
+  The rule measures the light primary in force, including any brand colour override, in the same
+  sRGB representation used by the [theme measurement sheets](../../scripts/theme-sheet.mjs).
+  Run the sheet script with `--all` for every built-in theme. The CLI host's
+  `INK_WASH_GREYSCALE_CUTOFF` supplies the cutoff to both the sheets and `validate --explain`.
+  §6's picture and codec fallbacks still apply. Set §7's paper lightness bound for the light tint
+  when its rendered output is measured.
 - **The host prepares the set in the background** after the theme is applied, from the originals, into
   a folder outside the project's files. Nothing in the project changes while it works. A newer theme
   change discards a set still being prepared for the older one.
-- **An offer is made only when it would change something**: the set for the theme's class differs from
-  what is placed. So a calm theme offers its colours; a greyscale theme offers the drawings back when
-  the placed pictures were recoloured for an earlier theme, and nothing when they are already as drawn.
+- **An offer is made only when it would change something.** A coloured theme offers a light tint
+  when it differs from the placed pictures. A greyscale theme offers the drawings when the placed
+  pictures were recoloured for an earlier theme.
 - **Studio offers it** with a quiet notice, "Pictures to match your theme are ready", opening a
   before-and-after of the hero and a few samples, with "Use these" and "Keep mine".
 - **An offer is bound to what it was made from:** the style, the library version, the theme's three

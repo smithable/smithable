@@ -131,3 +131,27 @@ test("Explain names explicit record emphasis instead of reporting automatic fiel
     "invoices summary (header and aside): status status, amount total, dates dueOn (named slots; omitted slots use automatic selection)",
   );
 });
+
+test("Explain uses the Ink wash cutoff with the effective light primary", async () => {
+  const dir = tempDir("smithable-ink-wash-explain-");
+  writeFileSync(
+    join(dir, "smithable.yml"),
+    "smithable: 0.1\napp: { name: Notes }\nmodels: { Note: { fields: { text: string } } }\n",
+  );
+  writeFileSync(join(dir, "smithable.auth.yml"), "smithableAuth: 0.1\nsignIn: none\n");
+  const ux = join(dir, "smithable.ux.yml");
+  const look = "smithableUx: 0.1\npictures: { style: ink-wash }\n";
+  writeFileSync(ux, `${look}theme: { preset: minimal }\n`);
+  const grey = captureIo();
+  expect(await run(["validate", dir, "--explain"], grey)).toBe(0);
+  expect(grey.stdout).toContain(
+    "Ink wash theme rule: as drawn (none). Light primary #292524, OKLCH chroma 0.006287 (greyscale cutoff: 0.02, inclusive).",
+  );
+
+  writeFileSync(ux, `${look}theme: { preset: minimal, brand: { primary: "#663399" } }\n`);
+  const colour = captureIo();
+  expect(await run(["validate", dir, "--explain"], colour)).toBe(0);
+  expect(colour.stdout).toContain("Ink wash theme rule: light tint (ink-wash-b90).");
+  expect(colour.stdout).toContain("Light primary #5c4777, OKLCH chroma 0.080393");
+  expect(colour.stdout).toContain("greyscale cutoff: 0.02, inclusive");
+});
