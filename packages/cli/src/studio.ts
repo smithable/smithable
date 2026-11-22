@@ -63,7 +63,12 @@ import {
 } from "./old-version.js";
 import { projectFiles, runOperation } from "./op.js";
 import { readOutbox } from "./outbox.js";
-import { type LibraryVersion, libraryVersion, placedRealistic } from "./picture-style.js";
+import {
+  type LibraryVersion,
+  libraryVersion,
+  linkedRecordPath,
+  placedRealistic,
+} from "./picture-style.js";
 import { declaredPlugins, loadPlugins, pluginPath } from "./plugins.js";
 import {
   PREVIEW_TOKEN_DIGEST,
@@ -179,15 +184,25 @@ export const ownFile = (path: string) => path in EDITABLE_FILES || path.startsWi
  * comments apart): formatting is never a change (docs/design/studio-v3.md §7), so the daemon
  * answers as if done and writes nothing; the formatted text reaches the file with the next edit.
  */
-/** Whether the bytes begin as a webp, avif, jpeg or png file does, whatever the file is called. */
-export function pictureBytes(bytes: Uint8Array): boolean {
+/**
+ * Whether the bytes begin as a file of the extension's kind does (webp, avif, jpeg, png): its
+ * header, not its name. An AVIF may name itself mif1 first and avif among its other brands.
+ */
+export function pictureBytes(bytes: Uint8Array, ext: string): boolean {
+  if (bytes.byteLength < 16) return false;
   const ascii = (from: number, to: number) => String.fromCharCode(...bytes.subarray(from, to));
-  return (
-    (ascii(0, 4) === "RIFF" && ascii(8, 12) === "WEBP") ||
-    (ascii(4, 8) === "ftyp" && /^avi[fs]$/.test(ascii(8, 12))) ||
-    (bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) ||
-    ascii(0, 8) === "\x89PNG\r\n\x1a\n"
+  if (ext === "webp") return ascii(0, 4) === "RIFF" && ascii(8, 12) === "WEBP";
+  if (ext === "png") return ascii(0, 8) === "\x89PNG\r\n\x1a\n";
+  if (ext === "jpg" || ext === "jpeg")
+    return bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
+  if (ext !== "avif" || ascii(4, 8) !== "ftyp") return false;
+  const box = Math.min(
+    bytes.byteLength,
+    (bytes[0] ?? 0) * 2 ** 24 + ((bytes[1] ?? 0) << 16) + ((bytes[2] ?? 0) << 8) + (bytes[3] ?? 0),
+    64,
   );
+  for (let at = 8; at + 4 <= box; at += 4) if (/^avi[fs]$/.test(ascii(at, at + 4))) return true;
+  return false;
 }
 
 /**
@@ -212,7 +227,7 @@ export function pictureRefusal(
       path !== `public/${String(args.src)}` ||
       !bytes ||
       bytes.byteLength > 2 * 1024 * 1024 ||
-      !pictureBytes(bytes)
+      !pictureBytes(bytes, path.slice(path.lastIndexOf(".") + 1))
     )
       return "A picture must be a webp, avif, jpg or png file of at most 2 MB.";
     if (there(path)) return `${path} is already there: a new picture gets a name of its own.`;
@@ -1464,7 +1479,10 @@ export async function studio(
             given.path,
             bytes,
             (args ?? {}) as Record<string, unknown>,
-            (path) => lstatSync(join(dir, path), { throwIfNoEntry: false }) !== undefined,
+            // A link for public/ or images/ would lead the write out of the project: refused as there.
+            (path) =>
+              linkedRecordPath(dir) !== undefined ||
+              lstatSync(join(dir, path), { throwIfNoEntry: false }) !== undefined,
           );
         if (refused) return json({ ok: false, output: refused }, 400);
 
@@ -1525,7 +1543,17 @@ export async function studio(
             reportLater: true,
             where: "studio",
             trace: traceIdOf(req.headers.traceparent),
-            ...(given && bytes ? { files: [{ path: given.path as string, bytes }] } : {}),
+            ...(given && bytes
+              ? {
+                  files: [
+                    {
+                      path: given.path as string,
+                      bytes,
+                      fresh: String(name) === "setSectionPicture",
+                    },
+                  ],
+                }
+              : {}),
           }),
         );
         // A destructive operation stops to ask; the Studio shows the impact and a confirm button.

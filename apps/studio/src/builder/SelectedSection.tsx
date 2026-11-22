@@ -317,7 +317,7 @@ export function SelectedSection({
         ))}
         {section.picture && (
           <SectionPicture
-            key={section.picture.image?.src}
+            key={pictureValue(section.picture.image)}
             page={section.page}
             section={section.section}
             image={section.picture.image}

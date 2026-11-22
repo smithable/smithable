@@ -1925,4 +1925,6 @@ test("setSectionPicture replaces, keeps the alt of, and removes a section's own 
   expect(picture({ section: "faq", src: "images/a.webp", alt: "A" }).ok).toBe(false);
   expect(picture({ src: "../secrets.webp", alt: "A" }).ok).toBe(false);
   expect(picture({ src: "images/logo.svg", alt: "A" }).ok).toBe(false);
+  // Only a src left out removes it; an empty one is no file.
+  expect(picture({ src: "" }).ok).toBe(false);
 });
