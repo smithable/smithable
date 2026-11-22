@@ -1476,7 +1476,7 @@ try {
           if (tries === 3) throw error;
         }
       }
-      await page.getByRole("button", { name: "Select" }).click();
+      await page.getByRole("button", { name: "Select", exact: true }).click();
       await preview
         .locator("html[data-sm-selecting]")
         .waitFor({ state: "attached", timeout: 60000 * P });
@@ -1526,13 +1526,13 @@ try {
       if (after.files.spec !== before) throw new Error("smithable.yml changed");
       const ux = readFileSync(join(dir, "smithable.ux.yml"), "utf8");
       if (!/columns: \[email, name/.test(ux)) throw new Error(ux);
-      await page.getByRole("button", { name: "Select" }).click();
+      await page.getByRole("button", { name: "Select", exact: true }).click();
     },
   );
   await step(
     "a column moves with Alt and an arrow; a record's value says where it comes from (A 231)",
     async () => {
-      await page.getByRole("button", { name: "Select" }).click();
+      await page.getByRole("button", { name: "Select", exact: true }).click();
       await preview
         .locator("html[data-sm-selecting]")
         .waitFor({ state: "attached", timeout: 60000 * P });
@@ -1589,7 +1589,7 @@ try {
         .locator("[data-value-origin]")
         .getByText("each customer's email", { exact: false })
         .waitFor({ timeout: 60000 * P });
-      await page.getByRole("button", { name: "Select" }).click();
+      await page.getByRole("button", { name: "Select", exact: true }).click();
       // Undone, so the steps after find the drag's change last, as before.
       const undone = await fetch(`${base}/api/undo`, {
         method: "POST",
@@ -1610,7 +1610,7 @@ try {
       // the frame being replaced edits nothing, so the title must be editable before typing.
       const title = preview.locator('[data-sm-text="pages.customers.title"]');
       const changed = last.getByText("Changed the Customers page's title to “Clients”").first();
-      await page.getByRole("button", { name: "Select" }).click();
+      await page.getByRole("button", { name: "Select", exact: true }).click();
       // A reload that lands between the title becoming editable and the typing takes the typing
       // with it: the whole edit is made again then (the same title again changes nothing).
       for (let attempt = 1; ; attempt++) {
@@ -1631,7 +1631,7 @@ try {
       }
       if (!(await project()).files.content.includes("title: Clients"))
         throw new Error("content not changed");
-      await page.getByRole("button", { name: "Select" }).click();
+      await page.getByRole("button", { name: "Select", exact: true }).click();
       await preview.getByRole("heading", { name: "Clients" }).waitFor({ timeout: 60000 * P });
     },
   );
@@ -2124,7 +2124,7 @@ try {
     "a field picked in the preview opens Behavior at it; Code keeps its file, cursor and unsaved edit across a window change and a reload",
     async () => {
       await openPreview("/customers/new");
-      await page.getByRole("button", { name: "Select" }).click();
+      await page.getByRole("button", { name: "Select", exact: true }).click();
       const email = page
         .getByRole("region", { name: "What the app does" })
         .locator("details[open]", { has: page.locator('summary:text-is("email")') });
@@ -2144,7 +2144,7 @@ try {
           if (attempt === 2) throw error;
         }
       }
-      await page.getByRole("button", { name: "Select" }).click();
+      await page.getByRole("button", { name: "Select", exact: true }).click();
       // A reload keeps the place (the browser tab's session).
       await page.reload();
       await email.first().waitFor({ timeout: 30000 * P });
@@ -2204,7 +2204,7 @@ try {
     async () => {
       await firstWindow("code");
       await openPreview("/customers");
-      await page.getByRole("button", { name: "Select" }).click();
+      await page.getByRole("button", { name: "Select", exact: true }).click();
       // The page in the frame is in select mode before anything is clicked: a click before it is
       // the app's own (a new frame after Go hears of select mode only once it has loaded).
       const selecting = () =>
@@ -2235,7 +2235,7 @@ try {
         .click({ timeout: 60000 * P });
       const field = await editorText("smithable.yml");
       if (!field.trim().startsWith("email:")) throw new Error(`smithable.yml shows "${field}"`);
-      await page.getByRole("button", { name: "Select" }).click();
+      await page.getByRole("button", { name: "Select", exact: true }).click();
       await firstWindow("nocode");
     },
   );
