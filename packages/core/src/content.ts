@@ -165,6 +165,13 @@ export function sectionItemTexts(kind: string): string[] | undefined {
   return items && !items.includes("image") ? items.filter((k) => k !== "features") : undefined;
 }
 
+/** The keys a kind of section's texts may have in the content file: its texts, and items, image or fields when it takes them. */
+export function sectionTextKeys(
+  kind: string,
+): { texts: string[]; items?: string[]; image?: true; fields?: true } | undefined {
+  return SECTION_TEXTS[kind];
+}
+
 /** The texts each kind of section takes, and the keys of its items. */
 const SECTION_TEXTS: Record<
   string,

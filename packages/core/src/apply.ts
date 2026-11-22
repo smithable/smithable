@@ -554,6 +554,8 @@ function checkArgs(schema: JsonSchema, args: OperationArgs): string | undefined 
   for (const key of (schema.required ?? []) as string[]) {
     if (args[key] === undefined || args[key] === "") return `"${key}" is missing.`;
   }
-  for (const key of Object.keys(args)) if (!properties[key]) return `Unknown argument "${key}".`;
+  for (const key of Object.keys(args))
+    if (!properties[key])
+      return `Unknown argument "${key}": it takes ${Object.keys(properties).join(", ")}.`;
   return checkJson({ properties }, args, "")[0];
 }
