@@ -2788,19 +2788,22 @@ try {
       await lookDialog.getByRole("button", { name: "Close look editor", exact: true }).click();
       await sub("Layout");
       await page.getByLabel("Page to style").selectOption("home");
-      // Contact was added above Footer. Its up arrow moves it above Hero; wait for that
-      // operation's response before reading the file it replaces.
-      const moved = page.waitForResponse(
-        (response) =>
-          response.url() === `${base}/api/op` &&
-          response.request().method() === "POST" &&
-          response.request().postDataJSON()?.name === "moveSection",
-      );
-      await page
-        .getByRole("list", { name: "Sections of Home" })
-        .getByRole("button", { name: "Move Contact up" })
-        .click();
-      const move = await (await moved).json();
+      // Moving Contact up puts it above Hero. Read the receipt as it arrives, before
+      // navigation can discard the response body.
+      const [move] = await Promise.all([
+        page
+          .waitForResponse(
+            (response) =>
+              response.url() === `${base}/api/op` &&
+              response.request().method() === "POST" &&
+              response.request().postDataJSON()?.name === "moveSection",
+          )
+          .then((response) => response.json()),
+        page
+          .getByRole("list", { name: "Sections of Home", exact: true })
+          .getByRole("button", { name: "Move Contact up", exact: true })
+          .click(),
+      ]);
       if (!move.ok) throw new Error(`moveSection: ${move.output}`);
       const spec = readFileSync(join(dir, "smithable.yml"), "utf8");
       const home = spec.slice(spec.indexOf("\n  home:"));

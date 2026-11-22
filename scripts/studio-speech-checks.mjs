@@ -180,7 +180,7 @@ export async function checkStudioSpeech(
       }, support);
       await page.route("**/vad/**", (route) => route.abort());
       await page.route("**/api/project", async (route) => {
-        const response = await route.fetch();
+        const response = await route.fetch({ maxRetries: 1 });
         const body = await response.json();
         body.speech = [{ name: "browser", ...(localOnly ? { onDeviceOnly: true } : {}) }];
         await route.fulfill({ response, json: body });
