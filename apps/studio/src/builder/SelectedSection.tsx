@@ -26,6 +26,7 @@ const KEYS: Record<string, string> = {
   image: "Picture side",
   height: "Height",
   band: "Background",
+  mark: "Heading",
 };
 const HEIGHTS: Record<string, string> = {
   default: "Layout's own",
@@ -59,6 +60,8 @@ export function selectedSection(selection: Selection | undefined, spec: Spec) {
   const choices = Object.keys(KEYS).flatMap((key) => {
     const all = looks[key];
     if (!Array.isArray(all)) return [];
+    if (key === "mark" && !spec.content?.logo)
+      return look.mark === "logo" ? [{ key, values: ["title"], current: "logo" }] : [];
     const values = all.filter((value) => applies(key, String(value)));
     // A hero's picture has a side only beside its text.
     if (section.kind === "hero" && key === "image" && !["split", "inset"].includes(layout))
@@ -75,6 +78,16 @@ export function selectedSection(selection: Selection | undefined, spec: Spec) {
     const current = look[key] ?? (key === "band" ? "none" : values[0]);
     return [{ key, values: values.map(String), current: String(current) }];
   });
+  const content = spec.content?.pages[page]?.sections?.[name];
+  const itemPictures =
+    section.kind === "features"
+      ? (content?.items ?? []).map((item, index) => ({
+          index,
+          label: typeof item.title === "string" ? item.title : `Feature ${index + 1}`,
+          image:
+            typeof item.image === "object" && !Array.isArray(item.image) ? item.image : undefined,
+        }))
+      : [];
   return {
     page,
     section: name,
@@ -82,9 +95,8 @@ export function selectedSection(selection: Selection | undefined, spec: Spec) {
     label: selection?.label?.trim() || humanize(name),
     choices,
     // A section with a picture of its own, and the one it has (none: the section shows its text).
-    picture: sectionTakesPicture(section.kind)
-      ? { image: spec.content?.pages[page]?.sections?.[name]?.image }
-      : undefined,
+    itemPictures,
+    picture: sectionTakesPicture(section.kind) ? { image: content?.image } : undefined,
   };
 }
 
@@ -134,6 +146,12 @@ export function SelectedSection({
           values: {
             ...Object.fromEntries(section.choices.map((c) => [c.key, c.current])),
             picture: pictureValue(section.picture?.image),
+            ...Object.fromEntries(
+              section.itemPictures.map(({ index, image }) => [
+                `picture:${index}`,
+                pictureValue(image),
+              ]),
+            ),
           },
           revision: project.revision ?? "",
         },
@@ -194,14 +212,15 @@ export function SelectedSection({
   const choosePicture = (
     args: { src?: string; alt?: string },
     file?: { path: string; data: string },
+    item?: number,
   ) =>
     attempt(
-      "picture",
+      item === undefined ? "picture" : `picture:${item}`,
       pictureValue(args.src ? { src: args.src, alt: args.alt ?? "" } : undefined),
       (revision) =>
         api.lookChange(
           "setSectionPicture",
-          { page: section.page, section: section.section, ...args },
+          { page: section.page, section: section.section, ...args, item },
           revision,
           lookProject,
           file,
@@ -322,10 +341,26 @@ export function SelectedSection({
             page={section.page}
             section={section.section}
             image={section.picture.image}
+            label={
+              ["text", "callToAction", "features"].includes(section.kind)
+                ? "Background picture"
+                : undefined
+            }
             change={(args, file) => void choosePicture(args, file)}
             busy={busy}
           />
         )}
+        {section.itemPictures.map(({ index, label, image }) => (
+          <SectionPicture
+            key={`${index}:${pictureValue(image)}`}
+            page={section.page}
+            section={`${section.section}-${index + 1}`}
+            label={`${label} picture`}
+            image={image}
+            change={(args, file) => void choosePicture(args, file, index)}
+            busy={busy}
+          />
+        ))}
         {error && (
           <p role="alert" className="text-sm text-red-700">
             {error}

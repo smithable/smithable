@@ -162,7 +162,9 @@ export const sectionTakesPicture = (kind: string) => SECTION_TEXTS[kind]?.image 
 /** The keys of a kind of section's items that are plain texts (a pricing plan's features and a gallery's picture are not); none when its items are not texts alone. */
 export function sectionItemTexts(kind: string): string[] | undefined {
   const items = SECTION_TEXTS[kind]?.items;
-  return items && !items.includes("image") ? items.filter((k) => k !== "features") : undefined;
+  return items && kind !== "gallery"
+    ? items.filter((k) => k !== "features" && k !== "image")
+    : undefined;
 }
 
 /** The keys a kind of section's texts may have in the content file: its texts, and items, image or fields when it takes them. */
@@ -179,7 +181,7 @@ const SECTION_TEXTS: Record<
 > = {
   mediaText: { texts: ["eyebrow", "title", "text", "button", "caption"], image: true },
   hero: { texts: ["eyebrow", "title", "subtitle", "button", "secondButton"], image: true },
-  features: { texts: ["eyebrow", "title", "text"], items: ["title", "text"] },
+  features: { texts: ["eyebrow", "title", "text"], items: ["title", "text", "image"], image: true },
   records: { texts: ["eyebrow", "title", "text"] },
   pricing: {
     texts: ["eyebrow", "title", "text"],
@@ -187,7 +189,7 @@ const SECTION_TEXTS: Record<
   },
   testimonials: { texts: ["eyebrow", "title"], items: ["quote", "name", "role"] },
   faq: { texts: ["eyebrow", "title"], items: ["question", "answer"] },
-  callToAction: { texts: ["title", "text", "button"] },
+  callToAction: { texts: ["title", "text", "button"], image: true },
   // Opening hours one per line; "thanks" is shown once a visitor has sent the form.
   contact: {
     texts: ["eyebrow", "title", "text", "address", "phone", "email", "hours", "button", "thanks"],
@@ -199,7 +201,7 @@ const SECTION_TEXTS: Record<
   calculator: { texts: ["title", "text", "results"], fields: true },
   custom: { texts: ["title", "text"] },
   // A text section: a heading and its paragraphs.
-  text: { texts: ["eyebrow", "title", "text"] },
+  text: { texts: ["eyebrow", "title", "text"], image: true },
   // A calculator page's results heading.
   results: { texts: ["title"] },
   // A link is a page's address ("/pricing") or a full one ("https://…", "mailto:…").

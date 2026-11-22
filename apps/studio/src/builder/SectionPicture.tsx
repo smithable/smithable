@@ -31,12 +31,14 @@ export function SectionPicture({
   page,
   section,
   image,
+  label = "Picture",
   change,
   busy,
 }: {
   page: string;
   section: string;
   image: ContentImage | undefined;
+  label?: string;
   change: (args: { src?: string; alt?: string }, file?: { path: string; data: string }) => void;
   busy: boolean;
 }) {
@@ -68,7 +70,7 @@ export function SectionPicture({
   };
   return (
     <fieldset className="space-y-2" data-section-picture>
-      <legend className="text-xs text-muted">Picture</legend>
+      <legend className="text-xs text-muted">{label}</legend>
       <div className="flex items-center gap-2">
         {image ? (
           <img

@@ -30,6 +30,7 @@ export const SECTION_LOOKS: Partial<
     layout: ["split", "centered", "plain", "cover", "photo", "inset", "stage", "tiles"],
     image: ["right", "left"],
     overlay: ["brand", "dark"],
+    mark: ["title", "logo"],
     eyebrow: ["address", "hours"],
     facts: "models",
     stage: "page",

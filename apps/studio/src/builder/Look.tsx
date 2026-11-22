@@ -1027,6 +1027,7 @@ function SectionAppearance({
     <div className="space-y-2 text-sm">
       {sections.map((section) =>
         Object.entries(SECTION_LOOKS[section.kind] ?? {}).map(([key, values]) => {
+          if (key === "mark") return null;
           const label = `${humanize(key)} of ${humanize(section.name)}`;
           const inputId = `${scope}-${section.name}-${key}`;
           const current = ux.looks?.[section.name]?.[key as "layout"];
