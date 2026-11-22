@@ -2429,21 +2429,23 @@ try {
         .waitFor({ timeout: 30000 * P });
       if (!(await page.locator("[data-speech]").count())) return;
       await page.getByRole("button", { name: /^Mic: / }).waitFor();
-      const sound = page.getByRole("button", { name: /^Sound: (?:on|off)$/ });
-      if (!(await sound.isEnabled())) return;
-      const before = await sound.getAttribute("aria-label");
-      await sound.click();
-      const after = await sound.getAttribute("aria-label");
-      if (after === before) throw new Error(`the sound button stays "${before}"`);
+      const turnOn = page.getByRole("button", { name: "Turn Smith's voice on", exact: true });
+      const turnOff = page.getByRole("button", { name: "Turn Smith's voice off", exact: true });
+      const wasOn = await turnOff.isVisible();
+      const before = wasOn ? turnOff : turnOn;
+      const after = wasOn ? turnOn : turnOff;
+      if (!(await before.isEnabled())) return;
+      await before.click();
+      await after.waitFor();
       // The choice is the browser's, kept for the next visit.
       const kept = await page.evaluate(() => localStorage.getItem("smithable:speech"));
-      if (!kept?.includes(`"sound":${after === "Sound: on"}`))
+      if (!kept || JSON.parse(kept).sound !== !wasOn)
         throw new Error(`the sound choice is not kept: ${kept}`);
-      await sound.click();
+      await after.click();
     },
   );
   await step(
-    "automatic mode loads Silero from the docs site's files, checked by their hashes (A 235 step 2)",
+    "a Smith call loads Silero from the docs site's files, checked by their hashes (A 235 step 2)",
     async () => {
       // Its own browser, with a stand-in microphone; docs.smithable.ai answered from the site
       // just built (pnpm site), as the published one will.
@@ -2452,6 +2454,12 @@ try {
       });
       try {
         const listener = await ears.newPage();
+        // Headless Chromium may have no system voices. Keep the real microphone and detector.
+        await listener.addInitScript(() => {
+          window.speechSynthesis.getVoices = () => [
+            { name: "Fixture voice", lang: "en-US", localService: true },
+          ];
+        });
         await listener.route("https://docs.smithable.ai/vad/**", (route) => {
           const path = new URL(route.request().url()).pathname;
           route.fulfill({
@@ -2459,19 +2467,19 @@ try {
             headers: { "access-control-allow-origin": "*" },
           });
         });
-        await listener.goto(`http://localhost:${port}/`);
-        await listener
-          .locator("[data-speech], [data-speech-off]")
-          .first()
-          .waitFor({ timeout: 30000 * P });
-        const auto = listener.getByRole("button", { name: "Automatic" });
-        if (!(await auto.count())) return; // no recognition in this browser
-        await auto.click();
-        await listener.getByText("Listening while Smith is silent").waitFor({ timeout: 30000 * P });
-        if (await listener.getByText("A simpler voice detector is in use.").count())
+        await listener.goto(`${base}/?guide=off`);
+        await openSmith(listener);
+        const speech = listener.locator("[data-speech]");
+        const start = speech.getByRole("button", { name: "Start call", exact: true });
+        const end = speech.getByRole("button", { name: "End call", exact: true });
+        await start.click();
+        await speech.getByRole("button", { name: "Mic: on", exact: true }).waitFor({
+          timeout: 30000 * P,
+        });
+        if (await speech.getByText("A simpler voice detector is in use.", { exact: true }).count())
           throw new Error("Silero's files did not load: the simple detector runs");
-        await auto.click();
-        await listener.getByText("Listening while Smith is silent").waitFor({ state: "detached" });
+        await end.click();
+        await start.waitFor();
       } finally {
         await ears.close();
       }
