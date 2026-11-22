@@ -288,6 +288,7 @@ export function planStyle(
     }
     if (tint) {
       if (
+        record.version === version.version &&
         record.source === entry.sha256 &&
         record.colours?.primary === tint.primary &&
         record.colours.background === tint.background &&
