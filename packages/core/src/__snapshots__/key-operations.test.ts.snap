@@ -1,22 +1,3 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`the keys left to editSpec, as reviewed: every other key has its operation 1`] = `
-[
-  "smithable.yml:models.*.fields.*.examples",
-  "smithable.yml:models.*.fields.*.examples.*",
-  "smithable.yml:models.*.fields.*.examples.*.expected",
-  "smithable.yml:models.*.fields.*.examples.*.input",
-  "smithable.yml:pages.*.calculator.examples",
-  "smithable.yml:pages.*.calculator.examples.*",
-  "smithable.yml:pages.*.calculator.examples.*.expected",
-  "smithable.yml:pages.*.calculator.examples.*.input",
-  "smithable.yml:pages.*.landing.*.calculator.examples",
-  "smithable.yml:pages.*.landing.*.calculator.examples.*",
-  "smithable.yml:pages.*.landing.*.calculator.examples.*.expected",
-  "smithable.yml:pages.*.landing.*.calculator.examples.*.input",
-  "smithable.yml:pages.*.sections.*.calculator.examples",
-  "smithable.yml:pages.*.sections.*.calculator.examples.*",
-  "smithable.yml:pages.*.sections.*.calculator.examples.*.expected",
-  "smithable.yml:pages.*.sections.*.calculator.examples.*.input",
-]
-`;
+exports[`the keys left to editSpec, as reviewed: every other key has its operation 1`] = `[]`;
