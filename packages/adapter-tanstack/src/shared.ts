@@ -63,6 +63,7 @@ export interface GenerateOptions {
   smithableVersion: string;
   /** Template inventory fingerprint supplied by the host; absent in older generated projects. */
   kitRevision?: string;
+  sectionPictureKitRevision?: string;
   /** Visible text from smithable.content.yml; anything missing is derived from names. */
   content?: ContentIR;
   auth: AuthIR;

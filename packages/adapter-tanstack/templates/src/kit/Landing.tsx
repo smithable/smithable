@@ -433,6 +433,7 @@ type Banded = {
 function SectionBackdrop({ image }: { image: LandingImage }) {
   return (
     <>
+      {/* Not marked: a picture under a scrim, like the photo hero (AiMark.tsx). */}
       <img
         src={image.src}
         srcSet={image.srcSet}
@@ -456,7 +457,7 @@ function pictureFrame(image?: LandingImage) {
         "data-section-photo": "",
         style: { backgroundColor: "black" },
         className:
-          "relative isolate mx-auto my-(--section-gap) max-w-(--landing-width) overflow-hidden rounded-lg px-5 py-10 text-white sm:py-12 [&_[data-part=eyebrow]]:text-white [&_p]:text-current",
+          "relative isolate mx-auto my-(--section-gap) max-w-(--landing-width) overflow-hidden rounded-lg px-5 py-10 text-white sm:py-12 [&_p]:text-current",
       }
     : {};
 }
@@ -773,11 +774,15 @@ function HeroView({
       )}
       <h1
         className="max-w-3xl text-[calc(2.25rem*var(--heading-scale))] leading-tight font-(--heading-weight) tracking-(--heading-tracking) [text-transform:var(--heading-case,none)] sm:text-[calc(3rem*var(--heading-scale))] lg:text-[calc(3.75rem*var(--heading-scale))]"
-        {...mark(texts, "title")}
+        // @sectionPictures
+        {...(logoMark ? {} : mark(texts, "title"))}
+        // @sectionPicturesBaseline |        {...mark(texts, "title")}
+        // @endSectionPictures
       >
         {/* @sectionPictures */}
         {logoMark ? (
           <>
+            {/* Not marked: the app logo, like the mark in the header. */}
             <img src={logoMark} alt="" className="h-auto max-h-40 max-w-full object-contain" />
             <span className="sr-only">{title}</span>
           </>

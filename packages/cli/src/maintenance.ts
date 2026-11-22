@@ -1,16 +1,22 @@
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { baselineKitSources, STACK_PROFILE } from "@smithable/adapter-tanstack";
+import { baselineKitSources, kitSources, STACK_PROFILE } from "@smithable/adapter-tanstack";
 import { git } from "./git.js";
 import { VERSION } from "./version.js";
-export const templateKitRevision = createHash("sha256")
-  .update(
-    JSON.stringify(
-      Object.entries(baselineKitSources).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)),
-    ),
-  )
-  .digest("hex");
+
+function kitHash(sources: Record<string, string>): string {
+  return createHash("sha256")
+    .update(
+      JSON.stringify(Object.entries(sources).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))),
+    )
+    .digest("hex");
+}
+
+export const templateKitRevision = kitHash(baselineKitSources);
+const SECTION_PICTURES = "section-pictures:";
+export const sectionPictureKitRevision = SECTION_PICTURES + kitHash(kitSources);
+
 function json(dir: string, file: string): Record<string, unknown> | undefined {
   try {
     const value = JSON.parse(readFileSync(join(dir, file), "utf8"));
@@ -25,6 +31,9 @@ export function maintenanceInfo(dir: string) {
   const generatedEngine = typeof lock?.smithable === "string" ? lock.smithable : undefined;
   const generatedProfile = typeof lock?.stackProfile === "string" ? lock.stackProfile : undefined;
   const generatedKit = typeof lock?.kitRevision === "string" ? lock.kitRevision : undefined;
+  const currentKit = generatedKit?.startsWith(SECTION_PICTURES)
+    ? sectionPictureKitRevision
+    : templateKitRevision;
   const dependencies = Object.fromEntries(
     Object.entries({
       ...((pkg?.dependencies ?? {}) as object),
@@ -52,7 +61,7 @@ export function maintenanceInfo(dir: string) {
       ? "Stack profile differs; test a staged upgrade"
       : !generatedKit
         ? "Template revision unknown; test a staged upgrade"
-        : generatedKit !== templateKitRevision
+        : generatedKit !== currentKit
           ? "Template revision differs; test a staged upgrade"
           : generatedEngine !== VERSION
             ? "Generator version differs; test a staged upgrade"
@@ -65,7 +74,7 @@ export function maintenanceInfo(dir: string) {
     generatedKit,
     currentEngine: VERSION,
     currentProfile: STACK_PROFILE.id,
-    currentKit: templateKitRevision,
+    currentKit,
     status,
     dependencies,
     upgrade,

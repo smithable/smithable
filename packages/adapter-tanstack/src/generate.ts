@@ -219,6 +219,8 @@ export function generateApp(spec: SpecIR, options: GenerateOptions): GeneratedFi
       );
     }),
   );
+  if (sectionPictures && options.sectionPictureKitRevision)
+    ctx.options = { ...options, kitRevision: options.sectionPictureKitRevision };
   const kits = SECTION_GENERATORS.flatMap((g) => g.kit ?? []);
   // The kit: every file, but a part's own only when the app uses that part, and of the words
   // (src/kit/words/<language>.ts) only the app's language, as src/kit/words.ts.

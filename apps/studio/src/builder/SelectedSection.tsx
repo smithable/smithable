@@ -59,7 +59,9 @@ export function selectedSection(selection: Selection | undefined, spec: Spec) {
       : value !== "stage" || Boolean(stagePage(ir)));
   const choices = Object.keys(KEYS).flatMap((key) => {
     const all = looks[key];
-    if (!Array.isArray(all) || (key === "mark" && !spec.content?.logo)) return [];
+    if (!Array.isArray(all)) return [];
+    if (key === "mark" && !spec.content?.logo)
+      return look.mark === "logo" ? [{ key, values: ["title"], current: "logo" }] : [];
     const values = all.filter((value) => applies(key, String(value)));
     // A hero's picture has a side only beside its text.
     if (section.kind === "hero" && key === "image" && !["split", "inset"].includes(layout))

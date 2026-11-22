@@ -59,11 +59,32 @@ function generate(files: { spec: string; content?: string; ux?: string }) {
     ir,
   );
   if (!auth || !data.content || !looks.ux) throw new Error("Invalid fixture content or look");
-  return generateApp(ir, { smithableVersion: "0.0.0", auth, content: data.content, ux: looks.ux });
+  return generateApp(ir, {
+    smithableVersion: "0.0.0",
+    kitRevision: "base",
+    sectionPictureKitRevision: "section-pictures:opt-in",
+    auth,
+    content: data.content,
+    ux: looks.ux,
+  });
 }
 
 test("section backgrounds and feature card pictures are opt-in and use the same content operation", () => {
   const baseline = { spec, content };
+  const logoOnly = operation(baseline, "setSectionLook", {
+    section: "hero",
+    key: "mark",
+    value: "logo",
+  });
+  const logoApp = generate(logoOnly);
+  expect(logoApp.find(({ path }) => path === "smithable.lock")?.content).toContain(
+    '"kitRevision": "section-pictures:opt-in"',
+  );
+  expect(logoApp.find(({ path }) => path === "src/kit/Landing.tsx")?.content).toContain(
+    '<span className="sr-only">',
+  );
+  expect(logoApp.some(({ content }) => content.includes('logoMark="/images/logo.svg"'))).toBe(true);
+
   let files: ReturnType<typeof operation> | typeof baseline = baseline;
   for (const section of ["about", "callToAction", "features"])
     files = operation(files, "setSectionPicture", {
