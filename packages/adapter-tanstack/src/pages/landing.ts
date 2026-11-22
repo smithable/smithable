@@ -259,7 +259,13 @@ export function landingRoute(
           }${
             own.image
               ? `
-          image={{ src: ${JSON.stringify(`/${own.image.src}`)}, alt: ${JSON.stringify(own.image.alt)}${own.image.generated ? ", generated: true" : ""}${own.image.kind ? `, kind: ${JSON.stringify(own.image.kind)}` : ""}${srcSetOf(own.image) ? `, srcSet: ${JSON.stringify(srcSetOf(own.image))}` : ""} }}`
+          image={{ src: ${JSON.stringify(`/${own.image.src}`)}, alt: ${JSON.stringify(own.image.alt)}${own.image.generated ? ", generated: true" : ""}${own.image.kind ? `, kind: ${JSON.stringify(own.image.kind)}` : ""}${srcSetOf(own.image) ? `, srcSet: ${JSON.stringify(srcSetOf(own.image))}` : ""} }}${
+            own.image.film
+              ? (imports.add("#/kit/Film", "Film"),
+                `
+          film={(framed) => <Film src=${attr(`/${own.image.film.src}`)}${own.image.film.generated ? " generated" : ""}${own.image.film.kind ? ` kind=${attr(own.image.film.kind)}` : ""} framed={framed} />}`)
+              : ""
+          }`
               : ""
           }${
             section.shortcuts?.length

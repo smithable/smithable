@@ -1072,6 +1072,14 @@ const SECTION_GENERATORS: SectionGenerator[] = [
         used: ({ ir, auth }) => smsEntries(ir, auth).length > 0,
       },
       {
+        // A hero's film (section-film.md): only an app with one gets the code that plays it.
+        files: ["src/kit/Film.tsx"],
+        used: ({ options }) =>
+          Object.values(options.content?.pages ?? {}).some((page) =>
+            Object.values(page.sections ?? {}).some((section) => section.image?.film),
+          ),
+      },
+      {
         // "Contact the owner" on a record's page (marketplace.md §2.4).
         files: ["src/kit/ContactOwner.tsx"],
         used: ({ ir, auth }) => hasSignIn(auth) && ir.pages.some((p) => p.contact),
