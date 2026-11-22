@@ -192,7 +192,11 @@ const addField: Operation<{
   list?: boolean;
 }> = {
   name: "addField",
-  sets: ["smithable.yml:models.*.fields.*"],
+  sets: [
+    "smithable.yml:models.*.fields.*",
+    "smithable.yml:models.*.fields.*.type",
+    "smithable.yml:models.*.fields.*.formula",
+  ],
   summary:
     "Add a NEW field to a model. To rename an existing field while keeping its data, use renameField instead.",
   schema: {
@@ -259,7 +263,7 @@ const addField: Operation<{
 
 const changeField: Operation<{ model: string; field: string; type: string; renames?: string[] }> = {
   name: "changeField",
-  sets: ["smithable.yml:models.*.fields.*"],
+  sets: ["smithable.yml:models.*.fields.*", "smithable.yml:models.*.fields.*.type"],
   summary:
     "Change an EXISTING field's type, choice values, required flag, uniqueness or default using its full shorthand. Preserve the other flags and choices. For only the initial value of new records, setFieldDefault is also available; it does not change the choices or existing records.",
   schema: {
@@ -718,6 +722,10 @@ const setFieldRules: Operation<{
     "smithable.yml:models.*.fields.*.required",
     "smithable.yml:models.*.fields.*.unique",
     "smithable.yml:models.*.fields.*.sequence",
+    "smithable.yml:models.*.fields.*.locked.*",
+    "smithable.yml:models.*.fields.*.locked.*.*",
+    "smithable.yml:models.*.fields.*.required.*",
+    "smithable.yml:models.*.fields.*.required.*.*",
   ],
   summary:
     "Set who fills a field and when it may change: by app (the form never shows it), locked (after it is made, or while a condition holds), required while a condition holds; and whether it is unique, and where (owner or app).",
@@ -1146,6 +1154,8 @@ const setThread: Operation<{
     "smithable.yml:models.*.thread.body",
     "smithable.yml:models.*.thread.author",
     "smithable.yml:models.*.thread.side",
+    "smithable.yml:models.*.thread.side.field",
+    "smithable.yml:models.*.thread.side.ours",
   ],
   summary:
     "Say which fields a conversation reads from a model's records: the message's body (a text field), its author (a person or email field) and the side that is ours (a two-valued choice and its value); --none leaves it to the rule again.",

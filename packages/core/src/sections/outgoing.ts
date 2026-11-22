@@ -934,6 +934,29 @@ const addOutgoing: Operation<
   name: "addOutgoing",
   summary:
     "Add a NEW outgoing entry: mail, push to or text (--to mail,push) the record's owner, a role or an address on the record when a record is added, changed or deleted, or an action runs (e.g. a confirmation when a booking is made); or call a target. On a clock timer (every day at 06:30), a list mail: a table of records (--list Booking --columns …) to a role that reads them all. To change an existing entry's channel or recipient, use setOutgoingTo instead.",
+  sets: [
+    "smithable.yml:outgoing.*",
+    "smithable.yml:outgoing.*.when",
+    "smithable.yml:outgoing.*.where",
+    "smithable.yml:outgoing.*.fields",
+    "smithable.yml:outgoing.*.show",
+    "smithable.yml:outgoing.*.previous",
+    "smithable.yml:outgoing.*.to",
+    "smithable.yml:outgoing.*.recipient",
+    "smithable.yml:outgoing.*.list",
+    "smithable.yml:outgoing.*.list.model",
+    "smithable.yml:outgoing.*.list.query",
+    "smithable.yml:outgoing.*.list.where",
+    "smithable.yml:outgoing.*.list.when",
+    "smithable.yml:outgoing.*.list.within",
+    "smithable.yml:outgoing.*.list.limit",
+    "smithable.yml:outgoing.*.list.columns",
+    "smithable.yml:outgoing.*.empty",
+    "smithable.yml:outgoing.*.where.*",
+    "smithable.yml:outgoing.*.where.*.*",
+    "smithable.yml:outgoing.*.list.where.*",
+    "smithable.yml:outgoing.*.list.where.*.*",
+  ],
   schema: {
     type: "object",
     required: ["outgoing", "when"],
@@ -1113,6 +1136,19 @@ const setOutgoingList: Operation<{ outgoing: string } & ListArgs> = {
   name: "setOutgoingList",
   summary:
     "Change what a list mail shows: its records (--list Model replaces a query, --query a model; a query list takes no where, date or within), their condition, the date and how far it reaches, the columns, how many, and whether a quiet day is mailed. A given key replaces the old; {} takes where away, none the date, within or limit.",
+  sets: [
+    "smithable.yml:outgoing.*.list",
+    "smithable.yml:outgoing.*.list.model",
+    "smithable.yml:outgoing.*.list.query",
+    "smithable.yml:outgoing.*.list.where",
+    "smithable.yml:outgoing.*.list.when",
+    "smithable.yml:outgoing.*.list.within",
+    "smithable.yml:outgoing.*.list.limit",
+    "smithable.yml:outgoing.*.list.columns",
+    "smithable.yml:outgoing.*.empty",
+    "smithable.yml:outgoing.*.list.where.*",
+    "smithable.yml:outgoing.*.list.where.*.*",
+  ],
   schema: {
     type: "object",
     required: ["outgoing"],
@@ -1183,6 +1219,7 @@ const setOutgoingBody: Operation<{ outgoing: string; show?: string[]; previous?:
   name: "setOutgoingBody",
   summary:
     "Choose what an outgoing mail lists under its text and a call carries: the fields in order, none for the text alone, or default for the record page's fields; and whether a change's mail or call says what the changed fields were.",
+  sets: ["smithable.yml:outgoing.*.show", "smithable.yml:outgoing.*.previous"],
   schema: {
     type: "object",
     required: ["outgoing"],

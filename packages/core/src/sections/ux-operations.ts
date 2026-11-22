@@ -46,6 +46,10 @@ const setTheme: Operation<{
     "smithable.ux.yml:theme.brand.primary",
     "smithable.ux.yml:theme.brand.background",
     "smithable.ux.yml:theme.brand.font",
+    "smithable.ux.yml:pages.*.theme.preset",
+    "smithable.ux.yml:pages.*.theme.motion",
+    "smithable.ux.yml:pages.*.theme.density",
+    "smithable.ux.yml:pages.*.theme.brand",
   ],
   summary:
     'Choose the theme preset, primary (brand) color, background color, font, density or motion. The color argument is primary (a hex color). Use preset for a named theme ("none" removes a color or the font; for motion it means no motion).',
@@ -246,6 +250,12 @@ const setCalendarCapacity: Operation<{ page: string; left: string; of?: string; 
   name: "setCalendarCapacity",
   summary:
     "Show the places left on a calendar's blocks, from two number fields, as a number, pips or a bar; none takes it away.",
+  sets: [
+    "smithable.ux.yml:pages.*.calendar.capacity",
+    "smithable.ux.yml:pages.*.calendar.capacity.left",
+    "smithable.ux.yml:pages.*.calendar.capacity.of",
+    "smithable.ux.yml:pages.*.calendar.capacity.look",
+  ],
   schema: {
     type: "object",
     required: ["page", "left"],
@@ -299,6 +309,7 @@ const setTableMark: Operation<{ page: string; mark: "initials" | "picture" | "no
     name: "setTableMark",
     summary:
       "Put a round mark before each record's title in a list: its initials, or its picture; none takes it away.",
+    sets: ["smithable.ux.yml:pages.*.table.mark"],
     schema: {
       type: "object",
       required: ["page", "mark"],
@@ -439,6 +450,7 @@ const setRecordLines: Operation<{ page: string; subtitle?: string; detail?: stri
   name: "setRecordLines",
   summary:
     'What a page shows under a record\'s name on cards and in pickers (docs/design/record-names.md §3): a subtitle and detail parts, each a field, a reference or a field one reference away; "none" takes the subtitle away, an empty detail list the details.',
+  sets: ["smithable.ux.yml:pages.*.record.subtitle", "smithable.ux.yml:pages.*.record.detail"],
   schema: {
     type: "object",
     required: ["page"],
@@ -538,6 +550,7 @@ const setRecordList: Operation<{
   name: "setRecordList",
   summary:
     "Show a list of related records on a page's record as a table (the default), a thread (a conversation with a reply box) or inline (rows edited in place, each saved on its own). The last thread shown as a table or inline takes record.first with it.",
+  sets: ["smithable.ux.yml:pages.*.record.lists", "smithable.ux.yml:pages.*.record.lists.*"],
   schema: {
     type: "object",
     required: ["page", "field", "look"],
@@ -619,6 +632,7 @@ const setRecordSummary: Operation<{
   name: "setRecordSummary",
   summary:
     "Show a record's summary (its status, its amount, its key dates) in the title row (header) or in a panel beside the form (aside); none takes it away as an explicit choice, inherit leaves it to the theme.",
+  sets: ["smithable.ux.yml:pages.*.record.header", "smithable.ux.yml:pages.*.form.aside"],
   schema: {
     type: "object",
     required: ["page", "place", "look"],
@@ -661,6 +675,11 @@ const setRecordEmphasis: Operation<{
   name: "setRecordEmphasis",
   summary:
     "Select summary fields: one status or money amount, up to two dates; an empty list shows none, omitted fields restore automatic selection.",
+  sets: [
+    "smithable.ux.yml:pages.*.record.summary.status",
+    "smithable.ux.yml:pages.*.record.summary.amount",
+    "smithable.ux.yml:pages.*.record.summary.dates",
+  ],
   schema: {
     type: "object",
     required: ["page", "part"],
@@ -756,6 +775,7 @@ const setTone: Operation<{ model: string; field: string; value: string; tone: st
   name: "setTone",
   summary:
     "Give a choice value a color by meaning, e.g. paid: success, overdue: warning (neutral: the default).",
+  sets: ["smithable.ux.yml:tones.*", "smithable.ux.yml:tones.*.*"],
   schema: {
     type: "object",
     required: ["model", "field", "value", "tone"],
@@ -811,6 +831,7 @@ const setBelow: Operation<{ page: string; column: string; field: string }> = {
   name: "setBelow",
   summary:
     'Show a second field under a table column\'s value, e.g. phone under email ("none" removes it).',
+  sets: ["smithable.ux.yml:pages.*.table.below", "smithable.ux.yml:pages.*.table.below.*"],
   schema: {
     type: "object",
     required: ["page", "column", "field"],
@@ -844,6 +865,26 @@ const setSectionLook: Operation<{ page: string; section: string; key: string; va
   name: "setSectionLook",
   summary:
     'Choose how a landing section looks, e.g. hero layout split|centered|plain|cover|photo, records layout cards|list|grid, features/records/gallery columns 2-6, faq layout accordion|list and columns 1|2, any section but the hero and footer band none|muted|inverse|primary; and a landing page\'s header (section "header": the top bar with the app\'s name and menu) position sticky (the default: the menu sticks and stays at the top when the page scrolls) or scrolling, away with the page ("default" removes it).',
+  sets: [
+    "smithable.ux.yml:pages.*.sections.*.rhythm",
+    "smithable.ux.yml:pages.*.sections.*.fit",
+    "smithable.ux.yml:pages.*.sections.*.aspect",
+    "smithable.ux.yml:pages.*.sections.*.focal",
+    "smithable.ux.yml:pages.*.sections.*.measure",
+    "smithable.ux.yml:pages.*.sections.*.layout",
+    "smithable.ux.yml:pages.*.sections.*.image",
+    "smithable.ux.yml:pages.*.sections.*.band",
+    "smithable.ux.yml:pages.*.sections.*.overlay",
+    "smithable.ux.yml:pages.*.sections.*.eyebrow",
+    "smithable.ux.yml:pages.*.sections.*.facts",
+    "smithable.ux.yml:pages.*.sections.*.stage",
+    "smithable.ux.yml:pages.*.sections.*.height",
+    "smithable.ux.yml:pages.*.sections.*.columns",
+    "smithable.ux.yml:pages.*.sections.*.by",
+    "smithable.ux.yml:pages.*.sections.*.highlight",
+    "smithable.ux.yml:pages.*.header.position",
+    "smithable.ux.yml:pages.*.header.over",
+  ],
   schema: {
     type: "object",
     required: ["page", "section", "key", "value"],
@@ -962,6 +1003,7 @@ const setControl: Operation<{ page: string; field: string; control: string }> = 
   name: "setControl",
   summary:
     'How a field is entered on a page\'s form: slider, stepper, radio, select, combobox, textarea or switch ("input" is the default for its kind).',
+  sets: ["smithable.ux.yml:pages.*.form.control", "smithable.ux.yml:pages.*.form.control.*"],
   schema: {
     type: "object",
     required: ["page", "field", "control"],
@@ -993,6 +1035,13 @@ const setFormSections: Operation<{ page: string; sections?: string[] }> = {
   name: "setFormSections",
   summary:
     'Group a page\'s form into sections with headings, each "name:field,field"; fields in none follow at the end (none: one form).',
+  sets: [
+    "smithable.ux.yml:pages.*.form.sections",
+    "smithable.ux.yml:pages.*.form.sections.*",
+    "smithable.ux.yml:pages.*.form.sections.*.name",
+    "smithable.ux.yml:pages.*.form.sections.*.fields",
+    "smithable.ux.yml:pages.*.form.sections.*.fields.*",
+  ],
   schema: {
     type: "object",
     required: ["page"],
@@ -1413,6 +1462,7 @@ const setFilterPick: Operation<{ page: string; filter: string; pick: "list" | "s
     name: "setFilterPick",
     summary:
       "How a list page's filter on a reference is picked: list (every related record as a choice), search (found as you type), or auto (by the count: a search from 200 records).",
+    sets: ["smithable.ux.yml:pages.*.filters.pick", "smithable.ux.yml:pages.*.filters.pick.*"],
     schema: {
       type: "object",
       required: ["page", "filter", "pick"],

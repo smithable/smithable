@@ -17,6 +17,7 @@ const setPackage: Operation<{ name: string; version: string }> = {
   name: "setPackage",
   summary:
     'Add a library for custom code at an exact version, e.g. chart.js 4.4.1 ("none" removes it).',
+  sets: ["smithable.context.yml:packages.*"],
   schema: {
     type: "object",
     required: ["name", "version"],
@@ -55,6 +56,12 @@ const setPackage: Operation<{ name: string; version: string }> = {
 const setAnalytics: Operation<{ provider: string; id?: string }> = {
   name: "setAnalytics",
   summary: `Count visits with ${Object.keys(ANALYTICS).join(", ")} and the app's id there ("none" stops it); google asks visitors for consent first.`,
+  sets: [
+    "smithable.context.yml:analytics.plausible",
+    "smithable.context.yml:analytics.umami",
+    "smithable.context.yml:analytics.fathom",
+    "smithable.context.yml:analytics.google",
+  ],
   schema: {
     type: "object",
     required: ["provider"],
@@ -96,6 +103,7 @@ const setAnalytics: Operation<{ provider: string; id?: string }> = {
 const setPaymentProvider: Operation<{ provider: string }> = {
   name: "setPaymentProvider",
   summary: `Take the app's payments through ${PAYMENT_PROVIDERS.join(", ")} ("none" takes the choice away; development and preview then use fake).`,
+  sets: ["smithable.context.yml:payments.provider"],
   schema: {
     type: "object",
     required: ["provider"],

@@ -361,6 +361,7 @@ const setPublicWhere: Operation<{
   name: "setPublicWhere",
   summary:
     "Limit which records of a model anyone on the internet may read, e.g. published posts only; with no condition, every record.",
+  sets: ["smithable.auth.yml:public.read.*.*", "smithable.auth.yml:public.read.*.*.where"],
   schema: {
     type: "object",
     required: ["model"],

@@ -156,6 +156,35 @@ const addAction: Operation<{
   name: "addAction",
   summary:
     "Add an action: standard with --on and --set (it sets fields of a record), a merge with --merge Model (two records become one), a split with --split Model --move list (one record becomes two), else custom (its behavior is code in src/custom/actions/).",
+  sets: [
+    "smithable.yml:actions.*",
+    "smithable.yml:actions.*.on",
+    "smithable.yml:actions.*.when",
+    "smithable.yml:actions.*.set",
+    "smithable.yml:actions.*.add",
+    "smithable.yml:actions.*.copy",
+    "smithable.yml:actions.*.with",
+    "smithable.yml:actions.*.input",
+    "smithable.yml:actions.*.output",
+    "smithable.yml:actions.*.custom",
+    "smithable.yml:actions.*.touches",
+    "smithable.yml:actions.*.touches.reads",
+    "smithable.yml:actions.*.touches.writes",
+    "smithable.yml:actions.*.triggers",
+    "smithable.yml:actions.*.merge",
+    "smithable.yml:actions.*.into",
+    "smithable.yml:actions.*.fields",
+    "smithable.yml:actions.*.split",
+    "smithable.yml:actions.*.move",
+    "smithable.yml:actions.*.intent",
+    "smithable.yml:pages.*.actions",
+    "smithable.yml:actions.*.set.*",
+    "smithable.yml:actions.*.add.*",
+    "smithable.yml:actions.*.add.*.*",
+    "smithable.yml:actions.*.input.*",
+    "smithable.yml:actions.*.output.*",
+    "smithable.yml:actions.*.fields.*",
+  ],
   schema: {
     type: "object",
     required: ["action"],
@@ -451,6 +480,15 @@ const setAction: Operation<{
   name: "setAction",
   summary:
     "Change an action: its intent, the records it is for (--when), the values it sets (--set), or a custom action's contract (--reads, --writes, --triggers). Each replaces what was there; an empty one (or none) removes it. Who may run it is grant <role> actions <name>.",
+  sets: [
+    "smithable.yml:actions.*.intent",
+    "smithable.yml:actions.*.when",
+    "smithable.yml:actions.*.set",
+    "smithable.yml:actions.*.touches",
+    "smithable.yml:actions.*.touches.reads",
+    "smithable.yml:actions.*.touches.writes",
+    "smithable.yml:actions.*.triggers",
+  ],
   schema: {
     type: "object",
     required: ["action"],
@@ -609,6 +647,17 @@ const addExample: Operation<{
   name: "addExample",
   summary:
     "Add an example to a custom action: the records given, the input, and the records and output expected after. The app tests its code by it.",
+  sets: [
+    "smithable.yml:actions.*.examples",
+    "smithable.yml:actions.*.examples.*",
+    "smithable.yml:actions.*.examples.*.as",
+    "smithable.yml:actions.*.examples.*.now",
+    "smithable.yml:actions.*.examples.*.given",
+    "smithable.yml:actions.*.examples.*.input",
+    "smithable.yml:actions.*.examples.*.after",
+    "smithable.yml:actions.*.examples.*.nothingElse",
+    "smithable.yml:actions.*.examples.*.output",
+  ],
   schema: {
     type: "object",
     required: ["action", "given"],
@@ -661,6 +710,7 @@ const addExample: Operation<{
 const removeExample: Operation<{ action: string; example: number }> = {
   name: "removeExample",
   summary: "Remove one of a custom action's examples, by its number (the first is 1).",
+  sets: ["smithable.yml:actions.*.examples.*"],
   schema: {
     type: "object",
     required: ["action", "example"],

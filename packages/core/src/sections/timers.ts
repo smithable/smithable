@@ -589,6 +589,15 @@ const addTimer: Operation<TimerArgs> = {
   name: "addTimer",
   summary:
     "Add a timer: an event the app raises at a time, on a clock (every day at 08:00, or cron) or relative to a date of a record (1 day before session.startsAt), running an action over the records it is due for; outgoing may listen to it.",
+  sets: [
+    "smithable.yml:timers.*",
+    "smithable.yml:timers.*.on",
+    "smithable.yml:timers.*.at",
+    "smithable.yml:timers.*.every",
+    "smithable.yml:timers.*.cron",
+    "smithable.yml:timers.*.where",
+    "smithable.yml:timers.*.run",
+  ],
   schema: {
     type: "object",
     required: ["name"],

@@ -15,6 +15,12 @@ const addQuery: Operation<{ query: string; returns: string; intent?: string }> =
   name: "addQuery",
   summary:
     "Add a custom query: records of a model chosen or ordered by code (e.g. customers most likely to churn). Its code is written afterwards, in src/custom/queries/.",
+  sets: [
+    "smithable.yml:queries.*",
+    "smithable.yml:queries.*.custom",
+    "smithable.yml:queries.*.returns",
+    "smithable.yml:queries.*.intent",
+  ],
   schema: {
     type: "object",
     required: ["query", "returns"],

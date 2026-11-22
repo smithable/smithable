@@ -14,7 +14,15 @@ const SCHEMAS: Record<string, JsonSchema> = {
   "smithable.auth.yml": COMPANION_SCHEMAS["smithable.auth.yml"] as JsonSchema,
   "smithable.content.yml": COMPANION_SCHEMAS["smithable.content.yml"] as JsonSchema,
   "smithable.ux.yml": COMPANION_SCHEMAS["smithable.ux.yml"] as JsonSchema,
+  "smithable.context.yml": COMPANION_SCHEMAS["smithable.context.yml"] as JsonSchema,
 };
+
+/** A list's items ("rules.*"), by file:path. */
+const ITEMS = new Set<string>();
+/** The keys that hold entries or items ("models") in some form, by file:path. */
+const HOLDING = new Set<string>();
+/** The named keys an object has in any of its forms ("app": name, description, …), by file:path. */
+const NAMED = new Map<string, Set<string>>();
 
 /** Every key path a schema takes, "*" for a name in a named map, without the format version. */
 function keyPaths(file: string): string[][] {
@@ -34,6 +42,17 @@ function keyPaths(file: string): string[][] {
     if (!n || seen.has(n) || path.length > 8) return;
     const next = new Set(seen).add(n);
     if (path.length) out.set(path.join("."), path);
+    const key = `${file}:${path.join(".")}`;
+    const named = Object.keys((n.properties as Record<string, JsonSchema>) ?? {}).length > 0;
+    const entries =
+      (n.additionalProperties && typeof n.additionalProperties === "object") ||
+      Object.keys((n.patternProperties as Record<string, JsonSchema>) ?? {}).length > 0;
+    const list = !!n.items && typeof n.items === "object" && !Array.isArray(n.items);
+    if (list) ITEMS.add(`${key}.*`);
+    if (path.length && (entries || list)) HOLDING.add(key);
+    if (path.length && named)
+      for (const k of Object.keys(n.properties as Record<string, JsonSchema>))
+        NAMED.set(key, (NAMED.get(key) ?? new Set()).add(k));
     for (const [k, v] of Object.entries((n.properties as Record<string, JsonSchema>) ?? {}))
       walk(v, [...path, k], next);
     if (n.additionalProperties && typeof n.additionalProperties === "object")
@@ -52,8 +71,29 @@ function keyPaths(file: string): string[][] {
 
 const ALL = Object.keys(SCHEMAS).flatMap((file) => keyPaths(file).map((path) => ({ file, path })));
 
+/**
+ * Whether an operation reaches a key (T1242: MCP has no editSpec, so a key no operation reaches
+ * is one an agent cannot set): one names it in its sets; or it is a list's item, set with its
+ * list; or it holds entries or items, set by adding and removing them; or it is an object of
+ * named keys, every one of them reached. A key taking both forms needs both.
+ */
+function reached(file: string, path: string[], way?: "up" | "down"): boolean {
+  if (operationsSetting(file, path).length) return true;
+  const key = `${file}:${path.join(".")}`;
+  if (way !== "down" && ITEMS.has(key) && reached(file, path.slice(0, -1), "up")) return true;
+  if (way === "up") return false;
+  // A key with both forms (named keys in one, entries in another) needs both reached.
+  const named = NAMED.get(key);
+  const holds = HOLDING.has(key);
+  if (!named && !holds) return false;
+  return (
+    (!holds || reached(file, [...path, "*"], "down")) &&
+    (!named || [...named].every((k) => reached(file, [...path, k], "down")))
+  );
+}
+
 test("the keys left to editSpec, as reviewed: every other key has its operation", () => {
-  const left = ALL.filter(({ file, path }) => !operationsSetting(file, path).length).map(
+  const left = ALL.filter(({ file, path }) => !reached(file, path)).map(
     ({ file, path }) => `${file}:${path.join(".")}`,
   );
   expect(left.sort()).toMatchSnapshot();

@@ -6,6 +6,14 @@ import { NAME_PATTERN, nameRule } from "./names.js";
 const setRuleId: Operation<{ concept: string; number: string; id: string }> = {
   name: "setRuleId",
   summary: "Give a rule a stable id, so code and tests can say they implement it.",
+  sets: [
+    "smithable.yml:app.rules.*.id",
+    "smithable.yml:models.*.rules.*.id",
+    "smithable.yml:models.*.fields.*.rules.*.id",
+    "smithable.yml:actions.*.rules.*.id",
+    "smithable.yml:queries.*.rules.*.id",
+    "smithable.yml:pages.*.rules.*.id",
+  ],
   schema: {
     type: "object",
     required: ["concept", "number", "id"],
