@@ -1,0 +1,16 @@
+- name: Charred mushroom flatbread
+  category: mains
+  description: Garlic mushrooms, white bean spread and pickled onions.
+  price: 11
+- name: Lemon chicken flatbread
+  category: mains
+  description: Griddled chicken, crunchy cabbage and lemon yoghurt.
+  price: 12
+- name: Crispy potatoes
+  category: sides
+  description: Crushed potatoes with smoked salt and a herb dip.
+  price: 5
+- name: Apple and ginger fizz
+  category: drinks
+  description: Pressed apple, ginger and sparkling water.
+  price: 4

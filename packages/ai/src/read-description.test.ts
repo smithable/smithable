@@ -90,6 +90,22 @@ test("words are compared in the singular", () => {
   ]);
 });
 
+test("catering distinguishes a food truck schedule from takeaway orders and a restaurant", () => {
+  expect(
+    readDescription(
+      "A public food truck site for visitors to browse stops, with catering and staff we invite.",
+    ),
+  ).toMatchObject({ kind: "food-truck", things: ["stop"] });
+  expect(
+    readDescription("A food truck taking pre-orders for pickup, with catering and staff we invite.")
+      .kind,
+  ).toBe("kiosk");
+  expect(
+    readDescription("A public restaurant site with dinner menus and catering for parties.").kind,
+  ).toBe("restaurant");
+  expect(readDescription("A CRM app to stop losing leads for our team.").things).toEqual(["lead"]);
+});
+
 test("a language named, but not two together, asks which languages the app is in", () => {
   const asks = (text: string) =>
     readDescription(text).questions.some((q) => q.about === "languages");

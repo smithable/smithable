@@ -3990,7 +3990,6 @@ async function marketplaceFlow(dir, base) {
   }
 }
 
-/** A seasonal menu takes over at local midnight and gives way when its last day ends. */
 /**
  * The painter's jobs without photos (T1119): the jobs page's cards and the landing's latest jobs
  * are text cards, with no empty picture slot, since no job shown has a picture yet.
@@ -4022,6 +4021,75 @@ async function painterFlow(base) {
   }
 }
 
+async function foodTruckFlow(dir, base) {
+  const browser = await chromium.launch();
+  const page = await browser.newPage({ viewport: { width: 390, height: 844 }, isMobile: true });
+  const showAt = async (at) => {
+    const moved = await fetch(`${base}/_dev/clock`, {
+      method: "POST",
+      headers: { "x-dev-door": DOOR_SECRET, "Content-Type": "application/json" },
+      body: JSON.stringify({ at }),
+    });
+    if (!moved.ok) throw new Error(`the stop's test clock: ${moved.status} ${await moved.text()}`);
+    await open(page, base);
+  };
+  try {
+    write(
+      dir,
+      `INSERT INTO stops (place, starts_at, ends_at, directions_url, menu_override, status, created_at, updated_at) VALUES
+        ('Sunday square', ${Date.parse("2026-11-22T09:00Z")}, ${Date.parse("2026-11-22T13:00Z")}, NULL, NULL, 'confirmed', unixepoch() * 1000, unixepoch() * 1000),
+        ('Saturday market', ${Date.parse("2026-11-21T09:00Z")}, ${Date.parse("2026-11-21T13:00Z")}, 'https://example.com/map', 'Smoky bean flatbread €10', 'confirmed', unixepoch() * 1000, unixepoch() * 1000),
+        ('Private draft', ${Date.parse("2026-11-23T09:00Z")}, ${Date.parse("2026-11-23T13:00Z")}, NULL, NULL, 'draft', unixepoch() * 1000, unixepoch() * 1000)`,
+    );
+    const venues = page
+      .getByRole("region", { name: "Find the truck" })
+      .getByRole("heading", { level: 3 });
+    await showAt("2026-11-21T12:55:00.000Z");
+    await venues.first().waitFor();
+    if ((await venues.allTextContents()).join(",") !== "Saturday market,Sunday square")
+      throw new Error("confirmed stops are missing or in the wrong order");
+    await page.getByText("Smoky bean flatbread €10").waitFor();
+    await page.getByText("Saturday 21 Nov, 11:00").waitFor();
+    const map = page.getByRole("link", { name: "Map and directions" });
+    if ((await map.getAttribute("href")) !== "https://example.com/map")
+      throw new Error("the stop's map link is missing");
+
+    await showAt("2026-11-21T13:00:00.000Z");
+    await page.getByRole("heading", { name: "Sunday square" }).waitFor();
+    if ((await venues.allTextContents()).join(",") !== "Sunday square")
+      throw new Error("Saturday's stop is still on the schedule after closing");
+    await page.getByRole("link", { name: "Regular menu" }).click();
+    await page.getByText("Charred mushroom flatbread").waitFor();
+    if (await page.locator('[data-part="placeholder"]').count())
+      throw new Error("the text-only menu shows an empty picture slot");
+
+    await showAt("2026-11-22T13:00:00.000Z");
+    await page.getByText("No stop planned.", { exact: true }).waitFor();
+    await page.getByRole("link", { name: "Ask about catering" }).click();
+    await page.getByRole("textbox", { name: "Name *" }).fill("Catering Test");
+    await page.getByRole("textbox", { name: "Email *" }).fill("catering-test@example.com");
+    await page
+      .getByRole("textbox", { name: /Venue and what you have in mind/ })
+      .fill("Lunch for a garden party");
+    await page.getByRole("button", { name: "Send catering enquiry" }).click();
+    await page.getByText("Thanks for your enquiry.").waitFor();
+    await signInAs(page, base, "admin");
+    await open(page, `${base}/enquiries`);
+    await page.getByText("Catering Test", { exact: true }).first().waitFor();
+    console.log(
+      "  ✓ food truck: the next stop replaces Saturday, and catering works after the last stop",
+    );
+  } catch (error) {
+    console.log(
+      `  ✗ food truck: ${error.message}\n    at ${page.url()}, see ${await screenshot(page)}`,
+    );
+    failures.push("food truck flow");
+  } finally {
+    await browser.close();
+  }
+}
+
+/** A seasonal menu takes over at local midnight and gives way when its last day ends. */
 async function restaurantFlow(base) {
   const browser = await chromium.launch();
   const page = await browser.newPage({ viewport: { width: 390, height: 844 }, isMobile: true });
@@ -10053,6 +10121,7 @@ test("the session cookie's name and attributes", async () => {
       if (example === "barbers") await barbersFlow(dir, base);
       if (example === "restaurant") await restaurantFlow(base);
       if (example === "painter") await painterFlow(base);
+      if (example === "food-truck") await foodTruckFlow(dir, base);
       if (example === "crm") await importFlow(dir, base);
       if (example === "status") await statusFlow(base);
       if (example === "status") await sessionFlow(base);

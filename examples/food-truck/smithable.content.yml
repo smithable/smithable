@@ -1,0 +1,61 @@
+smithableContent: 0.1
+
+models:
+  Stop:
+    fields:
+      place: { label: Venue }
+      startsAt: { label: Service starts }
+      endsAt: { label: Service ends }
+      directionsUrl: { label: Map link }
+      menuOverride:
+        label: Menu for this stop
+        help: Add dishes and prices for this venue. Leave blank to use the regular menu.
+  MenuItem:
+    fields:
+      category: { values: { mains: Mains, sides: Sides, drinks: Drinks } }
+      photo: { label: Dish photo }
+  CateringEnquiry:
+    fields:
+      eventDate: { label: Event date }
+      guests: { label: Number of guests }
+      message: { label: Venue and what you have in mind }
+      followUpOn: { label: Follow up on }
+
+actions:
+  contacted: { label: Mark contacted }
+  booked: { label: Mark booked }
+  closed: { label: Close enquiry }
+
+pages:
+  home:
+    hero:
+      title: Hot off the griddle
+      subtitle: Crisp-edged flatbreads and seasonal sides from a travelling kitchen.
+      button: See the menu
+    stops:
+      title: Find the truck
+    gallery:
+      # Add the owner's own truck or venue photo under its caption.
+      title: From the truck
+      items:
+        - caption: The truck at the market
+        - caption: Flatbreads on the griddle
+    footer:
+      text: Ember & Wheel
+      items:
+        - { label: Menu, link: /menu }
+        - { label: Catering, link: /catering }
+  menu:
+    title: Menu
+    menu:
+      title: From the griddle
+      text: Our regular menu. Look for the menu on a confirmed stop for any changes at that venue.
+  catering:
+    title: Catering
+    contact:
+      title: Bring the truck to your event
+      text: Tell us where and when you are gathering, and how many you are feeding. We’ll get back to you about the menu and availability.
+      button: Send catering enquiry
+      thanks: Thanks for your enquiry. We’ll get back to you about your event.
+  enquiries:
+    title: Catering enquiries

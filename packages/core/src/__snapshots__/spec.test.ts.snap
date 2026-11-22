@@ -3094,6 +3094,491 @@ exports[`valid specs > ../../../examples/crm/smithable.yml 1`] = `
 }
 `;
 
+exports[`valid specs > ../../../examples/food-truck/smithable.yml 1`] = `
+{
+  "actions": [
+    {
+      "custom": false,
+      "input": [],
+      "name": "contacted",
+      "on": "CateringEnquiry",
+      "set": [
+        {
+          "field": "status",
+          "value": "contacted",
+        },
+        {
+          "field": "followUpOn",
+          "formula": {
+            "args": [
+              {
+                "args": [],
+                "kind": "call",
+                "name": "TODAY",
+              },
+              {
+                "kind": "number",
+                "value": 3,
+              },
+              {
+                "kind": "text",
+                "value": "day",
+              },
+            ],
+            "kind": "call",
+            "name": "DATEADD",
+          },
+          "text": "DATEADD(TODAY(), 3, "day")",
+        },
+      ],
+      "when": {
+        "status": "new",
+      },
+    },
+    {
+      "custom": false,
+      "input": [],
+      "name": "booked",
+      "on": "CateringEnquiry",
+      "set": [
+        {
+          "field": "status",
+          "value": "booked",
+        },
+      ],
+      "when": {
+        "status": "contacted",
+      },
+    },
+    {
+      "custom": false,
+      "input": [],
+      "name": "closed",
+      "on": "CateringEnquiry",
+      "set": [
+        {
+          "field": "status",
+          "value": "closed",
+        },
+      ],
+      "when": {
+        "status": [
+          "new",
+          "contacted",
+          "booked",
+        ],
+      },
+    },
+  ],
+  "app": {
+    "currency": "EUR",
+    "description": "A food truck's stops, street-food menu and catering enquiries.",
+    "name": "Ember & Wheel",
+    "timezone": "Europe/Mariehamn",
+  },
+  "extensions": {},
+  "incoming": [],
+  "models": [
+    {
+      "fields": [
+        {
+          "name": "place",
+          "required": true,
+          "type": {
+            "kind": "scalar",
+            "name": "string",
+          },
+          "unique": false,
+        },
+        {
+          "name": "address",
+          "required": false,
+          "type": {
+            "kind": "scalar",
+            "name": "string",
+          },
+          "unique": false,
+        },
+        {
+          "name": "startsAt",
+          "required": true,
+          "type": {
+            "kind": "scalar",
+            "name": "datetime",
+          },
+          "unique": false,
+        },
+        {
+          "name": "endsAt",
+          "required": true,
+          "type": {
+            "kind": "scalar",
+            "name": "datetime",
+          },
+          "unique": false,
+        },
+        {
+          "name": "directionsUrl",
+          "required": false,
+          "type": {
+            "kind": "scalar",
+            "name": "url",
+          },
+          "unique": false,
+        },
+        {
+          "name": "menuOverride",
+          "required": false,
+          "type": {
+            "kind": "scalar",
+            "name": "text",
+          },
+          "unique": false,
+        },
+        {
+          "default": "draft",
+          "name": "status",
+          "required": true,
+          "type": {
+            "kind": "choice",
+            "values": [
+              "draft",
+              "confirmed",
+              "cancelled",
+            ],
+          },
+          "unique": false,
+        },
+      ],
+      "name": "Stop",
+    },
+    {
+      "fields": [
+        {
+          "name": "name",
+          "required": true,
+          "type": {
+            "kind": "scalar",
+            "name": "string",
+          },
+          "unique": false,
+        },
+        {
+          "default": "mains",
+          "name": "category",
+          "required": true,
+          "type": {
+            "kind": "choice",
+            "values": [
+              "mains",
+              "sides",
+              "drinks",
+            ],
+          },
+          "unique": false,
+        },
+        {
+          "name": "description",
+          "required": false,
+          "type": {
+            "kind": "scalar",
+            "name": "text",
+          },
+          "unique": false,
+        },
+        {
+          "min": 0,
+          "name": "price",
+          "required": true,
+          "type": {
+            "kind": "scalar",
+            "name": "money",
+          },
+          "unique": false,
+        },
+        {
+          "name": "photo",
+          "required": false,
+          "type": {
+            "kind": "scalar",
+            "name": "picture",
+          },
+          "unique": false,
+        },
+      ],
+      "name": "MenuItem",
+    },
+    {
+      "fields": [
+        {
+          "name": "name",
+          "required": true,
+          "type": {
+            "kind": "scalar",
+            "name": "string",
+          },
+          "unique": false,
+        },
+        {
+          "name": "email",
+          "required": true,
+          "type": {
+            "kind": "scalar",
+            "name": "email",
+          },
+          "unique": false,
+        },
+        {
+          "name": "eventDate",
+          "required": false,
+          "type": {
+            "kind": "scalar",
+            "name": "date",
+          },
+          "unique": false,
+        },
+        {
+          "min": 1,
+          "name": "guests",
+          "required": false,
+          "type": {
+            "kind": "scalar",
+            "name": "int",
+          },
+          "unique": false,
+        },
+        {
+          "name": "message",
+          "required": true,
+          "type": {
+            "kind": "scalar",
+            "name": "text",
+          },
+          "unique": false,
+        },
+        {
+          "byApp": true,
+          "default": "new",
+          "name": "status",
+          "required": true,
+          "type": {
+            "kind": "choice",
+            "values": [
+              "new",
+              "contacted",
+              "booked",
+              "closed",
+            ],
+          },
+          "unique": false,
+        },
+        {
+          "byApp": true,
+          "defaultFormula": {
+            "args": [],
+            "kind": "call",
+            "name": "TODAY",
+          },
+          "name": "followUpOn",
+          "required": false,
+          "type": {
+            "kind": "scalar",
+            "name": "date",
+          },
+          "unique": false,
+        },
+      ],
+      "name": "CateringEnquiry",
+    },
+  ],
+  "navigation": [
+    {
+      "name": "main",
+      "pages": [
+        "menu",
+        "catering",
+        "stops",
+        "menu-items",
+        "enquiries",
+        "team",
+      ],
+    },
+  ],
+  "outgoing": [],
+  "pages": [
+    {
+      "id": "home",
+      "pattern": {
+        "kind": "landing",
+        "sections": [
+          {
+            "button": "menu",
+            "kind": "hero",
+            "name": "hero",
+          },
+          {
+            "component": "UpcomingStops",
+            "kind": "custom",
+            "name": "stops",
+          },
+          {
+            "kind": "gallery",
+            "name": "gallery",
+          },
+          {
+            "kind": "footer",
+            "name": "footer",
+          },
+        ],
+      },
+      "route": "/",
+      "sections": [
+        {
+          "button": "menu",
+          "kind": "hero",
+          "name": "hero",
+        },
+        {
+          "component": "UpcomingStops",
+          "kind": "custom",
+          "name": "stops",
+        },
+        {
+          "kind": "gallery",
+          "name": "gallery",
+        },
+        {
+          "kind": "footer",
+          "name": "footer",
+        },
+      ],
+    },
+    {
+      "id": "menu",
+      "pattern": {
+        "kind": "sections",
+      },
+      "route": "/menu",
+      "sections": [
+        {
+          "filters": [
+            "category",
+          ],
+          "kind": "records",
+          "model": "MenuItem",
+          "name": "menu",
+        },
+      ],
+    },
+    {
+      "id": "catering",
+      "pattern": {
+        "kind": "sections",
+      },
+      "route": "/catering",
+      "sections": [
+        {
+          "form": "CateringEnquiry",
+          "kind": "contact",
+          "name": "contact",
+        },
+      ],
+    },
+    {
+      "filters": [
+        "startsAt",
+        "status",
+      ],
+      "id": "stops",
+      "pattern": {
+        "kind": "crud",
+        "model": "Stop",
+      },
+      "route": "/stops",
+      "sections": [
+        {
+          "kind": "crud",
+          "model": "Stop",
+          "name": "crud",
+          "own": true,
+        },
+      ],
+      "sortable": [
+        "startsAt",
+      ],
+    },
+    {
+      "filters": [
+        "category",
+      ],
+      "id": "menu-items",
+      "pattern": {
+        "kind": "crud",
+        "model": "MenuItem",
+      },
+      "route": "/menu-items",
+      "sections": [
+        {
+          "kind": "crud",
+          "model": "MenuItem",
+          "name": "crud",
+          "own": true,
+        },
+      ],
+    },
+    {
+      "actions": [
+        "contacted",
+        "booked",
+        "closed",
+      ],
+      "defaultFilter": {
+        "status": "new,contacted",
+      },
+      "filters": [
+        "status",
+      ],
+      "id": "enquiries",
+      "pattern": {
+        "kind": "crud",
+        "model": "CateringEnquiry",
+      },
+      "route": "/enquiries",
+      "sections": [
+        {
+          "kind": "crud",
+          "model": "CateringEnquiry",
+          "name": "crud",
+          "own": true,
+        },
+      ],
+      "sortable": [
+        "followUpOn",
+      ],
+    },
+    {
+      "id": "team",
+      "pattern": {
+        "kind": "users",
+        "mode": "manage",
+      },
+      "route": "/team",
+      "sections": [
+        {
+          "kind": "users",
+          "name": "users",
+          "own": true,
+        },
+      ],
+    },
+  ],
+  "payments": [],
+  "queries": [],
+  "specVersion": "0.1",
+  "timers": [],
+}
+`;
+
 exports[`valid specs > ../../../examples/invoicing/smithable.yml 1`] = `
 {
   "actions": [

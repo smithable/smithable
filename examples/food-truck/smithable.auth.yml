@@ -1,0 +1,24 @@
+smithableAuth: 0.1
+
+signIn:
+  providers: [email]
+  selfSignUp: false
+
+roles:
+  admin: all
+  crew:
+    pages: [stops, menu-items, enquiries]
+    read: [Stop, MenuItem, CateringEnquiry]
+    create: [Stop, MenuItem]
+    write: [Stop, MenuItem, CateringEnquiry]
+
+defaultRole: crew
+defaultAccess: shared
+admins: [owner@emberwheel.example]
+
+public:
+  pages: [home, menu, catering]
+  read:
+    - Stop: { where: { status: confirmed } }
+    - MenuItem
+  create: [CateringEnquiry]
