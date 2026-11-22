@@ -8,6 +8,7 @@ import { checkFirstLook } from "./first-look-checks.mjs";
 import { checkPorts } from "./ports.mjs";
 import { checkStudioSelection } from "./studio-selection-checks.mjs";
 import { checkStudioSmoke } from "./studio-smoke-checks.mjs";
+import { stopStudioFixture } from "./studio-test-processes.mjs";
 
 const repo = resolve(import.meta.dirname, "..");
 const smoke = process.argv.includes("--smoke");
@@ -106,16 +107,10 @@ try {
   }
   throw error;
 } finally {
-  await browser?.close();
-  if (server?.pid && server.exitCode === null) {
-    const ended = new Promise((resolve) => server.once("exit", resolve));
-    try {
-      process.kill(-server.pid, "SIGTERM");
-    } catch {}
-    await Promise.race([ended, new Promise((resolve) => setTimeout(resolve, 5000))]);
-    try {
-      process.kill(-server.pid, "SIGKILL");
-    } catch {}
+  try {
+    await browser?.close();
+  } finally {
+    if (server) await stopStudioFixture(server, root);
   }
   if (process.env.FIRST_LOOK_EVIDENCE) {
     mkdirSync(process.env.FIRST_LOOK_EVIDENCE, { recursive: true });
