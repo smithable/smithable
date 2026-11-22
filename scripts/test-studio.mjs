@@ -2907,9 +2907,13 @@ try {
       await workspaceSettings.getByLabel("Menu placement", { exact: true }).selectOption(placement);
       await workspaceSettings.getByRole("button", { name: "Apply", exact: true }).click();
       await workspaceSettings.waitFor({ state: "hidden" });
-      await workspaceHeader
-        .and(preview.locator(`[data-navigation="${placement}"]`))
-        .waitFor({ state: "attached" });
+      const positioned = workspaceHeader.and(preview.locator(`[data-navigation="${placement}"]`));
+      await positioned.waitFor({ state: "attached" });
+      // Apply can replace the preview frame. Open the page on the new layout before opening its
+      // mobile menu, so a frame replacement does not close the drawer under the click.
+      await openPreview("/customers");
+      await positioned.waitFor({ state: "attached" });
+      await preview.locator("body[data-hydrated=true]").waitFor();
       const workspaceItem = preview
         .locator(
           'a:visible:has([data-sm-part="menu-item"][data-sm-concept="text:pages.customers.title"])',
@@ -2920,6 +2924,7 @@ try {
           .getByRole("button", { name: "Open menu", exact: true })
           .first()
           .click();
+        await preview.locator('dialog[data-kit="drawer"][open]').waitFor();
       }
       await pick(workspaceItem, { x: 2, y: 2 });
       await page
