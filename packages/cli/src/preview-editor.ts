@@ -106,7 +106,8 @@ if (typeof window !== "undefined" && window.parent !== window) {
     const control = controlAt(target);
     return !control || control.contains(mark);
   };
-  const selectPart = (marked, concept, part = null) => {
+  // Quiet: the same selection marked again (its page loaded anew), so Studio hears only where it is.
+  const selectPart = (marked, concept, part = null, quiet = false) => {
     clear("data-sm-selected");
     selected = marked;
     selectedName = concept.startsWith("section:") ? marked.dataset.section : null;
@@ -131,6 +132,7 @@ if (typeof window !== "undefined" && window.parent !== window) {
     const columns = part === "column"
       ? [...(marked.closest("tr")?.querySelectorAll("[data-sm-part=column]") ?? [])].map(fieldOf)
       : null;
+    if (quiet) return post({ type: "selection-moved", anchor: { left, right, top, bottom } });
     const heading = concept.startsWith("section:") ? marked.querySelector("h1, h2") : null;
     post({
       type: "select", concept, part, page: marked.dataset.smPage ?? null, columns,
@@ -174,9 +176,29 @@ if (typeof window !== "undefined" && window.parent !== window) {
     clearSelection();
     post({ type: "selection-cleared" });
   };
+  // A section picked before its page loaded again (its look changed) is marked again once it shows,
+  // or given up after ten seconds when it never does.
+  const reselect = (origin, concept) => {
+    const name = typeof concept === "string" ? /^section:[^.]+[.](.+)$/.exec(concept)?.[1] : null;
+    if (!name) return;
+    studio = origin;
+    const find = () => document.querySelector('[data-kit=section][data-section="' + CSS.escape(name) + '"]');
+    if (find()) return selectPart(find(), concept, null, true);
+    const waiting = new MutationObserver(() => {
+      if (!find()) return;
+      waiting.disconnect();
+      selectPart(find(), concept, null, true);
+    });
+    waiting.observe(document.body, { childList: true, subtree: true });
+    setTimeout(() => {
+      waiting.disconnect();
+      if (!selected) post({ type: "selection-cleared" });
+    }, 10000);
+  };
   window.addEventListener("message", (event) => {
     if (designOnly() || event.source !== window.parent || !trusted(event.origin)) return;
     if (event.data?.type === "smithable:clear-selection") clearSelection();
+    if (event.data?.type === "smithable:reselect") return reselect(event.origin, event.data.concept);
     if (event.data?.type !== "smithable:reveal-selection" || event.origin !== studio || !selected) return;
     const bottom = event.data.bottom;
     if (!Number.isFinite(bottom) || bottom <= 0) return;

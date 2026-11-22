@@ -50,6 +50,7 @@ import {
   clearPreviewSelection,
   isPreviewMessage,
   type Place,
+  reselectInPreview,
   revealPreviewSelection,
   type Selection,
   touched,
@@ -785,7 +786,13 @@ export function App() {
     const receiveSelection = (event: MessageEvent) => {
       if (!isPreviewMessage(event)) return;
       if (event.data.type === "selection-cleared") clearSelection();
-      if (event.data.type === "ready") setSelectedPart(undefined);
+      // A page loading again ends a selection, except a section's: its look changed, and its form stays.
+      if (event.data.type === "ready")
+        setSelectedPart((part) => {
+          if (!part?.concept?.startsWith("section:")) return undefined;
+          reselectInPreview(part.concept);
+          return part;
+        });
       if (event.data.type === "selection-moved") {
         const { anchor } = event.data;
         setSelectedPart((part) => part && { ...part, anchor });

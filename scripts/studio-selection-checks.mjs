@@ -140,8 +140,12 @@ export async function checkStudioSelection(browser, base) {
           response.request().method() === "POST" &&
           response.request().postDataJSON()?.name === "setSectionLook",
       );
-      await sectionForm.getByRole("button", { name, exact: true }).click();
-      assert.equal((await (await operation).json()).ok, true);
+      // Together, so a click that cannot land says why rather than the wait for its answer.
+      const [response] = await Promise.all([
+        operation,
+        sectionForm.getByRole("button", { name, exact: true }).click(),
+      ]);
+      assert.equal((await response.json()).ok, true);
     };
     await choose("Full width photo");
     await frame.locator('[data-hero][data-layout="photo"]').waitFor();

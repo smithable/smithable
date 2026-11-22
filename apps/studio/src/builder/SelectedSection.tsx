@@ -128,7 +128,7 @@ export function SelectedSection({
       tabIndex={-1}
       aria-labelledby={heading}
       data-studio-overlay="selection"
-      className="fixed inset-x-1.5 bottom-1.5 z-30 max-h-[50dvh] space-y-3 overflow-auto overscroll-contain rounded-2xl border border-line bg-panel p-3 shadow-xl focus:outline-none lg:inset-x-auto lg:bottom-auto lg:w-80"
+      className="fixed inset-x-1.5 bottom-1.5 z-[55] max-h-[50dvh] space-y-3 overflow-auto overscroll-contain rounded-2xl border border-line bg-panel p-3 shadow-xl focus:outline-none lg:inset-x-auto lg:bottom-auto lg:w-80"
       style={narrow ? undefined : position}
       onKeyDown={(event) => {
         if (event.key !== "Escape") return;

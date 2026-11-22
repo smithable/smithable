@@ -88,6 +88,11 @@ if (typeof window !== "undefined")
       previewWindow?.postMessage({ type: "smithable:theme-css", css: triedTheme }, previewTarget());
   });
 
+/** A section picked before the page loaded again is marked again in the new page. */
+export function reselectInPreview(concept: string) {
+  previewWindow?.postMessage({ type: "smithable:reselect", concept }, previewTarget());
+}
+
 export function clearPreviewSelection() {
   previewWindow?.postMessage({ type: "smithable:clear-selection" }, previewTarget());
 }
