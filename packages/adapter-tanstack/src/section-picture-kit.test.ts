@@ -61,8 +61,6 @@ function generate(files: { spec: string; content?: string; ux?: string }) {
   if (!auth || !data.content || !looks.ux) throw new Error("Invalid fixture content or look");
   return generateApp(ir, {
     smithableVersion: "0.0.0",
-    kitRevision: "base",
-    resolveLandingKitRevision: (features) => `${features.join(",")}:opt-in`,
     auth,
     content: data.content,
     ux: looks.ux,
@@ -77,9 +75,6 @@ test("section backgrounds and feature card pictures are opt-in and use the same 
     value: "logo",
   });
   const logoApp = generate(logoOnly);
-  expect(logoApp.find(({ path }) => path === "smithable.lock")?.content).toContain(
-    '"kitRevision": "section-pictures:opt-in"',
-  );
   expect(logoApp.find(({ path }) => path === "src/kit/Landing.tsx")?.content).toContain(
     '<span className="sr-only">',
   );
@@ -117,8 +112,11 @@ test("section backgrounds and feature card pictures are opt-in and use the same 
   expect(files.content).toContain("images/work.webp");
 
   const unchanged = generate(baseline);
-  expect(unchanged.find(({ path }) => path === "src/kit/Landing.tsx")?.content).not.toContain(
-    "function SectionBackdrop",
+  const unchangedRoute = unchanged.find(({ path }) => path === "src/routes/index.tsx")?.content;
+  expect(unchangedRoute).not.toContain("background={");
+  expect(unchangedRoute).not.toContain("logoMark=");
+  expect(generated.find(({ path }) => path === "src/kit/Landing.tsx")?.content).toEqual(
+    unchanged.find(({ path }) => path === "src/kit/Landing.tsx")?.content,
   );
   const plainMark = operation(baseline, "setSectionLook", {
     section: "hero",

@@ -3,13 +3,9 @@ export { type SampleUser, samplePeople } from "./dev-door.js";
 export { FONT_ASSET_VERSION, FONT_ASSETS, fontImportRuntime, fontImportUrls } from "./fonts.js";
 export type { GeneratedFile, GenerateOptions, Zone } from "./generate.js";
 export {
-  baselineKitSources,
   customPageFromEdit,
   customPageSource,
   generateApp,
-  LANDING_KIT_FEATURES,
-  type LandingKitFeature,
-  landingKitSources,
   privacyReviews,
   readme,
 } from "./generate.js";

@@ -57,9 +57,7 @@ export interface LandingFooter {
   text?: string;
   links: { label?: string; link?: string }[];
   texts?: string;
-  // @contactFooter
   contactBand?: boolean;
-  // @endContactFooter
 }
 
 /** The page frame: the app's name, a link into the app, the sections and the footer. */
@@ -124,9 +122,7 @@ function LandingLayoutView({
   const clear = onHero && !open;
   const menu = (site?.menu ?? []).filter((m) => !m.access || allows(m.access, viewer ?? null));
   const contact = site?.contact;
-  // @contactFooter
   const contactBand = footer?.contactBand && contact !== undefined;
-  // @endContactFooter
   // Columns when there is something to put in them; otherwise the one line it always had.
   const columns = menu.length > 0 || contact !== undefined;
   const named = logo ? (
@@ -319,17 +315,23 @@ function LandingLayoutView({
         )}
       </header>
       <main className="flex-1">{children}</main>
-      {/* @contactFooter */}
       <footer
         data-part="footer"
         className={cn("border-t", contactBand && "bg-muted text-foreground")}
         {...(contactBand && footer?.texts ? sectionHooks(footer.texts) : {})}
       >
-        {/* @contactFooterBaseline |      <footer data-part="footer" className="border-t"> */}
-        {/* @endContactFooter */}
         {columns ? (
           <div className="mx-auto max-w-(--landing-width) px-5 py-12 text-sm">
-            <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-3">
+            <div
+              className={cn(
+                "grid gap-10 sm:grid-cols-2 lg:grid-cols-3",
+                contactBand &&
+                  contact?.hours &&
+                  menu.length > 0 &&
+                  (footer?.text || footerLinks) &&
+                  "lg:grid-cols-4",
+              )}
+            >
               <div className="space-y-2">
                 <p className="text-base font-semibold">{appName}</p>
                 {contact?.address && <p className="text-muted-foreground">{contact.address}</p>}
@@ -353,21 +355,16 @@ function LandingLayoutView({
                     </a>
                   </p>
                 )}
-                {/* @contactFooter */}
                 {!contactBand && contact?.hours && (
                   <p className="text-muted-foreground">{contact.hours}</p>
                 )}
-                {/* @contactFooterBaseline |                {contact?.hours && <p className="text-muted-foreground">{contact.hours}</p>} */}
-                {/* @endContactFooter */}
               </div>
-              {/* @contactFooter */}
               {contactBand && contact?.hours && (
                 <div className="space-y-2">
                   <h2 className="text-base font-semibold">{w.openingHours}</h2>
                   <p className="whitespace-pre-line">{contact.hours}</p>
                 </div>
               )}
-              {/* @endContactFooter */}
               {menu.length > 0 && (
                 <nav aria-label={w.pages} className="space-y-2">
                   <p className="text-base font-semibold">{w.pages}</p>
@@ -454,7 +451,6 @@ type Banded = {
   band?: Band;
 };
 
-// @sectionPictures
 /** The minimum veil keeps white type legible even over white pixels. */
 function SectionBackdrop({ image }: { image: LandingImage }) {
   return (
@@ -487,7 +483,6 @@ function pictureFrame(image?: LandingImage) {
       }
     : {};
 }
-// @endSectionPictures
 /** A section's frame: its box (open, or boxed by the theme), or a band across the width. */
 const frame = (band: Band, padding: string) => ({
   "data-band": band === "none" ? undefined : band,
@@ -521,9 +516,7 @@ function Eyebrow({ texts, children }: { texts?: string; children: string }) {
 
 function SectionView({
   texts,
-  // @sectionPictures
   background,
-  // @endSectionPictures
   band = "none",
   eyebrow,
   id,
@@ -539,9 +532,7 @@ function SectionView({
   text?: string;
   children: React.ReactNode;
   texts?: string;
-  // @sectionPictures
   background?: LandingImage;
-  // @endSectionPictures
   /** A short line over the title, e.g. what the section is ("Popular dishes"). */
   eyebrow?: string;
 }) {
@@ -551,13 +542,9 @@ function SectionView({
       aria-labelledby={title ? `${id}-title` : undefined}
       data-layout={layout}
       {...frame(band, "py-10 sm:py-12")}
-      // @sectionPictures
       {...pictureFrame(background)}
-      // @endSectionPictures
     >
-      {/* @sectionPictures */}
       {background && <SectionBackdrop image={background} />}
-      {/* @endSectionPictures */}
       {eyebrow && <Eyebrow texts={texts}>{eyebrow}</Eyebrow>}
       {title && (
         <h2
@@ -587,9 +574,7 @@ function SectionView({
 /** A text section: a heading and paragraphs (a blank line between them in the content file). */
 function TextSectionView({
   texts,
-  // @sectionPictures
   background,
-  // @endSectionPictures
   band = "none",
   eyebrow,
   id,
@@ -600,9 +585,7 @@ function TextSectionView({
   title?: string;
   text?: string;
   texts?: string;
-  // @sectionPictures
   background?: LandingImage;
-  // @endSectionPictures
   /** A short line over the title, e.g. what the section is ("Our story"). */
   eyebrow?: string;
 }) {
@@ -611,13 +594,9 @@ function TextSectionView({
       {...sectionHooks(texts)}
       aria-labelledby={title ? `${id}-title` : undefined}
       {...frame(band, "py-10")}
-      // @sectionPictures
       {...pictureFrame(background)}
-      // @endSectionPictures
     >
-      {/* @sectionPictures */}
       {background && <SectionBackdrop image={background} />}
-      {/* @endSectionPictures */}
       {eyebrow && <Eyebrow texts={texts}>{eyebrow}</Eyebrow>}
       {title && (
         <h2
@@ -662,9 +641,7 @@ function HeroView({
   texts,
   eyebrow,
   title,
-  // @sectionPictures
   logoMark,
-  // @endSectionPictures
   subtitle,
   link,
   secondLink,
@@ -679,9 +656,7 @@ function HeroView({
   stage,
 }: {
   title: string;
-  // @sectionPictures
   logoMark?: string;
-  // @endSectionPictures
   subtitle?: string;
   link?: LandingLink;
   /** A second button beside the first, an outline one. */
@@ -800,12 +775,8 @@ function HeroView({
       )}
       <h1
         className="max-w-3xl text-[calc(2.25rem*var(--heading-scale))] leading-tight font-(--heading-weight) tracking-(--heading-tracking) [text-transform:var(--heading-case,none)] sm:text-[calc(3rem*var(--heading-scale))] lg:text-[calc(3.75rem*var(--heading-scale))]"
-        // @sectionPictures
         {...(logoMark ? {} : mark(texts, "title"))}
-        // @sectionPicturesBaseline |        {...mark(texts, "title")}
-        // @endSectionPictures
       >
-        {/* @sectionPictures */}
         {logoMark ? (
           <>
             {/* Not marked: the app logo, like the mark in the header. */}
@@ -815,8 +786,6 @@ function HeroView({
         ) : (
           title
         )}
-        {/* @sectionPicturesBaseline |        {title} */}
-        {/* @endSectionPictures */}
       </h1>
       {subtitle && (
         <p className="mt-6 max-w-2xl text-lg text-muted-foreground" {...mark(texts, "subtitle")}>
@@ -1269,9 +1238,7 @@ const GALLERY_COLUMNS = {
 
 function FeaturesView({
   texts,
-  // @sectionPictures
   background,
-  // @endSectionPictures
   band = "none",
   eyebrow,
   title,
@@ -1281,21 +1248,15 @@ function FeaturesView({
 }: Banded & {
   title?: string;
   text?: string;
-  // @sectionPictures
   items: { title?: string; text?: string; image?: LandingImage }[];
-  // @sectionPicturesBaseline |  items: { title?: string; text?: string }[];
-  // @endSectionPictures
   /** Items side by side on wide screens: 2 to 6. */
   columns?: 2 | 3 | 4 | 5 | 6;
   texts?: string;
-  // @sectionPictures
   background?: LandingImage;
-  // @endSectionPictures
   /** A short line over the title, e.g. what the section is ("Why us"). */
   eyebrow?: string;
 }) {
   return (
-    // @sectionPictures
     <Section
       id="features"
       texts={texts}
@@ -1305,21 +1266,15 @@ function FeaturesView({
       text={text}
       background={background}
     >
-      {/* @sectionPicturesBaseline |    <Section id="features" texts={texts} band={band} eyebrow={eyebrow} title={title} text={text}> */}
-      {/* @endSectionPictures */}
       <ul className={cn("grid gap-4", CARD_COLUMNS[columns])}>
         {items.map((item, i) => (
           <li key={item.title ?? item.text}>
-            {/* @sectionPictures */}
             <Card
               className={cn(
                 "h-full space-y-2 p-card",
                 background && "border-white/30 bg-black/75 text-white",
               )}
             >
-              {/* @sectionPicturesBaseline |            <Card className="h-full space-y-2 p-card"> */}
-              {/* @endSectionPictures */}
-              {/* @sectionPictures */}
               {item.image && (
                 <AiMarked generated={item.image.generated} kind={item.image.kind}>
                   <img
@@ -1332,7 +1287,6 @@ function FeaturesView({
                   />
                 </AiMarked>
               )}
-              {/* @endSectionPictures */}
               {item.title && (
                 <h3 className="text-lg font-semibold" {...mark(texts, `items.${i}.title`)}>
                   {item.title}
@@ -1859,13 +1813,8 @@ function FaqView({
 
 function CallToActionView({
   texts,
-  // @sectionPictures
   background,
-  // @endSectionPictures
-  // @sectionPictures
   band: givenBand = "none",
-  // @sectionPicturesBaseline |  band = "none",
-  // @endSectionPictures
   title,
   text,
   link,
@@ -1874,21 +1823,12 @@ function CallToActionView({
   text?: string;
   link?: LandingLink;
   texts?: string;
-  // @sectionPictures
   background?: LandingImage;
-  // @endSectionPictures
 }) {
-  // @sectionPictures
   const band = background ? "primary" : givenBand;
-  // @endSectionPictures
   return (
-    // @sectionPictures
     <section {...sectionHooks(texts)} {...frame(band, "py-12")} {...pictureFrame(background)}>
-      {/* @sectionPicturesBaseline |    <section {...sectionHooks(texts)} {...frame(band, "py-12")}> */}
-      {/* @endSectionPictures */}
-      {/* @sectionPictures */}
       {background && <SectionBackdrop image={background} />}
-      {/* @endSectionPictures */}
       {/* On the primary band the band is its box: the words on it, the button inverse. */}
       <div
         className={
@@ -2214,9 +2154,7 @@ function MediaTextView({
   title,
   text,
   image,
-  // @mediaCollage
   items,
-  // @endMediaCollage
   caption,
   link,
   layout = "split",
@@ -2234,15 +2172,11 @@ function MediaTextView({
     image?: LandingImage;
     caption?: string;
     link?: LandingLink;
-    // @mediaCollage
     items?: { image: LandingImage }[];
     layout?: "split" | "stacked" | "collage";
-    // @mediaCollageBaseline |    layout?: "split" | "stacked";
-    // @endMediaCollage
     imageSide?: "left" | "right";
   }) {
   const dialog = useRef<HTMLDialogElement>(null);
-  // @mediaCollage
   const [open, setOpen] = useState(0);
   const collage = layout === "collage";
   const pictures: { image: LandingImage; caption?: string }[] = [
@@ -2250,7 +2184,6 @@ function MediaTextView({
     ...(items ?? []),
   ];
   const show = (index: number) => setOpen((index + pictures.length) % pictures.length);
-  // @endMediaCollage
   return (
     <section
       {...sectionHooks(texts)}
@@ -2289,7 +2222,6 @@ function MediaTextView({
             </Link>
           )}
         </div>
-        {/* @mediaCollage */}
         {collage && pictures.length > 0 && (
           <ul className="grid grid-cols-2 gap-3 sm:flex sm:items-start sm:gap-0 sm:pb-4">
             {pictures.map(({ image: photo, caption: note }, index) => (
@@ -2337,8 +2269,6 @@ function MediaTextView({
           </ul>
         )}
         {!collage && image && (
-          // @mediaCollageBaseline |        {image && (
-          // @endMediaCollage
           <figure
             className={cn(
               "min-w-0",
@@ -2379,14 +2309,9 @@ function MediaTextView({
       </div>
       <PictureDialog
         dialog={dialog}
-        // @mediaCollage
         pictures={collage ? pictures : image ? [{ image, caption }] : []}
         open={collage ? open : 0}
         show={collage ? show : () => {}}
-        // @mediaCollageBaseline |        pictures={image ? [{ image, caption }] : []}
-        // @mediaCollageBaseline |        open={0}
-        // @mediaCollageBaseline |        show={() => {}}
-        // @endMediaCollage
       />
     </section>
   );
