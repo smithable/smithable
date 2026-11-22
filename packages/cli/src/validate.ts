@@ -24,6 +24,7 @@ import {
   privacyCheck,
   recordPicture,
   recordSummary,
+  resolveLook,
   type SamplesIR,
   type SpecIR,
   type SpecPlugin,
@@ -48,6 +49,7 @@ import {
 } from "@smithable/core";
 import { hostedLevel, levelWarnings } from "./hosted-level.js";
 import type { Io } from "./io.js";
+import { INK_WASH_GREYSCALE_CUTOFF, inkWashTreatment } from "./picture-recolour.js";
 import { badgeExplained, readRecords, sha256 } from "./picture-style.js";
 import { loadPlugins } from "./plugins.js";
 import { contextFacts, reviewsFor } from "./privacy-review.js";
@@ -312,7 +314,7 @@ export function validate(
     return ir ? 0 : 1;
   }
   const found: Diagnostic[] = [];
-  const { ir, path, auth, ux, content } = loadSpec(target, io, extraPlugins, found);
+  const { ir, path, auth, ux, themes, content } = loadSpec(target, io, extraPlugins, found);
   if (!ir) return 1;
   // Warnings after loading, from validate alone: the privacy page's completeness and review.
   for (const d of privacyFindings(path, ir, auth, content, ux)) io.err(`${formatDiagnostic(d)}\n`);
@@ -321,7 +323,7 @@ export function validate(
   );
   // --write: what the rules settled, written into the spec, so it says it all and no later
   // change of its shape moves anything (docs/design/inference.md §4); then --explain reads the spec as written..
-  let shown = { ir, auth, ux };
+  let shown = { ir, auth, ux, themes };
   if (write) {
     const specPath = isDirectory(target) ? join(target, "smithable.yml") : target;
     const result = writeExplicit(readText(specPath), ir, auth, ux);
@@ -329,7 +331,7 @@ export function validate(
       writeFileSync(specPath, result.text);
       io.out(`\nWritten into ${specPath}:\n${result.written.map((w) => `  ${w}\n`).join("")}`);
       const again = loadSpec(target, { ...io, err: () => {} }, extraPlugins);
-      if (again.ir) shown = { ir: again.ir, auth: again.auth, ux: again.ux };
+      if (again.ir) shown = { ir: again.ir, auth: again.auth, ux: again.ux, themes: again.themes };
     } else io.out("\nNothing was left to the rules; the spec says it all.\n");
   }
   if (explain && shown.auth) {
@@ -337,6 +339,14 @@ export function validate(
     io.out(
       `${badgeExplained(isDirectory(target) ? target : dirname(target), shown.ux?.aiBadge)}\n`,
     );
+    if (shown.ux?.pictures?.style === "ink-wash") {
+      const { primary, chroma, rule, treatment } = inkWashTreatment(
+        resolveLook(shown.ux, shown.themes).tokens.light.primary,
+      );
+      io.out(
+        `Ink wash theme rule: ${treatment} (${rule}). Light primary ${primary}, OKLCH chroma ${chroma.toFixed(6)} (greyscale cutoff: ${INK_WASH_GREYSCALE_CUTOFF}, inclusive).\n`,
+      );
+    }
   }
   // Advice, after the verdict: what the app would gain, each with the operation that does it.
   const notes = found.filter((d) => d.severity === "note");
