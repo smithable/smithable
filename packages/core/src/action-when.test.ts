@@ -78,6 +78,7 @@ test("an action cannot ask for a sequence value", () => {
   expect(errors(text)).toContainEqual(
     expect.stringContaining("SupportCase.number cannot be set, the app counts it up."),
   );
+  expect(errors(text.replace("set: { number: }", "set: { number: 5 }"))).toEqual([]);
 });
 
 test("a reference wants only those forms, and ME() needs a field that refers to User", () => {

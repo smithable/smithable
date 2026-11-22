@@ -458,7 +458,12 @@ export function askedKeys(action: StandardActionIR, ir: SpecIR) {
   return askedFields(action).map((x) => {
     const field = modelNamed(ir, x.model).fields.find((f) => f.name === x.field) as FieldIR;
     const stored = dataKey(field);
-    return { ...x, field: stored, key: x.key === x.field ? stored : `${x.model}.${stored}` };
+    return {
+      ...x,
+      field: stored,
+      key: x.key === x.field ? stored : `${x.model}.${stored}`,
+      fieldSpec: field,
+    };
   });
 }
 
@@ -469,8 +474,8 @@ export function askedKeys(action: StandardActionIR, ir: SpecIR) {
 export function askOptions(action: StandardActionIR, ir: SpecIR, t: Texts) {
   const imports = new Map<string, string>();
   const entries = askedKeys(action, ir).flatMap((x) => {
-    const field = modelNamed(ir, x.model).fields.find((f) => dataKey(f) === x.field);
-    if (field?.type.kind !== "relation") return [];
+    const field = x.fieldSpec;
+    if (field.type.kind !== "relation") return [];
     if (field.type.model === USER_MODEL) {
       imports.set("userOptions", "#/generated/users");
       return [`${JSON.stringify(x.key)}: await userOptions()`];
@@ -491,10 +496,7 @@ export function standardActionModule(
   const a = actionNames(action);
   const n = names(modelNamed(ir, action.on), t);
   const when = whenKeys(action, ir);
-  const asked = askedKeys(action, ir).map((x) => ({
-    ...x,
-    fieldSpec: modelNamed(ir, x.model).fields.find((f) => dataKey(f) === x.field) as FieldIR,
-  }));
+  const asked = askedKeys(action, ir);
   // Where an asked field's label is kept: under its own model, by its name in the spec (a
   // reference's, not its key's).
   const labelText = (x: (typeof asked)[number]) =>

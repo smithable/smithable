@@ -1246,7 +1246,6 @@ function readSplitAction(
 /** Fields an action cannot set: computed, references, lists, pictures. */
 function unsettable(field: FieldIR): string | undefined {
   if (field.formula) return "it is computed";
-  if (field.sequence) return "the app counts it up";
   if (field.type.kind === "relation") return "it is a reference";
   if (storesPictures(field)) return "it is a picture";
   if (storesFiles(field)) return "it is a document";
@@ -1602,7 +1601,8 @@ export function readValues(
       values.push({ field: key, asked: true });
       continue;
     }
-    const why = unsettable(field);
+    const why =
+      field.sequence && (raw === null || raw === "") ? "the app counts it up" : unsettable(field);
     if (why) {
       ctx.error(at, "invalid-set", `${what}: ${target.name}.${key} cannot be set, ${why}.`);
       continue;
