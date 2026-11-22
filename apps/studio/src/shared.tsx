@@ -12,6 +12,9 @@ import { receipt } from "./receipt";
 import { Button, cx, Input, Panel } from "./ui";
 import { useVerified, Verified } from "./Verified";
 
+/** How long the note that the preview's records are samples stays before it closes by itself. */
+const SAMPLES_NOTICE_MS = 15_000;
+
 const PAGE_KEY = "smithable:preview-page";
 /** The page the preview is on, e.g. "/customers/12". */
 export const keptPage = () => {
@@ -110,12 +113,20 @@ export function Preview({
       return true;
     }
   });
-  const dismissSamples = () => {
+  const dismissSamples = useCallback(() => {
     setSamples(false);
     try {
       localStorage.setItem("samplesNoticeDismissed", "1");
     } catch {}
-  };
+  }, []);
+  // Said once, it closes by itself after a while, as dismissed; a pointer resting on it holds it
+  // (fact decisions.studio-notices: only errors and what needs an action stay until pressed).
+  const [holdingSamples, setHoldingSamples] = useState(false);
+  useEffect(() => {
+    if (!samples || holdingSamples) return;
+    const timer = setTimeout(dismissSamples, SAMPLES_NOTICE_MS);
+    return () => clearTimeout(timer);
+  }, [samples, holdingSamples, dismissSamples]);
   // The page the preview is on, as it reports it: a reload after a change comes back to it, and
   // so does reloading Studio (kept for the browser tab's session, like the place in each mode).
   const current = useRef(keptPage());
@@ -602,6 +613,8 @@ export function Preview({
         {samples && (
           <div
             role="note"
+            onPointerEnter={() => setHoldingSamples(true)}
+            onPointerLeave={() => setHoldingSamples(false)}
             className="flex items-start gap-3 border-b border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950"
           >
             <p className="flex-1">

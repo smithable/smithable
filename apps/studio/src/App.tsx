@@ -27,7 +27,12 @@ import { Ask, type AudioActivity, usePresentation } from "./builder/Ask";
 import { NoCode, OPEN_PART, type OpenPart } from "./builder/NoCode";
 import { mailTemplates, OutgoingTemplate } from "./builder/OutgoingTemplate";
 import { SelectedButton, selectedButton } from "./builder/SelectedButton";
-import { beside, SelectedSection, selectedSection } from "./builder/SelectedSection";
+import {
+  beside,
+  SECTION_FORM_WIDTH,
+  SelectedSection,
+  selectedSection,
+} from "./builder/SelectedSection";
 import { SmithFace } from "./builder/SmithFace";
 import { SummaryTab } from "./builder/SummaryTab";
 import { Visualize } from "./builder/Visualize";
@@ -1316,7 +1321,7 @@ export function App() {
             ),
           },
           { width: window.innerWidth, height: window.innerHeight, top: 64 },
-          320,
+          SECTION_FORM_WIDTH,
           sectionHeight,
         )
       : undefined;
@@ -2571,7 +2576,8 @@ export function App() {
         <SelectedSection
           key={selectedPart?.concept}
           section={section}
-          run={run}
+          project={project}
+          refresh={refreshLook}
           close={clearSelection}
           ask={() => workIn("smith")}
           position={sectionPosition}

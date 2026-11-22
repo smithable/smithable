@@ -35,6 +35,7 @@ test("a section's form goes to the right of its box, else left, below, above, el
 
 const spec = {
   ir: {
+    navigation: [],
     pages: [
       {
         id: "home",
@@ -69,4 +70,26 @@ test("a picked section offers the looks that arrange it, each with its current v
   expect(selectedSection(picked("section:home.story"), spec)?.choices).toEqual([]);
   expect(selectedSection(picked("section:home.missing"), spec)).toBeUndefined();
   expect(selectedSection(picked("text:pages.home.hero.title"), spec)).toBeUndefined();
+});
+
+test("a hero offers only the layouts it can take: tiles with two or three shortcuts, a stage with a list everyone sees", () => {
+  const layouts = (hero: object, pages: object[] = [], current?: string) =>
+    selectedSection(picked("section:home.hero"), {
+      ir: {
+        navigation: [{ pages: pages.map((p) => (p as { id: string }).id) }],
+        pages: [{ id: "home", sections: [{ name: "hero", kind: "hero", ...hero }] }, ...pages],
+      },
+      ux: { pages: { home: { looks: current ? { hero: { layout: current } } : {} } } },
+    } as unknown as Spec)?.choices[0]?.values;
+  const list = { id: "classes", pattern: { kind: "crud" } };
+  expect(layouts({})).not.toContain("tiles");
+  expect(layouts({})).not.toContain("stage");
+  expect(layouts({})).toContain("photo");
+  expect(layouts({ shortcuts: ["a", "b"] })).toContain("tiles");
+  expect(layouts({ shortcuts: ["a", "b", "c", "d"] })).not.toContain("tiles");
+  expect(layouts({}, [list])).toContain("stage");
+  // A list of the viewer's own records is no stage.
+  expect(layouts({}, [{ ...list, mine: true }])).not.toContain("stage");
+  // The layout it has is always there, so the form shows it chosen.
+  expect(layouts({}, [], "tiles")).toContain("tiles");
 });

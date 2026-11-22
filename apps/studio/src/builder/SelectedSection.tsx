@@ -1,9 +1,11 @@
-import { humanize, SECTION_LOOKS } from "@smithable/core";
+import { humanize, SECTION_LOOKS, stagePage } from "@smithable/core";
 import { type CSSProperties, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
+import { api } from "../api";
 import type { Spec } from "../engine";
+import { LookSession } from "../first-look";
 import type { Selection } from "../preview";
-import { useMedia } from "../ui";
-import type { Run } from "./ChangeForms";
+import { Button, useMedia } from "../ui";
+import { SectionSketch } from "./SectionSketch";
 
 /** A hero's layouts by what they look like (docs/spec/v0.1.md, sections); the two across the width say so. */
 const HERO_LAYOUTS: Record<string, string> = {
@@ -42,9 +44,21 @@ export function selectedSection(selection: Selection | undefined, spec: Spec) {
   const looks = SECTION_LOOKS[section.kind] ?? {};
   const look = (spec.ux?.pages[page]?.looks?.[name] ?? {}) as Record<string, unknown>;
   const layout = String(look.layout ?? (Array.isArray(looks.layout) ? looks.layout[0] : ""));
+  // A hero's tiles are its two or three shortcuts, and its stage a list everyone sees: a layout
+  // the section cannot take is not offered (T1196), unless it is the one it has.
+  const ir = spec.ir;
+  const shortcuts = (section as { shortcuts?: string[] }).shortcuts?.length ?? 0;
+  const applies = (key: string, value: string) =>
+    section.kind !== "hero" ||
+    key !== "layout" ||
+    value === layout ||
+    (value === "tiles"
+      ? shortcuts >= 2 && shortcuts <= 3
+      : value !== "stage" || Boolean(stagePage(ir)));
   const choices = Object.keys(KEYS).flatMap((key) => {
-    const values = looks[key];
-    if (!Array.isArray(values)) return [];
+    const all = looks[key];
+    if (!Array.isArray(all)) return [];
+    const values = all.filter((value) => applies(key, String(value)));
     // A hero's picture has a side only beside its text.
     if (section.kind === "hero" && key === "image" && !["split", "inset"].includes(layout))
       return [];
@@ -74,14 +88,21 @@ const named = (kind: string, key: string, value: string) =>
   (key === "height" ? HEIGHTS[value] : undefined) ??
   humanize(value);
 
+/** The form's width on the desk, as its class says (lg:w-[26rem]): its drawings, four to a row. */
+export const SECTION_FORM_WIDTH = 416;
+
 /**
- * A small form beside a landing section picked in the preview: its arrangement's choices, each
- * applied at once as one setSectionLook (Undo steps back), and the same selection to Smith. Placed
- * next to the selection by Studio, with nothing drawn between them; a sheet at the foot on a phone.
+ * A form beside a landing section picked in the preview: its arrangement's choices as small
+ * drawings, like the theme cards (T1196). A choice is tried on at once in the preview, as one
+ * setSectionLook per kind of choice (a second layout replaces the first); Apply, the X, Escape or
+ * picking something else keeps them, and Cancel undoes them all, back to the section as it was
+ * (fact decisions.studio-try-then-apply). Placed next to the selection by Studio when it fits
+ * there; a sheet at the foot on a phone.
  */
 export function SelectedSection({
   section,
-  run,
+  project,
+  refresh,
   close,
   ask,
   position,
@@ -89,7 +110,10 @@ export function SelectedSection({
   reveal,
 }: {
   section: NonNullable<ReturnType<typeof selectedSection>>;
-  run: Run;
+  /** The project as the form opened on it: Cancel undoes from its revision on. */
+  project: { revision?: string; lookProject?: string };
+  /** Reads the project again after a change, so the form and the preview show it. */
+  refresh: () => Promise<void>;
   close: () => void;
   ask: () => void;
   position?: CSSProperties;
@@ -97,8 +121,32 @@ export function SelectedSection({
   measured?: (height: number) => void;
   reveal: (sheetTop: number) => void;
 }) {
+  const lookProject = project.lookProject ?? "";
+  const [session] = useState(
+    () =>
+      new LookSession(
+        {
+          values: Object.fromEntries(section.choices.map((c) => [c.key, c.current])),
+          revision: project.revision ?? "",
+        },
+        (change, revision) => api.undoThemeChoice(change, revision, lookProject),
+      ),
+  );
   const [busy, setBusy] = useState(false);
+  const [changed, setChanged] = useState(false);
+  const [error, setError] = useState<string>();
   const running = useRef(false);
+  // Another section picked while an answer is awaited replaces this form (its key): what comes
+  // after the answer then leaves the new selection alone.
+  const mounted = useRef(true);
+  useEffect(
+    () => () => {
+      mounted.current = false;
+    },
+    [],
+  );
+  // A failed read leaves the form as it was, usable; the preview catches up on the next change.
+  const reread = () => refresh().catch(() => undefined);
   const heading = useId();
   const panel = useRef<HTMLDivElement>(null);
   const narrow = useMedia("(max-width: 1023px)");
@@ -113,7 +161,7 @@ export function SelectedSection({
     observer.observe(sheet);
     return () => observer.disconnect();
   }, [narrow, reveal]);
-  // On the desk: placed by its height as drawn (a hero's three rows of choices are taller than a
+  // On the desk: placed by its height as drawn (a hero's rows of drawings are taller than a
   // list's), and never taller than the screen leaves it, scrolling inside instead (T1179).
   useLayoutEffect(() => {
     const form = panel.current;
@@ -128,12 +176,49 @@ export function SelectedSection({
     if (running.current) return;
     running.current = true;
     setBusy(true);
+    setError(undefined);
     try {
-      await run("setSectionLook", { page: section.page, section: section.section, key, value });
+      await session.set(key, value, (revision) =>
+        api.lookChange(
+          "setSectionLook",
+          { page: section.page, section: section.section, key, value },
+          revision,
+          lookProject,
+        ),
+      );
+    } catch (reason) {
+      setError((reason as Error).message);
     } finally {
+      setChanged(session.changed);
+      await reread();
       running.current = false;
-      setBusy(false);
+      if (mounted.current) setBusy(false);
     }
+  };
+  const cancel = async () => {
+    if (running.current) return;
+    running.current = true;
+    setBusy(true);
+    try {
+      await session.finish(false);
+    } catch (reason) {
+      // Some were undone before one could not be: the preview shows what is left.
+      await reread();
+      running.current = false;
+      if (!mounted.current) return;
+      setBusy(false);
+      setChanged(session.changed);
+      setError(
+        `Cancel could not restore the section: ${(reason as Error).message} Review the changes in Changes.`,
+      );
+      return;
+    }
+    await reread();
+    running.current = false;
+    if (mounted.current) close();
+  };
+  const keep = () => {
+    if (!running.current) close();
   };
   return (
     <div
@@ -141,16 +226,17 @@ export function SelectedSection({
       role="dialog"
       tabIndex={-1}
       aria-labelledby={heading}
+      aria-busy={busy}
       data-studio-overlay="selection"
-      className="fixed inset-x-1.5 bottom-1.5 z-[55] max-h-[50dvh] space-y-3 overflow-auto overscroll-contain rounded-2xl border border-line bg-panel p-3 shadow-xl focus:outline-none lg:inset-x-auto lg:bottom-auto lg:max-h-[calc(100dvh-5.5rem)] lg:w-80"
+      className="fixed inset-x-1.5 bottom-1.5 z-[55] flex max-h-[60dvh] flex-col rounded-2xl border border-line bg-panel shadow-xl focus:outline-none lg:inset-x-auto lg:bottom-auto lg:max-h-[calc(100dvh-5.5rem)] lg:w-[26rem]"
       style={narrow ? undefined : position}
       onKeyDown={(event) => {
         if (event.key !== "Escape") return;
         event.stopPropagation();
-        close();
+        keep();
       }}
     >
-      <header className="flex items-center gap-1">
+      <header className="flex items-center gap-1 px-3 pt-3">
         <h2 id={heading} className="min-w-0 flex-1 truncate text-sm font-semibold">
           {section.label}
         </h2>
@@ -159,42 +245,69 @@ export function SelectedSection({
           className="h-8 shrink-0 rounded px-2 text-sm text-muted hover:bg-subtle"
           onClick={ask}
         >
-          Ask Smith
+          Describe another change
         </button>
         <button
           type="button"
           aria-label="Close selection"
           title="Close selection"
           className="grid size-8 shrink-0 place-items-center rounded text-muted hover:bg-subtle"
-          onClick={close}
+          onClick={keep}
         >
           <span aria-hidden="true">×</span>
         </button>
       </header>
-      {section.choices.length === 0 && (
-        <p className="text-sm text-muted">
-          This section has no arrangement to choose. Ask Smith to change it.
-        </p>
+      <div className="min-h-0 flex-1 space-y-3 overflow-auto overscroll-contain px-3 py-2">
+        {section.choices.length === 0 && (
+          <p className="text-sm text-muted">
+            This section has no arrangement to choose. Describe the change to Smith instead.
+          </p>
+        )}
+        {section.choices.map(({ key, values, current }) => (
+          <fieldset key={key} className="space-y-1">
+            <legend className="text-xs text-muted">{KEYS[key]}</legend>
+            <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+              {values.map((value) => (
+                <button
+                  key={value}
+                  type="button"
+                  aria-pressed={value === current}
+                  disabled={busy}
+                  className="rounded-md border border-line p-1 text-left text-xs leading-tight hover:bg-subtle disabled:opacity-60 aria-pressed:border-accent aria-pressed:bg-accent-soft aria-pressed:font-medium aria-pressed:ring-2 aria-pressed:ring-accent/40"
+                  onClick={() => value !== current && void choose(key, value)}
+                >
+                  <SectionSketch kind={section.kind} choice={key} value={value} />
+                  <span className="mt-1 block">{named(section.kind, key, value)}</span>
+                </button>
+              ))}
+            </div>
+          </fieldset>
+        ))}
+        {error && (
+          <p role="alert" className="text-sm text-red-700">
+            {error}
+          </p>
+        )}
+      </div>
+      {section.choices.length > 0 && (
+        <footer className="flex items-center justify-between gap-2 border-t border-line px-3 py-2">
+          <p aria-live="polite" className="min-w-0 text-xs text-muted">
+            {changed
+              ? "Cancel puts the section back as it was."
+              : "Pick one to see it in the preview."}
+          </p>
+          <span className="flex shrink-0 gap-2">
+            <Button variant="ghost" disabled={busy} onClick={() => void cancel()}>
+              Cancel
+            </Button>
+            {changed && (
+              <Button variant="primary" disabled={busy} onClick={keep}>
+                Apply
+              </Button>
+            )}
+          </span>
+        </footer>
       )}
-      {section.choices.map(({ key, values, current }) => (
-        <fieldset key={key} className="space-y-1">
-          <legend className="text-xs text-muted">{KEYS[key]}</legend>
-          <div className="flex flex-wrap gap-1">
-            {values.map((value) => (
-              <button
-                key={value}
-                type="button"
-                aria-pressed={value === current}
-                disabled={busy}
-                className="rounded border border-line px-2 py-1 text-sm hover:bg-subtle disabled:opacity-60 aria-pressed:border-accent aria-pressed:bg-accent-soft aria-pressed:font-medium"
-                onClick={() => value !== current && void choose(key, value)}
-              >
-                {named(section.kind, key, value)}
-              </button>
-            ))}
-          </div>
-        </fieldset>
-      ))}
     </div>
   );
 }
