@@ -63,7 +63,7 @@ import {
 } from "./old-version.js";
 import { projectFiles, runOperation } from "./op.js";
 import { readOutbox } from "./outbox.js";
-import { type LibraryVersion, libraryVersion } from "./picture-style.js";
+import { type LibraryVersion, libraryVersion, placedRealistic } from "./picture-style.js";
 import { declaredPlugins, loadPlugins, pluginPath } from "./plugins.js";
 import {
   PREVIEW_TOKEN_DIGEST,
@@ -1269,6 +1269,7 @@ export async function studio(
           return json({
             styles: [],
             error: "Picture styles could not be reached. You can still choose a theme.",
+            realistic: placedRealistic(dir),
           });
         const hashes = pictureHashes(dir);
         const offer = randomUUID();
@@ -1281,7 +1282,8 @@ export async function studio(
         while (pictureOffers.size >= 20)
           pictureOffers.delete(pictureOffers.keys().next().value as string);
         pictureOffers.set(offer, { project, version, hashes, expires: Date.now() + 10 * 60_000 });
-        return json({ ...cards, offer, project });
+        // Whether switching the AI badge off asks first (picture-kinds.md §3).
+        return json({ ...cards, offer, project, realistic: placedRealistic(dir) });
       }
       // A style card's preview, served by Studio from its offer's pinned version (T951).
       if (req.method === "GET" && url.pathname === "/api/picture-styles/preview") {
@@ -1455,7 +1457,9 @@ export async function studio(
             onResult: (result) => {
               if (!result.ok && result.diagnostics.length) diagnostics = result.diagnostics;
               if (
-                ["setTheme", "resetThemeOverride", "setPictureStyle"].includes(String(name)) &&
+                ["setTheme", "resetThemeOverride", "setPictureStyle", "setAiBadge"].includes(
+                  String(name),
+                ) &&
                 result.ok &&
                 result.verification?.revision
               )

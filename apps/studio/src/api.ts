@@ -1,4 +1,4 @@
-import type { ThemeIR, Verification } from "@smithable/core";
+import type { PictureKind, ThemeIR, Verification } from "@smithable/core";
 import type { ConceptInfo } from "@smithable/index";
 import { showCosts } from "./receipt";
 
@@ -269,6 +269,8 @@ export interface Result {
 
 export interface PictureStyles {
   offer?: string;
+  /** Realistic AI pictures are placed in the app: switching the AI badge off asks first. */
+  realistic?: boolean;
   project?: string;
   current?: string;
   error?: string;
@@ -279,6 +281,8 @@ export interface PictureStyles {
     kept: number;
     total: number;
     generated: number;
+    /** The library's kind of the style, once it says one (T1172); else told by `generated`. */
+    kind?: PictureKind;
     previews: { src: string; alt: string }[];
   }[];
 }

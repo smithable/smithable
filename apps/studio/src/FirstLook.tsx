@@ -1,5 +1,8 @@
+import type { PictureKind } from "@smithable/core";
 import { useEffect, useRef, useState } from "react";
+import { BadgeNote, badgeLine, kindChoices, startingKind, styleKind } from "./AiBadge";
 import { api, type PictureStyles, type Project } from "./api";
+import { BADGE_WORDS, KIND_WORDS } from "./badge-words";
 import { SMITHS } from "./builder/chat-style";
 import { SmithFace } from "./builder/SmithFace";
 import type { Spec } from "./engine";
@@ -24,7 +27,8 @@ export function FirstLook({
   project: Project;
   spec: Spec;
   preset: string;
-  aiBadge: boolean;
+  /** smithable.ux.yml's aiBadge: unsaid is by each picture's kind. */
+  aiBadge: boolean | undefined;
   onRefresh: () => Promise<void>;
   onClose: (options: { error?: string; kept?: boolean }) => void;
 }) {
@@ -52,6 +56,12 @@ export function FirstLook({
     };
   }, [project.lookProject]);
   const havePictures = Boolean(pictures?.offer && pictures.styles.length);
+  // The kind of pictures before their style (picture-kinds.md §1).
+  const [chosenKind, setKind] = useState<PictureKind>();
+  const styles = pictures?.styles ?? [];
+  const kind = chosenKind ?? startingKind(styles, selectedStyle);
+  const kinds = kindChoices(styles);
+  const ofKind = kinds.find((c) => c.kind === kind)?.styles ?? [];
   const [closing, setClosing] = useState(false);
   const [error, setError] = useState<string>();
   const heading = useRef<HTMLHeadingElement>(null);
@@ -206,9 +216,41 @@ export function FirstLook({
             <p className="mb-3 text-sm text-muted">
               The same subjects, in another style. Pictures change only when you keep this look.
             </p>
+            <fieldset disabled={closing} className="mb-3">
+              <legend className="mb-2 text-sm font-medium">{BADGE_WORDS.kindLabel}</legend>
+              <div className="flex flex-wrap gap-2">
+                {kinds.map((c) => (
+                  <button
+                    key={c.kind}
+                    type="button"
+                    aria-pressed={kind === c.kind}
+                    disabled={!c.styles.length}
+                    className={cx(
+                      "rounded-md border px-3 py-1.5 text-sm disabled:opacity-60",
+                      kind === c.kind ? "border-accent ring-2 ring-accent/40" : "border-line",
+                    )}
+                    onClick={() => {
+                      // A style chosen under another kind is let go: Keep keeps what is shown.
+                      setKind(c.kind);
+                      if (c.kind !== kind) setSelectedStyle(pictures?.current);
+                    }}
+                  >
+                    {KIND_WORDS[c.kind]}
+                    {!c.styles.length && (
+                      <span className="ml-1 text-xs text-muted">({BADGE_WORDS.notYet})</span>
+                    )}
+                  </button>
+                ))}
+              </div>
+              {kind === "ai-realistic" && (
+                <div className="mt-2">
+                  <BadgeNote />
+                </div>
+              )}
+            </fieldset>
             <fieldset disabled={closing}>
               <ul aria-label="Picture styles" className="space-y-3">
-                {pictures?.styles.map((style) => (
+                {ofKind.map((style) => (
                   <li key={style.id}>
                     <button
                       type="button"
@@ -239,7 +281,7 @@ export function FirstLook({
                       </span>
                       <span className="block p-3 text-sm">
                         <span className="font-medium">{style.name}</span>
-                        {pictures.current === style.id && (
+                        {pictures?.current === style.id && (
                           <span className="ml-2 text-xs text-accent">In use</span>
                         )}
                         <span className="mt-1 block text-muted">{style.line}</span>
@@ -260,10 +302,7 @@ export function FirstLook({
                     </button>
                     <details className="mt-1 text-xs text-muted">
                       <summary className="cursor-pointer">More</summary>
-                      {aiBadge
-                        ? "Pictures made by an image model carry a mark in this app."
-                        : "The mark for pictures made by an image model is off in this app."}{" "}
-                      Photographs keep their credit.
+                      {badgeLine(aiBadge, styleKind(style))} Photographs keep their credit.
                     </details>
                   </li>
                 ))}

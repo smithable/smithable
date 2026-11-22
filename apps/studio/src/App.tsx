@@ -305,6 +305,8 @@ export function App() {
   const [selecting, setSelecting] = useState(false);
   const [shiftSelect, setShiftSelect] = useState(false);
   const [selectedPart, setSelectedPart] = useState<Selection>();
+  // The section form's own height as drawn (SelectedSection measures it), to place it wholly on the screen.
+  const [sectionHeight, setSectionHeight] = useState(260);
   const [selectionHost, setSelectionHost] = useState<HTMLDivElement | null>(null);
   const clearSelection = useCallback(() => {
     setSelectedPart(undefined);
@@ -1313,7 +1315,7 @@ export function App() {
           },
           { width: window.innerWidth, height: window.innerHeight, top: 64 },
           320,
-          260,
+          sectionHeight,
         )
       : undefined;
   const selectionPosition =
@@ -2423,7 +2425,7 @@ export function App() {
           project={pickingLook.project}
           spec={spec}
           preset={pickingLook.preset}
-          aiBadge={spec.ux?.aiBadge ?? true}
+          aiBadge={spec.ux?.aiBadge}
           onRefresh={refreshLook}
           onClose={({ error, kept }) => {
             const finishedApp = pickingLook.project.localDir ?? pickingLook.project.name;
@@ -2566,6 +2568,7 @@ export function App() {
           close={clearSelection}
           ask={() => workIn("smith")}
           position={sectionPosition}
+          measured={setSectionHeight}
           reveal={revealSelection}
         />
       )}

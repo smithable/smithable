@@ -85,6 +85,7 @@ export function SelectedSection({
   close,
   ask,
   position,
+  measured,
   reveal,
 }: {
   section: NonNullable<ReturnType<typeof selectedSection>>;
@@ -92,6 +93,8 @@ export function SelectedSection({
   close: () => void;
   ask: () => void;
   position?: CSSProperties;
+  /** Its height as drawn, each time it changes, so the screen places it by that, not a guess. */
+  measured?: (height: number) => void;
   reveal: (sheetTop: number) => void;
 }) {
   const [busy, setBusy] = useState(false);
@@ -110,6 +113,17 @@ export function SelectedSection({
     observer.observe(sheet);
     return () => observer.disconnect();
   }, [narrow, reveal]);
+  // On the desk: placed by its height as drawn (a hero's three rows of choices are taller than a
+  // list's), and never taller than the screen leaves it, scrolling inside instead (T1179).
+  useLayoutEffect(() => {
+    const form = panel.current;
+    if (narrow || !form || !measured) return;
+    const tell = () => measured(Math.ceil(form.getBoundingClientRect().height));
+    tell();
+    const observer = new ResizeObserver(tell);
+    observer.observe(form);
+    return () => observer.disconnect();
+  }, [narrow, measured]);
   const choose = async (key: string, value: string) => {
     if (running.current) return;
     running.current = true;
@@ -128,7 +142,7 @@ export function SelectedSection({
       tabIndex={-1}
       aria-labelledby={heading}
       data-studio-overlay="selection"
-      className="fixed inset-x-1.5 bottom-1.5 z-[55] max-h-[50dvh] space-y-3 overflow-auto overscroll-contain rounded-2xl border border-line bg-panel p-3 shadow-xl focus:outline-none lg:inset-x-auto lg:bottom-auto lg:w-80"
+      className="fixed inset-x-1.5 bottom-1.5 z-[55] max-h-[50dvh] space-y-3 overflow-auto overscroll-contain rounded-2xl border border-line bg-panel p-3 shadow-xl focus:outline-none lg:inset-x-auto lg:bottom-auto lg:max-h-[calc(100dvh-5.5rem)] lg:w-80"
       style={narrow ? undefined : position}
       onKeyDown={(event) => {
         if (event.key !== "Escape") return;
