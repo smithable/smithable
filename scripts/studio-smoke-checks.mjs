@@ -43,8 +43,21 @@ async function checkBuilder(page, phone) {
   await review.getByRole("button", { name: "Close Review", exact: true }).click();
   await review.waitFor({ state: "detached" });
 
+  const address = await openPreviewAddress(page);
+  await address.fill("/customers/new");
+  await address.press("Enter");
+  const frame = page.frameLocator('iframe[title="App preview"]');
+  const select = page.getByRole("button", { name: "Select", exact: true });
+  await select.click();
+  await frame.locator("html[data-sm-selecting]").waitFor({ state: "attached" });
+  await frame.locator('[data-sm-concept="field:Customer.email"]').click();
+  const selectionHint = hint("All settings shows more for what you selected.");
+  await selectionHint.waitFor();
+  await select.click();
   await showEditor();
   const settingsHint = hint("No code changes the app. Code shows its files.");
+  assert.equal(await settingsHint.count(), 0, "the settings hint waits for the selection hint");
+  await selectionHint.click();
   await settingsHint.click();
   await settingsHint.waitFor({ state: "detached" });
   await tab("No code").click();
@@ -59,6 +72,10 @@ async function checkBuilder(page, phone) {
   const title = start.getByRole("textbox", { name: "title", exact: true });
   await title.fill("Edited in No code");
   await title.press("Tab");
+  await showPreview();
+  const overview = await openPreviewAddress(page);
+  await overview.fill("/");
+  await overview.press("Enter");
   await preview("Edited in No code");
   const undoHint = hint("Undo in the top bar puts the app back.");
   await undoHint.click();

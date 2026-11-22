@@ -29,35 +29,11 @@ export async function checkStudioSelection(browser, base) {
     const { page, frame, hero, link, select, smith, form } = wide;
     const originalHref = await link.getAttribute("href");
     assert.equal(originalHref, "/schedule");
-    if ((await smith.getAttribute("aria-pressed")) === "true") {
-      await smith.click();
-      await page
-        .getByRole("button", { name: "Click Smith to bring him back.", exact: true })
-        .click();
-    }
+    if ((await smith.getAttribute("aria-pressed")) === "true") await smith.click();
     await select.click();
     await frame.locator("html[data-sm-selecting]").waitFor();
     await link.click();
     await form.waitFor();
-    const hint = page
-      .locator("[data-studio-hint-anchor]")
-      .filter({ has: page.getByRole("button", { name: "All settings", exact: true }) })
-      .getByRole("button", {
-        name: "All settings shows more for what you selected.",
-        exact: true,
-      });
-    await hint.waitFor();
-    const settings = page.getByRole("button", { name: "All settings", exact: true });
-    await settings.click();
-    const settingsHint = page.getByRole("button", {
-      name: "No code changes the app. Code shows its files.",
-      exact: true,
-    });
-    assert.equal(await settingsHint.count(), 0, "the next hint waits for the one already showing");
-    await hint.click();
-    await hint.waitFor({ state: "detached" });
-    await settingsHint.click();
-    await settings.click();
     assert.equal(await form.evaluate((element) => element.closest("[data-guide=change]")), null);
     await hero.locator("a[data-sm-selected]").waitFor();
     const overlay = page.locator('[data-studio-overlay="selection"]');
@@ -70,7 +46,6 @@ export async function checkStudioSelection(browser, base) {
     await select.click();
     await link.click();
     await form.waitFor();
-    assert.equal(await hint.count(), 0);
     await page.waitForFunction(() => {
       const bounds = document
         .querySelector('[data-studio-overlay="selection"]')
