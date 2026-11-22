@@ -226,6 +226,14 @@ export interface Project {
   waiting?: string[];
 }
 
+export interface InkWashOffer {
+  id: string;
+  binding: string;
+  project: string;
+  revision: string;
+  samples: { before: string; after: string; asDrawn: boolean }[];
+}
+
 /** A model's proposal for a request; nothing is applied until it is confirmed. */
 /** `id` names the proposal for applying it: only the one shown can be applied. */
 export type Proposal = { usage: string; id: string } & (
@@ -315,6 +323,15 @@ export const waking = {
  * Studio's own API. An answer that is not OK (a refusal, the workspace restarting, a proxy's
  * plain-text error) throws an Error with a readable message; callers show it.
  */
+export class StudioRequestError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+  ) {
+    super(message);
+  }
+}
+
 async function call<T>(path: string, body?: unknown): Promise<T> {
   const send = () =>
     fetch(path, {
@@ -355,7 +372,10 @@ async function call<T>(path: string, body?: unknown): Promise<T> {
   }
   if (!response.ok) {
     const answer = parsed as { output?: string; message?: string };
-    throw new Error(answer.output ?? answer.message ?? `Studio answered ${response.status}.`);
+    throw new StudioRequestError(
+      answer.output ?? answer.message ?? `Studio answered ${response.status}.`,
+      response.status,
+    );
   }
   return parsed as T;
 }
@@ -479,6 +499,20 @@ export const api = {
   ) => changing(call<Result>("/api/op", { name, args, confirm: true, lookProject, ...envelope })),
   pictureStyles: (project: string) =>
     call<PictureStyles>(`/api/picture-styles?project=${encodeURIComponent(project)}&language=en`),
+  inkWashOffer: (project: string, revision: string) =>
+    call<{ offer?: InkWashOffer; pending?: true }>(
+      `/api/ink-wash?${new URLSearchParams({ project, revision })}`,
+    ),
+  applyInkWash: ({ id, project, revision }: InkWashOffer) =>
+    changing(
+      call<Result>("/api/op", {
+        name: "setPictureStyle",
+        args: { style: "ink-wash", recolour: true },
+        expectedRevision: revision,
+        lookProject: project,
+        inkWashOffer: id,
+      }),
+    ),
   choosePictureStyle: (
     style: string,
     revision: string,

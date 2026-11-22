@@ -80,6 +80,13 @@ describe("smithable.ux.yml", () => {
       style: "pastel",
     });
     expect(again.ok && again.effects).toEqual([{ kind: "place-pictures", style: "pastel" }]);
+    const tint = applyOperation({ spec: crm, ux: set.files.ux }, "setPictureStyle", {
+      style: "ink-wash",
+      recolour: true,
+    });
+    expect(tint.ok && tint.effects).toEqual([
+      { kind: "place-pictures", style: "ink-wash", recolour: true },
+    ]);
     expect(
       applyOperation({ spec: crm, ux: "smithableUx: 0.1\n" }, "setPictureStyle", { style: "../x" })
         .ok,

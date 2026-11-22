@@ -1142,7 +1142,7 @@ function realisticIn(node: unknown): boolean {
  * reports the pictures to place; the host fetches, checks and writes them before the one commit,
  * or refuses, so the key never names a style whose pictures are not there.
  */
-const setPictureStyle: Operation<{ style: string }> = {
+const setPictureStyle: Operation<{ style: string; recolour?: boolean }> = {
   name: "setPictureStyle",
   sets: ["smithable.ux.yml:pictures.style"],
   summary:
@@ -1157,18 +1157,22 @@ const setPictureStyle: Operation<{ style: string }> = {
         pattern: PICTURE_STYLE.source,
         description: "A style of the image library, e.g. lifelike, pastel or ink-wash.",
       },
+      recolour: {
+        type: "boolean",
+        description: "Tint the Ink wash drawings with the app's current theme colours.",
+      },
     },
   },
   positional: ["style"],
   describe: ({ style }) => `Put the app's pictures in the ${style} style`,
   destructive: () => false,
-  apply(editors, { style }) {
+  apply(editors, { style, recolour }) {
     if (!PICTURE_STYLE.test(style))
       throw new OperationError(
         `"${style}" is not a style id: lowercase words joined by "-", e.g. pastel or ink-wash.`,
       );
     put(editors.ux, ["pictures", "style"], style);
-    return [{ kind: "place-pictures", style }];
+    return [{ kind: "place-pictures", style, ...(recolour ? { recolour: true } : {}) }];
   },
 };
 

@@ -122,6 +122,63 @@ test("a style is offered only when it has a picture for every library picture th
   expect(offeredStyles(dir, version).map((s) => s.id)).toEqual(["lifelike", "pastel"]);
 });
 
+test("explicit Ink wash placement records the tint, reuses the same treatment and restores the original", async () => {
+  const dir = oldApp();
+  const images = join(dir, "public", "images");
+  const original = Buffer.from(
+    "UklGRlAAAABXRUJQVlA4TEQAAAAvCcABEB8gECByREsSY0dAQrwx2U85ICQgTpnsnAmagKDg/+jiA2SfgoI2kpS7Z351a3JNPoqI6H8CHvBrzbWmfGQhCw==",
+    "base64",
+  );
+  const source = sha256(original);
+  const hero = {
+    ...byId("cafe-hero-ink"),
+    sha256: source,
+    url: `https://docs.smithable.ai/images/files/${source}.webp`,
+  };
+  const indexed = {
+    ...version,
+    styles: version.styles.map((style) =>
+      style.id === "ink-wash" ? { ...style, washHue: 300 } : style,
+    ),
+    entries: version.entries.map((entry) => (entry.id === hero.id ? hero : entry)),
+  };
+  const fetcher: Fetch = async () => new Response(original);
+  const colours = { primary: "#006d66", foreground: "#232323", background: "#f8f6ef" };
+  // A matching original works offline. The two samples have become the owner's pictures.
+  writeFileSync(join(images, "hero.webp"), original);
+  writeFileSync(join(images, "samples", "0.webp"), bytes("my bicycle"));
+  writeFileSync(join(images, "samples", "1.webp"), bytes("my lamp"));
+  const placed = await placeStyle(dir, "ink-wash", offline, indexed, colours);
+  if (typeof placed === "string") throw new Error(placed);
+  expect(placed.files).toHaveLength(1);
+  expect(placed.kept).toEqual(["samples/0.webp", "samples/1.webp"]);
+  for (const file of placed.files) writeFileSync(join(dir, file.path), file.bytes);
+  for (const file of placed.texts) writeFileSync(join(dir, file.path), file.text);
+  const record = readRecords(dir)["hero.webp"];
+  expect(record).toMatchObject({ source, colours, rule: "ink-wash-b90" });
+  expect(record?.sha256).toBe(sha256(readFileSync(join(images, "hero.webp"))));
+  expect(record?.sha256).not.toBe(source);
+  expect(await placeStyle(dir, "ink-wash", offline, indexed, colours)).toMatchObject({ files: [] });
+  const grey = { ...colours, primary: "#292524" };
+  const restored = await placeStyle(dir, "ink-wash", fetcher, indexed, grey);
+  if (typeof restored === "string") throw new Error(restored);
+  expect(restored).toMatchObject({
+    asDrawn: expect.stringContaining("greyscale"),
+    files: [{ path: "public/images/hero.webp", bytes: new Uint8Array(original) }],
+  });
+  const restoredRecords = restored.texts.find(
+    (file) => file.path === "public/images/pictures.json",
+  );
+  expect(JSON.parse(restoredRecords?.text ?? "{}")["hero.webp"]).toMatchObject({
+    source,
+    colours: grey,
+    rule: "none",
+  });
+  expect(await placeStyle(dir, "pastel", offline, indexed, colours)).toContain(
+    "no Ink wash tint rule",
+  );
+});
+
 test("a style's pictures are fetched, checked and written with their record; the mark stays", async () => {
   const dir = oldApp();
   const placed = await placeStyle(dir, "pastel", library());

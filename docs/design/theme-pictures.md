@@ -1,13 +1,13 @@
 # Theme-coloured pictures: drawn library pictures in the app's own colours
 
-Status: the host can select the tint rule. Rendering and offers are pending. The design follows the
+Status: Studio can prepare and offer the tint, and the CLI can apply it explicitly. The design follows the
 trial of 2026-11-20/21, two rounds of sheets on contrasting themes, where Johan chose variant B
 ("light, keep hues, 25% back toward the original"). It builds on first-look.md §4: image styles,
 the record in `pictures.json`, and the host's `place-pictures` effect.
 
 **Changed 2026-11-22 after the comparison sheets: a theme change keeps the current pictures. Coloured
-themes qualify for a light tint and greyscale themes use the original drawings. §10 supersedes the
-earlier design where they differ.**
+themes qualify for a light tint blended 90% back toward the original. Greyscale themes use the
+original drawings. §10 supersedes the earlier design where they differ.**
 
 ## 1 What changes for the user
 

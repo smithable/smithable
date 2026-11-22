@@ -19,6 +19,7 @@ import {
   PEOPLE_PATH,
   parseOperationArgs,
   parseTheme,
+  resolveLook,
   type SpecIR,
   setCheck,
   storageOf,
@@ -26,6 +27,7 @@ import {
   validateAuth,
   validateContent,
   validateSpec,
+  validateUx,
   verificationBefore,
   YamlEditor,
 } from "@smithable/core";
@@ -54,9 +56,16 @@ import {
   prepareImport,
   refusalText,
 } from "./import.js";
+import type { InkWashColours } from "./ink-wash-raster.js";
 import { type Io, lap, lapFrom } from "./io.js";
 import { SPEC_FILES } from "./managed.js";
-import { currentHashes, placedRealistic, placeStyle, reseedPictures } from "./picture-style.js";
+import {
+  currentHashes,
+  type PlacedStyle,
+  placedRealistic,
+  placeStyle,
+  reseedPictures,
+} from "./picture-style.js";
 import { loadPlugins } from "./plugins.js";
 import { ProjectBusyError, ProjectLockError, withProjectMutation } from "./project-mutation.js";
 import { projectRevision, sourceDigests } from "./project-revision.js";
@@ -124,6 +133,8 @@ export interface OpFlags {
   files?: { path: string; bytes: Uint8Array; fresh?: boolean }[];
   /** How the image library is reached (setPictureStyle); the global fetch when unsaid. */
   fetch?: typeof fetch;
+  /** Studio's prepared tint, accepted only with the offer's checked project revision. */
+  preparedPictures?: PlacedStyle;
   /** How deep to verify the change (change-verified.md §3.3); `change` when unsaid. */
   verify?: Depth;
   /** Where the change is made, for its result; local (or hosted, in a workspace) when unsaid. */
@@ -570,7 +581,34 @@ async function applyAndCheckpoint(
   }
   // A picture style: every file fetched and checked before anything is written, or nothing is.
   const placing = result.effects.find((e) => e.kind === "place-pictures");
-  const placed = placing && (await placeStyle(dir, placing.style, flags.fetch ?? fetch));
+  const recolourRevision = placing?.recolour ? projectRevision(dir) : undefined;
+  let recolour: InkWashColours | undefined;
+  if (placing?.recolour) {
+    const themeSource = result.files.ux ?? files.ux;
+    const themes = files.themes ?? [];
+    const ux = themeSource && validateUx({ path: UX, text: themeSource }, after, themes).ux;
+    if (!ux) {
+      io.err("The current theme could not be read for recolouring.\n");
+      return 1;
+    }
+    const { primary, foreground, background } = resolveLook(ux, themes).tokens.light;
+    recolour = { primary, foreground, background };
+    const prepared = flags.preparedPictures?.recolour;
+    if (
+      flags.preparedPictures &&
+      (prepared?.style !== placing.style ||
+        prepared.colours.primary !== primary ||
+        prepared.colours.foreground !== foreground ||
+        prepared.colours.background !== background)
+    ) {
+      io.err("The prepared pictures no longer match this theme. Nothing was changed.\n");
+      return 1;
+    }
+  }
+  const placed =
+    placing &&
+    ((placing.recolour && flags.preparedPictures) ||
+      (await placeStyle(dir, placing.style, flags.fetch ?? fetch, undefined, recolour)));
   if (typeof placed === "string") {
     io.err(`${placed}\n`);
     return 1;
@@ -681,6 +719,10 @@ async function applyAndCheckpoint(
     io.err("The project source changed before Apply could write it. The draft was not written.\n");
     return 1;
   }
+  if (recolourRevision && projectRevision(dir) !== recolourRevision) {
+    io.err("The project changed while the pictures were prepared. Nothing was changed.\n");
+    return 1;
+  }
   // The pictures were planned before their files were fetched: someone may have changed one since.
   if (placed && JSON.stringify(currentHashes(dir)) !== JSON.stringify(placed.planned)) {
     io.err("A picture changed while the style's pictures were fetched. Nothing was changed.\n");
@@ -715,6 +757,7 @@ async function applyAndCheckpoint(
     changeTree(changes);
     if (placed) {
       const reseeded = reseedPictures(dir, placed.swaps);
+      if (placed.asDrawn) io.out(`${placed.asDrawn}\n`);
       io.out(
         `Pictures placed: ${placed.files.length ? placed.files.map((f) => f.path.replace("public/images/", "")).join(", ") : "none needed changing"}.${placed.kept.length ? ` Your own pictures stay: ${placed.kept.join(", ")}.` : ""}${reseeded ? ` Sample records with the new pictures: ${reseeded}.` : ""}\n`,
       );

@@ -77,7 +77,7 @@ export type Effect =
    * the style against one library version, fetches and checks every file, writes them with
    * public/images/pictures.json and the credits, or refuses and changes nothing. Core fetches nothing.
    */
-  | { kind: "place-pictures"; style: string }
+  | { kind: "place-pictures"; style: string; recolour?: true }
   /**
    * The AI badge switched off without the owner's acknowledgement, the content file having no
    * realistic AI picture: the host refuses with AI_BADGE_OFF_REFUSAL when a placed picture

@@ -107,6 +107,7 @@ import { projectIndex } from "./rules.js";
 import { doorAt, projectPeople } from "./sample-people.js";
 import { sampleRunner } from "./sample-run.js";
 import { childOptions, readOwn, readTreeOrNone, readTreeText, studioToken } from "./secrets.js";
+import { StudioInkWash } from "./studio-ink-wash.js";
 import {
   pictureHashes,
   pictureStyleCards,
@@ -579,6 +580,7 @@ export async function studio(
   // changes.
   const previewId = randomUUID();
   let lookProject = randomUUID();
+  const inkWash = new StudioInkWash();
   const pictureOffers = new Map<
     string,
     { project: string; version: LibraryVersion; hashes: string; expires: number }
@@ -1301,6 +1303,29 @@ export async function studio(
         people.touch();
         return json(people.state());
       }
+      if (req.method === "GET" && url.pathname === "/api/ink-wash") {
+        const revision = projectRevision(dir);
+        if (
+          url.searchParams.get("project") !== lookProject ||
+          url.searchParams.get("revision") !== revision
+        )
+          return json({}, 409);
+        return json(inkWash.get(dir, lookProject, revision));
+      }
+      if (req.method === "GET" && url.pathname === "/api/ink-wash/preview") {
+        const held = inkWash.read(dir, lookProject, url.searchParams.get("id") ?? "");
+        const index = url.searchParams.get("index");
+        const file =
+          index && /^(0|[1-9]\d*)$/.test(index) ? held?.placement.files[Number(index)] : undefined;
+        if (!file) return json({}, 404);
+        res.writeHead(200, {
+          "Content-Type": "image/webp",
+          "Content-Length": file.bytes.length,
+          "Cache-Control": "private, no-store",
+          "X-Content-Type-Options": "nosniff",
+        });
+        return res.end(file.bytes);
+      }
       if (req.method === "GET" && url.pathname === "/api/picture-styles") {
         const project = lookProject;
         if (url.searchParams.get("project") !== project)
@@ -1433,6 +1458,7 @@ export async function studio(
           expectedRevision,
           requestId,
           pictureOffer,
+          inkWashOffer,
         } = await body();
         if (expectedLookProject !== undefined && expectedLookProject !== lookProject)
           return json(
@@ -1445,6 +1471,46 @@ export async function studio(
           );
         const offeredPictures =
           typeof pictureOffer === "string" ? pictureOffers.get(pictureOffer) : undefined;
+        const preparedInkWash =
+          typeof inkWashOffer === "string"
+            ? inkWash.read(dir, lookProject, inkWashOffer)
+            : undefined;
+        if (inkWashOffer !== undefined) {
+          const choice = (args ?? {}) as Record<string, unknown>;
+          if (
+            name !== "setPictureStyle" ||
+            choice.style !== "ink-wash" ||
+            choice.recolour !== true ||
+            pictureOffer !== undefined
+          )
+            return json({ ok: false, output: "This request cannot apply an Ink wash offer." }, 400);
+          if (
+            !preparedInkWash ||
+            expectedLookProject !== lookProject ||
+            expectedRevision !== preparedInkWash.revision
+          ) {
+            return json(
+              { ok: false, output: "These pictures are no longer ready. Reopen the offer." },
+              409,
+            );
+          }
+          const version = await libraryVersion(fetch);
+          if (typeof version === "string")
+            return json(
+              { ok: false, output: "The picture library could not be checked. Try again." },
+              503,
+            );
+          if (
+            expectedLookProject !== lookProject ||
+            version.version !== preparedInkWash.version.version
+          ) {
+            if (typeof inkWashOffer === "string") inkWash.clear(inkWashOffer);
+            return json(
+              { ok: false, output: "These pictures are no longer ready. Reopen the offer." },
+              409,
+            );
+          }
+        }
         if (
           pictureOffer !== undefined &&
           (name !== "setPictureStyle" ||
@@ -1536,6 +1602,7 @@ export async function studio(
                 }
               : {}),
             ...(offeredPictures ? { fetch: pinnedPictureVersion(offeredPictures.version) } : {}),
+            ...(preparedInkWash ? { preparedPictures: preparedInkWash.placement } : {}),
             ...(typeof expectedRevision === "string" ? { expectedRevision } : {}),
             ...(typeof requestId === "string" ? { requestId } : {}),
             reportLater: true,
@@ -1559,7 +1626,10 @@ export async function studio(
         // The change the edit made, for the Changes window to open at.
         const change =
           result.ok && name === "editSpec" ? git(dir, ["rev-parse", "HEAD"]).out : undefined;
-        if (result.ok) changed({ description: result.output });
+        if (result.ok) {
+          inkWash.clear();
+          changed({ description: result.output });
+        }
         // A change that failed halfway was rolled back, its database included: the preview
         // reopens it, as after an undo.
         else if (result.output.includes("Nothing was changed.")) restored(packages);
@@ -2070,6 +2140,7 @@ export async function studio(
     for (const signal of ["SIGINT", "SIGTERM"] as const) process.once(signal, () => resolve());
   });
   stopApp();
+  inkWash.clear();
   server.close();
   return 0;
 }
