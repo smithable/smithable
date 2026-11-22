@@ -778,7 +778,7 @@ function siteContact(home: PageIR | undefined, t: Texts) {
   );
 }
 
-export function contactFooterEnabled(ir: SpecIR, auth: AuthIR, ux: UxIR, t: Texts, page: PageIR) {
+function contactFooterEnabled(ir: SpecIR, auth: AuthIR, ux: UxIR, t: Texts, page: PageIR) {
   if (page.pattern.kind !== "landing") return false;
   const footer = page.sections.find((section) => section.kind === "footer");
   return (

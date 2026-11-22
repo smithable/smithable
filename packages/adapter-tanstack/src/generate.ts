@@ -60,7 +60,7 @@ import { CUSTOM_PROPS, customPageStub, customSectionStub } from "./pages/custom.
 import { activityModule, hasInspector } from "./pages/data.js";
 import { documentReader, viewRoute } from "./pages/document.js";
 import { PAGE_GENERATORS, pageRoutes } from "./pages/index.js";
-import { contactFooterEnabled, siteModule } from "./pages/landing.js";
+import { siteModule } from "./pages/landing.js";
 import { privacyFacts, privacyFingerprint } from "./pages/legal.js";
 import { indexRoute, pagesModule, robotsRoute, rootRoute, sitemapRoute } from "./pages/root.js";
 import { paymentRoutes, paymentsFunctions, paymentsServerModule } from "./payments.js";
@@ -156,49 +156,6 @@ export function privacyReviews(
 /** The app's name as a package, an image and a volume are named: letters, digits and hyphens. */
 const appSlug = (ir: SpecIR) => kebab(ir.app.name.replace(/[^A-Za-z0-9 -]/g, "")) || "app";
 
-const LANDING_KIT = "src/kit/Landing.tsx";
-const LANDING_KIT_MARKERS = {
-  "section-pictures": "sectionPictures",
-  "contact-footer": "contactFooter",
-} as const;
-export type LandingKitFeature = keyof typeof LANDING_KIT_MARKERS;
-export const LANDING_KIT_FEATURES = Object.keys(LANDING_KIT_MARKERS) as LandingKitFeature[];
-
-/** Keep the original kit bytes for each treatment the app leaves unspecified. */
-function landingKitSource(features: readonly LandingKitFeature[], keepMarkers = false): string {
-  let source = TEMPLATES[LANDING_KIT] as string;
-  for (const feature of LANDING_KIT_FEATURES) {
-    const name = LANDING_KIT_MARKERS[feature];
-    const enabled = features.includes(feature);
-    let optional = false;
-    source = source
-      .split("\n")
-      .flatMap((line) => {
-        const comment = line.trim().replace(/^\/\/ |^\{\/\* | \*\/\}$/g, "");
-        if (comment === `@${name}`) {
-          optional = true;
-          return enabled && keepMarkers ? [line] : [];
-        }
-        if (comment === `@end${name[0]?.toUpperCase()}${name.slice(1)}`) {
-          optional = false;
-          return enabled && keepMarkers ? [line] : [];
-        }
-        const marker = `@${name}Baseline |`;
-        if (comment.startsWith(marker))
-          return enabled ? (keepMarkers ? [line] : []) : [comment.slice(marker.length)];
-        return !optional || enabled ? [line] : [];
-      })
-      .join("\n");
-  }
-  return source;
-}
-
-export function landingKitSources(features: readonly LandingKitFeature[]) {
-  return { ...TEMPLATES, [LANDING_KIT]: landingKitSource(features, true) };
-}
-
-export const baselineKitSources = landingKitSources([]);
-
 export function generateApp(spec: SpecIR, options: GenerateOptions): GeneratedFile[] {
   // Push and texts go to people who sign in (notifications.md §4, §5): without sign-in an entry
   // keeps its other channels, and one that only pushed or texted is left out.
@@ -220,27 +177,6 @@ export function generateApp(spec: SpecIR, options: GenerateOptions): GeneratedFi
     ux: options.ux ?? emptyUx(),
     options,
   };
-  const sectionPictures = ir.pages.some((page) =>
-    page.sections.some((section) => {
-      const content = ctx.t.section(page.id, section.name);
-      return (
-        (section.kind === "hero" &&
-          Boolean(ctx.t.logoSrc) &&
-          ctx.ux.pages[page.id]?.looks?.[section.name]?.mark === "logo") ||
-        (["text", "callToAction", "features"].includes(section.kind) && Boolean(content.image)) ||
-        (section.kind === "features" && content.items?.some((item) => Boolean(item.image)))
-      );
-    }),
-  );
-  const landingFeatures: LandingKitFeature[] = [];
-  if (sectionPictures) landingFeatures.push("section-pictures");
-  if (ir.pages.some((page) => contactFooterEnabled(ir, ctx.auth, ctx.ux, ctx.t, page)))
-    landingFeatures.push("contact-footer");
-  const landing = landingFeatures.length
-    ? landingKitSource(landingFeatures)
-    : baselineKitSources[LANDING_KIT];
-  if (landingFeatures.length && options.resolveLandingKitRevision)
-    ctx.options = { ...options, kitRevision: options.resolveLandingKitRevision(landingFeatures) };
   const kits = SECTION_GENERATORS.flatMap((g) => g.kit ?? []);
   // The kit: every file, but a part's own only when the app uses that part, and of the words
   // (src/kit/words/<language>.ts) only the app's language, as src/kit/words.ts.
@@ -253,12 +189,7 @@ export function generateApp(spec: SpecIR, options: GenerateOptions): GeneratedFi
     })
     .map(([path, content]) => ({
       path,
-      content:
-        path === FORMATS_FILE
-          ? formatsFile(ir, ctx.options.content?.language)
-          : path === LANDING_KIT
-            ? landing
-            : content,
+      content: path === FORMATS_FILE ? formatsFile(ir, ctx.options.content?.language) : content,
       zone: SCAFFOLD.has(path) ? "scaffold" : "kit",
     }));
   const content = ctx.options.content;

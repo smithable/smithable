@@ -16,7 +16,7 @@ import {
 import { YamlEditor } from "@smithable/core";
 import { cardFiles } from "./card.js";
 import { exec, execQuiet, type Io, lap, tool } from "./io.js";
-import { landingKitRevision, templateKitRevision } from "./maintenance.js";
+import { templateKitRevision } from "./maintenance.js";
 import { taggedContent } from "./picture-style.js";
 import { contextFacts } from "./privacy-review.js";
 import { stepsFor } from "./project-worker.js";
@@ -105,7 +105,6 @@ export async function generate(dir: string, io: Io, flags: GenerateFlags): Promi
   const files = generateApp(ir, {
     smithableVersion: VERSION,
     kitRevision: templateKitRevision,
-    resolveLandingKitRevision: landingKitRevision,
     // The same reading as the privacy page's review (privacy-review.ts), so they agree.
     ...contextFacts(existsSync(contextPath) ? treeText(contextPath) : undefined),
     ...(Object.keys(packages).length ? { packages } : {}),
