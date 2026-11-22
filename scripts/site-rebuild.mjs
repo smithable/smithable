@@ -98,11 +98,18 @@ const BLOCKS = () => {
   const out = [];
   const take = (el, depth) => {
     for (const k of [...el.children].filter(wide)) {
-      const parts = [...k.children].filter(wide);
+      // A wrapper with one wide child (main > div > div > sections) is followed down to the
+      // element whose children are the sections.
+      let inner = k;
+      for (let one = [...inner.children].filter(wide); one.length === 1; ) {
+        inner = one[0];
+        one = [...inner.children].filter(wide);
+      }
+      const parts = [...inner.children].filter(wide);
       const wrapper =
         k.tagName === "MAIN" ||
         (rect(k).height > vh * 1.6 && !k.matches("header,footer,nav,section"));
-      if (depth < 4 && parts.length >= 2 && wrapper) take(k, depth + 1);
+      if (depth < 4 && parts.length >= 2 && wrapper) take(inner, depth + 1);
       else out.push(k);
     }
   };
