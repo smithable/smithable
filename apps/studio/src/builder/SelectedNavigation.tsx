@@ -102,8 +102,8 @@ export function SelectedNavigation({
           Stays at the top when scrolling
         </label>
       ) : part.kind === "workspace" ? (
-        <label htmlFor={control} className="block space-y-1 text-sm">
-          <span>Menu placement</span>
+        <div className="space-y-1 text-sm">
+          <label htmlFor={control}>Menu placement</label>
           <Select
             id={control}
             value={value}
@@ -114,7 +114,7 @@ export function SelectedNavigation({
               ["topbar-centered", "Across the top, centred"],
             ]}
           />
-        </label>
+        </div>
       ) : (
         <div className="space-y-1 text-sm">
           <label htmlFor={control}>Menu item text</label>
