@@ -180,7 +180,7 @@ already say what the app is for and who runs it (open question 2).
    Left for later: moving `summarize`'s facts into core, export names from the project index, the
    verification line (change-verified.md), a paragraph in ARCHITECTURE §6.3 once the kit has
    `AppCard`.
-2. **The generated page (A).** `src/lib/app-card.ts`, the kit's `AppCard` over the same
+2. **The generated page (A).** `src/lib/app-card.ts` (its facts in `src/lib/app-card.server.ts`), the kit's `AppCard` over the same
    `CardFacts`, with the `card*` words in `en.ts` and `sv.ts`, the `/app-card` route for
    administrators, the users page's link; `kit-words.mjs` covers it.
 3. **Studio (A).** The Card view, the language switch, Download.
