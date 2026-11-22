@@ -39,6 +39,7 @@ export interface LibraryStyle {
 export interface VersionEntry extends PictureEntry {
   style?: string;
   subject?: string;
+  photo?: boolean;
   sha256: string;
 }
 

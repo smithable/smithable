@@ -1,7 +1,6 @@
 # Theme-coloured pictures: drawn library pictures in the app's own colours
 
-Status: the CLI can apply the tint rule. Preparing and showing an offer in Studio is pending.
-The design follows the
+Status: Studio can prepare and offer the tint, and the CLI can apply it explicitly. The design follows the
 trial of 2026-11-20/21, two rounds of sheets on contrasting themes, where Johan chose variant B
 ("light, keep hues, 25% back toward the original"). It builds on first-look.md §4: image styles,
 the record in `pictures.json`, and the host's `place-pictures` effect.
