@@ -1,3 +1,30 @@
+import { stageThemeSelection } from "@smithable/core";
+import type { Project } from "./api";
+import type { Spec } from "./engine";
+
+/**
+ * The CSS of a theme tried on in the preview (T1164): the app's look as it is, with only the
+ * preset changed. Nothing is written; the adapter is passed in, since Studio loads it lazily.
+ */
+export function triedThemeCss(
+  adapter: typeof import("@smithable/adapter-tanstack"),
+  spec: Spec,
+  project: Project,
+  theme: string,
+): string {
+  if (!spec.ir) throw new Error("The app's spec could not be read.");
+  const { ux } = stageThemeSelection(
+    {
+      ir: spec.ir,
+      uxText: project.files.ux ?? "",
+      themes: project.ownThemes,
+      ...(spec.auth ? { auth: spec.auth } : {}),
+    },
+    { preset: theme },
+  );
+  return adapter.themeCss(ux, project.ownThemes);
+}
+
 /** A picker owns one change at a time. Its exact revision travels with every write. */
 export interface LookChange {
   ok: boolean;

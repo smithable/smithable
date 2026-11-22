@@ -115,6 +115,52 @@ export async function checkStudioSelection(browser, base) {
     const renamed = hero.getByRole("link", { name: "Browse classes", exact: true });
     await renamed.waitFor();
     assert.equal(await renamed.getAttribute("href"), "/blog");
+
+    // A whole section, picked where none of its parts is marked (T1145): its box inside its own
+    // edges, so all four sides show; its form beside it on the screen; a choice is one setSectionLook.
+    await select.click();
+    await hero.click({ position: { x: 4, y: 4 } });
+    const sectionForm = page.getByRole("dialog").and(overlay);
+    await sectionForm.waitFor();
+    await frame.locator("[data-hero][data-sm-selected]").waitFor();
+    const outline = await frame
+      .locator("[data-hero][data-sm-selected]")
+      .evaluate((element) => getComputedStyle(element).outlineOffset);
+    assert.equal(outline, "-2px", "a section's selection box is drawn outside its edges");
+    const formBox = await sectionForm.boundingBox();
+    const viewport = page.viewportSize();
+    assert.ok(
+      formBox.x >= 0 && formBox.y >= 56 && formBox.x + formBox.width <= viewport.width,
+      `a section's form is off the screen: ${JSON.stringify(formBox)}`,
+    );
+    const choose = async (name) => {
+      const operation = page.waitForResponse(
+        (response) =>
+          response.url() === `${base}/api/op` &&
+          response.request().method() === "POST" &&
+          response.request().postDataJSON()?.name === "setSectionLook",
+      );
+      // Together, so a click that cannot land says why rather than the wait for its answer.
+      const [response] = await Promise.all([
+        operation,
+        sectionForm.getByRole("button", { name, exact: true }).click(),
+      ]);
+      assert.equal((await response.json()).ok, true);
+    };
+    await choose("Full width photo");
+    await frame.locator('[data-hero][data-layout="photo"]').waitFor();
+    await sectionForm
+      .getByRole("button", { name: "Full width photo", exact: true })
+      .and(sectionForm.locator('[aria-pressed="true"]'))
+      .waitFor();
+    // Drawn again in its new layout, it is still the one selected, its form still open.
+    await frame.locator('[data-hero][data-layout="photo"][data-sm-selected]').waitFor();
+    await sectionForm.getByRole("button", { name: "Ask Smith", exact: true }).click();
+    await page.locator("[data-guide=change]").first().waitFor();
+    await sectionForm.focus();
+    await page.keyboard.press("Escape");
+    await sectionForm.waitFor({ state: "hidden" });
+    await frame.locator("[data-sm-selected]").waitFor({ state: "hidden" });
     await renamed.click();
     await hero.waitFor({ state: "hidden" });
   } finally {
@@ -148,5 +194,7 @@ export async function checkStudioSelection(browser, base) {
   } finally {
     await phone.context.close();
   }
-  console.log("  ✓ Studio selection: click, Shift and tap, both form positions, cancel and apply");
+  console.log(
+    "  ✓ Studio selection: click, Shift and tap, both form positions, cancel and apply; a section beside its form",
+  );
 }

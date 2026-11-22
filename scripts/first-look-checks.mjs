@@ -117,6 +117,29 @@ export async function checkFirstLook(browser, base) {
     );
     return result;
   };
+  const tried = page.frameLocator('iframe[title="App preview"]').locator("#sm-theme");
+  // A Look card only tries its theme on in the preview; Apply makes the one setTheme.
+  const applyCard = async (name) => {
+    const before = (await project()).files.ux;
+    await panel.getByRole("button", { name, exact: true }).click();
+    await panel.getByRole("button", { name, pressed: true }).waitFor();
+    await tried.waitFor({ state: "attached" });
+    assert.equal((await project()).files.ux, before, "a tried Look card wrote something");
+    // The tried card says so; "In use" stays with the app's theme until Apply.
+    await panel.getByText("· Trying on", { exact: true }).waitFor();
+    assert.equal(await panel.getByText("· In use", { exact: true }).count(), 1);
+    const apply = panel.getByRole("button", { name: "Apply theme", exact: true });
+    // Its Apply is in view above the panel's foot, on a phone's short sheet too.
+    const [row, foot] = await apply.evaluate((button) => [
+      button.getBoundingClientRect().bottom,
+      button.closest(".look-panel").querySelector(".overflow-auto").getBoundingClientRect().bottom,
+    ]);
+    assert.ok(row <= foot + 1, `Apply theme is hidden under the panel's foot (${row} > ${foot})`);
+    return waitChoice(
+      panel.getByRole("button", { name: "Apply theme", exact: true }),
+      ".look-panel",
+    );
+  };
   try {
     await page.goto(base);
     if (!(await project()).asMade) {
@@ -161,7 +184,7 @@ export async function checkFirstLook(browser, base) {
         (preview.x >= opened.x + opened.width - 1 || preview.x + preview.width <= opened.x + 1),
       "the Look panel covers the preview",
     );
-    await waitChoice(panel.getByRole("button", { name: current, exact: true }), ".look-panel");
+    await applyCard(current);
     await panel.getByLabel("Density", { exact: true }).selectOption("compact");
     await page.waitForFunction(() => document.querySelector('.look-panel[aria-busy="false"]'));
     assert.match((await project()).files.ux, /density: compact/);
@@ -175,16 +198,21 @@ export async function checkFirstLook(browser, base) {
     );
     // The X closes and keeps.
     await look.click();
-    await waitChoice(panel.getByRole("button", { name: current, exact: true }), ".look-panel");
+    await applyCard(current);
     const chosen = await project();
     await panel.getByRole("button", { name: "Close Look", exact: true }).click();
     await panel.waitFor({ state: "detached" });
     assert.equal((await project()).files.ux, chosen.files.ux, "Close did not keep the change");
+    // A theme only tried on is taken off by Close, and nothing is written.
     await look.click();
-    await waitChoice(
-      panel.getByRole("button", { name: alternativeName, exact: true }),
-      ".look-panel",
-    );
+    await panel.getByRole("button", { name: alternativeName, exact: true }).click();
+    await tried.waitFor({ state: "attached" });
+    await panel.getByRole("button", { name: "Close Look", exact: true }).click();
+    await panel.waitFor({ state: "detached" });
+    await tried.waitFor({ state: "detached" });
+    assert.equal((await project()).files.ux, chosen.files.ux, "a tried theme was kept by Close");
+    await look.click();
+    await applyCard(alternativeName);
     // A second writer's operation runs through the daemon, as another browser or CLI would.
     const other = await write("setTheme", { density: "compact" });
     assert.ok(other.ok, other.output);
@@ -215,7 +243,7 @@ export async function checkFirstLook(browser, base) {
     await page.getByRole("dialog", { name: "Look", exact: true }).waitFor();
     assert.equal(await page.getByRole("dialog", { name: /^Smith presents / }).count(), 0);
     console.log(
-      "  ✓ first look and Look panel: a tried theme writes nothing, Keep one setTheme before presentation, Cancel exact own changes, Close keeps, refuse intervening change, phone sheet, Customise",
+      "  ✓ first look and Look panel: a tried theme writes nothing (picker and Look cards), Apply one setTheme, Close takes a tried one off, Keep one setTheme before presentation, Cancel exact own changes, Close keeps, refuse intervening change, phone sheet, Customise",
     );
   } finally {
     await context.close();

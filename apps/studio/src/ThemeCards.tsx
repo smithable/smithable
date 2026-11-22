@@ -6,11 +6,15 @@ import { cx } from "./ui";
 export function ThemeCards({
   themes,
   preset,
+  inUse = preset,
   onChoose,
   onCustomise,
 }: {
   themes: Project["themes"];
+  /** The card shown pressed: the app's theme, or one only tried on in the preview. */
   preset: string;
+  /** The app's own theme, when another is only tried on. */
+  inUse?: string;
   onChoose: (preset: string) => void;
   onCustomise?: (preset: string) => void;
 }) {
@@ -18,6 +22,7 @@ export function ThemeCards({
     <ul aria-label="Themes" className="grid grid-cols-2 gap-2">
       {themes.map((t) => {
         const current = t.name === preset;
+        const said = t.name === inUse ? "In use" : current ? "Trying on" : undefined;
         return (
           <li key={t.name}>
             <button
@@ -41,8 +46,8 @@ export function ThemeCards({
               />
               <span className={cx("block px-2 py-1.5 text-xs", current && "bg-accent-soft")}>
                 <span className="font-medium">{humanize(t.name)}</span>
-                {/* The one in use says so in words, not only by its outline. */}
-                {current && <span className="ml-1.5 font-medium text-accent">· In use</span>}
+                {/* The one in use (or only tried on) says so in words, not only by its outline. */}
+                {said && <span className="ml-1.5 font-medium text-accent">· {said}</span>}
                 <span className="block text-quiet">
                   {t.source === "project" ? `themes/${t.name}.yml · ` : ""}
                   {t.font}
