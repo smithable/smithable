@@ -24,6 +24,11 @@ export type PreviewMessage =
       anchor?: { left: number; right: number; top: number; bottom: number };
     }
   | { type: "selection-cleared" }
+  /** The selected part moved on the screen (the page scrolled or changed size). */
+  | {
+      type: "selection-moved";
+      anchor: { left: number; right: number; top: number; bottom: number };
+    }
   | { type: "columns"; page: string; columns: string[] }
   /** A text changed in place; `path` is its place in smithable.content.yml, dot-separated. */
   | { type: "text"; path: string; text: string }

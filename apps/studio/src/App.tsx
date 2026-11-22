@@ -27,6 +27,7 @@ import { Ask, type AudioActivity, usePresentation } from "./builder/Ask";
 import { NoCode, OPEN_PART, type OpenPart } from "./builder/NoCode";
 import { mailTemplates, OutgoingTemplate } from "./builder/OutgoingTemplate";
 import { SelectedButton, selectedButton } from "./builder/SelectedButton";
+import { beside, SelectedSection, selectedSection } from "./builder/SelectedSection";
 import { SmithFace } from "./builder/SmithFace";
 import { SummaryTab } from "./builder/SummaryTab";
 import { Visualize } from "./builder/Visualize";
@@ -785,11 +786,15 @@ export function App() {
       if (!isPreviewMessage(event)) return;
       if (event.data.type === "selection-cleared") clearSelection();
       if (event.data.type === "ready") setSelectedPart(undefined);
+      if (event.data.type === "selection-moved") {
+        const { anchor } = event.data;
+        setSelectedPart((part) => part && { ...part, anchor });
+      }
       if (
         !selectingCode &&
         event.data.type === "select" &&
         typeof event.data.concept === "string" &&
-        /^(action|field|model|page|text):[\w.-]+$/.test(event.data.concept)
+        /^(action|field|model|page|section|text):[\w.-]+$/.test(event.data.concept)
       )
         setSelectedPart(event.data);
     };
@@ -1319,10 +1324,26 @@ export function App() {
   };
   if (!project) return <p className="p-6 text-sm text-quiet">Opening the project…</p>;
   const button = selectedButton(selectedPart, spec);
+  const section = selectedSection(selectedPart, spec);
   const selectionAnchor = selectedPart?.anchor;
   const previewFrame = () =>
     previewBox?.querySelector<HTMLIFrameElement>('iframe[title="App preview"]');
   const selectionFrame = selectionAnchor && previewFrame()?.getBoundingClientRect();
+  // A section's form goes beside its box on the screen, never joined to it by a line.
+  const sectionPosition =
+    section && selectionAnchor && selectionFrame
+      ? beside(
+          {
+            left: selectionFrame.left + selectionAnchor.left,
+            right: selectionFrame.left + selectionAnchor.right,
+            top: selectionFrame.top + selectionAnchor.top,
+            bottom: selectionFrame.top + selectionAnchor.bottom,
+          },
+          { width: window.innerWidth, height: window.innerHeight, top: 64 },
+          320,
+          260,
+        )
+      : undefined;
   const selectionPosition =
     selectionAnchor &&
     selectionFrame &&
@@ -2603,6 +2624,17 @@ export function App() {
           progress={releaseStep ? releaseProgress(releaseStep).line : undefined}
           onConfirm={() => void checkPublish(releaseView)}
           onClose={closeRelease}
+        />
+      )}
+      {section && (
+        <SelectedSection
+          key={selectedPart?.concept}
+          section={section}
+          run={run}
+          close={clearSelection}
+          ask={() => workIn("smith")}
+          position={sectionPosition}
+          reveal={revealSelection}
         />
       )}
       {button && (

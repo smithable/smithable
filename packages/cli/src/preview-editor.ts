@@ -34,6 +34,8 @@ if (typeof window !== "undefined" && window.parent !== window) {
     "[data-sm-hover]{outline:2px dashed #3b5bdb!important;outline-offset:2px;cursor:pointer!important}" +
     "[data-sm-selected]{outline:2px solid #3b5bdb!important;outline-offset:2px}" +
     "[data-sm-part=column][draggable=true]{cursor:grab!important}" +
+    // A landing section runs to the window's edges: its box is drawn inside them, so all four sides show.
+    "[data-kit=section][data-sm-hover],[data-kit=section][data-sm-selected]{outline-offset:-2px!important}" +
     "html[data-sm-selecting] [data-sm-concept]{cursor:pointer!important}" +
     "html[data-sm-selecting] [data-sm-text]:hover{outline:2px dashed #e8590c!important;outline-offset:2px;cursor:text!important}" +
     // Being edited: an outline only, so the text keeps its own colors (a hero's white title on a pale box could not be read).
@@ -65,6 +67,16 @@ if (typeof window !== "undefined" && window.parent !== window) {
     followContext = event.data.context;
   });
   const markedAt = (element) => (element instanceof Element ? element.closest("[data-sm-concept]") : null);
+  // A landing section (the kit's data-kit="section"), named by its texts' place in the content
+  // file, "pages.<page>.<section>.<key>": what is picked where no closer part is marked.
+  const sectionAt = (element) => {
+    const section = element instanceof Element ? element.closest("[data-kit=section][data-section]") : null;
+    const name = section?.dataset.section;
+    const text = name && [...section.querySelectorAll("[data-sm-text^='pages.']")]
+      .map((marked) => marked.dataset.smText.split("."))
+      .find((path) => path[2] === name);
+    return text ? { element: section, concept: "section:" + text[1] + "." + name } : null;
+  };
   const clear = (attribute) => document.querySelectorAll("[" + attribute + "]").forEach((e) => e.removeAttribute(attribute));
   const fieldOf = (element) => element.dataset.smConcept.split(".")[1];
   const editing = (element) => element instanceof Element && Boolean(element.closest(
@@ -87,7 +99,7 @@ if (typeof window !== "undefined" && window.parent !== window) {
     if (!event.shiftKey || !(target instanceof Element) || editing(target)) return false;
     // A marked hero action is one editor target, including the padding around its text.
     if (heroButton(textAt(target))) return true;
-    const mark = target.closest("[data-sm-concept], [data-sm-text]");
+    const mark = target.closest("[data-sm-concept], [data-sm-text]") ?? sectionAt(target)?.element;
     if (!mark) return false;
     const control = controlAt(target);
     return !control || control.contains(mark);
@@ -104,12 +116,26 @@ if (typeof window !== "undefined" && window.parent !== window) {
     const columns = part === "column"
       ? [...(marked.closest("tr")?.querySelectorAll("[data-sm-part=column]") ?? [])].map(fieldOf)
       : null;
+    const heading = concept.startsWith("section:") ? marked.querySelector("h1, h2") : null;
     post({
       type: "select", concept, part, page: marked.dataset.smPage ?? null, columns,
-      label: (marked.getAttribute("aria-label") || marked.textContent || "").trim().slice(0, 120),
+      label: ((heading ?? marked).getAttribute("aria-label") || (heading ?? marked).textContent || "").trim().slice(0, 120),
       anchor: { left, right, top, bottom },
     });
   };
+  // Where the selection is now, after the page scrolled or changed size: Studio keeps its form beside it.
+  let moving = 0;
+  const followSelection = () => {
+    if (!selected || moving) return;
+    moving = requestAnimationFrame(() => {
+      moving = 0;
+      if (!selected?.isConnected) return;
+      const { left, right, top, bottom } = selected.getBoundingClientRect();
+      post({ type: "selection-moved", anchor: { left, right, top, bottom } });
+    });
+  };
+  window.addEventListener("scroll", followSelection, true);
+  window.addEventListener("resize", followSelection);
   const paintSelect = () => {
     const active = Boolean(armed());
     document.documentElement.toggleAttribute("data-sm-selecting", active);
@@ -320,7 +346,7 @@ if (typeof window !== "undefined" && window.parent !== window) {
     hovered?.removeAttribute("data-sm-hover");
     hovered = null;
     if (!canPick(event)) return;
-    hovered = heroButton(textAt(event.target)) ?? markedAt(event.target);
+    hovered = heroButton(textAt(event.target)) ?? markedAt(event.target) ?? sectionAt(event.target)?.element ?? null;
     hovered?.setAttribute("data-sm-hover", "");
     if (hovered?.dataset.smPart === "column") hovered.draggable = true;
   }, true);
@@ -366,7 +392,11 @@ if (typeof window !== "undefined" && window.parent !== window) {
     const marked = markedAt(event.target);
     event.preventDefault();
     event.stopPropagation();
-    if (!marked) return;
+    if (!marked) {
+      const section = sectionAt(event.target);
+      if (section) selectPart(section.element, section.concept);
+      return;
+    }
     // A selected column takes the keys, so Alt and the arrows move it.
     if (marked.dataset.smPart === "column") {
       marked.tabIndex = -1;
