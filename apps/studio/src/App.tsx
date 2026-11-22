@@ -1329,15 +1329,33 @@ export function App() {
   const previewFrame = () =>
     previewBox?.querySelector<HTMLIFrameElement>('iframe[title="App preview"]');
   const selectionFrame = selectionAnchor && previewFrame()?.getBoundingClientRect();
+  const within = (value: number, low: number, high: number) => Math.min(high, Math.max(low, value));
   // A section's form goes beside its box on the screen, never joined to it by a line.
   const sectionPosition =
     section && selectionAnchor && selectionFrame
       ? beside(
           {
-            left: selectionFrame.left + selectionAnchor.left,
-            right: selectionFrame.left + selectionAnchor.right,
-            top: selectionFrame.top + selectionAnchor.top,
-            bottom: selectionFrame.top + selectionAnchor.bottom,
+            // What shows of it: a section scrolled partly out of the preview counts only inside it.
+            left: within(
+              selectionFrame.left + selectionAnchor.left,
+              selectionFrame.left,
+              selectionFrame.right,
+            ),
+            right: within(
+              selectionFrame.left + selectionAnchor.right,
+              selectionFrame.left,
+              selectionFrame.right,
+            ),
+            top: within(
+              selectionFrame.top + selectionAnchor.top,
+              selectionFrame.top,
+              selectionFrame.bottom,
+            ),
+            bottom: within(
+              selectionFrame.top + selectionAnchor.bottom,
+              selectionFrame.top,
+              selectionFrame.bottom,
+            ),
           },
           { width: window.innerWidth, height: window.innerHeight, top: 64 },
           320,

@@ -46,7 +46,7 @@ test("a picked section offers the looks that arrange it, each with its current v
   expect(hero?.choices.map((choice) => [choice.key, choice.current])).toEqual([
     ["layout", "split"],
     ["image", "right"],
-    ["height", ""],
+    ["height", "default"],
   ]);
   expect(hero?.choices[0]?.values).toContain("photo");
   const classes = selectedSection(picked("section:home.classes"), spec);

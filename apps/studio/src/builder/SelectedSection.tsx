@@ -1,5 +1,5 @@
 import { humanize, SECTION_LOOKS } from "@smithable/core";
-import { type CSSProperties, useId, useLayoutEffect, useRef, useState } from "react";
+import { type CSSProperties, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import type { Spec } from "../engine";
 import type { Selection } from "../preview";
 import { useMedia } from "../ui";
@@ -24,7 +24,11 @@ const KEYS: Record<string, string> = {
   height: "Height",
   band: "Background",
 };
-const HEIGHTS: Record<string, string> = { auto: "Content's", full: "Full window" };
+const HEIGHTS: Record<string, string> = {
+  default: "Layout's own",
+  auto: "Content's",
+  full: "Full window",
+};
 
 /** A landing section picked in the preview ("section:<page>.<section>"), with the looks it takes. */
 export function selectedSection(selection: Selection | undefined, spec: Spec) {
@@ -44,11 +48,17 @@ export function selectedSection(selection: Selection | undefined, spec: Spec) {
     // A hero's picture has a side only beside its text.
     if (section.kind === "hero" && key === "image" && !["split", "inset"].includes(layout))
       return [];
-    const current =
-      look[key] ?? (key === "band" ? "none" : key === "height" ? undefined : values[0]);
-    return [
-      { key, values: values.map(String), current: current === undefined ? "" : String(current) },
-    ];
+    // Unsaid, a height is the layout's own: a choice of its own ("default" removes the look).
+    if (key === "height")
+      return [
+        {
+          key,
+          values: ["default", ...values.map(String)],
+          current: String(look[key] ?? "default"),
+        },
+      ];
+    const current = look[key] ?? (key === "band" ? "none" : values[0]);
+    return [{ key, values: values.map(String), current: String(current) }];
   });
   return {
     page,
@@ -85,9 +95,12 @@ export function SelectedSection({
   reveal: (sheetTop: number) => void;
 }) {
   const [busy, setBusy] = useState(false);
+  const running = useRef(false);
   const heading = useId();
   const panel = useRef<HTMLDivElement>(null);
   const narrow = useMedia("(max-width: 1023px)");
+  // The click that picked the section left focus in the preview: the form takes it, so Escape closes.
+  useEffect(() => panel.current?.focus({ preventScroll: true }), []);
   useLayoutEffect(() => {
     const sheet = panel.current;
     if (!narrow || !sheet) return;
@@ -98,11 +111,13 @@ export function SelectedSection({
     return () => observer.disconnect();
   }, [narrow, reveal]);
   const choose = async (key: string, value: string) => {
-    if (busy) return;
+    if (running.current) return;
+    running.current = true;
     setBusy(true);
     try {
       await run("setSectionLook", { page: section.page, section: section.section, key, value });
     } finally {
+      running.current = false;
       setBusy(false);
     }
   };
@@ -110,9 +125,10 @@ export function SelectedSection({
     <div
       ref={panel}
       role="dialog"
+      tabIndex={-1}
       aria-labelledby={heading}
       data-studio-overlay="selection"
-      className="fixed inset-x-1.5 bottom-1.5 z-30 max-h-[50dvh] space-y-3 overflow-auto overscroll-contain rounded-2xl border border-line bg-panel p-3 shadow-xl lg:inset-x-auto lg:bottom-auto lg:w-80"
+      className="fixed inset-x-1.5 bottom-1.5 z-30 max-h-[50dvh] space-y-3 overflow-auto overscroll-contain rounded-2xl border border-line bg-panel p-3 shadow-xl focus:outline-none lg:inset-x-auto lg:bottom-auto lg:w-80"
       style={narrow ? undefined : position}
       onKeyDown={(event) => {
         if (event.key !== "Escape") return;

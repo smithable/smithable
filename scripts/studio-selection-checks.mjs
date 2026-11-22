@@ -149,9 +149,12 @@ export async function checkStudioSelection(browser, base) {
       .getByRole("button", { name: "Full width photo", exact: true })
       .and(sectionForm.locator('[aria-pressed="true"]'))
       .waitFor();
+    // Drawn again in its new layout, it is still the one selected, its form still open.
+    await frame.locator('[data-hero][data-layout="photo"][data-sm-selected]').waitFor();
     await sectionForm.getByRole("button", { name: "Ask Smith", exact: true }).click();
     await page.locator("[data-guide=change]").first().waitFor();
-    await sectionForm.getByRole("button", { name: "Close selection", exact: true }).click();
+    await sectionForm.focus();
+    await page.keyboard.press("Escape");
     await sectionForm.waitFor({ state: "hidden" });
     await frame.locator("[data-sm-selected]").waitFor({ state: "hidden" });
     await renamed.click();

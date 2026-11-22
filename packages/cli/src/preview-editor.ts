@@ -28,6 +28,8 @@ if (typeof window !== "undefined" && window.parent !== window) {
   let hovered = null;
   let dragged = null;
   let selected = null;
+  let selectedName = null;
+  let watchSize = null;
   let watchSelection;
   const style = document.createElement("style");
   style.textContent =
@@ -107,10 +109,23 @@ if (typeof window !== "undefined" && window.parent !== window) {
   const selectPart = (marked, concept, part = null) => {
     clear("data-sm-selected");
     selected = marked;
+    selectedName = concept.startsWith("section:") ? marked.dataset.section : null;
     marked.setAttribute("data-sm-selected", "");
+    // A section drawn again (its look changed) stays selected: the same section, found by its name.
     watchSelection ??= new MutationObserver(() => {
-      if (selected && !selected.isConnected) loseSelection();
+      if (!selected || selected.isConnected) return;
+      const again = selectedName &&
+        document.querySelector('[data-kit=section][data-section="' + CSS.escape(selectedName) + '"]');
+      if (!again) return loseSelection();
+      selected = again;
+      again.setAttribute("data-sm-selected", "");
+      watchSize?.disconnect();
+      watchSize?.observe(again);
+      followSelection();
     });
+    watchSize ??= new ResizeObserver(() => followSelection());
+    watchSize.disconnect();
+    watchSize.observe(marked);
     watchSelection.observe(document.body, { childList: true, subtree: true });
     const { left, right, top, bottom } = marked.getBoundingClientRect();
     const columns = part === "column"
@@ -149,7 +164,9 @@ if (typeof window !== "undefined" && window.parent !== window) {
   };
   const clearSelection = () => {
     selected = null;
+    selectedName = null;
     watchSelection?.disconnect();
+    watchSize?.disconnect();
     clear("data-sm-selected");
     clear("data-sm-hover");
   };
