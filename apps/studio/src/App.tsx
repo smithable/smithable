@@ -719,6 +719,8 @@ export function App() {
       if (event.data.type === "selection-cleared") clearSelection();
       // Shift held in the page selects for as long as it is held: the Select button shows it (T1238).
       if (event.data.type === "shift") setShiftSelect(event.data.on === true);
+      // A page loaded again while Shift was held never says it was let go.
+      if (event.data.type === "ready") setShiftSelect(false);
       // A page loading again ends a selection, except a section's: its look changed, and its form stays.
       if (event.data.type === "ready")
         setSelectedPart((part) => {

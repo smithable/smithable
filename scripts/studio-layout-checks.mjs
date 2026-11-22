@@ -264,11 +264,16 @@ export async function checkSelectAndPages(browser, base) {
     await waitPressed("false");
     await page.keyboard.up("Shift");
     // Held in the page itself.
-    await page.locator('iframe[title="App preview"]').focus();
+    // Held in the page itself: the page's own handler selects, and Studio's button shows it.
+    const frame = page.frameLocator('iframe[title="App preview"]');
+    const html = frame.locator("html");
+    await frame.locator("a[href], button").first().focus();
     await page.keyboard.down("Shift");
     await waitPressed("true");
+    assert.equal(await html.getAttribute("data-sm-selecting"), "");
     await page.keyboard.up("Shift");
     await waitPressed("false");
+    assert.equal(await html.getAttribute("data-sm-selecting"), null);
 
     await openPreviewAddress(page);
     const list = page.getByRole("listbox", { name: "Pages", exact: true });

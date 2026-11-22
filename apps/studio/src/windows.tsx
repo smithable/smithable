@@ -109,7 +109,9 @@ export function gridOf(slots: (0 | 1 | 2)[], contents: SlotContent[]): React.CSS
           : "45fr"
         : s === 2
           ? "22rem"
-          : "55fr",
+          : s === 0 && slots.includes(1)
+            ? "45fr"
+            : "55fr",
   );
   return {
     gridTemplateAreas: `"${slots.map(area).join(" ")}"`,
