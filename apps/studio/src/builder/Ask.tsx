@@ -60,6 +60,7 @@ export function Ask({
   guide,
   guiding = false,
   onDone,
+  onChangeApplied,
   onBeginChange,
   studioQuestion,
   questionVisible = true,
@@ -122,6 +123,7 @@ export function Ask({
   selection?: string;
   /** A change was made. */
   onDone?: () => void;
+  onChangeApplied?: () => void;
   onEdit?: (prefill: Prefill) => void;
   words?: Words;
   making?: boolean;
@@ -440,6 +442,7 @@ export function Ask({
         clearRequest(revision);
         setJustApplied(true);
         onDone?.();
+        if (done.length) onChangeApplied?.();
       }
     } catch (error) {
       setOutput((error as Error).message);

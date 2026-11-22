@@ -34,6 +34,15 @@ export async function checkStudioSelection(browser, base) {
     await frame.locator("html[data-sm-selecting]").waitFor();
     await link.click();
     await form.waitFor();
+    const hint = page
+      .locator("[data-studio-hint-anchor]")
+      .filter({ has: page.getByRole("button", { name: "All settings", exact: true }) })
+      .getByRole("button", {
+        name: "All settings shows more for what you selected.",
+        exact: true,
+      });
+    await hint.click();
+    await hint.waitFor({ state: "detached" });
     assert.equal(await form.evaluate((element) => element.closest("[data-guide=change]")), null);
     await hero.locator("a[data-sm-selected]").waitFor();
     const overlay = page.locator('[data-studio-overlay="selection"]');
@@ -46,6 +55,7 @@ export async function checkStudioSelection(browser, base) {
     await select.click();
     await link.click();
     await form.waitFor();
+    assert.equal(await hint.count(), 0);
     await page.waitForFunction(() => {
       const bounds = document
         .querySelector('[data-studio-overlay="selection"]')

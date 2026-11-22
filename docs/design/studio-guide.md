@@ -4,6 +4,11 @@ Design, 2026-10-06 (Fable). Johan's idea (2026-10-03): a walkthrough that shows 
 
 ## 1. What it is
 
+The current No code tour covers Preview, Behavior, Ask me, and Changes. The Code tour points out
+the files and live validation. First-action hints cover preview selection, Undo, the No code and
+Code switch, reopening Look after keeping a theme, and checking changes before publishing.
+**Help → Show hints again** resets the hints. The original tour proposal follows.
+
 Five stops, each a small card beside the thing it is about, with one or two sentences, **Next** and **Skip**; the last says **Done**. The rest of the screen dims a little and takes no clicks while a card is open, with a cut-out around the thing, so a visitor sees where they are and nothing else moves. The tour takes under a minute; nothing in it has to be done, only read.
 
 | Stop | Beside | Says |

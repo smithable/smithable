@@ -49,6 +49,7 @@ export function ReleaseReview({
   reload,
   home,
   notice,
+  publishHint,
   summary,
   map,
   onClose,
@@ -59,6 +60,7 @@ export function ReleaseReview({
   reload: () => Promise<Review | undefined>;
   home?: string;
   notice?: string;
+  publishHint?: ReactNode;
   summary: ReactNode;
   map: ReactNode;
   onClose: () => void;
@@ -337,6 +339,14 @@ export function ReleaseReview({
         <div className="mt-2 h-[min(60vh,34rem)] min-h-52">{map}</div>
       ) : (
         <div className="mt-3 space-y-3">
+          {publishHint && (
+            <div className="relative" data-studio-hint-anchor>
+              <div className="sr-only" tabIndex={-1} data-studio-hint-target>
+                Review items
+              </div>
+              {publishHint}
+            </div>
+          )}
           {notice && (
             <p role="status" className="text-sm text-muted">
               {notice}
@@ -419,6 +429,7 @@ export function PublishConfirmation({
   testHosting,
   busy,
   progress,
+  publishHint,
   onConfirm,
   onClose,
 }: {
@@ -428,6 +439,7 @@ export function PublishConfirmation({
   testHosting?: boolean;
   busy: boolean;
   progress?: string;
+  publishHint?: ReactNode;
   onConfirm: () => void;
   onClose: () => void;
 }) {
@@ -444,7 +456,12 @@ export function PublishConfirmation({
       <h2 id="studio-publish-title" className="mb-3 text-lg font-semibold">
         Publish {project}?
       </h2>
-      <p className="rounded-md bg-subtle p-3 text-sm">Review complete · 0 open items</p>
+      <div data-studio-hint-anchor>
+        <p className="rounded-md bg-subtle p-3 text-sm" tabIndex={-1} data-studio-hint-target>
+          Review complete · 0 open items
+        </p>
+        {publishHint}
+      </div>
       {hosted && <AppName />}
       {testHosting && (
         <p className="my-3 text-sm">

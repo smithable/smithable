@@ -26,7 +26,7 @@ export function FirstLook({
   preset: string;
   aiBadge: boolean;
   onRefresh: () => Promise<void>;
-  onClose: (options: { error?: string }) => void;
+  onClose: (options: { error?: string; kept?: boolean }) => void;
 }) {
   const [selected, setSelected] = useState(preset);
   // The adapter writes a theme's CSS; it is loaded beside the picker, as the look editor loads it.
@@ -144,7 +144,7 @@ export function FirstLook({
     // With nothing changed no new page comes, so the tried theme is taken off this one.
     kept.current = steps.length > 0;
     await onRefresh();
-    onClose({});
+    onClose({ kept: true });
   };
   return (
     <section

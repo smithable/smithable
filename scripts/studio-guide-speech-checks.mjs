@@ -101,10 +101,10 @@ export async function checkStudioGuideSpeech(browser, base) {
     await page.keyboard.press("Control+Shift+Space");
     assert.equal(await page.evaluate(() => window.guideFixture.starts), 0);
     await card("preview").getByRole("button", { name: "Next", exact: true }).click();
-    await card("manual").waitFor();
-    const step = await card("manual").locator("p").first().textContent();
+    await card("behavior").waitFor();
+    const step = await card("behavior").locator("p").first().textContent();
     assert.ok(await input.isDisabled());
-    // The guide's manual anchor is only the No code/Code tabs. Edit controls live below it.
+    // The guide points at Behavior. Using its tab is still an editing action.
     const editor = page
       .locator('[data-window="manual"]')
       .getByRole("tab", { name: "Behavior", exact: true });
@@ -117,8 +117,8 @@ export async function checkStudioGuideSpeech(browser, base) {
       await openStudioGuide(page);
     };
     await resume();
-    await card("manual").waitFor();
-    await card("manual").getByText(step, { exact: true }).waitFor();
+    await card("behavior").waitFor();
+    await card("behavior").getByText(step, { exact: true }).waitFor();
     console.log("  ✓ Guide pauses for errors and resumes the saved stop");
     assert.ok(await input.isDisabled(), "resumed guide left the input enabled");
     notice = true;
@@ -139,8 +139,8 @@ export async function checkStudioGuideSpeech(browser, base) {
     notice = false;
     await error.getByRole("button", { name: "Dismiss", exact: true }).click();
     await resume();
-    await card("manual").waitFor();
-    await card("manual").getByText(step, { exact: true }).waitFor();
+    await card("behavior").waitFor();
+    await card("behavior").getByText(step, { exact: true }).waitFor();
     const visibleCard = page.locator("[data-guide-card]:visible");
     const reachDemo = async () => {
       for (let i = 0; i < 10; i++) {
