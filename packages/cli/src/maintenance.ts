@@ -21,6 +21,7 @@ function kitHash(sources: Record<string, string>): string {
 
 export const templateKitRevision = kitHash(baselineKitSources);
 export function landingKitRevision(features: readonly LandingKitFeature[]): string {
+  if (!features.length) return templateKitRevision;
   return `${features.join(",")}:${kitHash(landingKitSources(features))}`;
 }
 

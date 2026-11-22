@@ -329,7 +329,19 @@ function LandingLayoutView({
         {/* @endContactFooter */}
         {columns ? (
           <div className="mx-auto max-w-(--landing-width) px-5 py-12 text-sm">
-            <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-3">
+            {/* @contactFooter */}
+            <div
+              className={cn(
+                "grid gap-10 sm:grid-cols-2 lg:grid-cols-3",
+                contactBand &&
+                  contact?.hours &&
+                  menu.length > 0 &&
+                  (footer?.text || footerLinks) &&
+                  "lg:grid-cols-4",
+              )}
+            >
+              {/* @contactFooterBaseline |            <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-3"> */}
+              {/* @endContactFooter */}
               <div className="space-y-2">
                 <p className="text-base font-semibold">{appName}</p>
                 {contact?.address && <p className="text-muted-foreground">{contact.address}</p>}
