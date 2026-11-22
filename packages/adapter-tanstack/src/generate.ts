@@ -216,6 +216,20 @@ export function generateApp(spec: SpecIR, options: GenerateOptions): GeneratedFi
       file.content = dropUnused(file.content, ["personOf", "addressOf", "addressOwner", "fits"]);
   if (content?.languages?.length) translatedApp(files, ctx);
   if (files.some((f) => f.path === "src/lib/auth.ts")) personTime(files);
+  // Two parts writing one generated path would leave whichever came last, and the record of what was
+  // written could name the other: a model named like one of the app's own files says so instead.
+  const seen = new Set<string>();
+  for (const file of files.filter((f) => f.zone === "generated")) {
+    if (seen.has(file.path)) {
+      const model = ir.models.find((m) => file.path.startsWith(`src/generated/${kebab(m.name)}.`));
+      throw new Error(
+        model
+          ? `The model ${model.name} would write ${file.path}, which the app itself uses: give the model another name.`
+          : `Two parts of the app would write ${file.path}.`,
+      );
+    }
+    seen.add(file.path);
+  }
   return files.sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
 }
 
@@ -920,12 +934,13 @@ const SECTION_GENERATORS: SectionGenerator[] = [
         // The sample users the development door acts as (docs/design/sample-users.md §5).
         ...(people.length ? [generated("src/generated/people.ts", peopleModule(people))] : []),
         generated("src/generated/roles.ts", rolesModule(auth)),
-        // The app card for the administrators (docs/design/app-card.md §4).
+        // The app card for the administrators (docs/design/app-card.md §4), in src/lib: a model's
+        // files are named after it in src/generated, and a model may be called Card.
         generated(
-          "src/generated/card.server.ts",
+          "src/lib/app-card.server.ts",
           cardModule(ir, auth, options.content, options.cardFiles, options.smithableVersion),
         ),
-        generated("src/generated/card.ts", cardServerFnModule()),
+        generated("src/lib/app-card.ts", cardServerFnModule()),
         generated("src/routes/app-card.tsx", cardRoute()),
         generated(
           "src/routes/sign-in.tsx",

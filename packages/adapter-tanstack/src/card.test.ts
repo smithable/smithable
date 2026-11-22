@@ -23,8 +23,8 @@ test("an app with sign-in serves its card to the administrators at /app-card, in
     auth: signedIn,
     cardFiles: [{ name: "smithable.yml", text: spec }],
   });
-  const card = files.find((f) => f.path === "src/generated/card.server.ts")?.content ?? "";
-  const fn = files.find((f) => f.path === "src/generated/card.ts")?.content ?? "";
+  const card = files.find((f) => f.path === "src/lib/app-card.server.ts")?.content ?? "";
+  const fn = files.find((f) => f.path === "src/lib/app-card.ts")?.content ?? "";
   const route = files.find((f) => f.path === "src/routes/app-card.tsx")?.content ?? "";
   expect(card).toContain('name: "Shop"');
   expect(card).toContain('export const MAIN = "en"');

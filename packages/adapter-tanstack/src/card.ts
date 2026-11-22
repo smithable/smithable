@@ -1,5 +1,5 @@
 // The app card served in the app (docs/design/app-card.md §4): core's facts for each of the app's
-// languages, written as data into src/generated/card.server.ts (so they never reach a browser's
+// languages, written as data into src/lib/app-card.server.ts (so they never reach a browser's
 // bundle), a server function that hands them to administrators only, and the /app-card route that
 // renders them through the kit's AppCard. The app imports no Smithable package: the facts are a
 // literal, the sentences the kit's words.
@@ -46,7 +46,7 @@ export function cardServerFnModule(): string {
   return `${HEADER}import { createServerFn } from "@tanstack/react-start";
 import { AccessDenied } from "#/kit/access";
 import { currentViewer } from "#/lib/viewer.server";
-import { CARDS, MAIN } from "./card.server";
+import { CARDS, MAIN } from "./app-card.server";
 
 /** The app card's facts, in every language: for the administrators only. */
 export const appCard = createServerFn().handler(async () => {
@@ -61,7 +61,7 @@ export const appCard = createServerFn().handler(async () => {
 export function cardRoute(): string {
   const imports = importList()
     .add("@tanstack/react-router", "createFileRoute")
-    .add("#/generated/card", "appCard")
+    .add("#/lib/app-card", "appCard")
     .add("#/kit/AppCard", "AppCard")
     .add("#/kit/page-guard", "guardPage");
   return `${HEADER}${imports.render()}
