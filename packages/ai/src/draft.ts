@@ -5,6 +5,7 @@ import {
   buildJsonSchema,
   type Diagnostic,
   formatDiagnostic,
+  type Language,
   validateAuth,
   validateContent,
   validateSpec,
@@ -208,6 +209,7 @@ export function checkSpecFiles(files: SpecFiles): Diagnostic[] {
  */
 export async function draftProject(options: {
   description: string;
+  language?: Language;
   starter: SpecFiles;
   /** Allowed by the AI policy, cheapest first (see `route`); the strongest is tried first. */
   providers: Provider[];
@@ -218,7 +220,7 @@ export async function draftProject(options: {
   const example = FILES.filter((f) => options.starter[f])
     .map((f) => `${f}:\n${fenced(options.starter[f] as string)}`)
     .join("\n\n");
-  const user = `Description: ${options.description}${languageNote(options.description)}\n\nExample project:\n${example}\n\nJSON Schema of smithable.yml:\n${JSON.stringify(buildJsonSchema())}`;
+  const user = `Description: ${options.description}${languageNote(options.description, options.language)}\n\nExample project:\n${example}\n\nJSON Schema of smithable.yml:\n${JSON.stringify(buildJsonSchema())}`;
   let problem = "";
   for (const provider of [...options.providers].reverse()) {
     let prompt = user;
