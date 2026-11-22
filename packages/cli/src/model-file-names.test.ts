@@ -77,18 +77,22 @@ test("an app the old clash left stuck goes on, and a real edit by hand is still 
   const dir = join(tempDir("smithable-model-card-old-"), "app");
   await smithable(["new", dir, "--starter", "records"]);
   await smithable(["op", "addModel", "Card", "title=string!", "--dir", dir]);
-  const model = readFileSync(join(dir, "src/generated/card.ts"), "utf8");
   // The app card's file on disk where the record names the model's.
   writeFileSync(join(dir, "src/generated/card.ts"), OLD_CARD);
   commit(dir);
   await smithable(["op", "setText", "Hello", "pages", "home", "hero", "title", "--dir", dir]);
-  expect(readFileSync(join(dir, "src/generated/card.ts"), "utf8")).toBe(model);
-  // The model's file on disk where the record names another.
+  expect(readFileSync(join(dir, "src/generated/card.ts"), "utf8")).not.toBe(OLD_CARD);
+  // The model's file on disk where the record names the app card's, and the change is to Card.
+  const model2 = readFileSync(join(dir, "src/generated/card.ts"), "utf8");
+  writeFileSync(join(dir, "src/generated/card.ts"), OLD_CARD);
   const record = readRecord(dir);
-  record.files["src/generated/card.ts"] = "0".repeat(64);
+  record.files["src/generated/card.ts"] = hashFile(join(dir, "src/generated/card.ts"));
+  writeFileSync(join(dir, "src/generated/card.ts"), model2);
   writeFileSync(join(dir, ".smithable/files.json"), `${JSON.stringify(record, null, 2)}\n`);
   commit(dir);
-  await smithable(["op", "setText", "Hi", "pages", "home", "hero", "title", "--dir", dir]);
+  await smithable(["op", "addField", "Card", "note", "text", "--dir", dir]);
+  expect(readFileSync(join(dir, "src/generated/card.ts"), "utf8")).toContain("note");
+  const model = readFileSync(join(dir, "src/generated/card.ts"), "utf8");
   // A real edit by hand.
   writeFileSync(join(dir, "src/generated/card.ts"), `${model}// mine\n`);
   commit(dir);
@@ -114,3 +118,26 @@ test("an older app's card files in src/generated are removed once the card is in
   expect(existsSync(join(dir, "src/generated/card.server.ts"))).toBe(false);
   expect(existsSync(join(dir, "src/lib/app-card.ts"))).toBe(true);
 }, 120_000);
+
+test("an older app's card file edited by hand is still refused", async () => {
+  for (const [path, text] of [
+    ["src/generated/card.ts", OLD_CARD],
+    ["src/generated/card.server.ts", OLD_CARD_SERVER],
+  ] as const) {
+    const dir = join(tempDir("smithable-old-card-edited-"), "app");
+    await smithable(["new", dir, "--starter", "records"]);
+    writeFileSync(join(dir, path), text);
+    const record = readRecord(dir);
+    record.files[path] = hashFile(join(dir, path));
+    writeFileSync(join(dir, ".smithable/files.json"), `${JSON.stringify(record, null, 2)}\n`);
+    writeFileSync(join(dir, path), text.replace("MAIN", "MAIN_").concat("// mine\n"));
+    commit(dir);
+    const io = captureIo();
+    expect(
+      await run(["op", "setText", "Hey", "pages", "home", "hero", "title", "--dir", dir], io),
+      path,
+    ).not.toBe(0);
+    expect(io.stderr + io.stdout).toContain("edited by hand");
+    expect(existsSync(join(dir, path))).toBe(true);
+  }
+}, 180_000);
