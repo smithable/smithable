@@ -3991,6 +3991,37 @@ async function marketplaceFlow(dir, base) {
 }
 
 /** A seasonal menu takes over at local midnight and gives way when its last day ends. */
+/**
+ * The painter's jobs without photos (T1119): the jobs page's cards and the landing's latest jobs
+ * are text cards, with no empty picture slot, since no job shown has a picture yet.
+ */
+async function painterFlow(base) {
+  const browser = await chromium.launch();
+  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+  try {
+    for (const path of ["/jobs", "/"]) {
+      await open(page, `${base}${path}`);
+      // The landing shows six of the seven jobs, so wait for any of them.
+      await page
+        .getByText(
+          /^(Red farmhouse|Tin roof|Twelve windows|Yellow cladding|Staircase|Living room|Pine floor)/,
+        )
+        .first()
+        .waitFor();
+      const slots = await page.locator('[data-part="placeholder"]').count();
+      if (slots) throw new Error(`${path} shows ${slots} empty picture slots`);
+    }
+    console.log("  ✓ painter: jobs without photos show as text cards, with no empty picture slot");
+  } catch (error) {
+    console.log(
+      `  ✗ painter: ${error.message.split("\n")[0]}\n    at ${page.url()}, see ${await screenshot(page)}`,
+    );
+    failures.push("painter flow");
+  } finally {
+    await browser.close();
+  }
+}
+
 async function restaurantFlow(base) {
   const browser = await chromium.launch();
   const page = await browser.newPage({ viewport: { width: 390, height: 844 }, isMobile: true });
@@ -10020,6 +10051,7 @@ test("the session cookie's name and attributes", async () => {
       }
       if (example === "barbers") await barbersFlow(dir, base);
       if (example === "restaurant") await restaurantFlow(base);
+      if (example === "painter") await painterFlow(base);
       if (example === "crm") await importFlow(dir, base);
       if (example === "status") await statusFlow(base);
       if (example === "status") await sessionFlow(base);

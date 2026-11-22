@@ -1,0 +1,24 @@
+# How the app looks. Technology-neutral: presets and choices, never CSS.
+smithableUx: 0.1
+
+theme:
+  preset: modern                       # clean and light, so the colours in the photos lead
+
+tones:
+  Enquiry.status: { new: warning, won: success, lost: neutral }
+
+pages:
+  home:
+    sections:
+      latest: { band: muted }
+  jobs:
+    table: { view: cards, sort: year }
+  enquiries:
+    table:
+      columns: [name, job, status, followUpOn]
+      sort: followUpOn
+      actions: menu                    # the next steps in one menu, not Won beside Lost
+    form:
+      sections:
+        - { name: who, fields: [name, email, phone] }
+        - { name: what, fields: [job, message] }

@@ -141,6 +141,11 @@ const SHOTS = {
     ["projects", 1, "visitor", true],
     ["enquiries", "list", "admin"],
   ],
+  // The jobs by surface as a visitor sees them, and one job with its quote request.
+  painter: [
+    ["jobs", "list", "visitor"],
+    ["jobs", 1, "visitor", true],
+  ],
   api: [
     ["admin", "tasks", "admin"],
     // A key just made: the card with the call to copy and an assistant's lines.

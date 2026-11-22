@@ -1,0 +1,28 @@
+# Who signs in, the roles and the default access. Technology-neutral.
+smithableAuth: 0.1
+
+signIn:
+  providers: [email]
+  selfSignUp: false                  # the painter and whoever they invite; visitors need no account
+
+defaultAccess: shared                # a small team: everyone sees every enquiry
+
+roles:
+  admin:
+    description: The painter. Runs the team and the settings.
+  crew:
+    description: A painter. Follows up enquiries and keeps the jobs current.
+    pages: all
+    create: all
+    write: all
+
+defaultRole: crew
+
+admins: [owner@fairweather.example]
+
+# ⚠ PUBLIC: everything listed here is visible to anyone on the internet, without
+# signing in. Never add models that contain personal or business data.
+public:
+  pages: [home, jobs, privacy]
+  read: [Job]
+  create: [Enquiry]                  # a visitor's request for a quote; only the painter reads it
