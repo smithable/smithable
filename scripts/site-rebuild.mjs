@@ -481,6 +481,8 @@ const ours = await context.newPage();
 await ours.goto(`http://localhost:${opts.port}/`);
 await ours.waitForLoadState("networkidle");
 await scrollThrough(ours);
+if (process.env.REBUILD_DEBUG)
+  console.log("our sections:", await ours.evaluate(() => [...document.querySelectorAll("[data-section]")].map((e) => `${e.tagName}:${e.getAttribute("data-section")}`).join(" ")));
 
 /** Shoots each block of a page at the current width; ours by section name. */
 async function shots(page, selectors, viewport) {
