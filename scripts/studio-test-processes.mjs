@@ -40,17 +40,20 @@ async function waitFor(check, milliseconds) {
 /** Stop Studio through its shutdown handler first, then stop and verify its fixture processes. */
 export async function stopStudioFixture(studio, directory) {
   const stopped = () => !studio?.pid || studio.exitCode !== null || studio.signalCode !== null;
+  let graceful = true;
   if (!stopped()) {
     studio.kill("SIGTERM");
-    if (!(await waitFor(stopped, 5000))) studio.kill("SIGKILL");
+    graceful = await waitFor(stopped, 5000);
+    if (!graceful) studio.kill("SIGKILL");
   }
   await waitFor(stopped, 2000);
   const empty = () => fixturePids(directory).length === 0;
-  if (await waitFor(() => stopped() && empty(), 1000)) return;
+  if (await waitFor(() => stopped() && empty(), 2000)) return graceful;
 
   // Once Studio is stopped it cannot restart a preview. Signal only processes in this fixture.
   for (const signal of ["SIGTERM", "SIGKILL"]) {
     for (const pid of fixturePids(directory)) {
+      if (pid === process.pid || pid === process.ppid) continue;
       if (!fixturePids(directory).includes(pid)) continue;
       try {
         process.kill(pid, signal);
@@ -58,7 +61,7 @@ export async function stopStudioFixture(studio, directory) {
         if (error.code !== "ESRCH") throw error;
       }
     }
-    if (await waitFor(() => stopped() && empty(), 2000)) return;
+    if (await waitFor(() => stopped() && empty(), 2000)) return false;
   }
   throw new Error(
     `Studio fixture did not stop: ${directory} (PIDs: ${fixturePids(directory).join(", ")})`,

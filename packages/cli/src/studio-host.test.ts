@@ -100,9 +100,15 @@ function hosted(given: "stdin" | "env") {
 
   afterAll(async () => {
     if (!dir) return;
-    await stopStudioFixture(studio, dir);
-    expect(fixturePids(dir)).toEqual([]);
-    rmSync(dir, { recursive: true, force: true });
+    try {
+      const graceful = await stopStudioFixture(studio, dir);
+      expect(fixturePids(dir)).toEqual([]);
+      expect(graceful, "Studio should stop its own preview without the cleanup fallback").toBe(
+        true,
+      );
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   }, 15_000);
 
   test("the preview's process never sees Studio's token, only its own credential", () => {

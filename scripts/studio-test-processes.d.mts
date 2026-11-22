@@ -4,4 +4,4 @@ export function fixturePids(directory: string): number[];
 export function stopStudioFixture(
   studio: ChildProcess | undefined,
   directory: string,
-): Promise<void>;
+): Promise<boolean>;
