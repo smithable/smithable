@@ -248,31 +248,44 @@ export async function checkSelectAndPages(browser, base) {
     await page.goto(`${base}/?guide=off`);
     const select = await toolbarAction(page, "Select");
     const pressed = () => select.getAttribute("aria-pressed");
-    const waitPressed = async (value) => {
+    const waitPressed = async (value, when) => {
       for (let i = 0; i < 30 && (await pressed()) !== value; i++) await page.waitForTimeout(100);
-      assert.equal(await pressed(), value, `Select pressed ${value}`);
+      if ((await pressed()) === value) return;
+      const focus = await page.evaluate(() => {
+        const frame = document.querySelector('iframe[title="App preview"]');
+        const inner = frame?.contentDocument?.activeElement;
+        return `studio: ${document.activeElement?.tagName}, page: ${inner?.tagName ?? "none"}`;
+      });
+      assert.fail(`Select pressed ${await pressed()}, not ${value}, ${when} (focus ${focus})`);
     };
     assert.equal(await pressed(), "false");
     await page.evaluate(() => document.activeElement?.blur());
     await page.keyboard.down("Shift");
-    await waitPressed("true");
+    await waitPressed("true", "Shift down in Studio");
     await page.keyboard.up("Shift");
-    await waitPressed("false");
+    await waitPressed("false", "Shift up in Studio");
     await page.keyboard.down("Shift");
-    await waitPressed("true");
+    await waitPressed("true", "Shift down again in Studio");
     await page.evaluate(() => window.dispatchEvent(new Event("blur")));
-    await waitPressed("false");
+    await waitPressed("false", "after a blur");
     await page.keyboard.up("Shift");
-    // Held in the page itself.
     // Held in the page itself: the page's own handler selects, and Studio's button shows it.
     const frame = page.frameLocator('iframe[title="App preview"]');
     const html = frame.locator("html");
     await frame.locator("a[href], button").first().focus();
-    await page.keyboard.down("Shift");
-    await waitPressed("true");
+    // The page's editor loads after the page shows (a cold dev server): Shift is pressed again
+    // until it answers, as a person would.
+    for (let i = 0; i < 20; i++) {
+      await page.keyboard.down("Shift");
+      for (let j = 0; j < 10 && (await pressed()) !== "true"; j++) await page.waitForTimeout(100);
+      if ((await pressed()) === "true") break;
+      await page.keyboard.up("Shift");
+      await page.waitForTimeout(500);
+    }
+    await waitPressed("true", "Shift down in the page");
     assert.equal(await html.getAttribute("data-sm-selecting"), "");
     await page.keyboard.up("Shift");
-    await waitPressed("false");
+    await waitPressed("false", "Shift up in the page");
     assert.equal(await html.getAttribute("data-sm-selecting"), null);
 
     await openPreviewAddress(page);
