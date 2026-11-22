@@ -4001,7 +4001,13 @@ async function painterFlow(base) {
   try {
     for (const path of ["/jobs", "/"]) {
       await open(page, `${base}${path}`);
-      await page.getByText("Red farmhouse in linseed oil paint", { exact: true }).first().waitFor();
+      // The landing shows six of the seven jobs, so wait for any of them.
+      await page
+        .getByText(
+          /^(Red farmhouse|Tin roof|Twelve windows|Yellow cladding|Staircase|Living room|Pine floor)/,
+        )
+        .first()
+        .waitFor();
       const slots = await page.locator('[data-part="placeholder"]').count();
       if (slots) throw new Error(`${path} shows ${slots} empty picture slots`);
     }
