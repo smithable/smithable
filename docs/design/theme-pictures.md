@@ -6,8 +6,8 @@ original"). It builds on first-look.md §4: image styles, the record in `picture
 `place-pictures` effect.
 
 **Changed 2026-11-22, after Johan saw the second round of sheets: recolouring is an offer, not a rule
-applied at every theme change, and it is made only for calm themes. §10 says how; where it differs from
-§1, §5 and §9, §10 holds.**
+applied at every theme change. Calm themes are offered the chosen rule, strong themes a light tint, and
+greyscale themes nothing. §10 says how; where it differs from §1, §5, §6 and §9, §10 holds.**
 
 ## 1 What changes for the user
 
@@ -210,33 +210,48 @@ commit either way.
    and the operations page say so.
 4. **The theme sheet script** for the pictures. Johan reads the sheets before the change merges.
 
-## 10 An offer, for calm themes only (2026-11-22)
+## 10 An offer, by how strong the theme's colour is (2026-11-22)
 
 Johan's review of the sheets: the recoloured pictures are not always better than the drawing. So the
-recolouring is never applied by itself, and not for every theme.
+recolouring is never applied by itself, and how far it goes depends on the theme.
 
 - **A theme change changes the theme only.** `setTheme` reports no `place-pictures` effect and waits for
   no pictures. The app keeps the pictures it has. This replaces §5 points 1, 5 and 7.
-- **The host prepares the recoloured set in the background** after the theme is applied, from the
-  originals, into a folder outside the project's files. Nothing in the project changes while it works.
-- **When the set is ready, Studio offers it**: a quiet notice, "Pictures in your theme's colours are
-  ready", opening a before-and-after of the hero and a few samples. "Use these" applies the set as one
-  operation with the commit, the records and the undo of §5 points 2 to 4. "Keep mine" closes it. The
-  choice is remembered for that theme, so the same offer is not made twice.
-- **At creation it is the same**: a new app gets the drawings as they are, and the offer follows.
-- **Which themes get an offer**, read from the theme's light primary in OKLCH, never from its name:
-  - *greyscale* (chroma below 0.02): no offer. The drawing's own wash is the only colour on the page,
-    and it stays.
-  - *calm* (chroma from 0.02 to 0.12): the rule of §3 as chosen, 25% back toward the drawing.
-  - *strong* (chroma above 0.12): a light tint only, 90% back toward the drawing, so the pictures lean
-    a few percent toward the theme and no more.
+- **Which rule a theme gets**, read from the theme's light primary in OKLCH, never from its name:
+
+  | Class | Primary's chroma | Offer | Rule recorded |
+  | - | - | - | - |
+  | greyscale | below 0.02 | the drawings as drawn | `none` |
+  | calm | 0.02 to 0.12 | §3 as chosen, 25% back toward the drawing | `ink-wash-b25` |
+  | strong | above 0.12 | a light tint, 90% back toward the drawing | `ink-wash-b90` |
 
   The cut-offs are proposals. The sheet script (§7) prints each built-in theme's class beside its sheet,
-  and Johan reads those sheets before the offer ships.
-- `pictures.json` records the rule used as in §5 (`ink-wash-b25`, `ink-wash-b90`, or `none`), so
-  `check` no longer reports colours that differ from the theme's: that is now a normal state.
-- From the command line: `setPictureStyle` with the app's present style and `--recolour` prepares and
-  applies in one step, for the same themes. Without the flag it places the drawings as they are.
+  and Johan reads those sheets before the offer ships. §6's fallbacks still apply within a class.
+- **The host prepares the set in the background** after the theme is applied, from the originals, into
+  a folder outside the project's files. Nothing in the project changes while it works. A newer theme
+  change discards a set still being prepared for the older one.
+- **An offer is made only when it would change something**: the set for the theme's class differs from
+  what is placed. So a calm theme offers its colours; a greyscale theme offers the drawings back when
+  the placed pictures were recoloured for an earlier theme, and nothing when they are already as drawn.
+- **Studio offers it** with a quiet notice, "Pictures to match your theme are ready", opening a
+  before-and-after of the hero and a few samples, with "Use these" and "Keep mine".
+- **An offer is bound to what it was made from:** the style, the library version, the theme's three
+  colours, the rule, and the hash of each file it would replace. "Use these" checks all of them again.
+  A file changed since is left alone, as §5 point 9; a changed theme or style withdraws the offer.
+- **"Use these" is one operation: `setPictureStyle { style, recolour: true }`** with the app's present
+  style, carried out as §5 points 2 to 4: all or nothing, one commit, the records and sample copies with
+  it. Undo brings back the earlier files and records and leaves the theme as it is.
+- **"Keep mine" is remembered per person in Studio**, for that binding. The same offer is not made
+  again; a different theme, style or library version makes a new one. Nothing is written to the project.
+- **At creation it is the same**: a new app gets the drawings as they are, and the offer follows.
+- **From the command line:** `setPictureStyle` with `--recolour` prepares and applies in one step.
+  Without the flag it places the drawings as drawn. With the flag on a style that is not recoloured (§2),
+  it is refused with the reason and nothing changes; on a greyscale theme it places the drawings and
+  says why.
+- **The file's statement that a model made it** (picture-kinds.md §7) is written again into every
+  recoloured file and checked; without it the recolouring has failed.
+- `pictures.json` records the rule used, so `check` no longer reports colours that differ from the
+  theme's: after this that is a normal state.
 - The same prepare-in-the-background-and-offer pattern can carry other picture improvements later. Each
   would be its own design.
 
