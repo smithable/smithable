@@ -59,7 +59,7 @@ export function setPreview(window: Window | null, url: string) {
 export const previewTarget = () => previewOrigin || "*";
 
 /**
- * A theme tried on in the preview (the first-look picker, T1164): its CSS replaces the app's own
+ * A theme tried on in the preview (the first-look picker, T1164, and Look's cards): its CSS replaces the app's own
  * in the page and is sent again to each page that loads, until it is let go. Nothing is written.
  */
 let triedTheme: string | undefined;
