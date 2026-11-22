@@ -418,12 +418,17 @@ export function parseOperationArgs(op: AnyOperation, words: string[]): Operation
     const value = words[++i] as string;
     lastList = type === "array" ? key : undefined;
     const takesObject = type === "object" || (Array.isArray(type) && type.includes("object"));
+    const itemType = (properties[key]?.items as { type?: unknown } | undefined)?.type;
+    const listsObjects =
+      type === "array" &&
+      (itemType === "object" || (Array.isArray(itemType) && itemType.includes("object")));
     args[key] =
       takesObject && /^\s*[[{]/.test(value)
         ? // Records and nested values come as JSON: --given '{"Customer":[{"id":1}]}'.
           jsonOf(key, value)
-        : type === "array" && /^\s*[[{]/.test(value)
-          ? // A list of objects comes as JSON, a list or one item at a time (T1213):
+        : listsObjects && /^\s*[[{]/.test(value)
+          ? // A list of objects comes as JSON, a list or one item at a time (T1213); a list of
+            // words keeps its commas, so a page named "[draft]" stays a word:
             // --items '[{"title":"a","text":"b"}]', or --items '{"title":"a"}' --items '{…}'.
             [...((args[key] as unknown[] | undefined) ?? []), ...listOf(key, value)]
           : type === "array"

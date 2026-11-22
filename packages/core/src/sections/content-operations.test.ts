@@ -87,6 +87,13 @@ test("the command line gives setItems its list of objects as JSON (T1213)", () =
   );
   if (!text.ok) throw new Error(text.message);
   expect(text.files.content).toContain("Courts with lights");
+  // A list of words still splits on commas, brackets and all.
+  const words = {
+    ...op,
+    positional: [],
+    schema: { type: "object", properties: { pages: { type: "array", items: { type: "string" } } } },
+  } as typeof op;
+  expect(parseOperationArgs(words, ["--pages", "[draft],home"]).pages).toEqual(["[draft]", "home"]);
   expect(() => parseOperationArgs(op, ["home", "faq", "--items", "[{oops"])).toThrow(
     "--items is not JSON",
   );
