@@ -418,26 +418,35 @@ export function parseOperationArgs(op: AnyOperation, words: string[]): Operation
     const value = words[++i] as string;
     lastList = type === "array" ? key : undefined;
     const takesObject = type === "object" || (Array.isArray(type) && type.includes("object"));
+    const itemType = (properties[key]?.items as { type?: unknown } | undefined)?.type;
+    const listsObjects =
+      type === "array" &&
+      (itemType === "object" || (Array.isArray(itemType) && itemType.includes("object")));
     args[key] =
       takesObject && /^\s*[[{]/.test(value)
         ? // Records and nested values come as JSON: --given '{"Customer":[{"id":1}]}'.
           jsonOf(key, value)
-        : type === "array"
-          ? // Repeated ("--pages home --pages items") adds to the list given before.
-            [
-              ...((args[key] as string[] | undefined) ?? []),
-              ...value
-                .split(",")
-                .map((v) => v.trim())
-                .filter(Boolean),
-            ]
-          : type === "object"
-            ? // Repeated ("--set a=1 --set b=2") adds to the pairs given before.
-              {
-                ...(args[key] as object | undefined),
-                ...Object.fromEntries(pairsOf(value).map(pairOf)),
-              }
-            : scalarOf(value, type);
+        : listsObjects && /^\s*[[{]/.test(value)
+          ? // A list of objects comes as JSON, a list or one item at a time (T1213); a list of
+            // words keeps its commas, so a page named "[draft]" stays a word:
+            // --items '[{"title":"a","text":"b"}]', or --items '{"title":"a"}' --items '{…}'.
+            [...((args[key] as unknown[] | undefined) ?? []), ...listOf(key, value)]
+          : type === "array"
+            ? // Repeated ("--pages home --pages items") adds to the list given before.
+              [
+                ...((args[key] as string[] | undefined) ?? []),
+                ...value
+                  .split(",")
+                  .map((v) => v.trim())
+                  .filter(Boolean),
+              ]
+            : type === "object"
+              ? // Repeated ("--set a=1 --set b=2") adds to the pairs given before.
+                {
+                  ...(args[key] as object | undefined),
+                  ...Object.fromEntries(pairsOf(value).map(pairOf)),
+                }
+              : scalarOf(value, type);
   }
   op.positional.forEach((spec, index) => {
     if (spec.startsWith("...")) {
@@ -490,6 +499,12 @@ function jsonOf(key: string, text: string): unknown {
     const flag = `--${key.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)}`;
     throw new OperationError(`${flag} is not JSON: ${(error as Error).message}.`);
   }
+}
+
+/** A list flag's JSON: a list as it is, one object as a list of one. */
+function listOf(key: string, text: string): unknown[] {
+  const value = jsonOf(key, text);
+  return Array.isArray(value) ? value : [value];
 }
 
 /** A word as the schema's type: a number or a boolean when it says so and the word is one. */
