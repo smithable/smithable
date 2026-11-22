@@ -1,9 +1,5 @@
-// Studio's five windows and how they are laid out (docs/design/studio-v3.md §1, §8): the top bar
-// chooses a layout, small rectangles without names; which window goes in which slot is a
-// setting. Kept per device. The windows are drawn in one grid in a fixed order and only placed
-// by it, so moving one never makes another again (the preview's frame keeps its page).
-import { useEffect, useRef, useState } from "react";
-import { Button, cx, Select } from "./ui";
+// Studio’s fixed pane order keeps the preview mounted as the side panes open and close.
+import { useEffect, useState } from "react";
 
 export type WindowId = "nocode" | "code" | "preview" | "smith" | "changes";
 /**
@@ -17,7 +13,6 @@ export const isManualView = (window: string | undefined): window is ManualView =
   window === "nocode" || window === "code";
 /** A slot holds one window, Smith with Changes under it, or the view with No code and Code. */
 export type SlotContent = "manual" | "preview" | "smith" | "changes" | "smith+changes";
-export type Layout = "one" | "two" | "three" | "three-below";
 
 export const WINDOW_NAMES: Record<SlotContent | WindowId, string> = {
   nocode: "No code",
@@ -29,115 +24,75 @@ export const WINDOW_NAMES: Record<SlotContent | WindowId, string> = {
   "smith+changes": "Smith, with Changes under it",
 };
 
-/** How many slots each layout has, and its name for the bar's buttons. */
-export const LAYOUTS: [Layout, number, string][] = [
-  ["one", 1, "One window"],
-  ["two", 2, "Two windows side by side"],
-  ["three", 3, "Three windows side by side"],
-  ["three-below", 3, "Two windows, a third below"],
-];
+const MANUAL = "smithable:settings-view";
 
-export interface Arrangement {
-  layout: Layout;
-  slots: [SlotContent, SlotContent, SlotContent];
-  /** Which of No code and Code the view shows. */
-  manual?: ManualView;
-}
-
-/**
- * Smith first (smith-first.md §6): Smith, the preview beside him, and No code and Code as the
- * third place, which the arrow at the preview's edge opens. Changes is the detail view, closed
- * at first and opened from Smith's Show all or the windows menu (ask-flows.md §8); an
- * arrangement kept in the browser stays as it was.
- */
-const DEFAULT: Arrangement = {
-  layout: "two",
-  slots: ["smith", "preview", "manual"],
-  manual: "nocode",
-};
-const KEY = "smithable:windows";
-
-/**
- * An arrangement kept before No code and Code were one window: either becomes that window (the
- * first one found decides which it shows), and a second place it held gets the window missing.
- */
-export function keptArrangement(kept: {
-  layout: Layout;
-  slots: string[];
-  manual?: ManualView | "summary";
-}): Arrangement {
-  const old = kept.slots.find((s): s is ManualView => s === "nocode" || s === "code");
-  const slots = kept.slots.map((s) => (s === "nocode" || s === "code" ? "manual" : s));
-  const missing = (["manual", "preview", "smith"] as SlotContent[]).filter(
-    (w) => !slots.some((s) => s === w || (w === "smith" && s === "smith+changes")),
-  );
-  const seen = new Set<string>();
-  const unique = slots.map((s) => {
-    if (!seen.has(s)) {
-      seen.add(s);
-      return s;
-    }
-    return missing.shift() ?? s;
-  }) as Arrangement["slots"];
-  return {
-    layout: kept.layout,
-    slots: unique,
-    manual: kept.manual === "summary" ? "nocode" : (kept.manual ?? old ?? "nocode"),
-  };
-}
-
-/** The arrangement kept in this browser, and a way to change it. */
-export function useArrangement(): [Arrangement, (next: Arrangement) => void] {
-  const [arrangement, setArrangement] = useState<Arrangement>(() => {
+export function useManualView(): [ManualView, (view: ManualView) => void] {
+  const [view, setView] = useState<ManualView>(() => {
     try {
-      const kept = JSON.parse(localStorage.getItem(KEY) ?? "null") as Arrangement | null;
-      return kept?.slots?.length === 3 && LAYOUTS.some(([l]) => l === kept.layout)
-        ? keptArrangement(kept)
-        : DEFAULT;
+      const saved = localStorage.getItem(MANUAL);
+      if (isManualView(saved ?? undefined)) return saved as ManualView;
+      const old = JSON.parse(localStorage.getItem("smithable:windows") ?? "null");
+      if (isManualView(old?.manual)) return old.manual;
+      if (old?.manual === "summary") return "nocode";
+      return Array.isArray(old?.slots) ? (old.slots.find(isManualView) ?? "nocode") : "nocode";
     } catch {
-      return DEFAULT;
+      return "nocode";
     }
   });
   useEffect(() => {
     try {
-      localStorage.setItem(KEY, JSON.stringify(arrangement));
+      localStorage.setItem(MANUAL, view);
     } catch {}
-  }, [arrangement]);
-  return [arrangement, setArrangement];
+  }, [view]);
+  return [view, setView];
 }
 
-/** The slots a layout shows, without those hidden for a while by the preview's arrows. */
-export function shownSlots(
-  layout: Layout,
-  hidden: { left: boolean; right: boolean },
-): (0 | 1 | 2)[] {
-  const count = LAYOUTS.find(([l]) => l === layout)?.[1] ?? 2;
-  const slots = ([0, 1, 2] as const).slice(0, count);
-  return slots.filter(
-    (s) =>
-      !(hidden.left && s === 0 && count > 1) && !(hidden.right && s === 2 && layout === "three"),
-  );
+const SETTINGS_OPEN = "smithable:settings-open";
+
+export function useSettingsOpen(): [boolean, (open: boolean) => void] {
+  const [open, setOpen] = useState(() => {
+    try {
+      const saved = localStorage.getItem(SETTINGS_OPEN);
+      if (saved !== null) return saved === "1";
+      const legacy = JSON.parse(localStorage.getItem("smithable:windows") ?? "null");
+      return (
+        legacy?.layout === "three" && Array.isArray(legacy.slots) && legacy.slots.includes("manual")
+      );
+    } catch {
+      return false;
+    }
+  });
+  useEffect(() => {
+    try {
+      localStorage.setItem(SETTINGS_OPEN, open ? "1" : "0");
+    } catch {}
+  }, [open]);
+  return [open, setOpen];
 }
 
-/**
- * The grid for the slots shown: each slot its area, a ("a"), b and c. Side by side the first
- * window and the preview share the room and a third is a narrow column; below, the third is a
- * row across the foot.
- */
-export function gridOf(
-  layout: Layout,
-  slots: (0 | 1 | 2)[],
-  contents: SlotContent[] = [],
-): React.CSSProperties {
-  const area = (s: number) => "abc"[s] as string;
-  if (layout === "three-below" && slots.includes(2)) {
-    const top = slots.filter((s) => s !== 2);
-    return {
-      gridTemplateAreas: `"${top.map(area).join(" ")}" "${top.map(() => "c").join(" ")}"`,
-      gridTemplateColumns: top.length === 2 ? "45fr 55fr" : "1fr",
-      gridTemplateRows: "minmax(0, 3fr) minmax(0, 2fr)",
-    };
-  }
+const CHANGES_BESIDE = "smithable:changes-beside-smith";
+
+export function useChangesBesideSmith(): [boolean, (open: boolean) => void] {
+  const [open, setOpen] = useState(() => {
+    try {
+      const saved = localStorage.getItem(CHANGES_BESIDE);
+      if (saved !== null) return saved === "1";
+      const legacy = JSON.parse(localStorage.getItem("smithable:windows") ?? "null");
+      return Array.isArray(legacy?.slots) && legacy.slots.includes("smith+changes");
+    } catch {
+      return false;
+    }
+  });
+  useEffect(() => {
+    try {
+      localStorage.setItem(CHANGES_BESIDE, open ? "1" : "0");
+    } catch {}
+  }, [open]);
+  return [open, setOpen];
+}
+
+export function gridOf(slots: (0 | 1 | 2)[], contents: SlotContent[]): React.CSSProperties {
+  const area = (s: number) => "abc"[s];
   // Three side by side: Smith (or Changes) is a column of its own width, the preview and No code
   // or Code share the rest.
   const narrow = (s: number) => {
@@ -164,164 +119,8 @@ export function gridOf(
   };
 }
 
-/** A small picture of a layout: its windows as rectangles. */
-function LayoutPicture({ layout }: { layout: Layout }) {
-  const rects: Record<Layout, [number, number, number, number][]> = {
-    one: [[1, 1, 22, 14]],
-    two: [
-      [1, 1, 10, 14],
-      [12, 1, 11, 14],
-    ],
-    three: [
-      [1, 1, 7, 14],
-      [9, 1, 8, 14],
-      [18, 1, 5, 14],
-    ],
-    "three-below": [
-      [1, 1, 10, 8],
-      [12, 1, 11, 8],
-      [1, 10, 22, 5],
-    ],
-  };
-  return (
-    <svg viewBox="0 0 24 16" className="h-4 w-6" aria-hidden="true">
-      {rects[layout].map(([x, y, w, h]) => (
-        <rect
-          key={`${x},${y}`}
-          x={x}
-          y={y}
-          width={w}
-          height={h}
-          rx={1}
-          className="fill-none stroke-current"
-        />
-      ))}
-    </svg>
-  );
-}
-
-/** The top bar's layouts, and the gear for which window goes where. */
-export function LayoutBar({
-  arrangement,
-  onChange,
-}: {
-  arrangement: Arrangement;
-  onChange: (next: Arrangement) => void;
-}) {
-  const [settings, setSettings] = useState(false);
-  return (
-    <div className="flex items-center gap-1">
-      <fieldset className="flex rounded-md bg-subtle p-0.5">
-        <legend className="sr-only">Layout</legend>
-        {LAYOUTS.map(([layout, , name]) => {
-          const chosen = arrangement.layout === layout;
-          return (
-            <label
-              key={layout}
-              title={name}
-              className={cx(
-                "flex h-7 cursor-pointer items-center rounded px-1.5 has-focus-visible:ring-2 has-focus-visible:ring-accent/30",
-                chosen ? "bg-panel text-fg shadow-xs" : "text-muted",
-              )}
-            >
-              <input
-                type="radio"
-                name="layout"
-                aria-label={name}
-                className="sr-only"
-                checked={chosen}
-                onChange={() => onChange({ ...arrangement, layout })}
-              />
-              <LayoutPicture layout={layout} />
-            </label>
-          );
-        })}
-      </fieldset>
-      <button
-        type="button"
-        aria-label="Which window goes where"
-        title="Which window goes where"
-        onClick={() => setSettings(true)}
-        className="flex h-7 w-7 items-center justify-center rounded text-muted hover:bg-subtle"
-      >
-        <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden="true">
-          <path
-            d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Zm7.4-2.5a7.5 7.5 0 0 0 0-2l2-1.6-2-3.4-2.4 1a7.4 7.4 0 0 0-1.7-1L15 3.5h-4L10.7 6a7.4 7.4 0 0 0-1.7 1l-2.4-1-2 3.4 2 1.6a7.5 7.5 0 0 0 0 2l-2 1.6 2 3.4 2.4-1a7.4 7.4 0 0 0 1.7 1l.3 2.5h4l.3-2.5a7.4 7.4 0 0 0 1.7-1l2.4 1 2-3.4-2-1.6Z"
-            className="fill-none stroke-current"
-            strokeWidth="1.5"
-          />
-        </svg>
-      </button>
-      {settings && (
-        <WindowSettings
-          arrangement={arrangement}
-          onChange={onChange}
-          onClose={() => setSettings(false)}
-        />
-      )}
-    </div>
-  );
-}
-
-const SLOT_NAMES = ["The first window", "The second window", "The third window"];
-
-/** Which window each slot holds: the gear's dialog. */
-function WindowSettings({
-  arrangement,
-  onChange,
-  onClose,
-}: {
-  arrangement: Arrangement;
-  onChange: (next: Arrangement) => void;
-  onClose: () => void;
-}) {
-  const options = (Object.entries(WINDOW_NAMES) as [SlotContent | WindowId, string][]).filter(
-    (o): o is [SlotContent, string] => !isManualView(o[0]),
-  );
-  // The browser's own modal dialog: Escape closes it and the focus stays inside.
-  const dialog = useRef<HTMLDialogElement>(null);
-  useEffect(() => {
-    dialog.current?.showModal();
-  }, []);
-  return (
-    <dialog
-      ref={dialog}
-      aria-label="Which window goes where"
-      onClose={onClose}
-      className="m-auto mt-24 w-[min(24rem,92vw)] rounded-lg bg-panel p-0 text-fg shadow-xl backdrop:bg-black/30"
-    >
-      <div className="space-y-3 p-4">
-        <h2 className="text-sm font-semibold">Which window goes where</h2>
-        <p className="text-xs text-muted">
-          The bar at the top chooses how many windows are shown; here, which window is in each
-          place, from the left (the third goes under the first two in the last layout).
-        </p>
-        {SLOT_NAMES.map((name, i) => (
-          <div key={name} className="space-y-1 text-xs">
-            <p className="font-medium">{name}</p>
-            <Select
-              aria-label={name}
-              value={arrangement.slots[i]}
-              onChange={(e) => {
-                const slots = [...arrangement.slots] as Arrangement["slots"];
-                slots[i] = e.target.value as SlotContent;
-                onChange({ ...arrangement, slots });
-              }}
-              options={options}
-            />
-          </div>
-        ))}
-        <div className="flex justify-end">
-          <Button onClick={onClose}>Done</Button>
-        </div>
-      </div>
-    </dialog>
-  );
-}
-
-/** A phone's choices (studio-v3.md §8): whether Code is offered, whether Changes is Smith's. */
+/** A phone can show Changes beneath Smith; Changes stays reachable from the toolbar. */
 export interface PhoneSettings {
-  code: boolean;
   changesUnderSmith: boolean;
 }
 const PHONE = "smithable:phone";
@@ -329,13 +128,10 @@ const PHONE = "smithable:phone";
 export function usePhoneSettings(): [PhoneSettings, (next: PhoneSettings) => void] {
   const [settings, setSettings] = useState<PhoneSettings>(() => {
     try {
-      return {
-        code: true,
-        changesUnderSmith: false,
-        ...JSON.parse(localStorage.getItem(PHONE) ?? "{}"),
-      };
+      const kept = JSON.parse(localStorage.getItem(PHONE) ?? "null");
+      return { changesUnderSmith: kept?.changesUnderSmith === true };
     } catch {
-      return { code: true, changesUnderSmith: false };
+      return { changesUnderSmith: false };
     }
   });
   useEffect(() => {
@@ -346,76 +142,7 @@ export function usePhoneSettings(): [PhoneSettings, (next: PhoneSettings) => voi
   return [settings, setSettings];
 }
 
-/** A window a phone shows on its own. */
-export type PhoneWindow = "smith" | "preview" | "manual" | "changes";
+export type PhoneWindow = "smith" | "preview" | "manual";
 
-/**
- * A phone's windows, in their order (smith-first.md §6): Smith, the preview, No code and Code,
- * then Changes when it is not under Smith. Whether Code is one of the view's sub-tabs is a
- * setting (on by default, A 161).
- */
-export const phoneWindows = (s: PhoneSettings): PhoneWindow[] => [
-  "smith",
-  "preview",
-  "manual",
-  ...(s.changesUnderSmith ? [] : (["changes"] as const)),
-];
-
-/** The gear on a phone: whether Code is offered, whether Changes goes under Smith. */
-export function PhoneSettingsButton({
-  settings,
-  onChange,
-}: {
-  settings: PhoneSettings;
-  onChange: (next: PhoneSettings) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const dialog = useRef<HTMLDialogElement>(null);
-  useEffect(() => {
-    if (open) dialog.current?.showModal();
-  }, [open]);
-  return (
-    <>
-      <button
-        type="button"
-        aria-label="Phone settings"
-        title="Phone settings"
-        onClick={() => setOpen(true)}
-        className="flex h-7 w-7 items-center justify-center rounded text-muted hover:bg-subtle"
-      >
-        ⚙
-      </button>
-      {open && (
-        <dialog
-          ref={dialog}
-          aria-label="Phone settings"
-          onClose={() => setOpen(false)}
-          className="m-auto w-[min(24rem,92vw)] rounded-lg bg-panel p-0 text-fg shadow-xl backdrop:bg-black/30"
-        >
-          <div className="space-y-3 p-4 text-sm">
-            <h2 className="font-semibold">On a phone</h2>
-            <label className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={settings.code}
-                onChange={(e) => onChange({ ...settings, code: e.target.checked })}
-              />
-              Show Code among the windows
-            </label>
-            <label className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={settings.changesUnderSmith}
-                onChange={(e) => onChange({ ...settings, changesUnderSmith: e.target.checked })}
-              />
-              Changes under Smith (swipe below to switch)
-            </label>
-            <div className="flex justify-end">
-              <Button onClick={() => setOpen(false)}>Done</Button>
-            </div>
-          </div>
-        </dialog>
-      )}
-    </>
-  );
-}
+/** Each phone pane is reached by the edge arrows in this order. */
+export const phoneWindows: readonly PhoneWindow[] = ["smith", "preview", "manual"];

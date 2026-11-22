@@ -2,9 +2,11 @@ import assert from "node:assert/strict";
 import { join } from "node:path";
 import { stubPictureCatalogue } from "./first-look-checks.mjs";
 import {
+  checkAppOwnsPhoneSwipe,
   openFormEntry,
   openPreviewAddress,
-  showWorkspaceControls,
+  openSettings,
+  openStudioGuide,
   toolbarAction,
 } from "./studio-form-checks.mjs";
 import { checkStudioHistory } from "./studio-history-checks.mjs";
@@ -18,19 +20,11 @@ async function checkBuilder(page, phone) {
 
   const showPreview = async () => {
     if (phone) {
-      await showWorkspaceControls(page);
-      await page.getByRole("radio", { name: "Preview", exact: true }).check({ force: true });
+      const edge = page.getByRole("button", { name: "Show the app", exact: true });
+      if (await edge.isVisible()) await edge.click();
     }
   };
-  const showEditor = async () => {
-    if (phone) {
-      await showWorkspaceControls(page);
-      await page.getByRole("radio", { name: /^(No code|Code)$/ }).check({ force: true });
-    } else {
-      const open = page.getByRole("button", { name: "Show the window on the right" });
-      if (await open.isVisible()) await open.click();
-    }
-  };
+  const showEditor = () => openSettings(page);
   const preview = async (name) => {
     await showPreview();
     await page
@@ -163,7 +157,27 @@ export async function checkStudioSmoke(browser, base, evidence, asMade) {
       assert.equal(await look.count(), 0);
       assert.equal(await presentation.count(), 0);
       await checkStudioHistory(page, phone, evidence);
-      if (!phone) await checkPreviewRange(page);
+      if (phone) await checkAppOwnsPhoneSwipe(page);
+      else {
+        await openSettings(page);
+        await page.getByRole("tab", { name: "Code", exact: true }).click();
+        await page.getByRole("region", { name: "Code", exact: true }).waitFor();
+        await openStudioGuide(page);
+        const guide = page.locator('[data-guide-card="files"]');
+        await guide.waitFor();
+        await page.evaluate(() => document.activeElement?.blur());
+        await page.keyboard.press("Escape");
+        await guide.waitFor({ state: "detached" });
+        // Range selection lives in the preview's table layout, which needs the full width.
+        for (const side of ["left", "right"]) {
+          const hide = page.getByRole("button", {
+            name: `Hide the window on the ${side}`,
+            exact: true,
+          });
+          if (await hide.isVisible()) await hide.click();
+        }
+        await checkPreviewRange(page);
+      }
     } catch (error) {
       await page
         .screenshot({ path: join(evidence, `${layout}.png`), timeout: 3000 })

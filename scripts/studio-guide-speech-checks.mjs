@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { openStudioGuide } from "./studio-form-checks.mjs";
 
 export async function checkStudioGuideSpeech(browser, base) {
   const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
@@ -113,8 +114,7 @@ export async function checkStudioGuideSpeech(browser, base) {
     assert.ok(await input.isEnabled());
     console.log("  ✓ Guide pauses when editing starts");
     const resume = async () => {
-      await page.getByRole("button", { name: "Guide", exact: true }).click();
-      await page.getByRole("menuitem", { name: "Tour Studio", exact: true }).click();
+      await openStudioGuide(page);
     };
     await resume();
     await card("manual").waitFor();

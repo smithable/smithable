@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { createRequire } from "node:module";
+import { openStudioGuide } from "./studio-form-checks.mjs";
 
 const { parse } = createRequire(new URL("../packages/core/package.json", import.meta.url))("yaml");
 
@@ -96,8 +97,7 @@ export async function checkStudioValidation(browser, base) {
       "grammar leaked into No code",
     );
     assert.equal(await page.locator("[data-guide-lit]").count(), 0);
-    await page.getByRole("button", { name: "Guide", exact: true }).click();
-    await page.getByRole("menuitem", { name: "Tour Studio", exact: true }).click();
+    await openStudioGuide(page);
     assert.equal(
       await page.locator("[data-guide-lit]").count(),
       0,

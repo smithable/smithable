@@ -63,8 +63,8 @@ export async function checkStudioOverlays(browser, base) {
     await changes.waitFor({ state: "detached" });
 
     await page.setViewportSize({ width: 1536, height: 900 });
-    await page.locator('[data-smith-layer="panel"]').waitFor({ state: "attached" });
     const face = await openSmith(page);
+    await page.getByRole("button", { name: "Undock Smith", exact: true }).click();
     const smith = page.getByRole("complementary", { name: "Smith", exact: true });
     await panelPosition(smith, "Smith", "Top left");
     assert.ok((await smith.boundingBox()).x <= 16);

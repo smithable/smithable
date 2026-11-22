@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { projectRevision } from "../packages/cli/dist/project-revision.js";
 import { P } from "./patience.mjs";
-import { showWorkspaceControls, toolbarAction } from "./studio-form-checks.mjs";
+import { openSettings, toolbarAction } from "./studio-form-checks.mjs";
 
 export async function checkStudioLook(page, dir) {
   const baseline = projectRevision(dir);
@@ -496,8 +496,7 @@ export async function checkStudioDefaultsApply(page, dir) {
   assert.notEqual(committed, baseline);
   await dialog.getByRole("button", { name: "Close look editor", exact: true }).click();
   await dialog.waitFor({ state: "detached" });
-  await showWorkspaceControls(page);
-  await page.getByRole("checkbox", { name: "No code", exact: true }).check({ force: true });
+  await openSettings(page);
   await (await toolbarAction(page, "Look")).click();
   await page.getByRole("button", { name: "Customise", exact: true }).click();
   const settings = page.getByRole("dialog", { name: "Look", exact: true });
@@ -509,7 +508,8 @@ export async function checkStudioDefaultsApply(page, dir) {
   );
   assert.match(await menu.locator('option[value="__inherited"]').innerText(), /Topbar/);
   await settings.getByRole("button", { name: "Close look editor", exact: true }).click();
-  await page.getByRole("checkbox", { name: "Preview", exact: true }).check({ force: true });
+  const preview = page.getByRole("button", { name: "Show the app", exact: true });
+  if (await preview.isVisible()) await preview.click();
   const history = async (action, expected) => {
     const response = page.waitForResponse(
       (response) =>

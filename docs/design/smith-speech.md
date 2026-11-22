@@ -18,28 +18,21 @@ sorted away. Studio's Smith only (an app's assistant: assistant.md §8). Reviewe
 
 ## 2. What people get
 
-Three controls in Smith's panel, beside the chat box. Sound is on from the start, where the policy
-allows a voice (§3): Smith speaks his introduction, and that first message says that sound can be
-turned off and on with the speaker button and that Esc stops him (Johan, 2026-11-07). A browser
-that refuses to play before the person has touched the page shows the sound button pulsing with
-"Turn on sound" instead, and the first click starts it. The mic is off until the person uses it,
-since it needs the browser's permission: the first press shows, in one line, where the voice goes
-(§3), asks the browser for the microphone, and sets press to talk.
+Four icons sit beside Smith's chat box. Each has a tooltip on hover or focus. Sound is on
+from the start where the policy allows a voice (§3). If the browser asks for a gesture before
+playing, the speaker icon pulses until pressed.
 
-- **Mic:** off, press to talk, automatic. Press to talk listens while the mic button or the key is
-  held; a click without holding listens for one utterance, for anyone who cannot hold a key.
-  Automatic listens whenever Smith is silent and, while he speaks, only watches for the person
-  starting to talk, to stop him (§4.3). Where barge-in is off for the voice, the control says so.
-- **Sound:** on or off; it needs no microphone. **Voice:** the provider's voices for Studio's
-  language, by name (§6).
+- **Mic** starts or ends dictation. The first press explains where the voice goes and asks for
+  microphone permission. When listening, the mic icon fills.
+- **Phone** starts a call. Smith speaks a greeting, then listens while he is silent. During a
+  call the phone icon fills. Press it again to end the call.
+- **Speaker** turns Smith's voice on or off. It needs no microphone.
+- **Voice settings** opens a small panel for the voice and speed.
 
-While anything listens, a mic indicator shows on the button and on Smith's face, folded or not;
-the panel does not fold by itself then or while he speaks, when a Stop button shows beside his
-face. Only one Studio tab listens at a time: starting in another stops the first. The browser
-remembers (`smithable:speech`) sound, voice, and the mic as off or press to talk; automatic is
-chosen again on each visit. On every load and project switch the voice is checked against the
-policy; one no longer allowed gives way to the first allowed, or speech is off, with a line why.
-No microphone, a refused permission, no recognition or no voice: the control is off and says so.
+The browser remembers sound, voice, speed, and microphone preferences. Each call starts with
+a press of the phone icon. Only one Studio tab listens at a time. Starting in another ends the
+first. If a saved voice is no longer allowed, Studio uses the first allowed voice. The controls
+explain when microphone permission, recognition, or a voice is unavailable.
 
 ### 2.1 Keyboard
 
@@ -49,7 +42,7 @@ No microphone, a refused permission, no recognition or no voice: the control is 
   Key repeat is ignored; losing focus or hiding the tab counts as release. On the focused mic
   button, holding Space talks (its click on release is suppressed).
 - **Esc stops Smith speaking** when the focus is in his panel, and does nothing else then. Every
-  control is reachable by Tab, its state read out ("Mic: automatic, listening"). Captions are
+  control is reachable by Tab, with an accessible name and a tooltip on focus. Captions are
   always there: the transcript is in the box, his words in the thread.
 
 ## 3. Where the voice goes
@@ -105,25 +98,25 @@ keeps a short lead-in so the first syllable is not lost.
 
 **Where its files live.** Silero runs on onnxruntime-web's WebAssembly runtime (MIT). The two large
 files, the runtime's binary and the model, are about 17 MB on disk and about 6 MB on the wire, too
-much for the CLI's package when most installs never turn automatic mode on. So they are not in
+much for the CLI's package when most installs never start a call. So they are not in
 it: the docs site publishes them under `docs.smithable.ai/vad/<version>/` (the version joins
 onnxruntime's and vad-web's versions, so a new one never changes an old folder), a hosted Studio serves
-the same files itself beside its bundle, and Studio fetches them only when automatic mode starts,
+the same files itself beside its bundle, and Studio fetches them only when a call starts,
 first from its own host, then from the docs site, each checked against the hash its build carries
 (subresource integrity). Both are our own hosts in the EU, so nothing third-party is fetched and
 the AI policy has nothing to decide. The runtime's small loader (about 75 KB) is in Studio's
 bundle, loaded at the same moment. When neither host answers (offline, a blocked host), a simple
 detector runs instead, loudness over the room's level weighted by a voice's zero-crossing rate,
 and the line under the controls says a simpler voice detector is in use.
-In automatic mode only these segments go to a provider. With `browser`, recognition starts at
+In a call only these segments go to a provider. With `browser`, recognition starts at
 the onset and stops at the end (step 2 measures whether the first syllable survives); where it is
 on the device it may run the whole time. Noise is the browser's suppression plus the VAD's
 threshold; a heavier model (RNNoise) only if real use needs one.
 
 **The modes.** Press to talk listens while held (or for one utterance after a click), without the VAD.
-Automatic: while Smith is silent, an utterance ends after about 800 ms of silence and is sent
-(§6). It returns to press to talk after ten minutes without the person speaking, and whenever the
-tab is hidden; a line says so. No wake word.
+During a call, while Smith is silent, an utterance ends after about 800 ms of silence and is sent
+(§6). The call ends after ten minutes without the person speaking or when the browser tab is hidden.
+A line gives the reason.
 
 ### 4.3 Barge-in, without Smith interrupting himself
 
