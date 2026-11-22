@@ -3,7 +3,8 @@ import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { parseDocument } from "yaml";
 import { api, type PictureStyles, type Project } from "./api";
 import type { Spec } from "./engine";
-import { LookSession } from "./first-look";
+import { LookSession, triedThemeCss } from "./first-look";
+import { letGoTriedTheme, tryThemeInPreview } from "./preview";
 import { ThemeCards } from "./ThemeCards";
 import { Button, cx, Select } from "./ui";
 
@@ -18,8 +19,10 @@ const OWN = "";
 
 /**
  * Look (T1145): the whole app's most used look settings beside the running preview, each applied
- * at once through the operation layer. Close keeps them; Cancel undoes this panel's own changes
- * and refuses when another writer changed the app in between. Customise opens the theme lab.
+ * at once through the operation layer, except the theme: a card only tries it on in the preview,
+ * as the first visit's picker does (T1164), and Apply makes it one setTheme. Close keeps what was
+ * applied and takes a tried theme off; Cancel undoes this panel's own changes and refuses when
+ * another writer changed the app in between. Customise opens the theme lab.
  */
 export function LookPanel({
   project,
@@ -104,16 +107,74 @@ export function LookPanel({
       revision: string,
     ) => Promise<{ ok: boolean; output: string; change?: string; revision?: string }>,
   ) => {
-    if (closed.current) return;
+    if (closed.current) return false;
     setPending((n) => n + 1);
     setError(undefined);
     try {
       await session.set(key, value, apply);
+      return true;
     } catch (reason) {
       setError((reason as Error).message);
+      return false;
     } finally {
       await onRefresh();
       setPending((n) => n - 1);
+    }
+  };
+  // The tried theme's CSS is written again whenever the app's other settings change, so the
+  // preview shows the theme with the font, density and color as they are now.
+  const [adapter] = useState(() => import("@smithable/adapter-tanstack"));
+  const [tried, setTried] = useState<string>();
+  const triedNow = useRef<string>(undefined);
+  const applying = useRef(false);
+  useEffect(() => {
+    if (tried === undefined) return;
+    let active = true;
+    adapter.then(
+      (loaded) => {
+        if (!active || closed.current || applying.current) return;
+        try {
+          tryThemeInPreview(triedThemeCss(loaded, spec, project, tried));
+        } catch (reason) {
+          setError((reason as Error).message);
+        }
+      },
+      (reason: Error) => active && setError(reason.message),
+    );
+    return () => {
+      active = false;
+    };
+  }, [adapter, tried, spec, project]);
+  // Closing the panel any way takes a theme only tried on off the preview.
+  useEffect(() => () => letGoTriedTheme(triedNow.current !== undefined), []);
+  const choose = (theme: string) => {
+    const back = theme === (spec.ux?.theme.preset ?? "");
+    triedNow.current = back ? undefined : theme;
+    setTried(triedNow.current);
+    if (back) letGoTriedTheme(true);
+  };
+  const applyTried = async () => {
+    const theme = triedNow.current;
+    if (!theme || applying.current) return;
+    applying.current = true;
+    // This page keeps the tried look until the new one, with the real theme, replaces it.
+    letGoTriedTheme(false);
+    try {
+      if (await setTheme("preset", theme)) {
+        triedNow.current = undefined;
+        setTried(undefined);
+        return;
+      }
+    } finally {
+      applying.current = false;
+    }
+    // Refused: the theme stays tried on, and Apply can be pressed again.
+    try {
+      const loaded = await adapter;
+      if (triedNow.current === theme && !closed.current)
+        tryThemeInPreview(triedThemeCss(loaded, spec, project, theme));
+    } catch (reason) {
+      setError((reason as Error).message);
     }
   };
   const setTheme = (key: Setting | "preset", value: string) =>
@@ -187,12 +248,14 @@ export function LookPanel({
             Theme <span className="font-normal text-muted">· {humanize(preset)}</span>
           </legend>
           <div className="max-h-[17rem] overflow-auto rounded-md">
-            <ThemeCards
-              themes={project.themes}
-              preset={preset}
-              onChoose={(theme) => void setTheme("preset", theme)}
-            />
+            <ThemeCards themes={project.themes} preset={tried ?? preset} onChoose={choose} />
           </div>
+          {tried && (
+            <div className="flex items-center justify-between gap-3 text-sm">
+              <span className="text-muted">Only the preview shows {humanize(tried)}.</span>
+              <Button onClick={() => void applyTried()}>Apply theme</Button>
+            </div>
+          )}
         </fieldset>
         <fieldset disabled={busy} className="space-y-3">
           <legend className="sr-only">Whole app settings</legend>

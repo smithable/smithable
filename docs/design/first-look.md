@@ -27,7 +27,9 @@ The two steps:
 
 "Keep this look" makes the changes and closes it. "Cancel" closes it and changes nothing. Then
 Smith's presentation and the guide follow as today. For any app, new or not, Look in the top bar
-opens the Look panel beside the preview, without the presentation or the guide.
+opens the Look panel beside the preview, without the presentation or the guide. Its theme cards
+try a theme on the same way, and "Apply theme" makes it the app's; closing the panel without it
+takes the tried theme off. Its other settings apply at once.
 
 No model runs: the themes exist, and the pictures are made beforehand and lie in the image
 library. Picking is free, instant and the same every time.

@@ -1,10 +1,9 @@
-import { stageThemeSelection } from "@smithable/core";
 import { useEffect, useRef, useState } from "react";
 import { api, type PictureStyles, type Project } from "./api";
 import { SMITHS } from "./builder/chat-style";
 import { SmithFace } from "./builder/SmithFace";
 import type { Spec } from "./engine";
-import { keepLook, type LookChange } from "./first-look";
+import { keepLook, type LookChange, triedThemeCss } from "./first-look";
 import { letGoTriedTheme, tryThemeInPreview } from "./preview";
 import { ThemeCards } from "./ThemeCards";
 import { Button, cx } from "./ui";
@@ -72,19 +71,10 @@ export function FirstLook({
     setError(undefined);
     const turn = ++tried.current;
     try {
-      const { themeCss } = await adapter;
+      const loaded = await adapter;
       // A click whose CSS comes after Keep began or the picker closed is dropped.
-      if (!open.current || turn !== tried.current || !spec.ir) return;
-      const { ux } = stageThemeSelection(
-        {
-          ir: spec.ir,
-          uxText: project.files.ux ?? "",
-          themes: project.ownThemes,
-          ...(spec.auth ? { auth: spec.auth } : {}),
-        },
-        { preset: theme },
-      );
-      triedCss.current = themeCss(ux, project.ownThemes);
+      if (!open.current || turn !== tried.current) return;
+      triedCss.current = triedThemeCss(loaded, spec, project, theme);
       tryThemeInPreview(triedCss.current);
     } catch (reason) {
       if (turn === tried.current) setError((reason as Error).message);
