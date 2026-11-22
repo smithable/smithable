@@ -53,7 +53,10 @@ function StopCard({ stop }: { stop: Stops[number] }) {
       {stop.address && <address className="wrap-break-word not-italic">{stop.address}</address>}
       {stop.photo && (
         <img
-          {...stop.photo}
+          src={stop.photo.src}
+          alt={stop.photo.alt}
+          width={stop.photo.width}
+          height={stop.photo.height}
           loading="lazy"
           className="aspect-video w-full max-w-md rounded-lg object-cover"
         />
