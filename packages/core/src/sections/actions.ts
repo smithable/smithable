@@ -233,11 +233,6 @@ export const actionsSection: SpecSection<"actions"> = {
         },
         input: { ...inputSchema, description: "The values the action needs." },
         output: { ...fieldsSchema, description: "The values the action returns, if any." },
-        allow: {
-          type: "array",
-          items: { type: "string" },
-          description: "Only these roles may run the action (admins always can).",
-        },
         ...textSchema,
       },
     },

@@ -1327,9 +1327,26 @@ function meaningPath(
   concept: string,
 ): { path: ReturnType<typeof fieldPath>; field?: { model: string; name: string } } {
   if (concept === "app") return { path: ["app"] };
+  // A query's name may also be a page's or an action's: query:<name> says which.
+  const query = concept.startsWith("query:") ? concept.slice(6) : undefined;
+  if (query !== undefined) {
+    if (!ir.queries.some((q) => q.name === query))
+      throw new OperationError(`There is no query named "${query}".`);
+    return { path: ["queries", query] };
+  }
+  if (
+    ir.queries.some((q) => q.name === concept) &&
+    (ir.models.some((m) => m.name === concept) ||
+      ir.actions.some((a) => a.name === concept) ||
+      ir.pages.some((p) => p.id === concept))
+  )
+    throw new OperationError(
+      `"${concept}" is a query and something else too: say query:${concept} for the query.`,
+    );
   if (ir.models.some((m) => m.name === concept)) return { path: ["models", concept] };
   if (ir.actions.some((a) => a.name === concept)) return { path: ["actions", concept] };
   if (ir.pages.some((p) => p.id === concept)) return { path: ["pages", concept] };
+  if (ir.queries.some((q) => q.name === concept)) return { path: ["queries", concept] };
   const dot = concept.indexOf(".");
   if (dot > 0) {
     const m = concept.slice(0, dot);
@@ -1341,7 +1358,7 @@ function meaningPath(
     return { path: fieldPath(m, f, ir), field: { model: m, name: f } };
   }
   throw new OperationError(
-    `There is no "${concept}" to explain: say app, a model, a field as Model.field, an action or a page.`,
+    `There is no "${concept}" to explain: say app, a model, a field as Model.field, an action, a page or a query.`,
   );
 }
 
@@ -1358,9 +1375,11 @@ const setMeaning: Operation<{ concept: string; description?: string; intent?: st
     "smithable.yml:pages.*.intent",
     "smithable.yml:actions.*.description",
     "smithable.yml:actions.*.intent",
+    "smithable.yml:queries.*.description",
+    "smithable.yml:queries.*.intent",
   ],
   summary:
-    "Explain what something means, for the assistant and developers, never shown to visitors: the app, a model, a field (Model.field), an action or a page gets a description (what it is) or an intent (what it should achieve). A choice field's short description goes in the assistant's summary, so a word that is both a value and a word people use loosely is read as the app means it. An empty text removes the key.",
+    "Explain what something means, for the assistant and developers, never shown to visitors: the app, a model, a field (Model.field), an action, a page or a query gets a description (what it is) or an intent (what it should achieve). A choice field's short description goes in the assistant's summary, so a word that is both a value and a word people use loosely is read as the app means it. An empty text removes the key.",
   schema: {
     type: "object",
     required: ["concept"],
@@ -1369,7 +1388,8 @@ const setMeaning: Operation<{ concept: string; description?: string; intent?: st
       concept: {
         type: "string",
         minLength: 1,
-        description: "app, a model, Model.field, an action or a page.",
+        description:
+          "app, a model, Model.field, an action, a page or a query (query:<name> when a page or an action has its name).",
       },
       description: {
         type: "string",

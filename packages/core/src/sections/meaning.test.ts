@@ -25,6 +25,26 @@ const text = (r: ReturnType<typeof apply>) => {
   return r.files.spec;
 };
 
+test("a query gets a description and an intent, and loses them when empty", () => {
+  const withQuery = `${spec}queries:\n  atRisk:\n    custom: true\n    returns: Component[]\n`;
+  const explained = text(
+    apply(withQuery, { concept: "atRisk", description: "Components down twice in a week." }),
+  );
+  expect(explained).toContain(
+    "  atRisk:\n    custom: true\n    returns: Component[]\n    description: Components down twice in a week.\n",
+  );
+  expect(text(apply(explained, { concept: "atRisk", description: "" }))).toBe(withQuery);
+  // A query named as a page is: refused bare, and named with query: instead.
+  const both = withQuery.split("atRisk:").join("components:");
+  expect(apply(both, { concept: "components", description: "x" })).toMatchObject({
+    ok: false,
+    message: expect.stringContaining("query:components"),
+  });
+  expect(text(apply(both, { concept: "query:components", description: "Down twice." }))).toContain(
+    "    returns: Component[]\n    description: Down twice.\n",
+  );
+});
+
 test("a field's description goes in its long form, and leaves it when removed", () => {
   const explained = text(
     apply(spec, {

@@ -72,6 +72,29 @@ function keyPaths(file: string): string[][] {
 const ALL = Object.keys(SCHEMAS).flatMap((file) => keyPaths(file).map((path) => ({ file, path })));
 
 /**
+ * Keys no operation sets on purpose (T1242), each with its reason; their children go with them.
+ * They are a person's to write in the file, never an agent's through MCP.
+ */
+const EXCEPTIONS: Record<string, string> = {
+  "smithable.context.yml:ai":
+    "Where a model may run is a person's choice: an agent does not loosen the limit set on itself.",
+  "smithable.context.yml:adapter":
+    "The framework the app is generated for is chosen when the project starts, not changed by an operation.",
+  "smithable.context.yml:database":
+    "The database is chosen when the project starts; moving the data is a person's step.",
+  "smithable.context.yml:conventions":
+    "The team's own rules for code, written by its people for the models that write code.",
+  "smithable.context.yml:guidance":
+    "The team's own words for the models that write code, written by its people.",
+  "smithable.context.yml:plugins":
+    "A project plugin is declared when smithable teach writes it; its code is the team's.",
+};
+
+/** The exception a key falls under, itself or a key above it. */
+const exception = (file: string, path: string[]) =>
+  path.map((_, i) => `${file}:${path.slice(0, i + 1).join(".")}`).find((k) => k in EXCEPTIONS);
+
+/**
  * Whether an operation reaches a key (T1242: MCP has no editSpec, so a key no operation reaches
  * is one an agent cannot set): one names it in its sets; or it is a list's item, set with its
  * list; or it holds entries or items, set by adding and removing them; or it is an object of
@@ -93,10 +116,30 @@ function reached(file: string, path: string[], way?: "up" | "down"): boolean {
 }
 
 test("the keys left to editSpec, as reviewed: every other key has its operation", () => {
-  const left = ALL.filter(({ file, path }) => !reached(file, path)).map(
+  const left = ALL.filter(({ file, path }) => !reached(file, path) && !exception(file, path)).map(
     ({ file, path }) => `${file}:${path.join(".")}`,
   );
   expect(left.sort()).toMatchSnapshot();
+});
+
+test("no operation takes an argument named confirm: an MCP tool adds its own, for a change that loses data", () => {
+  expect(
+    OPERATIONS.filter((op) => Object.hasOwn(op.schema.properties ?? {}, "confirm")).map(
+      (op) => op.name,
+    ),
+  ).toEqual([]);
+});
+
+test("an exception is a key the schemas have that no operation reaches", () => {
+  for (const key of Object.keys(EXCEPTIONS)) {
+    const [file = "", dotted = ""] = key.split(":");
+    const path = dotted.split(".");
+    expect(
+      ALL.some((k) => k.file === file && k.path.join(".") === dotted),
+      key,
+    ).toBe(true);
+    expect(reached(file, path), key).toBe(false);
+  }
 });
 
 test("every operation's sets names keys the schemas have, with ** only at the end", () => {

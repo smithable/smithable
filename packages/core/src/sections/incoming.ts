@@ -542,6 +542,7 @@ const addIncoming: Operation<{
   replyFields?: string[];
   replySet?: string[];
   replyThen?: string[];
+  id?: string;
 }> = {
   name: "addIncoming",
   summary:
@@ -565,6 +566,7 @@ const addIncoming: Operation<{
     "smithable.yml:incoming.*.body",
     "smithable.yml:incoming.*.challenge",
     "smithable.yml:incoming.*.as",
+    "smithable.yml:incoming.*.id",
     "smithable.yml:incoming.*.set.*",
   ],
   schema: {
@@ -630,6 +632,11 @@ const addIncoming: Operation<{
         description:
           "For a mail: part=field pairs, e.g. from=email subject=title body=body attachments=files.",
       },
+      id: {
+        type: "string",
+        description:
+          'One {path} in the call\'s JSON that names the event, like "{event.id}": a call seen in the last day is not acted on again.',
+      },
       ...REPLY_ARGS,
     },
   },
@@ -662,10 +669,16 @@ const addIncoming: Operation<{
       replyFields,
       replySet,
       replyThen,
+      id,
     },
     ir,
   ) {
     if (!FIELD_NAME_PATTERN.test(name)) throw new OperationError(nameRule("incoming", name));
+    if (
+      id !== undefined &&
+      (placeholders(id).length !== 1 || !PATH.test(placeholders(id)[0]?.trim() ?? ""))
+    )
+      throw new OperationError('--id is one {path} in the call\'s JSON, like "{event.id}".');
     if (ir.incoming.some((i) => i.name === name))
       throw new OperationError(`There is an incoming call named "${name}" already.`);
     if (Boolean(custom) === Boolean(create))
@@ -716,6 +729,7 @@ const addIncoming: Operation<{
       ...(form ? { body: "form" } : {}),
       ...(challenge ? { challenge } : {}),
       ...(as && as !== "admin" ? { as } : {}),
+      ...(id !== undefined ? { id } : {}),
     };
     if (spec.has(["incoming"])) spec.add(["incoming"], name, value);
     else spec.add([], "incoming", { [name]: value });

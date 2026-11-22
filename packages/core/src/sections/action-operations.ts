@@ -476,10 +476,11 @@ const setAction: Operation<{
   writes?: string[];
   triggers?: string[];
   touches?: string;
+  askFirst?: boolean;
 }> = {
   name: "setAction",
   summary:
-    "Change an action: its intent, the records it is for (--when), the values it sets (--set), or a custom action's contract (--reads, --writes, --triggers). Each replaces what was there; an empty one (or none) removes it. Who may run it is grant <role> actions <name>.",
+    "Change an action: its intent, the records it is for (--when), the values it sets (--set), whether it asks before it runs (--ask-first), or a custom action's contract (--reads, --writes, --triggers). Each replaces what was there; an empty one (or none) removes it. Who may run it is grant <role> actions <name>.",
   sets: [
     "smithable.yml:actions.*.intent",
     "smithable.yml:actions.*.when",
@@ -488,6 +489,7 @@ const setAction: Operation<{
     "smithable.yml:actions.*.touches.reads",
     "smithable.yml:actions.*.touches.writes",
     "smithable.yml:actions.*.triggers",
+    "smithable.yml:actions.*.confirm",
   ],
   schema: {
     type: "object",
@@ -518,22 +520,28 @@ const setAction: Operation<{
         enum: ["none"],
         description: 'The one word "none": no touches at all, so no fence on the code.',
       },
+      askFirst: {
+        type: "boolean",
+        description:
+          "A standard action that changes or copies a record: true asks before it runs (its question is the content file's actions.<name>.confirm), false runs it at once.",
+      },
     },
   },
   positional: ["action"],
-  describe: ({ action, intent, when, set, reads, writes, triggers, touches }) =>
+  describe: ({ action, intent, when, set, reads, writes, triggers, touches, askFirst }) =>
     `Change ${
       [
         intent !== undefined && "the intent",
         when && "the condition",
         set && "the values",
         (reads || writes || triggers || touches) && "the contract",
+        askFirst !== undefined && "whether it asks first",
       ]
         .filter(Boolean)
         .join(" and ") || "nothing"
     } of the action ${action}`,
   destructive: () => false,
-  apply({ spec }, { action, intent, when, set, reads, writes, triggers, touches }, ir) {
+  apply({ spec }, { action, intent, when, set, reads, writes, triggers, touches, askFirst }, ir) {
     const found = ir.actions.find((a) => a.name === action);
     if (!found) throw new OperationError(`There is no action named "${action}".`);
     if (touches !== undefined && touches !== "none")
@@ -541,9 +549,13 @@ const setAction: Operation<{
     if (touches && (reads || writes))
       throw new OperationError("--touches none goes alone: no --reads or --writes with it.");
     const contract = contractOf(ir, reads, writes, triggers);
-    if (intent === undefined && !when && !set && !contract && !touches)
+    if (intent === undefined && !when && !set && !contract && !touches && askFirst === undefined)
       throw new OperationError(
-        "Say what to change: --intent, --when, --set, --reads, --writes, --triggers or --touches none.",
+        "Say what to change: --intent, --when, --set, --ask-first, --reads, --writes, --triggers or --touches none.",
+      );
+    if (askFirst !== undefined && (found.custom || found.merge || found.split))
+      throw new OperationError(
+        `"${action}" is not a standard action that changes or copies a record: a merge, a split and custom code have their own dialog or none, so --ask-first is not for it.`,
       );
     if ((contract || touches) && !found.custom)
       throw new OperationError(
@@ -576,6 +588,7 @@ const setAction: Operation<{
         put("triggers", contract.triggers.length ? contract.triggers : undefined);
     }
     if (touches && found.custom) put("touches", undefined);
+    if (askFirst !== undefined) put("confirm", askFirst || undefined);
     if (!when && !set) return [];
     const model = found.custom ? undefined : ir.models.find((m) => m.name === found.on);
     if (!model)

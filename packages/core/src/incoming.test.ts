@@ -94,6 +94,16 @@ test("addIncoming and removeIncoming write the entry; the role must exist and ma
     /paymentReceived:\n {4}custom: true\n {4}signed: sha256/,
   );
   expect(applyOperation(files, "addIncoming", { name: "x" })).toMatchObject({ ok: false });
+  // A call's own id, so a call sent again is not acted on twice: one {path}, nothing else.
+  const once = applyOperation(files, "addIncoming", {
+    name: "paid",
+    custom: true,
+    id: "{event.id}",
+  });
+  expect(once.ok && once.files.spec).toMatch(/paid:\n {4}custom: true\n {4}id: "\{event\.id\}"/);
+  expect(
+    applyOperation(files, "addIncoming", { name: "paid", custom: true, id: "event.id" }),
+  ).toMatchObject({ ok: false });
   const removed = applyOperation({ ...files, ...added.files }, "removeIncoming", {
     name: "monitorDown",
   });
