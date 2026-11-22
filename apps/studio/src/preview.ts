@@ -24,6 +24,11 @@ export type PreviewMessage =
       anchor?: { left: number; right: number; top: number; bottom: number };
     }
   | { type: "selection-cleared" }
+  /** The selected part moved on the screen (the page scrolled or changed size). */
+  | {
+      type: "selection-moved";
+      anchor: { left: number; right: number; top: number; bottom: number };
+    }
   | { type: "columns"; page: string; columns: string[] }
   /** A text changed in place; `path` is its place in smithable.content.yml, dot-separated. */
   | { type: "text"; path: string; text: string }
@@ -82,6 +87,11 @@ if (typeof window !== "undefined")
     if (e.data.type === "ready")
       previewWindow?.postMessage({ type: "smithable:theme-css", css: triedTheme }, previewTarget());
   });
+
+/** A section picked before the page loaded again is marked again in the new page. */
+export function reselectInPreview(concept: string) {
+  previewWindow?.postMessage({ type: "smithable:reselect", concept }, previewTarget());
+}
 
 export function clearPreviewSelection() {
   previewWindow?.postMessage({ type: "smithable:clear-selection" }, previewTarget());

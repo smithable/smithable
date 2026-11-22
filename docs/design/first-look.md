@@ -34,6 +34,17 @@ takes the tried theme off. Its other settings apply at once.
 No model runs: the themes exist, and the pictures are made beforehand and lie in the image
 library. Picking is free, instant and the same every time.
 
+**One part's layout** is not in the Look panel, which holds only the whole app's settings (Johan,
+2026-11-21). With Select, a click on a landing section where none of its parts is marked (a hero's
+edge or its picture) picks the whole section. Its box is drawn inside the section's own edges, so
+all four sides show on a desk and a phone. A small form opens beside it: to its right, else its
+left, below or above it, and inside its visible foot only when the section fills the window.
+Nothing joins the form to the box. The form lists the choices that arrange that kind of section:
+its layout (a hero's two full-width ones among them), columns, the picture's side, height and
+background. Each choice is one `setSectionLook` at once, which Undo steps back. "Ask Smith"
+hands the same selection to Smith. On a phone the form is a sheet at the foot, the selection
+scrolled above it.
+
 ## 2 How it works today (read from main, 2026-11-18)
 
 - First run is decided in Studio (`App.tsx`, `firstVisit`), per browser and per app, in the

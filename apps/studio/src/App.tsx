@@ -27,6 +27,7 @@ import { Ask, type AudioActivity, usePresentation } from "./builder/Ask";
 import { NoCode, OPEN_PART, type OpenPart } from "./builder/NoCode";
 import { mailTemplates, OutgoingTemplate } from "./builder/OutgoingTemplate";
 import { SelectedButton, selectedButton } from "./builder/SelectedButton";
+import { beside, SelectedSection, selectedSection } from "./builder/SelectedSection";
 import { SmithFace } from "./builder/SmithFace";
 import { SummaryTab } from "./builder/SummaryTab";
 import { Visualize } from "./builder/Visualize";
@@ -49,6 +50,7 @@ import {
   clearPreviewSelection,
   isPreviewMessage,
   type Place,
+  reselectInPreview,
   revealPreviewSelection,
   type Selection,
   touched,
@@ -696,12 +698,22 @@ export function App() {
     const receiveSelection = (event: MessageEvent) => {
       if (!isPreviewMessage(event)) return;
       if (event.data.type === "selection-cleared") clearSelection();
-      if (event.data.type === "ready") setSelectedPart(undefined);
+      // A page loading again ends a selection, except a section's: its look changed, and its form stays.
+      if (event.data.type === "ready")
+        setSelectedPart((part) => {
+          if (!part?.concept?.startsWith("section:")) return undefined;
+          reselectInPreview(part.concept);
+          return part;
+        });
+      if (event.data.type === "selection-moved") {
+        const { anchor } = event.data;
+        setSelectedPart((part) => part && { ...part, anchor });
+      }
       if (
         !selectingCode &&
         event.data.type === "select" &&
         typeof event.data.concept === "string" &&
-        /^(action|field|model|page|text):[\w.-]+$/.test(event.data.concept)
+        /^(action|field|model|page|section|text):[\w.-]+$/.test(event.data.concept)
       )
         setSelectedPart(event.data);
     };
@@ -1228,10 +1240,44 @@ export function App() {
   };
   if (!project) return <p className="p-6 text-sm text-quiet">Opening the project…</p>;
   const button = selectedButton(selectedPart, spec);
+  const section = selectedSection(selectedPart, spec);
   const selectionAnchor = selectedPart?.anchor;
   const previewFrame = () =>
     previewBox?.querySelector<HTMLIFrameElement>('iframe[title="App preview"]');
   const selectionFrame = selectionAnchor && previewFrame()?.getBoundingClientRect();
+  const within = (value: number, low: number, high: number) => Math.min(high, Math.max(low, value));
+  // A section's form goes beside its box on the screen, never joined to it by a line.
+  const sectionPosition =
+    section && selectionAnchor && selectionFrame
+      ? beside(
+          {
+            // What shows of it: a section scrolled partly out of the preview counts only inside it.
+            left: within(
+              selectionFrame.left + selectionAnchor.left,
+              selectionFrame.left,
+              selectionFrame.right,
+            ),
+            right: within(
+              selectionFrame.left + selectionAnchor.right,
+              selectionFrame.left,
+              selectionFrame.right,
+            ),
+            top: within(
+              selectionFrame.top + selectionAnchor.top,
+              selectionFrame.top,
+              selectionFrame.bottom,
+            ),
+            bottom: within(
+              selectionFrame.top + selectionAnchor.bottom,
+              selectionFrame.top,
+              selectionFrame.bottom,
+            ),
+          },
+          { width: window.innerWidth, height: window.innerHeight, top: 64 },
+          320,
+          260,
+        )
+      : undefined;
   const selectionPosition =
     selectionAnchor &&
     selectionFrame &&
@@ -2441,6 +2487,17 @@ export function App() {
           progress={releaseStep ? releaseProgress(releaseStep).line : undefined}
           onConfirm={() => void checkPublish(releaseView)}
           onClose={closeRelease}
+        />
+      )}
+      {section && (
+        <SelectedSection
+          key={selectedPart?.concept}
+          section={section}
+          run={run}
+          close={clearSelection}
+          ask={() => workIn("smith")}
+          position={sectionPosition}
+          reveal={revealSelection}
         />
       )}
       {button && (
