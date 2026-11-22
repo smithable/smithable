@@ -2831,8 +2831,8 @@ try {
         await new Promise((r) => setTimeout(r, 1000));
       if (await down.isDisabled()) throw new Error("the sections' arrows did not follow the move");
       // A page's frame (page-sections.md §4): the customers in the site's frame, in the ux file.
-      await page.getByLabel("Page to style").selectOption("customers");
-      await page.getByLabel("Frame of Customers").selectOption("site");
+      await page.getByLabel("Page to style", { exact: true }).selectOption("customers");
+      await page.getByLabel("Frame of Customers", { exact: true }).selectOption("site");
       const framed = () =>
         /customers:\s*\n(\s+\S.*\n)*?\s+frame: site/.test(
           readFileSync(join(dir, "smithable.ux.yml"), "utf8"),
@@ -2894,7 +2894,9 @@ try {
         value: originalPosition ?? "default",
       });
       // Back to its kind's, for the steps after this one.
-      await page.getByLabel("Frame of Customers").selectOption("default");
+      await sub("Layout");
+      await page.getByLabel("Page to style", { exact: true }).selectOption("customers");
+      await page.getByLabel("Frame of Customers", { exact: true }).selectOption("default");
       for (let i = 0; i < 60 * P && framed(); i++) await new Promise((r) => setTimeout(r, 1000));
       if (framed()) throw new Error("the customers kept the site's frame");
       await openPreview("/customers");
