@@ -90,21 +90,27 @@ const RULES_KEYS = [
   "smithable.yml:app.rules",
   "smithable.yml:app.rules.*",
   "smithable.yml:app.rules.*.rule",
+  "smithable.yml:app.rules.*.id",
   "smithable.yml:models.*.rules",
   "smithable.yml:models.*.rules.*",
   "smithable.yml:models.*.rules.*.rule",
+  "smithable.yml:models.*.rules.*.id",
   "smithable.yml:models.*.fields.*.rules",
   "smithable.yml:models.*.fields.*.rules.*",
   "smithable.yml:models.*.fields.*.rules.*.rule",
+  "smithable.yml:models.*.fields.*.rules.*.id",
   "smithable.yml:actions.*.rules",
   "smithable.yml:actions.*.rules.*",
   "smithable.yml:actions.*.rules.*.rule",
+  "smithable.yml:actions.*.rules.*.id",
   "smithable.yml:queries.*.rules",
   "smithable.yml:queries.*.rules.*",
   "smithable.yml:queries.*.rules.*.rule",
+  "smithable.yml:queries.*.rules.*.id",
   "smithable.yml:pages.*.rules",
   "smithable.yml:pages.*.rules.*",
   "smithable.yml:pages.*.rules.*.rule",
+  "smithable.yml:pages.*.rules.*.id",
 ];
 
 const addRule: Operation<{ concept: string; rule: string; id?: string }> = {
@@ -143,13 +149,11 @@ const addRule: Operation<{ concept: string; rule: string; id?: string }> = {
     const item: YamlValue = id === undefined ? text : { id, rule: text };
     // A field written as shorthand gets its long form, its type as its own key.
     const written = spec.get(target.path);
-    if (typeof written === "string") {
+    if (concept.startsWith("field:") && typeof written === "string") {
       spec.set(target.path, { ...longForm(written), rules: [item] });
       return [];
     }
-    // The list is written whole: a block item cannot go into a list inside { … }.
-    const list = spec.get([...target.path, "rules"]);
-    if (Array.isArray(list)) spec.set([...target.path, "rules"], [...(list as YamlValue[]), item]);
+    if (spec.has([...target.path, "rules"])) spec.appendItem([...target.path, "rules"], item);
     else spec.add(target.path, "rules", [item]);
     return [];
   },
@@ -188,20 +192,12 @@ const removeRule: Operation<{ concept: string; number: string }> = {
     const at = [...target.path, "rules"];
     if (target.rules.length === 1) spec.remove(at);
     else spec.removeItem(at, index);
-    // A field left with its type (and default) alone goes back to its shorthand.
+    // A field left with its type alone goes back to its shorthand. A default stays its own key:
+    // written back after "=" it may not read as it was ("", "001", a choice's).
     if (concept.startsWith("field:")) {
       const long = spec.get(target.path) as Record<string, YamlValue>;
-      const keys = Object.keys(long).filter((k) => k !== "type" && k !== "default");
-      // A choice keeps its default as its own key: "=" on a choice is refused.
-      const [model, field] = concept.slice(6).split(".");
-      const choice =
-        ir.models.find((m) => m.name === model)?.fields.find((x) => x.name === field)?.type.kind ===
-        "choice";
-      if (!keys.length && typeof long.type === "string" && !(choice && long.default !== undefined))
-        spec.set(
-          target.path,
-          long.default === undefined ? long.type : `${long.type} = ${String(long.default)}`,
-        );
+      const keys = Object.keys(long);
+      if (keys.length === 1 && typeof long.type === "string") spec.set(target.path, long.type);
     }
     return [];
   },

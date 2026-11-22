@@ -257,6 +257,11 @@ export class YamlEditor {
     }
     if (!isSeq(list)) throw new EditError(`${path.join(".") || "The document"} is not a list.`);
     const seq = list as YAMLSeq.Parsed;
+    // A list inside { … } stays on its line: a block item cannot go there.
+    if (path.length && this.parentMap(path).flow) {
+      this.set(path, [...(seq.toJSON() as YamlValue[]), value]);
+      return;
+    }
     const last = seq.items[seq.items.length - 1] as ParsedNode | undefined;
     if (seq.flow || !last) {
       // [a, b] becomes a block list with the item, in the list's own place: the text around it stays.

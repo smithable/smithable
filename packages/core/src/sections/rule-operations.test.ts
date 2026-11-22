@@ -83,3 +83,24 @@ test("removeRule takes one away by its place, and asks first for one with an id"
     /has 2 rule\(s\), not 3/,
   );
 });
+
+test("a rule is added below the others, their comments kept, and a default stays its own key", () => {
+  const commented = spec
+    .split("      status: { type: draft | sent, default: draft }\n")
+    .join(
+      "      status: { type: draft | sent, default: draft }\n      quantity: { type: int, default: 1 }\n    rules:\n      # agreed with sales\n      - First\n",
+    );
+  const added = ok("addRule", { concept: "model:Order", rule: "Second" }, { spec: commented });
+  expect(added.files.spec).toContain("      # agreed with sales\n      - First\n      - Second\n");
+  const withDefault = ok(
+    "addRule",
+    { concept: "field:Order.quantity", rule: "At least one" },
+    { spec: commented },
+  );
+  const back = ok(
+    "removeRule",
+    { concept: "field:Order.quantity", number: "1" },
+    withDefault.files,
+  );
+  expect(parse(back.files.spec).models.Order.fields.quantity).toEqual({ type: "int", default: 1 });
+});
