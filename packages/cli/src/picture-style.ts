@@ -406,6 +406,8 @@ export async function placeStyle(
   const plan = planStyle(dir, version, style, tint);
   if (plan.missing.length)
     return `The ${style} style has no picture for ${plan.missing.join(", ")}, so it is not offered for this app.`;
+  if (tint && plan.writes.some(({ entry }) => entry.generated !== true || entry.photo === true))
+    return "No pictures were changed: the tint requires model-made Ink wash drawings.";
   const files: PlacedStyle["files"] = [];
   const swaps: PlacedStyle["swaps"] = [];
   const failed: string[] = [];
