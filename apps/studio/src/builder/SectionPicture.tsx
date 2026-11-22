@@ -42,6 +42,9 @@ export function SectionPicture({
 }) {
   const [alt, setAlt] = useState(image?.alt ?? "");
   const [refused, setRefused] = useState<string>();
+  // A file being read: nothing else is sent meanwhile.
+  const [reading, setReading] = useState(false);
+  const held = busy || reading;
   const altId = useId();
   const replace = (file: File | undefined) => {
     setRefused(undefined);
@@ -50,7 +53,13 @@ export function SectionPicture({
     if (why) return setRefused(why);
     if (!alt.trim()) return setRefused("Say first what the picture shows.");
     const reader = new FileReader();
+    setReading(true);
+    reader.onerror = () => {
+      setReading(false);
+      setRefused("This file could not be read.");
+    };
     reader.onload = () => {
+      setReading(false);
       const data = String(reader.result).split(",")[1] ?? "";
       const src = pictureName(page, section, TYPES[file.type] as string, Date.now());
       change({ src, alt: alt.trim() }, { path: `public/${src}`, data });
@@ -76,7 +85,7 @@ export function SectionPicture({
             type="file"
             accept=".webp,.avif,.png,.jpg,.jpeg"
             className="sr-only"
-            disabled={busy}
+            disabled={held}
             onChange={(event) => {
               replace(event.target.files?.[0]);
               event.target.value = "";
@@ -86,7 +95,7 @@ export function SectionPicture({
         {image && (
           <button
             type="button"
-            disabled={busy}
+            disabled={held}
             className="rounded border border-line px-2 py-1 text-sm hover:bg-subtle disabled:opacity-60"
             onClick={() => change({})}
           >
@@ -102,12 +111,13 @@ export function SectionPicture({
           id={altId}
           value={alt}
           className="min-w-0 flex-1 rounded border border-line bg-panel px-2 py-1 text-sm"
+          disabled={held}
           onChange={(event) => setAlt(event.target.value)}
         />
         {image && alt.trim() && alt.trim() !== image.alt && (
           <button
             type="button"
-            disabled={busy}
+            disabled={held}
             className="rounded border border-line px-2 py-1 text-sm hover:bg-subtle disabled:opacity-60"
             onClick={() => change({ src: image.src, alt: alt.trim() })}
           >

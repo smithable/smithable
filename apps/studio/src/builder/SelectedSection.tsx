@@ -212,7 +212,8 @@ export function SelectedSection({
     value: string,
     apply: (revision: string) => ReturnType<typeof api.lookChange>,
   ) => {
-    if (running.current) return;
+    // A file read after the form was closed is not sent: what was kept or undone stays so.
+    if (running.current || !mounted.current) return;
     running.current = true;
     setBusy(true);
     setError(undefined);
