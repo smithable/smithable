@@ -19,15 +19,24 @@ picture (`setSectionPicture`, spec "Landing pages") and on [picture-kinds.md](pi
 | | Rule | Why |
 | - | - | - |
 | Sound | none; a file with a sound track is refused | a background never speaks; browsers block it anyway |
-| Length | 3 to 12 seconds, loops | a loop, not a film to watch |
-| Size | at most 1920 × 1080; at most 5 MB | about 3 Mbit/s at eight seconds; more is not seen behind a wash |
-| Format | MP4 (H.264), and optionally a WebM beside it | plays everywhere without a player library |
-| Controls | none shown; a pause button appears for keyboard and screen-reader users | WCAG 2.2.2: motion longer than five seconds can be paused |
+| Length | 3 to 12 seconds (both included), loops | a loop, not a film to watch |
+| Picture size | shown size (after the file's rotation) at most 1920 on the long side and 1080 on the short | landscape and portrait both; more is not seen behind a wash |
+| File size | one file of at most 5 000 000 bytes, and at most 5 Mbit/s on average (bytes × 8 / seconds) | a three-second clip may not spend the whole allowance; and the file stays in the app's history for good (§4) |
+| Format | MP4 with H.264 picture, the index (`moov`) before the data | plays everywhere without a player library; with the index last nothing shows until the whole file is fetched |
+| Pause | a Pause button is shown to everyone whenever the film runs | WCAG 2.2.2: a loop repeats past five seconds whatever its length |
+| Flashing | not more than three flashes in a second | WCAG 2.3.1; the form says so, see below |
 
+- A WebM beside the MP4 is not in these steps: one operation carries one file, and a second file found
+  by its name would be shown without having been checked.
 - The film is decoration: it has no text of its own, and the picture's `alt` stays the description.
-- The app does not convert film. Studio's upload checks the rules above and says which one failed;
-  it does not re-encode (no encoder in the browser or the generated app). The hosted service may
-  offer a conversion later; that is its own note.
+- **Where the rules are checked.** Core checks only what it can without reading a file: the name, under
+  `images/`, ending `.mp4`. The bytes are read by the host, as a picture's are: Studio's server at
+  upload, and `smithable check` for a file put there by hand. It reads the container's boxes (brand,
+  codec, a sound track, length, shown size, where the index is) and names the rule that failed.
+- Flashing cannot be measured by that read. Studio's form states the rule beside the upload, an
+  owner's file is the owner's to answer for, and a clip in the library is checked before it is added.
+- The app does not convert film. Nothing re-encodes (no encoder in the browser or the generated app).
+  The hosted service may offer a conversion later; that is its own note.
 
 ## 3 Where it is written
 
@@ -40,17 +49,23 @@ pages:
       image:
         src: images/hero-coast.webp
         alt: Waves on a pebble beach
-        film: images/hero-coast.mp4      # new; optional
+        film:                              # new; optional
+          src: images/hero-coast.mp4
 ```
 
-- `film` is a file under the app's `public/images/`, as `src` is. A `.webm` of the same name beside
-  it is used when it is there.
-- A translation file never names a film of its own: the film follows the picture.
+- `film.src` is a file under the app's `public/images/`, as the picture's `src` is.
+- **The film has its own origin.** A photograph may carry a film a model made, or the reverse, so
+  `film` takes the same origin keys a picture has (picture-kinds.md) and inherits nothing from the
+  picture. An owner's upload is recorded as an owner's file, as an uploaded picture is.
+- The badge follows what is seen: it shows when the picture or the film asks for it, and an owner's
+  switch for the picture's badge covers the section, film included. The publish review lists the film
+  as its own item, by its file; a "keep" given to the picture does not cover it, and a film that is
+  replaced is reviewed again.
+- A film plays only over the picture it was set with. A language whose file names its own picture
+  for the section shows that picture and no film, in these steps.
 - The operation `setSectionFilm <page> <section> [film]` sets or removes it. Refused when the section
   has no picture. `setSectionPicture` with another file removes the film, as it removes `generated`,
   `kind` and widths: they said nothing of the new picture.
-- A film has the picture's kind (picture-kinds.md): a film made by an AI that looks real is
-  `ai-realistic`, and the badge and the publish review treat it as they treat the picture.
 
 ### The five questions (ARCHITECTURE §2.4)
 
@@ -64,19 +79,41 @@ pages:
 5. *Materially better than free text plus custom code?* Yes: the section keeps its crop, wash, badge
    and publish review, which custom code would have to copy.
 
-It is off unless written, so every starter and every app made before stays byte-identical, and the
-operation without a file undoes it.
+It is off unless written. The film's code is a kit file of its own that the generator writes only
+into an app that has a film, so every starter and every app made before stays byte-identical
+(rule 6), and the operation without a file undoes it and takes the kit file out again.
 
 ## 4 What the generated app does
 
-- The section renders the picture exactly as today. When `film` is set it adds a plain `<video>`
-  over it: `muted`, `loop`, `playsinline`, `preload="none"`, the picture as `poster`, `aria-hidden`.
-- A few lines in the kit start it: only when the section is in view, the visitor has not asked for
-  reduced motion, and the browser does not report data saving. Out of view it pauses. If playing
-  fails, nothing happens: the picture is there.
-- The film is never the page's largest paint: the picture loads first, with its widths, as today.
+- The section renders the picture exactly as today. When a film is set, a plain `<video>` lies over
+  it: `muted`, `loop`, `playsinline`, `aria-hidden`, no `poster` (the picture is already under it; a
+  poster would fetch a second copy), and **no source yet**.
+- The kit's film file gives it its source and starts it only when all of these hold: the section is in
+  view, the visitor has not asked for reduced motion, the browser does not report data saving, and
+  the visitor has not paused it. A browser that reports nothing about data saving is not thereby
+  known to be on a fast link; the claim is only that a visitor who asked to save data fetches no film.
+- The video is invisible until its `playing` event. If the fetch, the decoding or the start fails, it
+  is hidden again and the picture shows: nothing else happens. In print the picture shows.
+- Out of view it pauses, and comes back when in view. A hidden tab pauses it.
+- **Pause.** While the film runs, a small button in a corner of the section says Pause (then Play),
+  outside the hidden video, for pointer, touch, keyboard and screen reader alike, with a visible
+  focus ring and its own backing so it reads over every frame. A visitor's pause holds for the page
+  view: scrolling away and back, or leaving the tab and returning, does not start it again.
+- Reduced motion is listened to, not only read at the start: switched on while the film plays, the
+  film stops and the picture shows.
+- The wash, the section's text and the badge lie above the video, as they lie above the picture. The
+  wash is the same over every frame; a film whose frames are far lighter than its picture is the
+  owner's to judge in Studio's try-on, where the loop plays under the real text.
+- The picture loads first, with its widths, as today, and is meant to stay the page's largest paint.
+  That is measured in the tests (paint and bytes fetched), not assumed.
+- The static frames of a page (`smithable static`, which have no scripts) leave the video out; the
+  picture shows.
 - No package is added. The generated app stays free of Smithable packages.
-- The file is served as the pictures are, from `public/images/`, with range requests.
+- The file is served as the pictures are, from `public/images/`. Safari plays a video only from a
+  server that answers a range request with a part (206): the generated app's production server and
+  the hosted service's static path are checked for that in step 1, and fixed there if they do not.
+- A film is up to five megabytes in the app's history for good, since every change is a commit that
+  can be undone. That is the reason for the size rule, and Studio's form says it once.
 
 ## 5 Where films come from
 
@@ -91,15 +128,22 @@ The builder never adds a film by itself in the first step: an app's first look d
 
 ## 6 Steps
 
-1. Core: the key, its validation (file kind by first bytes, the rules of §2), `setSectionFilm`,
-   the spec reference. Kit: the `<video>` and the start rule. Tests: a hero with and without, reduced
-   motion, removal with the picture.
-2. Studio: the "Film" row in the section form, upload with the checks, Cancel puts it back.
+1. Core: the key (name check only), `setSectionFilm`, `setSectionPicture` clearing it, the spec
+   reference. Kit: the film file, written only when a film is set. Host: the byte check, in
+   `smithable check`. The range check of both servers.
+2. Studio: the "Film" row in the section form, upload with the checks, the try-on, Cancel puts it back.
 3. Media-and-text sections (the same code path; a separate check of the layouts).
 4. Library loops and the starters that use them.
+
+Tests with the first two steps: an app without a film is byte-identical to today's; a three-second
+loop; pause by touch and by keyboard; coming back into view after a pause (it stays paused); a start
+that is blocked and a file that does not decode (the picture shows); reduced motion and data saving
+from the start (no film request at all) and reduced motion switched on mid-play; a photograph with a
+generated film (badge and review); a film replaced (reviewed again); a film removed (the output is
+what it was before); each refusal of §2 on a file built by hand for the test.
 
 ## 7 Not decided
 
 - Whether a published app on the hosted service converts an owner's film that breaks the size rule,
   or only refuses it.
-- Whether a hero with a film shows the pause button to everyone or only on focus.
+- Whether a language's own picture may later carry its own film.
