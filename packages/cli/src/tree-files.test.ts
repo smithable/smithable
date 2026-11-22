@@ -82,3 +82,18 @@ test("every module that writes files itself is placed, with its reason", () => {
     );
   expect(writers.sort()).toEqual(Object.keys(WRITES_ITSELF).sort());
 });
+
+test("a fresh file is written only where none is, and never over one that is there", async () => {
+  const { mkdtempSync, rmSync, writeFileSync } = await import("node:fs");
+  const { tmpdir } = await import("node:os");
+  const { changeTree } = await import("./tree-files.js");
+  const dir = mkdtempSync(join(tmpdir(), "fresh-"));
+  changeTree([{ path: join(dir, "images", "new.webp"), data: "one", fresh: true }]);
+  expect(readFileSync(join(dir, "images", "new.webp"), "utf8")).toBe("one");
+  writeFileSync(join(dir, "images", "there.webp"), "theirs");
+  expect(() =>
+    changeTree([{ path: join(dir, "images", "there.webp"), data: "mine", fresh: true }]),
+  ).toThrow();
+  expect(readFileSync(join(dir, "images", "there.webp"), "utf8")).toBe("theirs");
+  rmSync(dir, { recursive: true, force: true });
+});
