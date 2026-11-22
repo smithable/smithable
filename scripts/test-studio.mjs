@@ -2067,13 +2067,19 @@ try {
           );
         }
       });
-      await page.evaluate(
-        () =>
-          new Promise((resolve) =>
-            requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
-          ),
-      );
-      if (!(await edge("Show settings").isVisible()) || !(await edge("Show Smith").isVisible()))
+      await page.locator("main").evaluate(async (row) => {
+        await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+        await Promise.all(
+          row.getAnimations().map((animation) => animation.finished.catch(() => {})),
+        );
+      });
+      const appBounds = await page.locator('iframe[title="App preview"]').boundingBox();
+      if (
+        !appBounds ||
+        Math.abs(appBounds.x) > 2 ||
+        !(await edge("Show settings").isVisible()) ||
+        !(await edge("Show Smith").isVisible())
+      )
         throw new Error("a swipe inside the app switched Studio away from its preview");
       await swipe("[data-preview-page]", 400);
       await edge("Show the app").waitFor();
