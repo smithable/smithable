@@ -1993,6 +1993,12 @@
                   "type": "string",
                   "description": "The page the section's button opens."
                 },
+                "pictures": {
+                  "enum": [
+                    "work"
+                  ],
+                  "description": "A gallery's or media-and-text section's pictures present the owner's own work (finished jobs, a project): the publish review lists generated ones."
+                },
                 "secondButton": {
                   "type": "string",
                   "description": "A hero's second button, an outline one beside the first: the page it opens. None when not given."
@@ -2178,6 +2184,12 @@
                 "button": {
                   "type": "string",
                   "description": "The page the section's button opens."
+                },
+                "pictures": {
+                  "enum": [
+                    "work"
+                  ],
+                  "description": "A gallery's or media-and-text section's pictures present the owner's own work (finished jobs, a project): the publish review lists generated ones."
                 },
                 "secondButton": {
                   "type": "string",

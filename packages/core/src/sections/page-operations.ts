@@ -1247,6 +1247,57 @@ const setSectionWhere: Operation<{
   },
 };
 
+/**
+ * A gallery or media-and-text section whose pictures present the owner's own work (finished jobs,
+ * a project), or no longer: the publish review lists such pictures when an image model made them
+ * (docs/design/picture-kinds.md §6). Said in the spec, never guessed from a section's name.
+ */
+const setSectionPictures: Operation<{ page: string; section: string; pictures?: "work" }> = {
+  name: "setSectionPictures",
+  sets: ["smithable.yml:pages.*.landing.*.pictures", "smithable.yml:pages.*.sections.*.pictures"],
+  summary:
+    "Say that a gallery's or media-and-text section's pictures present the owner's own work (pictures work), so the publish review asks about generated ones; none takes it off.",
+  schema: {
+    type: "object",
+    required: ["page", "section"],
+    additionalProperties: false,
+    properties: {
+      page: refTo({ ref: "page", label: "Page" }),
+      section: refTo({ ref: "section", page: "page", label: "Section" }),
+      pictures: {
+        enum: ["work"],
+        description: "work: the pictures present the owner's own work; none takes it off.",
+      },
+    },
+  },
+  positional: ["page", "section", "pictures"],
+  describe: ({ page, section, pictures }) =>
+    pictures
+      ? `Mark the pictures of the ${section} section of ${page} as the owner's own work`
+      : `Stop marking the pictures of the ${section} section of ${page} as the owner's own work`,
+  destructive: () => false,
+  apply({ spec }, { page, section, pictures }, ir) {
+    const existing = ir.pages.find((p) => p.id === page);
+    const found = existing ? partSections(existing).find((s) => s.name === section) : undefined;
+    if (!existing || !found)
+      throw new OperationError(`The ${page} page has no section named "${section}".`);
+    if (found.kind !== "gallery" && found.kind !== "mediaText")
+      throw new OperationError(
+        `Only a gallery or mediaText section's pictures can be the owner's work; ${section} is a ${found.kind} section.`,
+      );
+    const at = [...sectionsPath(existing), section];
+    const path = [...at, "pictures"];
+    if (!pictures) {
+      if (!spec.has(path))
+        throw new OperationError(`The ${section} section's pictures are not marked as work.`);
+      spec.remove(path);
+    } else if (spec.has(path)) spec.set(path, pictures);
+    else if (spec.get(at) == null) spec.set(at, { pictures });
+    else spec.add(at, "pictures", pictures);
+    return [];
+  },
+};
+
 const setShortcuts: Operation<{ page: string; pages?: string[] }> = {
   name: "setShortcuts",
   summary:
@@ -1466,6 +1517,7 @@ export const landingOperations: AnyOperation[] = [
   removeSection,
   moveSection,
   setSectionWhere,
+  setSectionPictures,
   setShortcuts,
   setHeroButtons,
 ];
