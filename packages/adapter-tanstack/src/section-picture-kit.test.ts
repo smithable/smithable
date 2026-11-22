@@ -105,4 +105,12 @@ test("section backgrounds and feature card pictures are opt-in and use the same 
     value: "title",
   });
   expect(generate(plainMark)).toEqual(unchanged);
+
+  const noLogo = { spec, content: content.replace(/^logo:.*\n/m, "") };
+  const fallback = operation(noLogo, "setSectionLook", {
+    section: "hero",
+    key: "mark",
+    value: "logo",
+  });
+  expect(generate(fallback)).toEqual(generate(noLogo));
 });

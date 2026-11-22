@@ -212,6 +212,7 @@ export function generateApp(spec: SpecIR, options: GenerateOptions): GeneratedFi
       const content = ctx.t.section(page.id, section.name);
       return (
         (section.kind === "hero" &&
+          Boolean(ctx.t.logoSrc) &&
           ctx.ux.pages[page.id]?.looks?.[section.name]?.mark === "logo") ||
         (["text", "callToAction", "features"].includes(section.kind) && Boolean(content.image)) ||
         (section.kind === "features" && content.items?.some((item) => Boolean(item.image)))
