@@ -9,14 +9,12 @@ import { mkdirSync } from "node:fs";
 import { basename, join, resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { chromium } from "playwright";
-import { loadSpec } from "../packages/cli/dist/validate.js";
 import {
-  hexOf,
-  hexToRgb,
-  resolveLook,
-  rgbToOklch,
-  themeNames,
-} from "../packages/core/dist/index.js";
+  INK_WASH_GREYSCALE_CUTOFF,
+  inkWashTreatment,
+} from "../packages/cli/dist/picture-recolour.js";
+import { loadSpec } from "../packages/cli/dist/validate.js";
+import { resolveLook, themeNames } from "../packages/core/dist/index.js";
 import { newApp, op, open as openUrl, serveDev, signIn } from "./dev-app.mjs";
 import { checkAdminHeading, checkContactForm, checkRenderedFonts } from "./theme-form-checks.mjs";
 
@@ -87,11 +85,10 @@ try {
     else op(dir, "setTheme", "--preset", name);
     const project = loadSpec(dir, { out: () => {}, err: (text) => process.stderr.write(text) });
     if (!project.ux) throw new Error(`Could not read the applied look for ${name}.`);
-    const primary = hexOf(resolveLook(project.ux, project.themes).tokens.light.primary);
-    const [, chroma] = rgbToOklch(hexToRgb(primary));
-    // Review thresholds from theme-pictures.md §10. At a boundary, use the calmer class.
-    const pictureClass = chroma <= 0.02 ? "greyscale" : chroma <= 0.12 ? "calm" : "strong";
-    const measurement = `Light primary ${primary} · OKLCH chroma ${chroma.toFixed(6)} · ${pictureClass} (proposed cutoffs 0.02 and 0.12)`;
+    const { primary, chromaText, treatment } = inkWashTreatment(
+      resolveLook(project.ux, project.themes).tokens.light.primary,
+    );
+    const measurement = `Light primary ${primary} · OKLCH chroma ${chromaText} · Ink wash ${treatment} (greyscale cutoff ${INK_WASH_GREYSCALE_CUTOFF}, inclusive)`;
     const stop = await serve();
     let context;
     try {
