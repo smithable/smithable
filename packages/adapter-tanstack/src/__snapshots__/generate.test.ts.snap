@@ -42991,6 +42991,7 @@ import { pageAccess, pageUi, pageHead } from "#/generated/pages";
 import { deleteEnquiry, enquiryUi, getEnquiry, updateEnquiry } from "#/generated/enquiry";
 import { enquirySchema } from "#/generated/enquiry.schema";
 import { contacted, contactedAccess, contactedFits } from "#/generated/actions/contacted";
+import { visited, visitedAccess, visitedFits } from "#/generated/actions/visited";
 import { quoted, quotedAccess, quotedFits } from "#/generated/actions/quoted";
 import { won, wonAccess, wonFits } from "#/generated/actions/won";
 import { lost, lostAccess, lostFits } from "#/generated/actions/lost";
@@ -43062,6 +43063,16 @@ function EnquiryPage() {
                 concept="action:contacted"
                 onRun={async () => {
                   await contacted({ data: row.id });
+                  await router.invalidate();
+                }}
+              />
+            )}
+            {allows(visitedAccess, viewer, row.ownerId) && visitedFits(row, viewer) && (
+              <ActionButton
+                label="Visited"
+                concept="action:visited"
+                onRun={async () => {
+                  await visited({ data: row.id });
                   await router.invalidate();
                 }}
               />
@@ -43152,6 +43163,7 @@ import { orderOf } from "#/kit/filter";
 import { currentViewer } from "#/lib/viewer.server";
 import { buttonVariants } from "#/components/ui/button";
 import { contacted, contactedAccess, contactedFits, contactedMany } from "#/generated/actions/contacted";
+import { visited, visitedAccess, visitedFits, visitedMany } from "#/generated/actions/visited";
 import { quoted, quotedAccess, quotedFits, quotedMany } from "#/generated/actions/quoted";
 import { won, wonAccess, wonFits, wonMany } from "#/generated/actions/won";
 import { lost, lostAccess, lostFits, lostMany } from "#/generated/actions/lost";
@@ -43211,7 +43223,7 @@ function EnquiriesPage() {
   // The chosen rows, offered when the viewer may do something to at least one row.
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const chosen = rows.filter((row) => selected.has(row.id));
-  const selectable = rows.some((row) => allows(contactedAccess, viewer, row.ownerId) && contactedFits(row, viewer) || allows(quotedAccess, viewer, row.ownerId) && quotedFits(row, viewer) || allows(wonAccess, viewer, row.ownerId) && wonFits(row, viewer) || allows(lostAccess, viewer, row.ownerId) && lostFits(row, viewer) || allows(enquiryDeleteRule, viewer, row.ownerId));
+  const selectable = rows.some((row) => allows(contactedAccess, viewer, row.ownerId) && contactedFits(row, viewer) || allows(visitedAccess, viewer, row.ownerId) && visitedFits(row, viewer) || allows(quotedAccess, viewer, row.ownerId) && quotedFits(row, viewer) || allows(wonAccess, viewer, row.ownerId) && wonFits(row, viewer) || allows(lostAccess, viewer, row.ownerId) && lostFits(row, viewer) || allows(enquiryDeleteRule, viewer, row.ownerId));
   const newButton = canCreate && (
     <Link to="/enquiries/new" className={buttonVariants()}>
       {w.newOne("enquiry")}
@@ -43266,6 +43278,12 @@ function EnquiriesPage() {
               run: () => contactedMany({ data: { ids: chosen.map((row) => row.id) } }),
             },
             {
+              label: "Visited",
+              concept: "action:visited",
+              applies: chosen.filter((row) => allows(visitedAccess, viewer, row.ownerId) && visitedFits(row, viewer)).length,
+              run: () => visitedMany({ data: { ids: chosen.map((row) => row.id) } }),
+            },
+            {
               label: "Quoted",
               concept: "action:quoted",
               applies: chosen.filter((row) => allows(quotedAccess, viewer, row.ownerId) && quotedFits(row, viewer)).length,
@@ -43310,6 +43328,16 @@ function EnquiriesPage() {
                 concept="action:contacted"
                 onRun={async () => {
                   await contacted({ data: row.id });
+                  await router.invalidate();
+                }}
+              />
+            )}
+            {allows(visitedAccess, viewer, row.ownerId) && visitedFits(row, viewer) && (
+              <ActionButton
+                label="Visited"
+                concept="action:visited"
+                onRun={async () => {
+                  await visited({ data: row.id });
                   await router.invalidate();
                 }}
               />
@@ -45248,8 +45276,8 @@ exports[`../../../examples/builder/smithable.yml > the generated files are as re
   "src/routes/__root.tsx": "32afe8ed generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/app-card.tsx": "48827720 generated",
-  "src/routes/enquiries/$id.tsx": "ecddb05b generated",
-  "src/routes/enquiries/index.tsx": "2cb98751 generated",
+  "src/routes/enquiries/$id.tsx": "9f8f421d generated",
+  "src/routes/enquiries/index.tsx": "6b75b28a generated",
   "src/routes/enquiries/new.tsx": "14abb828 generated",
   "src/routes/files/$model.$field.ts": "37c1c781 kit",
   "src/routes/files/$model.$id.$field.$n.ts": "5288014d kit",
@@ -80225,7 +80253,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
 exports[`../../../examples/painter/smithable.yml > file list and generated code > README.md 1`] = `
 "# Fairweather Painters
 
-A small painter's site and enquiry book. Visitors see finished jobs by surface, indoors and out, and ask for a quote. The painter follows each enquiry up.
+A painter's jobs by surface, and the enquiries followed up.
 
 A [TanStack Start](https://tanstack.com/start) app with [Drizzle](https://orm.drizzle.team) and SQLite, generated by Smithable from \`smithable.yml\`.
 
@@ -81827,7 +81855,7 @@ export const CARDS: Record<string, CardFacts> = {
     language: "en",
     app: {
       name: "Fairweather Painters",
-      description: "A small painter's site and enquiry book. Visitors see finished jobs by surface, indoors and out, and ask for a quote. The painter follows each enquiry up.",
+      description: "A painter's jobs by surface, and the enquiries followed up.",
       languages: ["en"],
       hash: "cbf29ce48422",
       engine: "0.0.0",
@@ -83932,7 +83960,7 @@ interface PageUi {
 export const pageUi = {
   home: {
     title: "Home",
-    description: "A small painter's site and enquiry book. Visitors see finished jobs by surface, indoors and out, and ask for a quote. The painter follows each enquiry up.",
+    description: "A painter's jobs by surface, and the enquiries followed up.",
   },
   jobs: { title: "Jobs" },
   start: { title: "Start" },
@@ -84878,7 +84906,7 @@ export const Route = createRootRoute({
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: app.name },
-      { name: "description", content: "A small painter's site and enquiry book. Visitors see finished jobs by surface, indoors and out, and ask for a quote. The painter follows each enquiry up." },
+      { name: "description", content: "A painter's jobs by surface, and the enquiries followed up." },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
@@ -84991,6 +85019,7 @@ import { pageAccess, pageUi, pageHead } from "#/generated/pages";
 import { deleteEnquiry, enquiryUi, getEnquiry, updateEnquiry } from "#/generated/enquiry";
 import { enquirySchema } from "#/generated/enquiry.schema";
 import { contacted, contactedAccess, contactedFits } from "#/generated/actions/contacted";
+import { visited, visitedAccess, visitedFits } from "#/generated/actions/visited";
 import { quoted, quotedAccess, quotedFits } from "#/generated/actions/quoted";
 import { won, wonAccess, wonFits } from "#/generated/actions/won";
 import { lost, lostAccess, lostFits } from "#/generated/actions/lost";
@@ -85062,6 +85091,16 @@ function EnquiryPage() {
                 concept="action:contacted"
                 onRun={async () => {
                   await contacted({ data: row.id });
+                  await router.invalidate();
+                }}
+              />
+            )}
+            {allows(visitedAccess, viewer, row.ownerId) && visitedFits(row, viewer) && (
+              <ActionButton
+                label="Visited"
+                concept="action:visited"
+                onRun={async () => {
+                  await visited({ data: row.id });
                   await router.invalidate();
                 }}
               />
@@ -85152,6 +85191,7 @@ import { orderOf } from "#/kit/filter";
 import { currentViewer } from "#/lib/viewer.server";
 import { buttonVariants } from "#/components/ui/button";
 import { contacted, contactedAccess, contactedFits, contactedMany } from "#/generated/actions/contacted";
+import { visited, visitedAccess, visitedFits, visitedMany } from "#/generated/actions/visited";
 import { quoted, quotedAccess, quotedFits, quotedMany } from "#/generated/actions/quoted";
 import { won, wonAccess, wonFits, wonMany } from "#/generated/actions/won";
 import { lost, lostAccess, lostFits, lostMany } from "#/generated/actions/lost";
@@ -85211,7 +85251,7 @@ function EnquiriesPage() {
   // The chosen rows, offered when the viewer may do something to at least one row.
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const chosen = rows.filter((row) => selected.has(row.id));
-  const selectable = rows.some((row) => allows(contactedAccess, viewer, row.ownerId) && contactedFits(row, viewer) || allows(quotedAccess, viewer, row.ownerId) && quotedFits(row, viewer) || allows(wonAccess, viewer, row.ownerId) && wonFits(row, viewer) || allows(lostAccess, viewer, row.ownerId) && lostFits(row, viewer) || allows(enquiryDeleteRule, viewer, row.ownerId));
+  const selectable = rows.some((row) => allows(contactedAccess, viewer, row.ownerId) && contactedFits(row, viewer) || allows(visitedAccess, viewer, row.ownerId) && visitedFits(row, viewer) || allows(quotedAccess, viewer, row.ownerId) && quotedFits(row, viewer) || allows(wonAccess, viewer, row.ownerId) && wonFits(row, viewer) || allows(lostAccess, viewer, row.ownerId) && lostFits(row, viewer) || allows(enquiryDeleteRule, viewer, row.ownerId));
   const newButton = canCreate && (
     <Link to="/enquiries/new" className={buttonVariants()}>
       {w.newOne("enquiry")}
@@ -85266,6 +85306,12 @@ function EnquiriesPage() {
               run: () => contactedMany({ data: { ids: chosen.map((row) => row.id) } }),
             },
             {
+              label: "Visited",
+              concept: "action:visited",
+              applies: chosen.filter((row) => allows(visitedAccess, viewer, row.ownerId) && visitedFits(row, viewer)).length,
+              run: () => visitedMany({ data: { ids: chosen.map((row) => row.id) } }),
+            },
+            {
               label: "Quoted",
               concept: "action:quoted",
               applies: chosen.filter((row) => allows(quotedAccess, viewer, row.ownerId) && quotedFits(row, viewer)).length,
@@ -85310,6 +85356,16 @@ function EnquiriesPage() {
                 concept="action:contacted"
                 onRun={async () => {
                   await contacted({ data: row.id });
+                  await router.invalidate();
+                }}
+              />
+            )}
+            {allows(visitedAccess, viewer, row.ownerId) && visitedFits(row, viewer) && (
+              <ActionButton
+                label="Visited"
+                concept="action:visited"
+                onRun={async () => {
+                  await visited({ data: row.id });
                   await router.invalidate();
                 }}
               />
@@ -85439,7 +85495,7 @@ function HomePage() {
       <Hero
           texts="pages.home.hero"
           title="Fairweather Painters"
-          subtitle="A small painter's site and enquiry book. Visitors see finished jobs by surface, indoors and out, and ask for a quote. The painter follows each enquiry up."
+          subtitle="A painter's jobs by surface, and the enquiries followed up."
           link={{ to: "/jobs", label: "Get started" }}
           more
         />
@@ -85834,7 +85890,7 @@ import { enquiryUi } from "#/generated/enquiry";
 /** What the page says, from the app's definition when it was generated. */
 const facts: LegalFacts = {
   app: app.name,
-  purpose: "A small painter's site and enquiry book. Visitors see finished jobs by surface, indoors and out, and ask for a quote. The painter follows each enquiry up.",
+  purpose: "A painter's jobs by surface, and the enquiries followed up.",
   signIn: { email: true, google: false, invitedOnly: true },
   records: [
     { label: enquiryUi.pluralLabel, fields: ["email", "phone"], readers: "members" },
@@ -86822,7 +86878,7 @@ exports[`../../../examples/painter/smithable.yml > the generated files are as re
   "LICENSES/hallmark-MIT.txt": "26d1de6b kit",
   "LICENSES/shadcn-ui.txt": "38dd653a kit",
   "LICENSES/tweakcn-Apache-2.0.txt": "dc4aedc0 kit",
-  "README.md": "c509b2c3 generated",
+  "README.md": "d6fe9018 generated",
   "drizzle.config.ts": "0987fb48 kit",
   "package.json": "98cc3fb3 generated",
   "playwright.config.ts": "5ffef2a7 kit",
@@ -86853,7 +86909,7 @@ exports[`../../../examples/painter/smithable.yml > the generated files are as re
   "src/generated/actions/won.ts": "27ec39e2 generated",
   "src/generated/activity.server.ts": "41dbf537 generated",
   "src/generated/app.ts": "4ee03e5c generated",
-  "src/generated/card.server.ts": "13dbfd9b generated",
+  "src/generated/card.server.ts": "fa86ab68 generated",
   "src/generated/card.ts": "5cab12e4 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/dev-door.server.ts": "62a53333 generated",
@@ -86870,7 +86926,7 @@ exports[`../../../examples/painter/smithable.yml > the generated files are as re
   "src/generated/job.server.ts": "334bef34 generated",
   "src/generated/job.ts": "2ce0ebd9 generated",
   "src/generated/my-time.ts": "c315432b generated",
-  "src/generated/pages.ts": "1664caa0 generated",
+  "src/generated/pages.ts": "8c045975 generated",
   "src/generated/roles.ts": "2040923c generated",
   "src/generated/site.ts": "88f9d974 generated",
   "src/generated/uploads.ts": "3af32af5 generated",
@@ -86954,21 +87010,21 @@ exports[`../../../examples/painter/smithable.yml > the generated files are as re
   "src/routes/[_dev]/act.ts": "c57e01e2 generated",
   "src/routes/[_dev]/clock.ts": "a1ccbe93 generated",
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
-  "src/routes/__root.tsx": "6418991c generated",
+  "src/routes/__root.tsx": "dfd07cb3 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/app-card.tsx": "48827720 generated",
-  "src/routes/enquiries/$id.tsx": "99497a37 generated",
-  "src/routes/enquiries/index.tsx": "2cb98751 generated",
+  "src/routes/enquiries/$id.tsx": "63e66b39 generated",
+  "src/routes/enquiries/index.tsx": "6b75b28a generated",
   "src/routes/enquiries/new.tsx": "6dbd7a5c generated",
   "src/routes/files/$model.$field.ts": "37c1c781 kit",
   "src/routes/files/$model.$id.$field.$n.ts": "5288014d kit",
   "src/routes/files/$model.$id.$field.ts": "93378bd7 kit",
   "src/routes/health.ts": "362c9904 kit",
-  "src/routes/index.tsx": "51a8b4f8 generated",
+  "src/routes/index.tsx": "571f91ed generated",
   "src/routes/jobs/$id.tsx": "0e5a54dd generated",
   "src/routes/jobs/index.tsx": "631b8020 generated",
   "src/routes/jobs/new.tsx": "65893714 generated",
-  "src/routes/privacy/index.tsx": "de80230c generated",
+  "src/routes/privacy/index.tsx": "d583618f generated",
   "src/routes/robots[.]txt.ts": "100b5058 generated",
   "src/routes/sign-in.tsx": "fc26205e generated",
   "src/routes/sitemap[.]xml.ts": "57c0d780 generated",
