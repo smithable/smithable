@@ -789,7 +789,7 @@ export function projectSitePersonal(
         contentMode: mode,
         facts: input.facts,
         images: input.images,
-        description: describeSiteFacts(input.facts, "full"),
+        description: describeSiteFacts(input.facts, mode),
         personal: { version: 1, counts: { name: 0, email: 0, phone: 0, address: 0, identity: 0 } },
       },
       personalMap: map,
