@@ -60,7 +60,7 @@ const readMenu = createServerFn().handler(async (): Promise<Menu> => {
       name: String(${title && title !== "id" ? row(title) : "r.id"} ?? ""),
       price: Number(${row(p.price)} ?? 0),${section ? `\n      section: ${row(section.name)} ?? null,` : ""}${description ? `\n      description: ${row(description.name)} ?? null,` : ""}${
         picture
-          ? `\n      picture: ${row(picture.name)} ? { src: \`/files/${kebab(from.name)}/\${r.id}/${picture.name}?v=\${${row(picture.name)}.file.slice(-29, -5)}\`, alt: ${row(picture.name)}.alt, generated: ${row(picture.name)}.generated === true } : null,`
+          ? `\n      picture: ${row(picture.name)} ? { src: \`/files/${kebab(from.name)}/\${r.id}/${picture.name}?v=\${${row(picture.name)}.file.slice(-29, -5)}\`, alt: ${row(picture.name)}.alt, generated: ${row(picture.name)}.generated === true, kind: ${row(picture.name)}.kind } : null,`
           : ""
       }
       available: ${p.available ? `${row(p.available)} !== false` : "true"},

@@ -5,12 +5,16 @@
 // across the page the EU's worded label ("AI GENERATED") in English, and in another language the
 // icon with the app's own words joined to it. A picture styled where it is used (under the hero's
 // wash or veil) is not marked, but a theme's picture treatment does not lift the mark: a tinted
-// photograph can still pass for one. A maker's own pictures are marked only when they say so. The
-// owner can switch every mark off (aiBadge: false in the app's presentation settings): the theme
-// hides them.
+// photograph can still pass for one. A maker's own pictures are marked only when they say so. Each mark
+// says its picture's kind (data-kind): the theme hides a drawn one's while the owner has not
+// chosen (aiBadge unsaid in the app's presentation settings), and every one when the owner
+// switched the badge off (aiBadge: false); a picture without a kind counts as looking real.
 import type { ReactNode } from "react";
 import { cn } from "#/lib/utils";
 import { language, w } from "./words";
+
+/** What a picture is, as the image library said when it was placed (picture-kinds.md §2). */
+export type PictureKind = "ai-realistic" | "ai-drawn" | "photograph";
 
 /** The EU's basic icon, its own paths; the view box is the disc's square. */
 function AiIcon({ className, label }: { className: string; label?: string }) {
@@ -110,12 +114,14 @@ function AiLabel({ className, label }: { className: string; label: string }) {
  */
 export function AiMarked({
   generated,
+  kind,
   full,
   tiny,
   className,
   children,
 }: {
   generated?: boolean | undefined;
+  kind?: PictureKind | undefined;
   full?: boolean;
   tiny?: boolean;
   className?: string;
@@ -128,6 +134,7 @@ export function AiMarked({
       {full ? (
         <span
           data-part="ai-mark"
+          data-kind={kind}
           className="pointer-events-none absolute right-2 bottom-2 z-10 flex"
         >
           {language().startsWith("en") ? (
@@ -144,6 +151,7 @@ export function AiMarked({
       ) : (
         <span
           data-part="ai-mark"
+          data-kind={kind}
           className={cn(
             "pointer-events-none absolute z-10 flex",
             tiny ? "right-0.5 bottom-0.5" : "right-2 bottom-2",

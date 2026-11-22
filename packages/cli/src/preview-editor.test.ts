@@ -1,5 +1,6 @@
 import { expect, test, vi } from "vitest";
 import {
+  BADGES_HIDDEN,
   framedLocally,
   guardUpgrades,
   holdFullReloads,
@@ -106,7 +107,11 @@ function page(
     styleSheets: [{ cssRules: [darkRule] }],
     body: { dataset: { hydrated: "true" } },
     documentElement: {
-      toggleAttribute() {},
+      attributes: new Set<string>(),
+      toggleAttribute(name: string, on: boolean) {
+        if (on) this.attributes.add(name);
+        else this.attributes.delete(name);
+      },
       scrollHeight: 3000,
       dataset: {} as Record<string, string>,
       style: {} as Record<string, string>,
@@ -297,6 +302,23 @@ test("an empty theme CSS takes a tried theme off again (the first-look picker's 
   // Nothing tried on: still nothing.
   send({ type: "smithable:theme-css", css: "" });
   expect(theme()).toBeUndefined();
+});
+
+test("the preview hides the AI badges until Studio says to show them, and only Studio may say so", () => {
+  const studio = smithableEditor({ holdUpdates: true }) as unknown as {
+    transform: (code: string, id: string) => string | undefined;
+  };
+  expect(studio.transform(":root{}", "/app/src/styles.css")).toContain(BADGES_HIDDEN);
+  expect(studio.transform(":root{}", "/app/src/styles.css?url")).toBeUndefined();
+  const { send, root } = page();
+  send({ type: "smithable:show-badges", on: true }, "https://elsewhere.example");
+  expect(root.attributes.has("data-sm-badges")).toBe(false);
+  send({ type: "smithable:show-badges", on: true }, undefined, {});
+  expect(root.attributes.has("data-sm-badges")).toBe(false);
+  send({ type: "smithable:show-badges", on: true });
+  expect(root.attributes.has("data-sm-badges")).toBe(true);
+  send({ type: "smithable:show-badges", on: false });
+  expect(root.attributes.has("data-sm-badges")).toBe(false);
 });
 
 test("a theme's CSS from the lab replaces the app's until reload, its fonts at Vite's paths", () => {

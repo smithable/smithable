@@ -1,7 +1,16 @@
-import { FONTS, humanize } from "@smithable/core";
+import { FONTS, humanize, type PictureKind } from "@smithable/core";
 import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { parseDocument } from "yaml";
+import {
+  BadgeNote,
+  BadgeSwitch,
+  badgeValue,
+  kindChoices,
+  ShowBadgesHere,
+  startingKind,
+} from "./AiBadge";
 import { api, type PictureStyles, type Project } from "./api";
+import { BADGE_WORDS, KIND_WORDS } from "./badge-words";
 import type { Spec } from "./engine";
 import { LookSession, triedThemeCss } from "./first-look";
 import { letGoTriedTheme, tryThemeInPreview } from "./preview";
@@ -35,7 +44,7 @@ export function LookPanel({
   spec: Spec;
   place: "left" | "right" | "sheet";
   onRefresh: () => Promise<void>;
-  onClose: (options: { error?: string; customize?: boolean }) => void;
+  onClose: (options: { error?: string; customize?: boolean; kept?: boolean }) => void;
 }) {
   const lookProject = project.lookProject ?? "";
   const authored = (text: string | undefined, setting: Setting) => {
@@ -51,6 +60,7 @@ export function LookPanel({
             font: authored(project.files.ux, "font"),
             density: authored(project.files.ux, "density"),
             primary: authored(project.files.ux, "primary"),
+            aiBadge: badgeValue(spec.ux?.aiBadge),
           },
           revision: project.revision ?? "",
         },
@@ -203,12 +213,17 @@ export function LookPanel({
       refusal = `Cancel could not restore the opening look: ${(reason as Error).message} Review the changes in Changes.`;
     }
     await onRefresh();
-    onClose({ ...(refusal ? { error: refusal } : {}), customize });
+    onClose({ ...(refusal ? { error: refusal } : {}), customize, kept: keep && session.changed });
   };
   const id = useId();
   const ux = project.files.ux;
   const preset = spec.ux?.theme.preset ?? "";
   const styles = pictures?.offer ? pictures.styles : [];
+  // The kind of pictures comes before their style (picture-kinds.md §1): the kind shown is the
+  // one chosen here, else the current style's.
+  const [chosenKind, setKind] = useState<PictureKind>();
+  const kind = chosenKind ?? startingKind(styles, pictures?.current);
+  const ofKind = kindChoices(styles).find((c) => c.kind === kind)?.styles ?? [];
   const busy = closing || session.refused;
   return (
     <aside
@@ -276,15 +291,39 @@ export function LookPanel({
         <fieldset disabled={busy} className="space-y-3">
           <legend className="sr-only">Whole app settings</legend>
           {styles.length > 0 && (
+            <Row label="Kind of pictures" htmlFor={`${id}-kind`}>
+              <Select
+                id={`${id}-kind`}
+                value={kind}
+                options={kindChoices(styles).map(
+                  (c) =>
+                    [
+                      c.kind,
+                      c.styles.length
+                        ? KIND_WORDS[c.kind]
+                        : `${KIND_WORDS[c.kind]} (${BADGE_WORDS.notYet})`,
+                    ] as [string, string],
+                )}
+                onChange={(event) => setKind(event.target.value as PictureKind)}
+              />
+            </Row>
+          )}
+          {styles.length > 0 && kind === "ai-realistic" && <BadgeNote />}
+          {styles.length > 0 && !ofKind.length && (
+            <p className="text-sm text-muted" data-kind-not-yet>
+              {KIND_WORDS[kind]}: {BADGE_WORDS.notYet}.
+            </p>
+          )}
+          {ofKind.length > 0 && (
             <Row label="Image type" htmlFor={`${id}-pictures`}>
               <Select
                 id={`${id}-pictures`}
                 value={pictures?.current ?? ""}
                 options={[
-                  ...(pictures?.current && styles.some((s) => s.id === pictures.current)
+                  ...(pictures?.current && ofKind.some((s) => s.id === pictures.current)
                     ? []
                     : [["", "Current pictures"] as [string, string]]),
-                  ...styles.map((s) => [s.id, s.name] as [string, string]),
+                  ...ofKind.map((s) => [s.id, s.name] as [string, string]),
                 ]}
                 onChange={(event) => {
                   const style = event.target.value;
@@ -328,6 +367,22 @@ export function LookPanel({
             value={authored(ux, "primary")}
             onChange={(color) => void setTheme("primary", color)}
           />
+          <BadgeSwitch
+            id={`${id}-ai-badge`}
+            aiBadge={spec.ux?.aiBadge}
+            realistic={pictures?.realistic === true}
+            onChange={(value, acknowledged) =>
+              void change("aiBadge", value, (revision) =>
+                api.lookChange(
+                  "setAiBadge",
+                  { value, ...(acknowledged ? { acknowledged: true } : {}) },
+                  revision,
+                  lookProject,
+                ),
+              )
+            }
+          />
+          <ShowBadgesHere />
         </fieldset>
         {pictures?.error && <p className="text-sm text-muted">{pictures.error}</p>}
         {pending > 0 && (

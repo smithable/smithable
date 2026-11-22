@@ -15,12 +15,7 @@ const NOCODE: Stop[] = [
   {
     anchor: "preview",
     title: "Preview",
-    text: "This is your app, running: click around as anyone would. What you change shows here at once. Choose Select above it and click a part to open its settings.",
-  },
-  {
-    anchor: "manual",
-    title: "By hand",
-    text: "Here you can change the app by hand: No code, in plain words and forms, or Code, the definition itself as text. Summary tells the whole app in plain words, each line opening where it is set.",
+    text: "This is your app, running: click around as anyone would. What you change shows here at once.",
   },
   {
     anchor: "behavior",
@@ -35,17 +30,7 @@ const NOCODE: Stop[] = [
   {
     anchor: "changes",
     title: "Every change, in words",
-    text: "Changes lists what was done, however it was made, and every change can be undone.",
-  },
-  {
-    anchor: "look",
-    title: "The look",
-    text: "Look in the top bar holds themes and Customise. In No code, Layout holds each page's presentation and Content holds the logo and languages.",
-  },
-  {
-    anchor: "publish",
-    title: "Publish your app",
-    text: "Review shows who can use the app and which checks need attention. Publish takes you to any open items, or asks you to confirm the app version before continuing.",
+    text: "Changes lists what was done, however it was made.",
   },
 ];
 
@@ -58,7 +43,7 @@ const CODE: Stop[] = [
   {
     anchor: "problems",
     title: "Checked as you type",
-    text: "A problem is named here and marked in the text. A save is one change, which can be undone like any other.",
+    text: "A problem is named here and marked in the text.",
   },
 ];
 

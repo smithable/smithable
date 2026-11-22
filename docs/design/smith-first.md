@@ -74,7 +74,7 @@ The figures are A's bench of 2026-10-26 ([claude-5-5.md](../benchmarks/claude-5-
 
 (Revised in §12.4: the guide's stop is Smith's line and a small card at the place, both.)
 
-The tour's stops stay the stops of studio-guide.md (the running app, what it does, every change in words, the look, publish and share; the code stops when Code is open), but each is a line of Smith's in his thread, the mascot pointing, the place lit as the cards lit it; Next and Skip are chips, Esc skips. The first stop, "How do you want to work?", is removed: when the manual view is first opened, Smith says "Here you can change the app by hand: No code, or the code itself" and points at the two sub-tabs. The stops' texts stay in `guide.ts` as Studio's words, with Smith's voice; **Help → Tour Studio** runs it again. It shows when studio-guide.md §2 says, after the presentation and the questions; a stop whose place is not on the screen is left out, as today.
+The tour covers the running app, what it does, Ask Smith, and Changes. When Code is open, its tour covers the files and live validation. Smith says each stop in his thread with its place lit. Next and Skip are chips, and Esc skips. The stops' texts live in `guide.ts`, and **Help → Tour Studio** runs it again. It shows after the presentation and questions. First-action hints point to All settings after a preview selection, the No code and Code tabs when settings open, Undo after an edit, Look after keeping a theme, and the change list when Publish opens. **Help → Show hints again** resets them.
 
 ## 8. The beta, in Smith's words
 

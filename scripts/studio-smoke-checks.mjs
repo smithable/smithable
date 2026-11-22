@@ -13,6 +13,7 @@ import { checkStudioHistory } from "./studio-history-checks.mjs";
 
 async function checkBuilder(page, phone) {
   const tab = (name) => page.getByRole("tab", { name, exact: true });
+  const hint = (name) => page.getByRole("button", { name, exact: true });
   const look = page.getByRole("complementary", { name: "Look", exact: true });
   await (await toolbarAction(page, "Look")).click();
   await look.getByRole("button", { name: "Close Look", exact: true }).click();
@@ -42,7 +43,23 @@ async function checkBuilder(page, phone) {
   await review.getByRole("button", { name: "Close Review", exact: true }).click();
   await review.waitFor({ state: "detached" });
 
+  const address = await openPreviewAddress(page);
+  await address.fill("/customers/new");
+  await address.press("Enter");
+  const frame = page.frameLocator('iframe[title="App preview"]');
+  const select = page.getByRole("button", { name: "Select", exact: true });
+  await select.click();
+  await frame.locator("html[data-sm-selecting]").waitFor({ state: "attached" });
+  await frame.locator('[data-sm-concept="field:Customer.email"]').click();
+  const selectionHint = hint("All settings shows more for what you selected.");
+  await selectionHint.waitFor();
+  await select.click();
   await showEditor();
+  const settingsHint = hint("No code changes the app. Code shows its files.");
+  assert.equal(await settingsHint.count(), 0, "the settings hint waits for the selection hint");
+  await selectionHint.click();
+  await settingsHint.click();
+  await settingsHint.waitFor({ state: "detached" });
   await tab("No code").click();
   await tab("Content").click();
   const pages = page
@@ -55,7 +72,13 @@ async function checkBuilder(page, phone) {
   const title = start.getByRole("textbox", { name: "title", exact: true });
   await title.fill("Edited in No code");
   await title.press("Tab");
+  await showPreview();
+  const overview = await openPreviewAddress(page);
+  await overview.fill("/");
+  await overview.press("Enter");
   await preview("Edited in No code");
+  const undoHint = hint("Undo in the top bar puts the app back.");
+  await undoHint.click();
   await undo();
   await preview("Overview");
 
@@ -72,8 +95,17 @@ async function checkBuilder(page, phone) {
   }, edited);
   await page.getByRole("button", { name: "Save", exact: true }).click();
   await preview("Edited in Code");
+  assert.equal(await undoHint.count(), 0);
   await undo();
   await preview("Overview");
+  await page.getByRole("button", { name: "Publish", exact: true }).click();
+  const publishHint = page.getByRole("dialog").getByRole("button", {
+    name: "Check what has changed before you publish.",
+    exact: true,
+  });
+  await publishHint.click();
+  await page.keyboard.press("Escape");
+  await page.getByRole("dialog").waitFor({ state: "detached" });
 }
 
 async function checkPreviewRange(page) {
@@ -143,10 +175,16 @@ export async function checkStudioSmoke(browser, base, evidence, asMade) {
       else assert.notEqual(savedUx, openingUx, "Keep did not save the chosen theme");
       await presentation.getByRole("button", { name: "Skip", exact: true }).click();
       await presentation.waitFor({ state: "detached" });
+      const lookHint = page.getByRole("button", {
+        name: "Look opens this again when you want another theme.",
+        exact: true,
+      });
       // On a cold runner the guide waits for the preview or its own 20-second fallback.
       await page.locator("[data-guide-card]").waitFor({ timeout: 45000 });
       await page.getByRole("button", { name: "Skip guide", exact: true }).click();
       await page.locator("[data-guide-card]").waitFor({ state: "detached" });
+      if (choice === "Keep this look") await lookHint.click();
+      else assert.equal(await lookHint.count(), 0);
       // Skipping the guide after its fallback can still precede a cold preview's startup.
       await page.locator('iframe[title="App preview"]').waitFor({ timeout: 60000 });
 

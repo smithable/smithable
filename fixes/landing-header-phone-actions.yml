@@ -1,0 +1,8 @@
+id: landing-header-phone-actions
+title: A narrow landing header now keeps the sign-out and site menu buttons within the screen.
+severity: fix
+exposure: none
+introduced: unknown
+affects:
+  kit: [src/kit/Landing.tsx]
+migration: none

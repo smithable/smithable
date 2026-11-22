@@ -12,6 +12,8 @@ The entries are filled in from the merged pull requests at each release. A fix t
 
 ### Breaking
 
+- **The engine**: `setAiBadge` takes `on`, `off` or `default` (it took `shown: true|false`), and switching the badge off while a realistic AI picture is placed needs `--acknowledged`. **The spec**: `aiBadge` unsaid no longer means on: it means by each picture's `kind` (a drawn picture is not badged); an app that wants every AI picture badged says `aiBadge: true`. Pictures without a `kind`, every app's today, are badged as before.
+
 - **The engine**: `smithable report --always` and Studio's Always send are gone: every error report is shown in full and sent by hand. Someone who chose always before is asked again.
 
 - **The spec**: a name, a label, a title or a subject is one line, in every spec file; the longer texts (descriptions, intents, rules, a section's text, help, answers, quotes) may still run over several. Control characters, the line breaks U+2028, U+2029 and U+0085, and the characters that reverse text's direction are refused anywhere.
@@ -22,6 +24,7 @@ The entries are filled in from the merged pull requests at each release. A fix t
 
 ### Fixes
 
+- Generated apps keep the sign-out and site menu buttons inside a narrow landing header by shortening the app name as needed (`fixes/landing-header-phone-actions.yml`).
 - Generated apps: on a phone, a landing page's header puts its "Open …" link in the site menu when there is one, and otherwise lets it shorten, so a long app name no longer makes the page scroll sideways (`fixes/landing-header-phone-width.yml`).
 - Generated apps: a cards view, and a landing page's cards, draw the picture placeholder only when a record shown has a picture; records without any show as text cards, not a row of empty slots (`fixes/empty-picture-slots.yml`).
 - Generated apps: a picture an AI made carries one badge, the EU's worded label "AI GENERATED" in English, the EU's icon joined to the app's own words in other languages, the icon alone on small pictures; photographs under a strong-colour theme keep their own colours (`fixes/ai-badge-one-mark.yml`).

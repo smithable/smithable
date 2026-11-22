@@ -23,7 +23,7 @@ import {
   TableRow,
 } from "#/components/ui/table";
 import { cn } from "#/lib/utils";
-import { AiMarked } from "./AiMark";
+import { AiMarked, type PictureKind } from "./AiMark";
 import { csvName, csvOf, download } from "./csv";
 import { pictureSet, versioned } from "./file-address";
 import { displayValue, formatValue, numberText } from "./format";
@@ -149,6 +149,15 @@ export function SaveButton({
       <Heart aria-hidden className={cn("size-5", saved && "fill-current text-primary-text")} />
     </button>
   );
+}
+
+/** What a record's picture (for several, the cover) is, as recorded when it was placed (AiMark.tsx). */
+function pictureKind<R>(row: R, field: RecordFieldUi<R>): PictureKind | undefined {
+  const value = field.get(row);
+  const picture = Array.isArray(value) ? value[0] : value;
+  return picture && typeof picture === "object" && "kind" in picture
+    ? (picture.kind as PictureKind)
+    : undefined;
 }
 
 /** Whether a record's picture (for several, the cover) was made by an AI (AiMark.tsx). */
@@ -323,7 +332,12 @@ export function ModelTable<R extends Row>({
       ui.model
     )
       return (
-        <AiMarked generated={generatedPicture(row, pictureField)} tiny className="shrink-0">
+        <AiMarked
+          generated={generatedPicture(row, pictureField)}
+          kind={pictureKind(row, pictureField)}
+          tiny
+          className="shrink-0"
+        >
           <img
             data-part="mark"
             {...pictureAt(pictureField, row)}
@@ -359,7 +373,12 @@ export function ModelTable<R extends Row>({
     // A picture as a thumbnail; its address is the record's, so it is as private as the record.
     if ((field.kind === "picture" || field.kind === "pictures") && text !== "—" && ui.model)
       return (
-        <AiMarked generated={generatedPicture(row, field)} tiny className="w-fit">
+        <AiMarked
+          generated={generatedPicture(row, field)}
+          kind={pictureKind(row, field)}
+          tiny
+          className="w-fit"
+        >
           <img
             {...pictureAt(field, row)}
             sizes="2.5rem"
@@ -476,6 +495,7 @@ export function ModelTable<R extends Row>({
                 (formatValue(cardPicture, displayValue(cardPicture, row), app) !== "—" ? (
                   <AiMarked
                     generated={generatedPicture(row, cardPicture)}
+                    kind={pictureKind(row, cardPicture)}
                     className="-mx-5 w-[calc(100%+2.5rem)]"
                   >
                     <img

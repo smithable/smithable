@@ -71,8 +71,11 @@ export interface UxIR {
   pages: Record<string, PageUx>;
   /** Colors of choice values by meaning, by "Model.field"; values not listed are neutral. */
   tones: Record<string, Record<string, Tone>>;
-  /** Whether pictures an AI made carry the badge (AiMark.tsx); on unless the owner switches it off. */
-  aiBadge: boolean;
+  /**
+   * Whether pictures an AI made carry the badge (AiMark.tsx; docs/design/picture-kinds.md §3):
+   * true for every one, false for none; unsaid, each by its kind (on where it looks real).
+   */
+  aiBadge?: boolean;
   /**
    * The image style the app's library pictures are in (docs/design/first-look.md §4.2), a style id
    * of the image library. Unsaid, the placed pictures' record says what they are.
@@ -464,7 +467,6 @@ export function emptyUx(): UxIR {
     theme: { preset: "modern", density: "comfortable", motion: "subtle" },
     pages: {},
     tones: {},
-    aiBadge: true,
     assistant: { voice: "plain" },
   };
 }
@@ -833,7 +835,10 @@ export function validateUx(
 
   for (const { key, value } of known) {
     if (key === "theme") readTheme(ctx, value, `"theme"`, themes, ux.theme);
-    if (key === "aiBadge") ux.aiBadge = readBoolean(ctx, value, '"aiBadge"') ?? true;
+    if (key === "aiBadge") {
+      const said = readBoolean(ctx, value, '"aiBadge"');
+      if (said !== undefined) ux.aiBadge = said;
+    }
     if (key === "navigation" || key === "chrome" || key === "menuActive") {
       const allowed: readonly string[] =
         key === "navigation" ? NAVIGATIONS : key === "chrome" ? CHROMES : ACTIVES;

@@ -605,8 +605,9 @@ test("timers, outgoing mail, payments, incoming calls and an action's meaning th
 
 test("the whole app's look goes through its operations", () => {
   const u = "smithable.ux.yml";
-  expect(operationFor(u, ["aiBadge"], false)).toEqual(["setAiBadge", { shown: "false" }]);
-  expect(operationFor(u, ["aiBadge"], undefined)).toEqual(["setAiBadge", { shown: "true" }]);
+  expect(operationFor(u, ["aiBadge"], false)).toEqual(["setAiBadge", { value: "off" }]);
+  expect(operationFor(u, ["aiBadge"], true)).toEqual(["setAiBadge", { value: "on" }]);
+  expect(operationFor(u, ["aiBadge"], undefined)).toEqual(["setAiBadge", { value: "default" }]);
   expect(operationFor(u, ["chrome"], undefined)).toEqual(["setChrome", { chrome: "inherit" }]);
   expect(operationFor(u, ["navigation"], "topbar")).toEqual([
     "setMenuLayout",

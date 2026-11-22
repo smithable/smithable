@@ -134,6 +134,8 @@ export interface ContentImage {
   alt: string;
   /** Made by an AI (the image library's pictures): the app says so on pictures that could pass for photographs. */
   generated?: true;
+  /** What the picture is, as the image library said when it was placed (picture-kinds.md §2). */
+  kind?: PictureKind;
   /** The file's own width in pixels, so a screen may choose it among its copies. */
   width?: number;
   /**
@@ -210,6 +212,22 @@ export interface FieldContent {
   values?: Record<string, string>;
 }
 
+/**
+ * What a placed picture is (docs/design/picture-kinds.md §2): made by an image model and looking
+ * real, made by one and drawn, or a photograph. A picture marked generated without a kind counts
+ * as the first.
+ */
+export const PICTURE_KINDS = ["ai-realistic", "ai-drawn", "photograph"] as const;
+export type PictureKind = (typeof PICTURE_KINDS)[number];
+
+/** Whether a generated picture of this kind carries the badge while aiBadge is unsaid. */
+export const badgedByDefault = (kind: PictureKind | undefined) =>
+  kind !== "ai-drawn" && kind !== "photograph";
+
+/** Why switching the AI badge off waits for the owner's word while a realistic AI picture is placed. */
+export const AI_BADGE_OFF_REFUSAL =
+  "The app has AI pictures that look real: whether its audience must be told an AI made them is your responsibility. Switch the badge off again with acknowledged (--acknowledged) to say so.";
+
 export const CONTENT_VERSION = "0.1";
 
 export function emptyContent(): ContentIR {
@@ -229,6 +247,7 @@ export const NOT_TEXT = new Set([
   "icon",
   "for",
   "generated",
+  "kind",
   "email",
   "phone",
   "vatNumber",
@@ -890,18 +909,27 @@ function readFieldTexts(
   return result;
 }
 
-/** A picture's texts, and whether an AI made it (`generated: true`). */
+/** A picture's texts, whether an AI made it (`generated: true`) and what it is (`kind`). */
 function readPicture(
   ctx: ParseContext,
   node: ParsedNode | null,
   where: string,
   sized = true,
-): { src?: string; alt?: string; generated?: true; width?: number; widths?: number[] } {
+): {
+  src?: string;
+  alt?: string;
+  generated?: true;
+  kind?: PictureKind;
+  width?: number;
+  widths?: number[];
+} {
   // A mark is shown small: one file.
   const entries = checkKeys(ctx, mapEntries(ctx, node, where) ?? [], where, {
-    allowed: ["src", "alt", "generated", ...(sized ? ["width", "widths"] : [])],
+    allowed: ["src", "alt", "generated", ...(sized ? ["kind", "width", "widths"] : [])],
   });
   const flag = entries.find((e) => e.key === "generated");
+  const sort = entries.find((e) => e.key === "kind");
+  const kind = sort && readPictureKind(ctx, sort.value, where);
   const own = entries.find((e) => e.key === "width");
   const copies = entries.find((e) => e.key === "widths");
   const texts = readTexts(
@@ -909,7 +937,7 @@ function readPicture(
     node,
     where,
     ["src", "alt"],
-    entries.filter((e) => e !== flag && e !== own && e !== copies),
+    entries.filter((e) => e !== flag && e !== sort && e !== own && e !== copies),
   );
   const width = own && readWidths(ctx, own.value, where, false)?.[0];
   const widths = copies && readWidths(ctx, copies.value, where, true);
@@ -924,14 +952,39 @@ function readPicture(
           ? `"widths" of ${where} needs a file whose name ends in a lower-case extension (images/hero.webp): its copies are named after it.`
           : undefined);
   if (misfit) ctx.error(copies?.value ?? null, "invalid-value", misfit);
+  const generated = flag && readBoolean(ctx, flag.value, `"generated" of ${where}`) === true;
+  // The two say the same thing twice, so they must agree, or the badge would follow the wrong one.
+  if (kind && (kind === "photograph") === Boolean(generated))
+    ctx.error(
+      sort?.value ?? null,
+      "invalid-value",
+      kind === "photograph"
+        ? `"kind" of ${where} is photograph, but it says "generated: true": an AI picture is ai-realistic or ai-drawn.`
+        : `"kind" of ${where} is ${kind}, a picture an AI made: say "generated: true" beside it.`,
+    );
   return {
     ...texts,
-    ...(flag && readBoolean(ctx, flag.value, `"generated" of ${where}`) === true
-      ? { generated: true as const }
-      : {}),
+    ...(generated ? { generated: true as const } : {}),
+    ...(kind ? { kind } : {}),
     ...(width ? { width } : {}),
     ...(widths && !misfit ? { widths } : {}),
   };
+}
+
+/** A picture's `kind`: one of PICTURE_KINDS. */
+function readPictureKind(
+  ctx: ParseContext,
+  node: ParsedNode | null,
+  where: string,
+): PictureKind | undefined {
+  const value = isScalar(node) ? node.value : undefined;
+  if ((PICTURE_KINDS as readonly unknown[]).includes(value)) return value as PictureKind;
+  ctx.error(
+    node,
+    "invalid-value",
+    `"kind" of ${where} must be ${PICTURE_KINDS.join(", ")}: what the picture is.`,
+  );
+  return undefined;
 }
 
 const PIXELS = (w: unknown): w is number =>
@@ -972,7 +1025,7 @@ function readImage(
   node: ParsedNode | null,
   where: string,
 ): ContentImage | undefined {
-  const { src, alt, generated, width, widths } = readPicture(ctx, node, where);
+  const { src, alt, generated, kind, width, widths } = readPicture(ctx, node, where);
   // In a language file a picture says what it shows only: its file is the content file's.
   if (ctx.emptyTexts) return { alt: alt ?? "" } as ContentImage;
   if (!src || !IMAGE_SRC.test(src)) {
@@ -995,6 +1048,7 @@ function readImage(
     src,
     alt,
     ...(generated ? { generated } : {}),
+    ...(kind ? { kind } : {}),
     ...(width ? { width } : {}),
     ...(widths ? { widths } : {}),
   };

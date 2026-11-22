@@ -3,8 +3,10 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { expect, test } from "vitest";
 import {
+  badgeExplained,
   type LibraryVersion,
   offeredStyles,
+  placedRealistic,
   placeStyle,
   readRecords,
   rebuildRecords,
@@ -349,4 +351,25 @@ test("a linked images folder or record file refuses; an app without library pict
   const placed = await placeStyle(bare, "pastel", library());
   if (typeof placed === "string") throw new Error(placed);
   expect(placed.texts).toEqual([]);
+});
+
+test("the AI badge by the placed pictures' kinds: realistic ones count, drawn ones and logos do not", () => {
+  const dir = mkdtempSync(join(tmpdir(), "smithable-badge-"));
+  mkdirSync(join(dir, "public", "images"), { recursive: true });
+  const write = (records: object) =>
+    writeFileSync(join(dir, "public", "images", "pictures.json"), JSON.stringify(records));
+  expect(placedRealistic(dir)).toBe(false);
+  write({
+    "hero.webp": { generated: true, role: "hero", kind: "ai-drawn" },
+    "logo.webp": { generated: true, role: "logo" },
+    "samples/0.webp": { generated: false, role: "sample", kind: "photograph" },
+  });
+  expect(placedRealistic(dir)).toBe(false);
+  expect(badgeExplained(dir, undefined)).toContain("0 placed picture(s) badged, 1 drawn");
+  // One without a kind (from before kinds) counts as looking real.
+  write({ "hero.webp": { generated: true, role: "hero" } });
+  expect(placedRealistic(dir)).toBe(true);
+  expect(badgeExplained(dir, undefined)).toContain("1 placed picture(s) badged, 0 drawn");
+  expect(badgeExplained(dir, true)).toContain("on");
+  expect(badgeExplained(dir, false)).toContain("off");
 });

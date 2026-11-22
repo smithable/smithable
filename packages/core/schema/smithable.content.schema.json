@@ -308,6 +308,14 @@
                   "type": "boolean",
                   "description": "Made by an AI: the app marks it as such where it could pass for a photograph."
                 },
+                "kind": {
+                  "enum": [
+                    "ai-realistic",
+                    "ai-drawn",
+                    "photograph"
+                  ],
+                  "description": "What the picture is, as the image library said when it was placed: an AI picture that looks real, a drawn AI picture, or a photograph. The badge's default follows it."
+                },
                 "width": {
                   "type": "integer",
                   "description": "The file's own width in pixels.",
@@ -350,6 +358,14 @@
                       "generated": {
                         "type": "boolean",
                         "description": "Made by an AI: the app marks it as such where it could pass for a photograph."
+                      },
+                      "kind": {
+                        "enum": [
+                          "ai-realistic",
+                          "ai-drawn",
+                          "photograph"
+                        ],
+                        "description": "What the picture is, as the image library said when it was placed: an AI picture that looks real, a drawn AI picture, or a photograph. The badge's default follows it."
                       },
                       "width": {
                         "type": "integer",
@@ -430,6 +446,14 @@
                       "generated": {
                         "type": "boolean",
                         "description": "Made by an AI: the app marks it as such where it could pass for a photograph."
+                      },
+                      "kind": {
+                        "enum": [
+                          "ai-realistic",
+                          "ai-drawn",
+                          "photograph"
+                        ],
+                        "description": "What the picture is, as the image library said when it was placed: an AI picture that looks real, a drawn AI picture, or a photograph. The badge's default follows it."
                       },
                       "width": {
                         "type": "integer",

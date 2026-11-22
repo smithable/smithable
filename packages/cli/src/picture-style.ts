@@ -16,7 +16,7 @@ import {
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import type { PictureCredit, PictureEntry } from "@smithable/ai";
-import { YamlEditor } from "@smithable/core";
+import { badgedByDefault, type PictureKind, YamlEditor } from "@smithable/core";
 import { asProject } from "./as-project.js";
 import { databasePath } from "./database.js";
 import { atLibrary, type Fetch, libraryBase } from "./pictures.js";
@@ -57,6 +57,8 @@ export interface PictureRecord {
   style?: string;
   sha256?: string;
   role?: PictureRole;
+  /** What the picture is (docs/design/picture-kinds.md §2); a generated one without it looks real. */
+  kind?: PictureKind;
   credit?: PictureCredit;
 }
 
@@ -137,6 +139,59 @@ function placedFiles(dir: string): string[] {
       if (/^[\w.-]+\.webp$/.test(name) && plain(join(samples, name), "file"))
         files.push(`samples/${name}`);
   return files;
+}
+
+/**
+ * Whether public/images/pictures.json lists a placed picture an AI made that looks real, which
+ * the badge marks by default (a logo is never badged; one recorded without its role is counted). A record from before photographs has no
+ * `generated` and was the library's, so made by an AI.
+ */
+export function placedRealistic(dir: string): boolean {
+  const records = readRecords(dir);
+  return (
+    Object.values(records).some(
+      (r) => r.generated !== false && r.role !== "logo" && badgedByDefault(r.kind),
+    ) ||
+    // A starter's numbered sample picture without a record was the library's, so made by an AI.
+    placedFiles(dir).some((f) => /^samples\/\d+\.webp$/.test(f) && !records[f]) ||
+    samplesRealistic(dir)
+  );
+}
+
+/** Whether a sample file (samples/<model>.yml) names a picture an AI made that looks real. */
+function samplesRealistic(dir: string): boolean {
+  const folder = join(dir, "samples");
+  if (!plain(folder, "dir")) return false;
+  const realistic = (node: unknown): boolean => {
+    if (Array.isArray(node)) return node.some(realistic);
+    if (!node || typeof node !== "object") return false;
+    const o = node as { picture?: unknown; generated?: unknown; kind?: unknown };
+    if (o.picture !== undefined && (o.generated === true || o.kind === "ai-realistic"))
+      return badgedByDefault(o.kind as PictureKind | undefined);
+    return Object.values(o).some(realistic);
+  };
+  return readdirSync(folder).some((name) => {
+    if (!/\.ya?ml$/.test(name) || !plain(join(folder, name), "file")) return false;
+    try {
+      return realistic(new YamlEditor(treeText(join(folder, name))).get([]));
+    } catch {
+      return false;
+    }
+  });
+}
+
+/**
+ * The AI badge in force, for `validate --explain` (picture-kinds.md §2): on, off, or by each
+ * picture's kind, then with how many of the placed pictures an AI made it badges and leaves.
+ */
+export function badgeExplained(dir: string, aiBadge: boolean | undefined): string {
+  if (aiBadge === true) return "aiBadge: on (every picture an AI made carries the badge)";
+  if (aiBadge === false) return "aiBadge: off (no picture carries the badge; set by the owner)";
+  const made = Object.values(readRecords(dir)).filter(
+    (r) => r.generated !== false && r.role !== "logo",
+  );
+  const badged = made.filter((r) => badgedByDefault(r.kind)).length;
+  return `aiBadge: by each picture's kind (default): ${badged} placed picture(s) badged, ${made.length - badged} drawn left unbadged`;
 }
 
 /** The hash of each placed file as it is now, to see that nothing changed before writing. */

@@ -28,6 +28,8 @@ export interface Picture {
   height: number;
   /** Made by an AI: the image library's sample pictures; a person's own only when they say so. */
   generated?: true;
+  /** What it is, as the image library said (picture-kinds.md §2): the AI badge's default follows it. */
+  kind?: "ai-realistic" | "ai-drawn" | "photograph";
   /** The same picture at PICTURE_WIDTHS narrower than it, each a file named by its own content. */
   smaller?: SmallerPicture[];
 }
@@ -183,10 +185,11 @@ export const pictureTag = (picture: Picture) => `"${picture.file.slice(-29, -5)}
 
 /**
  * What the image library said of each picture Smithable placed (public/images/pictures.json):
- * whether an image model made it. Absent in an app from before photographs.
+ * whether an image model made it, and its kind. Absent in an app from before photographs.
  */
-let placed: Record<string, { generated?: boolean }> | undefined;
-function placedPictures(): Record<string, { generated?: boolean }> {
+type Placed = Record<string, { generated?: boolean; kind?: Picture["kind"] }>;
+let placed: Placed | undefined;
+function placedPictures(): Placed {
   // Read once a seed: every sample picture asks.
   if (!placed)
     try {
@@ -202,16 +205,21 @@ function placedPictures(): Record<string, { generated?: boolean }> {
  * picture, copied into uploads/; null when the app has no sample pictures. A numbered one is
  * badged as public/images/pictures.json says (a photograph is not), and without that list as the
  * image library's were (an AI made them); a sample file says so of its own with `generated: true`.
+ * Its kind comes the same way: the sample file's own, else pictures.json's.
  */
 export function samplePicture(
   model: string,
   n: number | string,
   alt: string,
   generated?: boolean,
+  kind?: Picture["kind"],
 ): Picture | null {
   // A starter's numbered pictures (0.webp, 1.webp, …), or a sample file's own by name.
   const name = typeof n === "number" ? `${n}.webp` : n;
-  generated ??= placedPictures()[`samples/${name}`]?.generated ?? typeof n === "number";
+  const said = placedPictures()[`samples/${name}`];
+  kind ??= said?.kind;
+  // A kind says whether an AI made it; without one, the library's word or a starter's numbering.
+  generated ??= kind ? kind !== "photograph" : (said?.generated ?? typeof n === "number");
   const source = join("public", "images", "samples", name);
   if (!existsSync(source)) return null;
   const bytes = readFileSync(source);
@@ -224,7 +232,7 @@ export function samplePicture(
     return saved.width === width ? [{ file: saved.file, width, height: saved.height }] : [];
   });
   if (smaller.length) picture.smaller = smaller;
-  return generated ? { ...picture, generated: true } : picture;
+  return { ...picture, ...(generated ? { generated: true } : {}), ...(kind ? { kind } : {}) };
 }
 
 /** What a document field stores: the file under uploads/, the name it was sent with, its kind and size. */

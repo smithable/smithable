@@ -18,7 +18,7 @@ import { Badge } from "#/components/ui/badge";
 import { buttonVariants } from "#/components/ui/button";
 import { Card } from "#/components/ui/card";
 import { cn } from "#/lib/utils";
-import { AiMarked } from "./AiMark";
+import { AiMarked, type PictureKind } from "./AiMark";
 import { AppearancePicker } from "./AppearancePicker";
 import { AppLink } from "./AppLink";
 import { allows, type Rule, type Viewer } from "./access";
@@ -233,7 +233,9 @@ function LandingLayoutView({
               </ul>
             </nav>
           )}
-          <div className="flex min-w-0 items-center gap-2">
+          <div
+            className={cn("flex min-w-0 items-center gap-2", menu.length > 0 && "max-md:shrink-0")}
+          >
             {link && (
               <Link
                 to={link.to}
@@ -566,6 +568,8 @@ export interface LandingImage {
   alt: string;
   /** Made by an AI: marked where it is shown whole (AiMark.tsx). */
   generated?: boolean;
+  /** What it is (picture-kinds.md §2): the badge's default follows it. */
+  kind?: PictureKind;
   /** Its copies in other widths ("/images/hero.webp 1536w, /images/hero-2400.webp 2400w"), when it has them. */
   srcSet?: string;
 }
@@ -877,7 +881,11 @@ function HeroView({
                   >
                     {s.image ? (
                       // A tile is a card: an AI's picture carries the small mark, over its scrim.
-                      <AiMarked generated={s.image.generated} className="absolute inset-0 -z-10">
+                      <AiMarked
+                        generated={s.image.generated}
+                        kind={s.image.kind}
+                        className="absolute inset-0 -z-10"
+                      >
                         <img
                           src={s.image.src}
                           alt=""
@@ -1057,7 +1065,7 @@ function HeroView({
             imageSide === "right" ? "lg:order-2" : "",
           )}
         >
-          <AiMarked generated={image.generated} full>
+          <AiMarked generated={image.generated} kind={image.kind} full>
             <img
               src={image.src}
               alt={image.alt}
@@ -1093,6 +1101,7 @@ function HeroView({
     >
       <AiMarked
         generated={image.generated}
+        kind={image.kind}
         full
         className={cn(imageSide === "right" && "lg:order-2")}
       >
@@ -1226,7 +1235,14 @@ function RecordCardsView({
     tone?: "success" | "warning" | "danger";
     /** Where the card opens, e.g. its article. */
     href?: string;
-    picture?: { src: string; alt: string; width: number; height: number; generated?: boolean };
+    picture?: {
+      src: string;
+      alt: string;
+      width: number;
+      height: number;
+      generated?: boolean;
+      kind?: PictureKind;
+    };
   }[];
   /**
    * cards: a grid of cards; list: rows with a small picture; grid: the pictures, titled; ledger:
@@ -1272,7 +1288,7 @@ function RecordCardsView({
     !card.picture ? (
       icon && pictured && <PicturePlaceholder icon={icon} className={className} />
     ) : (
-      <AiMarked generated={card.picture.generated} className="shrink-0">
+      <AiMarked generated={card.picture.generated} kind={card.picture.kind} className="shrink-0">
         <img
           src={card.picture.src}
           alt={card.picture.alt}
@@ -1941,7 +1957,7 @@ function GalleryView({
                   dialog.current?.showModal();
                 }}
               >
-                <AiMarked generated={item.image.generated}>
+                <AiMarked generated={item.image.generated} kind={item.image.kind}>
                   <img
                     src={item.image.src}
                     alt={item.image.alt}
@@ -2106,7 +2122,7 @@ function MediaTextView({
               aria-label={w.openPicture(image.alt)}
               onClick={() => dialog.current?.showModal()}
             >
-              <AiMarked generated={image.generated}>
+              <AiMarked generated={image.generated} kind={image.kind}>
                 <img
                   src={image.src}
                   alt={image.alt}

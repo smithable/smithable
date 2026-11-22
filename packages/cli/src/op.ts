@@ -2,6 +2,7 @@ import { existsSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { columnOf, plural } from "@smithable/adapter-tanstack";
 import {
+  AI_BADGE_OFF_REFUSAL,
   applyOperation,
   applyOperations,
   checkOf,
@@ -55,7 +56,7 @@ import {
 } from "./import.js";
 import { type Io, lap, lapFrom } from "./io.js";
 import { SPEC_FILES } from "./managed.js";
-import { currentHashes, placeStyle, reseedPictures } from "./picture-style.js";
+import { currentHashes, placedRealistic, placeStyle, reseedPictures } from "./picture-style.js";
 import { loadPlugins } from "./plugins.js";
 import { ProjectBusyError, ProjectLockError, withProjectMutation } from "./project-mutation.js";
 import { projectRevision, sourceDigests } from "./project-revision.js";
@@ -572,6 +573,11 @@ async function applyAndCheckpoint(
   const placed = placing && (await placeStyle(dir, placing.style, flags.fetch ?? fetch));
   if (typeof placed === "string") {
     io.err(`${placed}\n`);
+    return 1;
+  }
+  // The AI badge switched off: core read the content file; the placed pictures are the host's.
+  if (result.effects.some((e) => e.kind === "ai-badge-off") && placedRealistic(dir)) {
+    io.err(`${AI_BADGE_OFF_REFUSAL}\n`);
     return 1;
   }
   if (destructive && !flags.yes) {

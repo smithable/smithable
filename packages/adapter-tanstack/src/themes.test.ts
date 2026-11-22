@@ -2,11 +2,15 @@ import { emptyUx, FONTS, parseTheme, type ThemeIR } from "@smithable/core";
 import { expect, test } from "vitest";
 import { FONT_PACKAGES, themeCss } from "./themes.js";
 
-test("the owner's switch for the AI badge (aiBadge: false) hides every mark", () => {
-  expect(themeCss(emptyUx())).not.toContain("ai-mark");
+test("the AI badge: every mark on, none (aiBadge: false), or by kind when unsaid", () => {
+  expect(themeCss({ ...emptyUx(), aiBadge: true })).not.toContain("ai-mark");
   expect(themeCss({ ...emptyUx(), aiBadge: false })).toContain(
     '[data-part="ai-mark"] {\n  display: none;',
   );
+  // Unsaid: a drawn picture's mark is hidden, a realistic one's (and a kindless one's) shows.
+  const unsaid = themeCss(emptyUx());
+  expect(unsaid).toContain('[data-part="ai-mark"][data-kind="ai-drawn"] {\n  display: none;');
+  expect(unsaid).not.toContain('[data-part="ai-mark"] {');
 });
 
 test("an owner's background goes in under the brand color, in both modes", () => {
