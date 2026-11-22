@@ -117,8 +117,7 @@ export function otherLanguages(description: string, main: Language): Language[] 
 }
 
 /** What the prompts say about the language, when it can be told; else nothing. */
-export function languageNote(description: string): string {
-  const language = textLanguage(description);
+export function languageNote(description: string, language = textLanguage(description)): string {
   return language
     ? `\n\nThe app's texts are in ${NAMES[language]}: write every question, suggested answer and text a person reads in ${NAMES[language]}, whatever names of places or people the description mentions.`
     : "";

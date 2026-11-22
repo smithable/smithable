@@ -22,7 +22,7 @@ import { runDev } from "./dev.js";
 import { affectedCommand, fixesCommand } from "./fixes.js";
 import { readPageCommand } from "./from-page.js";
 import { generate } from "./generate.js";
-import { commandHelp, help, operationHelp } from "./help.js";
+import { COMMANDS, commandHelp, help, operationHelp } from "./help.js";
 import { hostedLevel } from "./hosted-level.js";
 import { inspect, test } from "./inspect.js";
 import { type Io, keepStdoutForProtocol, processIo } from "./io.js";
@@ -353,7 +353,15 @@ export async function run(argv: string[], io: Io = processIo): Promise<number> {
       return values.approve
         ? approveAssetReviewCommand(dir, values.approve, io)
         : readWebsiteAssetReviewCommand(dir, io);
-    case "new":
+    case "new": {
+      const known = new Set(COMMANDS.find((entry) => entry.name === "new")?.options);
+      const unused = Object.keys(values).find((option) => !known.has(option));
+      if (unused) {
+        io.err(
+          `Unknown option for new: --${unused}. Run "smithable new --help" for its options.\n`,
+        );
+        return 2;
+      }
       if (values.content === "full" && hostedLevel()) {
         io.err(
           "Full website content on the hosted service needs the owner's recorded instruction. Use the service form when available.\n",
@@ -384,6 +392,7 @@ export async function run(argv: string[], io: Io = processIo): Promise<number> {
         yes: values.yes === true,
         sampleData: values["no-sample-data"] !== true,
       });
+    }
     case "clarify":
       if (!args.length) {
         io.err(

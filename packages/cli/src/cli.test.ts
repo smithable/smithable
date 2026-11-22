@@ -274,6 +274,15 @@ test("content mode is explicit and only accepted with local new from a website",
   }
 });
 
+test("new documents the content modes and rejects flags belonging to other commands", async () => {
+  const help = captureIo();
+  expect(await run(["new", "--help"], help)).toBe(0);
+  expect(help.stdout).toContain("--content full");
+  const io = captureIo();
+  expect(await run(["new", "x", "--force"], io)).toBe(2);
+  expect(io.stderr).toContain("Unknown option for new: --force");
+});
+
 test("local full-content command refuses the existing hosted environment marker", async () => {
   vi.stubEnv("SMITHABLE_HOSTED_LEVEL", "normal");
   try {

@@ -954,3 +954,27 @@ test("a draft from a Swedish site, nothing answered (new --from --yes), is a Swe
     expect(draft.files["smithable.content.yml"]).toContain("language: sv");
   }
 });
+
+test("full website copy keeps its language and takes priority over the English description frame", async () => {
+  const messages: string[] = [];
+  const provider = answering({ operations: [{ op: "setApp", args: { name: "Hamnens salong" } }] });
+  const draft = await draftProjectByOperations({
+    description: "Use the facts from this page to build the app and give it a public home.",
+    language: "sv",
+    preserveSourceCopy: true,
+    providers: [
+      {
+        ...provider,
+        complete(request) {
+          messages.push(request.system, request.user);
+          return provider.complete(request);
+        },
+      },
+    ],
+  });
+  expect(draft.kind).toBe("draft");
+  expect(messages[0]).toContain("preserving the source headings");
+  expect(messages[0]).not.toContain("never its sentences");
+  expect(messages[1]).toContain("The app's texts are in Swedish");
+  expect(draft.kind === "draft" && draft.files["smithable.content.yml"]).toContain("language: sv");
+});
