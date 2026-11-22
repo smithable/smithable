@@ -388,7 +388,11 @@ function pair(a, b) {
   }
   return out;
 }
-const pairs = pair(site, before.list).map(([i, j]) => ({ site: site[i], ours: before.list[j] }));
+const pairs = pair(site, before.list).map(([i, j]) => ({
+  site: site[i],
+  ours: before.list[j],
+  made: before.list[j],
+}));
 const sel = (s) => (s.kind === "footer" ? '[data-part="footer"]' : `[data-section="${s.name}"]`);
 
 // ---- Step 2: measure. In the page: an element's boxes (headings, pictures, filled buttons) by
@@ -734,7 +738,7 @@ for (const [i, p] of pairs.entries()) {
     n: i + 1,
     block: p.site.block,
     siteKind: p.site.kind,
-    section: p.ours.name,
+    section: p.made.name === p.ours.name ? p.ours.name : `${p.made.name} → ${p.ours.name}`,
     kind: p.ours.kind,
     before: p.before,
     after: p.after,
@@ -761,7 +765,7 @@ await browser.close();
 
 // ---- Step 5: the report. (a) what new --from got wrong or left out; (b) what no try reached.
 const paired = new Set(pairs.map((p) => p.site.block));
-const pairedOurs = new Set(pairs.map((p) => p.ours.name));
+const pairedOurs = new Set(pairs.map((p) => p.made.name));
 const fromList = [];
 for (const m of site)
   if (!paired.has(m.block))
@@ -772,7 +776,7 @@ for (const s of before.list)
   if (!pairedOurs.has(s.name))
     fromList.push(`our ${s.name} (${s.kind}) has no block on the site's home page`);
 for (const p of pairs) {
-  const made = before.list.find((s) => s.name === p.ours.name) ?? p.ours;
+  const made = p.made;
   if (p.site.kind !== made.kind && p.site.kind !== "text")
     fromList.push(
       `site block ${p.site.block} reads as ${p.site.kind}; new --from made ${made.name} a ${made.kind}`,
