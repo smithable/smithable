@@ -217,16 +217,21 @@ export default function LookEditorDialog({
           const { expectedRevision, requestId, ...args } = JSON.parse(
             String(init?.body ?? "{}"),
           ) as Record<string, unknown>;
-          const applyNow = () =>
+          // From Look, the precondition is the revision Look's session left, so Cancel can undo it.
+          const applyNow = (revision?: string) =>
             api.applyLook("applyTheme", args, project.lookProject ?? "", {
-              ...(typeof expectedRevision === "string" ? { expectedRevision } : {}),
+              ...(revision
+                ? { expectedRevision: revision }
+                : typeof expectedRevision === "string"
+                  ? { expectedRevision }
+                  : {}),
               ...(typeof requestId === "string" ? { requestId } : {}),
             });
           const result =
             route === "/api/apply"
               ? fromLook
                 ? await asLookChange(fromLook.session, `lab-${++labApplies.current}`, applyNow)
-                : await applyNow()
+                : await applyNow(undefined)
               : await api.applyLook("addTheme", args, project.lookProject ?? "");
           if (!result.ok)
             return Response.json(
@@ -343,16 +348,22 @@ export default function LookEditorDialog({
 async function asLookChange(
   session: LookSession,
   key: string,
-  apply: () => Promise<Result>,
+  apply: (revision: string) => Promise<Result>,
 ): Promise<Result> {
   let result: Result | undefined;
   try {
-    await session.set(key, "applied", async () => {
-      result = await apply();
+    await session.set(key, "applied", async (revision) => {
+      result = await apply(revision);
       return result;
     });
   } catch (reason) {
     if (!result) return { ok: false, output: (reason as Error).message };
+    // Applied, but Look's session could not record it: say so rather than report a clean Apply.
+    if (result.ok)
+      return {
+        ...result,
+        output: `${result.output} Cancel can no longer undo Look's changes: review them in Changes.`,
+      };
   }
   return result ?? { ok: false, output: "Look is closing: open the look editor again." };
 }
