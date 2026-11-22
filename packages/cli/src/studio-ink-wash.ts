@@ -6,7 +6,13 @@ import { deserialize } from "node:v8";
 import { Worker } from "node:worker_threads";
 import { resolveLook } from "@smithable/core";
 import type { InkWashWork } from "./ink-wash-worker.js";
-import { type LibraryVersion, libraryVersion, type PlacedStyle, sha256 } from "./picture-style.js";
+import {
+  type LibraryVersion,
+  libraryVersion,
+  type PictureRecords,
+  type PlacedStyle,
+  sha256,
+} from "./picture-style.js";
 import type { Fetch } from "./pictures.js";
 import { projectRevision } from "./project-revision.js";
 import { pictureHashes } from "./studio-picture-styles.js";
@@ -17,7 +23,7 @@ export interface InkWashOffer {
   binding: string;
   project: string;
   revision: string;
-  samples: { before: string; after: string }[];
+  samples: { before: string; after: string; asDrawn: boolean }[];
 }
 
 interface Preparation {
@@ -132,10 +138,16 @@ export class StudioInkWash {
         Buffer.from(JSON.stringify([dir, version.version, colours, placed.planned])),
       );
       const id = randomUUID();
-      const samples = placed.files.slice(0, 4).map(({ path }, index) => ({
-        before: `/api/images/${path.slice("public/images/".length)}`,
-        after: `/api/ink-wash/preview?${new URLSearchParams({ id, index: String(index) })}`,
-      }));
+      const record = placed.texts.find(({ path }) => path === "public/images/pictures.json");
+      const records = JSON.parse(record?.text ?? "{}") as PictureRecords;
+      const samples = placed.files.slice(0, 4).map(({ path }, index) => {
+        const file = path.slice("public/images/".length);
+        return {
+          before: `/api/images/${file}`,
+          after: `/api/ink-wash/preview?${new URLSearchParams({ id, index: String(index) })}`,
+          asDrawn: records[file]?.rule !== "ink-wash-b90",
+        };
+      });
       work.offer = { id, binding, project: work.project, revision: work.revision, samples };
     } catch {
       // The original pictures remain in place whenever preparation is unavailable.

@@ -231,7 +231,7 @@ export interface InkWashOffer {
   binding: string;
   project: string;
   revision: string;
-  samples: { before: string; after: string }[];
+  samples: { before: string; after: string; asDrawn: boolean }[];
 }
 
 /** A model's proposal for a request; nothing is applied until it is confirmed. */

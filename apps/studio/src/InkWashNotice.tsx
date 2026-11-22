@@ -81,14 +81,16 @@ export function InkWashNotice({
         <div className="mb-3 grid grid-cols-2 gap-2">
           <p>Current pictures</p>
           <p>Pictures for this theme</p>
-          {offer.samples.flatMap(({ before, after }) => [
+          {offer.samples.flatMap(({ before, after, asDrawn }) => [
             <img key={before} src={before} alt="Current drawing" className="w-full rounded" />,
-            <img
-              key={after}
-              src={after}
-              alt="Drawing to match the theme"
-              className="w-full rounded"
-            />,
+            <figure key={after}>
+              <img
+                src={after}
+                alt={asDrawn ? "Original drawing" : "Drawing to match the theme"}
+                className="w-full rounded"
+              />
+              {asDrawn && <figcaption className="text-xs text-muted">As drawn</figcaption>}
+            </figure>,
           ])}
         </div>
         {error && (
