@@ -655,7 +655,8 @@ const section: JsonSchema = {
     ),
     image: {
       type: "object",
-      description: "A hero's picture: { src: /images/hero.webp, alt: what it shows }.",
+      description:
+        "A section picture, including a background behind text, an invitation or features: { src: images/hero.webp, alt: what it shows }.",
       additionalProperties: false,
       dependencies: {
         kept: { required: ["generated"], properties: { generated: { const: true } } },
@@ -766,7 +767,8 @@ const section: JsonSchema = {
           answer: { type: "string" },
           image: {
             type: "object",
-            description: "A gallery picture: { src: images/…, alt: what it shows }.",
+            description:
+              "A gallery or feature card picture: { src: images/…, alt: what it shows }.",
             additionalProperties: false,
             dependencies: {
               kept: { required: ["generated"], properties: { generated: { const: true } } },

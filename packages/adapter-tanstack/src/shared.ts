@@ -63,6 +63,7 @@ export interface GenerateOptions {
   smithableVersion: string;
   /** Template inventory fingerprint supplied by the host; absent in older generated projects. */
   kitRevision?: string;
+  sectionPictureKitRevision?: string;
   /** Visible text from smithable.content.yml; anything missing is derived from names. */
   content?: ContentIR;
   auth: AuthIR;
@@ -110,6 +111,7 @@ export function texts(content: ContentIR) {
     /** The app's language: the kit's words and the page's `lang` follow it. */
     language: content.language,
     /** The app's mark as a prop of the shell or the landing frame (its file's address), or nothing. */
+    logoSrc: content.logo ? `/${content.logo.src}` : undefined,
     logo: content.logo ? ` logo=${attr(`/${content.logo.src}`)}` : "",
     /** The tab's icon: the app's mark when it has one, else the generated one with its initial. */
     icon: content.logo

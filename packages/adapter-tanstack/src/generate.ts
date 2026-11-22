@@ -156,6 +156,36 @@ export function privacyReviews(
 /** The app's name as a package, an image and a volume are named: letters, digits and hyphens. */
 const appSlug = (ir: SpecIR) => kebab(ir.app.name.replace(/[^A-Za-z0-9 -]/g, "")) || "app";
 
+const LANDING_KIT = "src/kit/Landing.tsx";
+
+/** Keep the original kit bytes for apps that use none of the optional picture treatments. */
+function landingPictureKit(source: string, enabled: boolean): string {
+  let optional = false;
+  return source
+    .split("\n")
+    .flatMap((line) => {
+      const comment = line.trim().replace(/^\/\/ |^\{\/\* | \*\/\}$/g, "");
+      if (comment === "@sectionPictures") {
+        optional = true;
+        return [];
+      }
+      if (comment === "@endSectionPictures") {
+        optional = false;
+        return [];
+      }
+      const marker = "@sectionPicturesBaseline |";
+      if (comment.startsWith(marker)) return enabled ? [] : [comment.slice(marker.length)];
+      return !optional || enabled ? [line] : [];
+    })
+    .join("\n");
+}
+
+/** Sources whose revisions apply to every generated app, including apps without opt-ins. */
+export const baselineKitSources = {
+  ...TEMPLATES,
+  [LANDING_KIT]: landingPictureKit(TEMPLATES[LANDING_KIT] as string, false),
+};
+
 export function generateApp(spec: SpecIR, options: GenerateOptions): GeneratedFile[] {
   // Push and texts go to people who sign in (notifications.md §4, §5): without sign-in an entry
   // keeps its other channels, and one that only pushed or texted is left out.
@@ -177,6 +207,20 @@ export function generateApp(spec: SpecIR, options: GenerateOptions): GeneratedFi
     ux: options.ux ?? emptyUx(),
     options,
   };
+  const sectionPictures = ir.pages.some((page) =>
+    page.sections.some((section) => {
+      const content = ctx.t.section(page.id, section.name);
+      return (
+        (section.kind === "hero" &&
+          Boolean(ctx.t.logoSrc) &&
+          ctx.ux.pages[page.id]?.looks?.[section.name]?.mark === "logo") ||
+        (["text", "callToAction", "features"].includes(section.kind) && Boolean(content.image)) ||
+        (section.kind === "features" && content.items?.some((item) => Boolean(item.image)))
+      );
+    }),
+  );
+  if (sectionPictures && options.sectionPictureKitRevision)
+    ctx.options = { ...options, kitRevision: options.sectionPictureKitRevision };
   const kits = SECTION_GENERATORS.flatMap((g) => g.kit ?? []);
   // The kit: every file, but a part's own only when the app uses that part, and of the words
   // (src/kit/words/<language>.ts) only the app's language, as src/kit/words.ts.
@@ -189,7 +233,14 @@ export function generateApp(spec: SpecIR, options: GenerateOptions): GeneratedFi
     })
     .map(([path, content]) => ({
       path,
-      content: path === FORMATS_FILE ? formatsFile(ir, ctx.options.content?.language) : content,
+      content:
+        path === FORMATS_FILE
+          ? formatsFile(ir, ctx.options.content?.language)
+          : path === LANDING_KIT
+            ? sectionPictures
+              ? landingPictureKit(content, true)
+              : baselineKitSources[LANDING_KIT]
+            : content,
       zone: SCAFFOLD.has(path) ? "scaffold" : "kit",
     }));
   const content = ctx.options.content;

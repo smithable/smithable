@@ -193,7 +193,14 @@ export function landingRoute(
   const loader = loaded
     ? `  loader: async () => {\n${lists.join("\n")}\n    return { ${shown.join(", ")} };\n  },\n`
     : "";
-  const items = (name: string) => literal(text(name).items ?? []);
+  const items = (name: string, featurePictures = false) =>
+    literal(
+      (text(name).items ?? []).map((item) =>
+        featurePictures && typeof item.image === "object" && !Array.isArray(item.image)
+          ? { ...item, image: picture(item.image) }
+          : item,
+      ),
+    );
   // A banded theme's sections: every second one that can have a band, counting from the first
   // after the hero (the footer and a custom section not counted), is muted unless it says its own.
   const alternate = new Set<string>();
@@ -213,7 +220,8 @@ export function landingRoute(
           key !== "stage" &&
           key !== "by" &&
           key !== "rhythm" &&
-          key !== "measure",
+          key !== "measure" &&
+          key !== "mark",
       )
       // The hero's "image" (which side) is imageSide: its image is the picture itself.
       .map(
@@ -222,6 +230,10 @@ export function landingRoute(
       )
       .join("");
     const own = text(section.name);
+    const background =
+      own.image && ["text", "callToAction", "features"].includes(section.kind)
+        ? `\n          background={${literal(picture(own.image))}}`
+        : "";
     // The short line over a section's title: the content file's, else (a hero) one read from the
     // page's contact section, its city or the first line of its hours (look-gap §4).
     const contact = sections.find((s) => s.kind === "contact");
@@ -234,13 +246,13 @@ export function landingRoute(
     const line = own.eyebrow ?? (read || undefined);
     const eyebrow = line ? `\n          eyebrow=${attr(line)}` : "";
     const open = (component: string) =>
-      `<${component}\n          texts=${attr(`pages.${page.id}.${section.name}`)}${look}${eyebrow}`;
+      `<${component}\n          texts=${attr(`pages.${page.id}.${section.name}`)}${look}${eyebrow}${background}`;
     switch (section.kind) {
       case "hero":
         imports.add("#/kit/Landing", "Hero");
         return [
           `${open("Hero")}
-          title=${attr(own.title ?? ir.app.name)}${
+          title=${attr(own.title ?? ir.app.name)}${given.mark === "logo" && t.logoSrc ? `\n          logoMark=${attr(t.logoSrc)}` : ""}${
             (own.subtitle ?? ir.app.description)
               ? `
           subtitle=${attr((own.subtitle ?? ir.app.description) as string)}`
@@ -609,7 +621,7 @@ export function landingRoute(
             ]
           : [
               `${open(kit)}${heading}${section.kind === "features" ? lead : ""}
-          items={${items(section.name)}}
+          items={${items(section.name, section.kind === "features")}}
         />`,
             ];
       }
