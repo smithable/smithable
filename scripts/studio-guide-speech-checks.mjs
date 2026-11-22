@@ -171,18 +171,19 @@ export async function checkStudioGuideSpeech(browser, base) {
       }
       await visibleCard.getByText("Keep the field, or take it back?", { exact: true }).waitFor();
     };
+    const done = card("changes").getByRole("button", { name: "Done", exact: true });
     await reachDemo();
     await visibleCard.getByRole("button", { name: "Undo", exact: true }).click();
-    await visibleCard.getByRole("button", { name: "Skip guide", exact: true }).waitFor();
+    await done.waitFor();
     await page.getByRole("status").filter({ hasText: "Undid:" }).waitFor({ timeout: 60000 });
     assert.ok(await input.isDisabled(), "guide's own Undo paused the remaining tour");
-    await visibleCard.getByRole("button", { name: "Skip guide", exact: true }).click();
+    await done.click();
     await page.locator("[data-guide-card]:visible").waitFor({ state: "detached" });
     assert.ok(await input.isEnabled());
     await resume();
     await reachDemo();
     await visibleCard.getByRole("button", { name: "Keep", exact: true }).click();
-    await visibleCard.getByRole("button", { name: "Skip guide", exact: true }).click();
+    await done.click();
     assert.ok(await input.isEnabled());
     // Keep is a real local operation; restore the fixture after checking that path too.
     const undo = await page.request.post(`${base}/api/undo`, {
