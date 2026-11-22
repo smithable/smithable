@@ -5,6 +5,7 @@ import type { Spec } from "../engine";
 import { LookSession } from "../first-look";
 import type { Selection } from "../preview";
 import { Button, useMedia } from "../ui";
+import { SectionFilm } from "./SectionFilm";
 import { SectionPicture } from "./SectionPicture";
 import { SectionSketch } from "./SectionSketch";
 
@@ -207,6 +208,17 @@ export function SelectedSection({
           file,
         ),
     );
+  // A hero's film, tried on the same way: its file goes in with the change and leaves with its undo.
+  const chooseFilm = (src?: string, file?: { path: string; data: string }) =>
+    attempt("film", src ?? "", (revision) =>
+      api.lookChange(
+        "setSectionFilm",
+        { page: section.page, section: section.section, ...(src ? { src } : {}) },
+        revision,
+        lookProject,
+        file,
+      ),
+    );
   const attempt = async (
     key: string,
     value: string,
@@ -323,6 +335,16 @@ export function SelectedSection({
             section={section.section}
             image={section.picture.image}
             change={(args, file) => void choosePicture(args, file)}
+            busy={busy}
+          />
+        )}
+        {section.kind === "hero" && section.picture?.image && (
+          <SectionFilm
+            key={section.picture.image.film?.src ?? ""}
+            page={section.page}
+            section={section.section}
+            film={section.picture.image.film}
+            change={(src, file) => void chooseFilm(src, file)}
             busy={busy}
           />
         )}

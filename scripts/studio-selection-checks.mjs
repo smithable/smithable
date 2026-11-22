@@ -198,6 +198,42 @@ export async function checkStudioSelection(browser, base) {
     await sectionForm.getByRole("button", { name: "Cancel", exact: true }).click();
     await sectionForm.waitFor({ state: "hidden" });
     await frame.locator("[data-hero] img").first().waitFor();
+    // Its film (T1278): a file that breaks a rule is refused with the rule named; one within them is
+    // tried on, and Cancel takes it away again.
+    await select.click();
+    await hero.click({ position: { x: 4, y: 4 } });
+    await sectionForm.waitFor();
+    const filmRow = sectionForm.locator("[data-section-film]");
+    const sendFilm = async (buffer) => {
+      const sent = page.waitForResponse(
+        (response) =>
+          response.url() === `${base}/api/op` &&
+          response.request().postDataJSON()?.name === "setSectionFilm",
+      );
+      await filmRow
+        .locator('input[type="file"]')
+        .setInputFiles({ name: "loop.mp4", mimeType: "video/mp4", buffer });
+      return (await sent).json();
+    };
+    const loud = await sendFilm(mp4Boxes({ sound: true }));
+    assert.equal(loud.ok, false);
+    assert.match(loud.output, /^Sound: it has a sound track/);
+    await sectionForm
+      .getByRole("alert")
+      .filter({ hasText: "Sound: it has a sound track" })
+      .waitFor();
+    assert.equal((await sendFilm(mp4Boxes())).ok, true);
+    await filmRow.getByRole("button", { name: "Replace", exact: true }).waitFor();
+    // The picture stays: it is what shows until a film plays, and when it cannot.
+    await frame.locator("[data-hero] img").first().waitFor();
+    await sectionForm.getByRole("button", { name: "Cancel", exact: true }).click();
+    await sectionForm.waitFor({ state: "hidden" });
+    await select.click();
+    await hero.click({ position: { x: 4, y: 4 } });
+    await sectionForm.waitFor();
+    await filmRow.getByText("No film: the picture stands still.", { exact: true }).waitFor();
+    await sectionForm.getByRole("button", { name: "Cancel", exact: true }).click();
+    await sectionForm.waitFor({ state: "hidden" });
     await renamed.click();
     await hero.waitFor({ state: "hidden" });
   } finally {
@@ -234,4 +270,44 @@ export async function checkStudioSelection(browser, base) {
   console.log(
     "  ✓ Studio selection: click, Shift and tap, both form positions, cancel and apply; a section beside its form",
   );
+}
+
+/**
+ * An MP4 of boxes alone (ISO/IEC 14496-12), enough for Studio's check of a film's rules: five
+ * seconds of 1280×720 H.264, with a sound track when asked. Nothing in it decodes.
+ */
+function mp4Boxes({ sound = false } = {}) {
+  const u32 = (n) => {
+    const b = Buffer.alloc(4);
+    b.writeInt32BE(n);
+    return b;
+  };
+  const box = (type, ...content) => {
+    const body = Buffer.concat(content);
+    return Buffer.concat([u32(body.length + 8), Buffer.from(type, "latin1"), body]);
+  };
+  const zeros = (n) => Buffer.alloc(n);
+  const one = 0x10000;
+  const matrix = [one, 0, 0, 0, one, 0, 0, 0, 0x40000000].map(u32);
+  const hdlr = (kind) => box("hdlr", u32(0), zeros(4), Buffer.from(kind, "latin1"), zeros(13));
+  const video = box(
+    "trak",
+    box("tkhd", u32(0), zeros(36), ...matrix, u32(1280 * one), u32(720 * one)),
+    box(
+      "mdia",
+      hdlr("vide"),
+      box("minf", box("stbl", box("stsd", u32(0), u32(1), box("avc1", zeros(78))))),
+    ),
+  );
+  const moov = box(
+    "moov",
+    box("mvhd", u32(0), zeros(8), u32(1000), u32(5000), zeros(80)),
+    video,
+    ...(sound ? [box("trak", box("mdia", hdlr("soun")))] : []),
+  );
+  return Buffer.concat([
+    box("ftyp", Buffer.from("isom", "latin1"), u32(0), Buffer.from("isom", "latin1")),
+    moov,
+    box("mdat", zeros(1000)),
+  ]);
 }

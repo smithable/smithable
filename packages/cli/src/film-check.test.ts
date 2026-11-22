@@ -4,6 +4,7 @@ import { join } from "node:path";
 import type { ContentIR } from "@smithable/core";
 import { expect, test } from "vitest";
 import { readFilm } from "./film-check.js";
+import { pictureRefusal } from "./studio.js";
 import { filmFindings } from "./validate.js";
 
 // MP4 files built box by box (ISO/IEC 14496-12): only the boxes the check reads, with the
@@ -149,4 +150,25 @@ test("smithable validate refuses a hero's film that is missing or breaks a rule"
   expect(filmFindings(dir, withFilm("images/gone.mp4"))[0]?.message).toBe(
     "The film images/gone.mp4 of home hero: its file is not in public/images/gone.mp4.",
   );
+});
+
+test("Studio takes a film with its change only as a new MP4 within the rules, named as its src", () => {
+  const send = (path: string, bytes: Uint8Array, there = false, src = path.slice(7)) =>
+    pictureRefusal("setSectionFilm", path, bytes, { src }, () => there);
+  expect(send("public/images/home-hero-1.mp4", mp4())).toBeUndefined();
+  // Each broken rule is named, as smithable validate names it.
+  expect(send("public/images/home-hero-1.mp4", mp4({ sound: true, seconds: 20 }))).toBe(
+    "Sound: it has a sound track; a film plays without sound, so save it without one. Length: it runs 20.0 seconds; a film runs 3 to 12 seconds.",
+  );
+  expect(send("public/images/home-hero-1.mp4", ascii("<html>"))).toMatch(
+    /^Format: it is not an MP4/,
+  );
+  // Never over a file that is there, never under another name, folder or extension.
+  expect(send("public/images/hero.mp4", mp4(), true)).toMatch(/already there/);
+  expect(send("public/images/a.mp4", mp4(), false, "images/b.mp4")).toBe(
+    "A film must be an MP4 file.",
+  );
+  expect(send("public/images/a/b.mp4", mp4())).toBe("A film must be an MP4 file.");
+  expect(send("public/images/hero.mov", mp4())).toBe("A film must be an MP4 file.");
+  expect(send("public/hero.mp4", mp4())).toBe("A film must be an MP4 file.");
 });
