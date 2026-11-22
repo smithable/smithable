@@ -4042,6 +4042,7 @@ async function foodTruckFlow(dir, base) {
     write(
       dir,
       `UPDATE stops SET place = 'Saturday market', directions_url = 'https://example.com/map',
+        starts_at = ${Date.parse("2026-11-21T09:00Z")}, ends_at = ${Date.parse("2026-11-21T13:00Z")},
         menu_override = 'Smoky bean flatbread €10', status = 'confirmed' WHERE place = 'Harbour market';
         INSERT INTO stops (place, starts_at, ends_at, directions_url, menu_override, status, created_at, updated_at) VALUES
         ('Sunday square', ${Date.parse("2026-11-22T09:00Z")}, ${Date.parse("2026-11-22T13:00Z")}, NULL, NULL, 'confirmed', unixepoch() * 1000, unixepoch() * 1000),
@@ -4074,9 +4075,13 @@ async function foodTruckFlow(dir, base) {
     if ((await venues.allTextContents()).join(",") !== "Sunday square")
       throw new Error("Saturday's stop is still on the schedule after closing");
     await page.getByRole("link", { name: "Regular menu" }).click();
-    await page.getByText("Charred mushroom flatbread").waitFor();
-    if (await page.locator('[data-part="placeholder"]').count())
-      throw new Error("the text-only menu shows an empty picture slot");
+    await page.getByText("Cheeseburger and fries", { exact: true }).waitFor();
+    const menuPhoto = page.getByRole("img", { name: "A cheeseburger and fries on a wooden board" });
+    await menuPhoto.scrollIntoViewIfNeeded();
+    await page.waitForFunction(() => {
+      const image = document.querySelector('img[src^="/files/menu-item/"]');
+      return image?.complete && image.naturalWidth > 0;
+    });
 
     await showAt("2026-11-22T13:00:00.000Z");
     await page.getByText("No stop planned.", { exact: true }).waitFor();

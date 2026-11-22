@@ -1,16 +1,20 @@
-- name: Charred mushroom flatbread
+- name: Cheeseburger and fries
   category: mains
-  description: Garlic mushrooms, white bean spread and pickled onions.
-  price: 11
-- name: Lemon chicken flatbread
+  description: A toasted bun, melted cheddar and fries.
+  price: 13
+  photo: { file: food-burger-p.webp, alt: A cheeseburger and fries on a wooden board }
+- name: Tomato soup
   category: mains
-  description: Griddled chicken, crunchy cabbage and lemon yoghurt.
-  price: 12
-- name: Crispy potatoes
+  description: Tomato soup topped with rocket and pesto.
+  price: 9
+  photo: { file: food-soup-p.webp, alt: A bowl of tomato soup topped with rocket and pesto }
+- name: Garden salad
   category: sides
-  description: Crushed potatoes with smoked salt and a herb dip.
+  description: Mixed greens with tomatoes and radishes.
   price: 5
-- name: Apple and ginger fizz
+  photo: { file: food-salad-p.webp, alt: A bowl of mixed salad with tomatoes and radishes }
+- name: Orange juice
   category: drinks
-  description: Pressed apple, ginger and sparkling water.
+  description: Freshly squeezed orange juice.
   price: 4
+  photo: { file: drink-juice-p.webp, alt: A glass of orange juice beside squeezed orange halves }

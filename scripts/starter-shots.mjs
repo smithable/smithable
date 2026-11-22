@@ -167,6 +167,7 @@ const SHOTS = {
     ],
     ["catering", "list", "visitor", true],
     ["where", "list", "visitor", true],
+    ["menu", "list", "visitor", true],
   ],
   api: [
     ["admin", "tasks", "admin"],

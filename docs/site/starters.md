@@ -201,6 +201,8 @@ In **Service hours**, enter a serving window for each weekday and service you of
 
 ![The Ember & Wheel home page with a sample confirmed stop](starters/food-truck-1.webp)
 ![The public catering enquiry form](starters/food-truck-2.webp)
+![The public food truck schedule](starters/food-truck-3.webp)
+![The pictured sample menu](starters/food-truck-4.webp)
 
 Ember & Wheel gives visitors a schedule, a regular menu and a catering enquiry form. In **Stops**, add the venue, start and end times, and a map link. Add a menu for that venue if the dishes or prices differ. Choose **Confirmed** to show the stop to visitors.
 
@@ -210,4 +212,4 @@ smithable new my-truck --starter food-truck
 
 The public schedule starts empty. There is a pictured draft stop in the crew's **Stops** list. Once a confirmed stop closes, the next one moves to the top. When nothing else is scheduled, visitors see **No stop planned** and can still ask about catering. The crew sees requests and follow-up dates in **Catering enquiries**.
 
-Edit the dishes and prices in **Menu items**. You can add a photo to each dish and add your own truck and griddle photos to the home gallery when you have them.
+Edit the pictured sample dishes and prices in **Menu items**. Replace the photos with your own and add truck and griddle photos to the home gallery when you have them.
