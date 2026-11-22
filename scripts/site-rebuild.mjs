@@ -173,7 +173,9 @@ const BLOCKS = () => {
           b.top < a.bottom - 20,
       ),
     );
-    const center = pictures.length ? pictures[0].left + pictures[0].width / 2 : r.width / 2;
+    // Both are page coordinates: the side is against the block's own middle, its left offset included.
+    const middle = r.left + r.width / 2;
+    const center = pictures.length ? pictures[0].left + pictures[0].width / 2 : middle;
     return {
       n: i,
       tag: el.tagName.toLowerCase(),
@@ -187,7 +189,7 @@ const BLOCKS = () => {
       pictureShare: Math.min(1, pictures.reduce((s, p) => s + p.width * p.height, 0) / area),
       pictureSide:
         pictures.length && pictures[0].width < r.width * 0.7
-          ? center < r.width / 2
+          ? center < middle
             ? "left"
             : "right"
           : null,
