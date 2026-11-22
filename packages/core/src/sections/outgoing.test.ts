@@ -482,6 +482,15 @@ test("setOutgoingBody sets, clears and refuses show and previous; a renamed fiel
   const wrong = applyOperation(files, "setOutgoingBody", { outgoing: "made", show: ["photo"] });
   expect(wrong.ok).toBe(false);
   expect(applyOperation(files, "setOutgoingBody", { outgoing: "made" }).ok).toBe(false);
+  // How long the {view} link opens: set, refused outside 1 to 365, and 0 back to the 60 unsaid.
+  const days = applyOperation(files, "setOutgoingBody", { outgoing: "made", viewDays: 14 });
+  if (!days.ok) throw new Error(days.message);
+  expect(days.files.spec).toContain("    recipient: owner\n    viewDays: 14\n");
+  expect(applyOperation(files, "setOutgoingBody", { outgoing: "made", viewDays: 400 }).ok).toBe(
+    false,
+  );
+  const unsaid = applyOperation(days.files, "setOutgoingBody", { outgoing: "made", viewDays: 0 });
+  expect(unsaid.ok && unsaid.files.spec).toBe(files.spec);
   // addOutgoing takes them too.
   const added = applyOperation(files, "addOutgoing", {
     outgoing: "gone",

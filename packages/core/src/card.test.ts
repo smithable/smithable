@@ -346,7 +346,6 @@ const LEFT_OUT: Record<string, string> = {
   "smithable.yml:actions.*.move": "what a split moves",
   "smithable.yml:actions.*.input": "a custom action's form",
   "smithable.yml:actions.*.output": "a custom action's result",
-  "smithable.yml:actions.*.allow": "a custom action's limits on its input",
   "smithable.yml:actions.*.triggers":
     "the outgoing entries a custom action raises, which part 5 lists",
   "smithable.yml:actions.*.examples.**": "values: the card counts the examples, never shows them",

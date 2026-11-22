@@ -1215,11 +1215,20 @@ const removeOutgoing: Operation<{ outgoing: string }> = {
   },
 };
 
-const setOutgoingBody: Operation<{ outgoing: string; show?: string[]; previous?: boolean }> = {
+const setOutgoingBody: Operation<{
+  outgoing: string;
+  show?: string[];
+  previous?: boolean;
+  viewDays?: number;
+}> = {
   name: "setOutgoingBody",
   summary:
-    "Choose what an outgoing mail lists under its text and a call carries: the fields in order, none for the text alone, or default for the record page's fields; and whether a change's mail or call says what the changed fields were.",
-  sets: ["smithable.yml:outgoing.*.show", "smithable.yml:outgoing.*.previous"],
+    "Choose what an outgoing mail lists under its text and a call carries: the fields in order, none for the text alone, or default for the record page's fields; whether a change's mail or call says what the changed fields were; and how many days a mail's {view} link opens.",
+  sets: [
+    "smithable.yml:outgoing.*.show",
+    "smithable.yml:outgoing.*.previous",
+    "smithable.yml:outgoing.*.viewDays",
+  ],
   schema: {
     type: "object",
     required: ["outgoing"],
@@ -1231,19 +1240,38 @@ const setOutgoingBody: Operation<{ outgoing: string; show?: string[]; previous?:
         description: `${showArgSchema.description} "default" returns to the record page's fields.`,
       },
       previous: previousSchema,
+      viewDays: {
+        type: "integer",
+        minimum: 0,
+        maximum: 365,
+        description:
+          "How many days the {view} link to the sent copy opens, from 1 to 365; 0 returns to the 60 days unsaid.",
+      },
     },
   },
   positional: ["outgoing"],
-  describe: ({ outgoing, show, previous }) =>
-    `Set what ${outgoing} carries${show ? `: ${show.join(", ")}` : ""}${previous !== undefined ? `, previous ${previous ? "on" : "off"}` : ""}`,
+  describe: ({ outgoing, show, previous, viewDays }) =>
+    `Set what ${outgoing} carries${show ? `: ${show.join(", ")}` : ""}${previous !== undefined ? `, previous ${previous ? "on" : "off"}` : ""}${viewDays !== undefined ? `, its view link ${viewDays || 60} days` : ""}`,
   destructive: () => false,
-  apply({ spec }, { outgoing, show, previous }, ir) {
+  apply({ spec }, { outgoing, show, previous, viewDays }, ir) {
     const o = ir.outgoing.find((x) => x.name === outgoing);
     if (!o) throw new OperationError(`There is nothing named "${outgoing}" under outgoing.`);
-    if (show === undefined && previous === undefined)
+    if (show === undefined && previous === undefined && viewDays === undefined)
       throw new OperationError(
-        "Say --show (fields in order, none, or default) or --previous true|false.",
+        "Say --show (fields in order, none, or default), --previous true|false or --view-days.",
       );
+    if (viewDays !== undefined) {
+      if (!Number.isInteger(viewDays) || viewDays < 0 || viewDays > 365)
+        throw new OperationError(
+          "--view-days is a whole number from 1 to 365, or 0 for the 60 days unsaid.",
+        );
+      const at = ["outgoing", outgoing, "viewDays"];
+      if (!viewDays) {
+        if (spec.has(at)) spec.remove(at);
+      } else if (spec.has(at)) spec.set(at, viewDays);
+      else spec.add(["outgoing", outgoing], "viewDays", viewDays);
+      if (show === undefined && previous === undefined) return [];
+    }
     if ("custom" in o.when)
       throw new OperationError(
         `The custom action "${o.when.custom}" has no record, so "show" and "previous" say nothing for "${outgoing}".`,

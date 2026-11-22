@@ -1112,13 +1112,6 @@
             },
             "description": "The values the action returns, if any."
           },
-          "allow": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "description": "Only these roles may run the action (admins always can)."
-          },
           "description": {
             "type": "string",
             "title": "What it is for",
