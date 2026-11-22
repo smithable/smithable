@@ -1,6 +1,6 @@
 # Starters
 
-A starter is a complete app to begin from: its spec, real sample records and pictures, and the generated code. Make one with `smithable new <folder> --starter <name>`, change it with [operations](change.md) or in your own words, or start it without the sample records with `--no-sample-data`. The pictures below are the starters as `smithable new` makes them, at desktop width. Seven of the thirteen also have a page of their own on smithable.ai, all at [smithable.ai/starters](https://smithable.ai/starters); the support desk, the food truck, the barbershop, the builder, the painter and the restaurant are made with `smithable new` on your own machine.
+A starter is a complete app to begin from, with its spec and generated code. Most come with sample records and pictures. Make one with `smithable new <folder> --starter <name>`, change it with [operations](change.md) or in your own words, or start it without the sample records with `--no-sample-data`. Seven starters have pages at [smithable.ai/starters](https://smithable.ai/starters). All fourteen are available with `smithable new`.
 
 ## CRM
 
@@ -196,3 +196,18 @@ smithable new my-restaurant --starter restaurant
 Create a seasonal menu in **Menus**, set its first and last serving days and add dishes to it. Change its status to **Published** when it's ready. The seasonal menu appears at the start of its first day in the restaurant's time zone. The regular menu returns at the end of its last day. If two seasonal menus overlap, the one with the later start date takes precedence.
 
 In **Service hours**, enter a serving window for each weekday and service you offer. In **Venue details**, replace the sample table booking and directions links. Add your own photos to the home page's dining room cover and kitchen gallery, or remove both pictures in Studio for a text-only site.
+
+## Food truck
+
+![The Ember & Wheel home page with a sample confirmed stop](starters/food-truck-1.webp)
+![The public catering enquiry form](starters/food-truck-2.webp)
+
+Ember & Wheel gives visitors a schedule, a regular menu and a catering enquiry form. In **Stops**, add the venue, start and end times, and a map link. Add a menu for that venue if the dishes or prices differ. Choose **Confirmed** to show the stop to visitors.
+
+```sh
+smithable new my-truck --starter food-truck
+```
+
+The schedule starts empty. Once a confirmed stop closes, the next one moves to the top. When nothing else is scheduled, visitors see **No stop planned** and can still ask about catering. The crew sees requests and follow-up dates in **Catering enquiries**.
+
+Edit the dishes and prices in **Menu items**. You can add a photo to each dish and add your own truck and griddle photos to the home gallery when you have them.

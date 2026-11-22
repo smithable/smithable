@@ -117,10 +117,7 @@ export async function checkStudioValidation(browser, base) {
     console.log("  ✓ Validation target opens timer settings");
     await timerError.getByText("Code details", { exact: true }).click();
     await timerError.getByText(/one of the three/).waitFor();
-    await page
-      .locator('[data-guide="manual"]')
-      .getByRole("tab", { name: "Code", exact: true })
-      .click();
+    await page.getByRole("tab", { name: "Code", exact: true }).click();
     await timerError.getByText(/one of the three/).waitFor();
     assert.equal(await timerError.getByText("Code details", { exact: true }).count(), 0);
     // The target must wait for No code to mount, including after a narrow-screen window change.

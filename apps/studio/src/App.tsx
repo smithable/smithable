@@ -27,7 +27,13 @@ import { Ask, type AudioActivity, usePresentation } from "./builder/Ask";
 import { NoCode, OPEN_PART, type OpenPart } from "./builder/NoCode";
 import { mailTemplates, OutgoingTemplate } from "./builder/OutgoingTemplate";
 import { SelectedButton, selectedButton } from "./builder/SelectedButton";
-import { beside, SelectedSection, selectedSection } from "./builder/SelectedSection";
+import { SelectedNavigation, selectedNavigation } from "./builder/SelectedNavigation";
+import {
+  beside,
+  SECTION_FORM_WIDTH,
+  SelectedSection,
+  selectedSection,
+} from "./builder/SelectedSection";
 import { SmithFace } from "./builder/SmithFace";
 import { SummaryTab } from "./builder/SummaryTab";
 import { Visualize } from "./builder/Visualize";
@@ -36,7 +42,7 @@ import { type CodeJump, SHOW_CODE } from "./code-jump";
 import { type Spec, useSpec } from "./engine";
 import { FeedbackDialog } from "./Feedback";
 import { FirstLook } from "./FirstLook";
-import { lookSeenKey, seenLook } from "./first-look";
+import { type LookSession, lookSeenKey, seenLook } from "./first-look";
 import { doneKey, guideOff, presentedKey, TOURS } from "./guide";
 import { entryText, grouped, line } from "./history";
 import { LookPanel } from "./LookPanel";
@@ -244,6 +250,8 @@ export function App() {
     project: Project;
     path: string;
     target?: string;
+    /** Opened by Look's Customize: a draft of this theme, Look's changes still undoable. */
+    fromLook?: { theme?: string; session: LookSession };
   }>();
   const [pickingLook, setPickingLook] = useState<{
     project: Project;
@@ -305,6 +313,8 @@ export function App() {
   const [selecting, setSelecting] = useState(false);
   const [shiftSelect, setShiftSelect] = useState(false);
   const [selectedPart, setSelectedPart] = useState<Selection>();
+  // The section form's own height as drawn (SelectedSection measures it), to place it wholly on the screen.
+  const [sectionHeight, setSectionHeight] = useState(260);
   const [selectionHost, setSelectionHost] = useState<HTMLDivElement | null>(null);
   const clearSelection = useCallback(() => {
     setSelectedPart(undefined);
@@ -717,7 +727,7 @@ export function App() {
       if (
         event.data.type === "select" &&
         typeof event.data.concept === "string" &&
-        /^(action|field|model|page|section|text):[\w.-]+$/.test(event.data.concept)
+        /^(action|field|model|navigation|page|section|text):[\w.-]+$/.test(event.data.concept)
       ) {
         if (!selectingCode) setSelectedPart(event.data);
         reveal("selection");
@@ -1278,6 +1288,7 @@ export function App() {
   };
   if (!project) return <p className="p-6 text-sm text-quiet">Opening the project…</p>;
   const button = selectedButton(selectedPart, spec);
+  const navigation = selectedNavigation(selectedPart, spec);
   const section = selectedSection(selectedPart, spec);
   const selectionAnchor = selectedPart?.anchor;
   const previewFrame = () =>
@@ -1312,8 +1323,8 @@ export function App() {
             ),
           },
           { width: window.innerWidth, height: window.innerHeight, top: 64 },
-          320,
-          260,
+          SECTION_FORM_WIDTH,
+          sectionHeight,
         )
       : undefined;
   const selectionPosition =
@@ -2423,7 +2434,7 @@ export function App() {
           project={pickingLook.project}
           spec={spec}
           preset={pickingLook.preset}
-          aiBadge={spec.ux?.aiBadge ?? true}
+          aiBadge={spec.ux?.aiBadge}
           onRefresh={refreshLook}
           onClose={({ error, kept }) => {
             const finishedApp = pickingLook.project.localDir ?? pickingLook.project.name;
@@ -2451,7 +2462,7 @@ export function App() {
               else reveal("look-kept");
             }
             if (error) setMessage({ ok: false, text: error });
-            if (customize) setEditingLook({ project, path: keptPage() });
+            if (customize) setEditingLook({ project, path: keptPage(), fromLook: customize });
           }}
         />
       )}
@@ -2465,7 +2476,12 @@ export function App() {
             liveBusy={busy}
             initialTarget={editingLook.target}
             path={editingLook.path}
-            onClose={() => setEditingLook(undefined)}
+            {...(editingLook.fromLook ? { fromLook: editingLook.fromLook } : {})}
+            onClose={(result) => {
+              setEditingLook(undefined);
+              if (result?.undone) void refreshLook();
+              if (result?.error) setMessage({ ok: false, text: result.error });
+            }}
           />
         </Suspense>
       )}
@@ -2562,10 +2578,12 @@ export function App() {
         <SelectedSection
           key={selectedPart?.concept}
           section={section}
-          run={run}
+          project={project}
+          refresh={refreshLook}
           close={clearSelection}
           ask={() => workIn("smith")}
           position={sectionPosition}
+          measured={setSectionHeight}
           reveal={revealSelection}
         />
       )}
@@ -2578,6 +2596,20 @@ export function App() {
           host={smithVisible && !overlaid ? selectionHost : undefined}
           position={narrow ? undefined : selectionPosition}
           reveal={revealSelection}
+        />
+      )}
+      {navigation && (
+        <SelectedNavigation
+          key={selectedPart?.concept}
+          part={navigation}
+          run={run}
+          close={clearSelection}
+          position={narrow ? undefined : selectionPosition}
+          go={(path) => {
+            clearSelection();
+            openPreviewWindow();
+            setGo((previous) => ({ path, key: (previous?.key ?? 0) + 1 }));
+          }}
         />
       )}
     </div>

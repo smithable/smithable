@@ -651,14 +651,28 @@ try {
     await op("setFilters", { page: "orders", fields: ["status"] });
     await firstWindow("nocode");
   });
-  await step("the preview says its records are samples, until dismissed", async () => {
-    const note = page.getByRole("note").filter({ hasText: "Your published app starts empty" });
-    await note.waitFor();
-    await note.getByRole("button", { name: "Dismiss" }).click();
-    await page.reload();
-    await page.getByRole("heading", { name: "Ask Smith", exact: true }).waitFor();
-    if (await note.count()) throw new Error("the samples notice came back");
-  });
+  const noticePage = await lookSeen.newPage();
+  try {
+    await step(
+      "the preview says its records are samples, until dismissed",
+      async () => {
+        // The notice expires by itself. Check dismissal on a fresh visit, before its timer ends.
+        await noticePage.goto(`${base}/?guide=off`);
+        const note = noticePage
+          .getByRole("note")
+          .filter({ hasText: "Your published app starts empty" });
+        await note.waitFor();
+        await note.getByRole("button", { name: "Dismiss", exact: true }).click();
+        await note.waitFor({ state: "detached" });
+        await noticePage.reload();
+        await noticePage.locator('iframe[title="App preview"]').waitFor();
+        if (await note.count()) throw new Error("the samples notice came back");
+      },
+      noticePage,
+    );
+  } finally {
+    await noticePage.close();
+  }
   await step(
     "the preview's address is no form a password manager fills, opens on Enter with no Go button, and its link button is kept",
     async () => {
@@ -1476,7 +1490,7 @@ try {
           if (tries === 3) throw error;
         }
       }
-      await page.getByRole("button", { name: "Select" }).click();
+      await page.getByRole("button", { name: "Select", exact: true }).click();
       await preview
         .locator("html[data-sm-selecting]")
         .waitFor({ state: "attached", timeout: 60000 * P });
@@ -1526,13 +1540,13 @@ try {
       if (after.files.spec !== before) throw new Error("smithable.yml changed");
       const ux = readFileSync(join(dir, "smithable.ux.yml"), "utf8");
       if (!/columns: \[email, name/.test(ux)) throw new Error(ux);
-      await page.getByRole("button", { name: "Select" }).click();
+      await page.getByRole("button", { name: "Select", exact: true }).click();
     },
   );
   await step(
     "a column moves with Alt and an arrow; a record's value says where it comes from (A 231)",
     async () => {
-      await page.getByRole("button", { name: "Select" }).click();
+      await page.getByRole("button", { name: "Select", exact: true }).click();
       await preview
         .locator("html[data-sm-selecting]")
         .waitFor({ state: "attached", timeout: 60000 * P });
@@ -1589,7 +1603,7 @@ try {
         .locator("[data-value-origin]")
         .getByText("each customer's email", { exact: false })
         .waitFor({ timeout: 60000 * P });
-      await page.getByRole("button", { name: "Select" }).click();
+      await page.getByRole("button", { name: "Select", exact: true }).click();
       // Undone, so the steps after find the drag's change last, as before.
       const undone = await fetch(`${base}/api/undo`, {
         method: "POST",
@@ -1610,7 +1624,7 @@ try {
       // the frame being replaced edits nothing, so the title must be editable before typing.
       const title = preview.locator('[data-sm-text="pages.customers.title"]');
       const changed = last.getByText("Changed the Customers page's title to “Clients”").first();
-      await page.getByRole("button", { name: "Select" }).click();
+      await page.getByRole("button", { name: "Select", exact: true }).click();
       // A reload that lands between the title becoming editable and the typing takes the typing
       // with it: the whole edit is made again then (the same title again changes nothing).
       for (let attempt = 1; ; attempt++) {
@@ -1631,7 +1645,7 @@ try {
       }
       if (!(await project()).files.content.includes("title: Clients"))
         throw new Error("content not changed");
-      await page.getByRole("button", { name: "Select" }).click();
+      await page.getByRole("button", { name: "Select", exact: true }).click();
       await preview.getByRole("heading", { name: "Clients" }).waitFor({ timeout: 60000 * P });
     },
   );
@@ -1670,7 +1684,7 @@ try {
     "look and feel: a theme, density and motion are chosen without touching code",
     async () => {
       await page.getByRole("button", { name: "Look", exact: true }).click();
-      await page.getByRole("button", { name: "Customise", exact: true }).click();
+      await page.getByRole("button", { name: "Customize", exact: true }).click();
       const theme = page.getByRole("region", {
         name: "App-wide font, density and motion",
         exact: true,
@@ -1794,7 +1808,7 @@ try {
     "a theme pasted in the Look tab is checked, added as a file and used; undo removes it",
     async () => {
       await page.getByRole("button", { name: "Look", exact: true }).click();
-      await page.getByRole("button", { name: "Customise", exact: true }).click();
+      await page.getByRole("button", { name: "Customize", exact: true }).click();
       const look = page.getByRole("dialog", { name: "Look", exact: true });
       await look.getByText("Add a theme").click();
       await look
@@ -2124,7 +2138,7 @@ try {
     "a field picked in the preview opens Behavior at it; Code keeps its file, cursor and unsaved edit across a window change and a reload",
     async () => {
       await openPreview("/customers/new");
-      await page.getByRole("button", { name: "Select" }).click();
+      await page.getByRole("button", { name: "Select", exact: true }).click();
       const email = page
         .getByRole("region", { name: "What the app does" })
         .locator("details[open]", { has: page.locator('summary:text-is("email")') });
@@ -2144,7 +2158,7 @@ try {
           if (attempt === 2) throw error;
         }
       }
-      await page.getByRole("button", { name: "Select" }).click();
+      await page.getByRole("button", { name: "Select", exact: true }).click();
       // A reload keeps the place (the browser tab's session).
       await page.reload();
       await email.first().waitFor({ timeout: 30000 * P });
@@ -2204,7 +2218,7 @@ try {
     async () => {
       await firstWindow("code");
       await openPreview("/customers");
-      await page.getByRole("button", { name: "Select" }).click();
+      await page.getByRole("button", { name: "Select", exact: true }).click();
       // The page in the frame is in select mode before anything is clicked: a click before it is
       // the app's own (a new frame after Go hears of select mode only once it has loaded).
       const selecting = () =>
@@ -2235,7 +2249,7 @@ try {
         .click({ timeout: 60000 * P });
       const field = await editorText("smithable.yml");
       if (!field.trim().startsWith("email:")) throw new Error(`smithable.yml shows "${field}"`);
-      await page.getByRole("button", { name: "Select" }).click();
+      await page.getByRole("button", { name: "Select", exact: true }).click();
       await firstWindow("nocode");
     },
   );
@@ -2554,7 +2568,7 @@ try {
       .getByText("Add a logo")
       .waitFor({ timeout: 60000 * P });
     await page.getByRole("button", { name: "Look", exact: true }).click();
-    await page.getByRole("button", { name: "Customise", exact: true }).click();
+    await page.getByRole("button", { name: "Customize", exact: true }).click();
     await look("App-wide font, density and motion")
       .getByRole("button", { name: "Comfortable" })
       .click();
@@ -2611,7 +2625,7 @@ try {
     // Native selected-page controls have visible labels and keyboard focus. They use the same
     // project history as chat: one Undo restores the original authored source.
     await page.getByRole("button", { name: "Look", exact: true }).click();
-    await page.getByRole("button", { name: "Customise", exact: true }).click();
+    await page.getByRole("button", { name: "Customize", exact: true }).click();
     const menu = page
       .getByRole("dialog", { name: "Look", exact: true })
       .getByLabel("Menu layout", { exact: true });
@@ -2754,7 +2768,7 @@ try {
         .waitFor({ timeout: 60000 * P });
       // Its own theme, from the Look tab (look.md §1.5).
       await page.getByRole("button", { name: "Look", exact: true }).click();
-      await page.getByRole("button", { name: "Customise", exact: true }).click();
+      await page.getByRole("button", { name: "Customize", exact: true }).click();
       const lookDialog = page.getByRole("dialog", { name: "Look", exact: true });
       await lookDialog.getByLabel("Theme selection target", { exact: true }).selectOption("home");
       await lookDialog.getByRole("button", { name: "Use Playful theme", exact: true }).click();
@@ -2810,18 +2824,114 @@ try {
         await new Promise((r) => setTimeout(r, 1000));
       if (await down.isDisabled()) throw new Error("the sections' arrows did not follow the move");
       // A page's frame (page-sections.md §4): the customers in the site's frame, in the ux file.
-      await page.getByLabel("Page to style").selectOption("customers");
-      await page.getByLabel("Frame of Customers").selectOption("site");
+      await page.getByLabel("Page to style", { exact: true }).selectOption("customers");
+      await page.getByLabel("Frame of Customers", { exact: true }).selectOption("site");
       const framed = () =>
         /customers:\s*\n(\s+\S.*\n)*?\s+frame: site/.test(
           readFileSync(join(dir, "smithable.ux.yml"), "utf8"),
         );
       for (let i = 0; i < 60 * P && !framed(); i++) await new Promise((r) => setTimeout(r, 1000));
       if (!framed()) throw new Error("the ux file has no frame for the customers");
+      await openPreview("/home");
+      const pick = async (target, position) => {
+        const select = page.getByRole("button", { name: "Select", exact: true });
+        if ((await select.getAttribute("aria-pressed")) !== "true") await select.click();
+        await preview.locator("html[data-sm-selecting]").waitFor({ state: "attached" });
+        await target.click({ position });
+      };
+      const topBar = preview.locator('header[data-sm-concept="navigation:landing.home"]');
+      const originalPosition = await topBar.getAttribute("data-position");
+      const positions =
+        originalPosition === "scrolling" ? ["sticky", "scrolling"] : ["scrolling", "sticky"];
+      for (const position of positions) {
+        await pick(topBar, { x: 4, y: 4 });
+        const settings = page.getByRole("form", { name: "Top bar", exact: true });
+        await settings
+          .getByRole("checkbox", { name: "Stays at the top when scrolling", exact: true })
+          .setChecked(position === "sticky");
+        await settings.getByRole("button", { name: "Apply", exact: true }).click();
+        await topBar.and(preview.locator(`[data-position="${position}"]`)).waitFor();
+        await settings.waitFor({ state: "hidden" });
+      }
+      const item = topBar.locator('[data-sm-concept="text:pages.customers.title"]:visible');
+      const drawer = topBar.getByRole("button", { name: "Open menu", exact: true });
+      if (await drawer.isVisible()) await drawer.click();
+      const original = (await item.textContent())?.trim();
+      if (!original) throw new Error("the menu item has no label");
+      await pick(item, { x: 2, y: 2 });
+      const itemEditor = page.getByRole("form", { name: original, exact: true });
+      await itemEditor.getByLabel("Menu item text", { exact: true }).fill("Customer list");
+      await itemEditor.getByRole("button", { name: "Apply", exact: true }).click();
+      await itemEditor.waitFor({ state: "hidden" });
+      if (
+        !readFileSync(join(dir, "smithable.content.yml"), "utf8").includes("title: Customer list")
+      )
+        throw new Error("the selected menu wording was not saved");
+      await openPreview("/home");
+      if (await drawer.isVisible()) await drawer.click();
+      await pick(item);
+      await page
+        .getByRole("form", { name: "Customer list", exact: true })
+        .getByRole("button", { name: "Open page", exact: true })
+        .click();
+      await page.waitForFunction(() =>
+        [...document.querySelectorAll('iframe[title="App preview"]')].some(
+          (frame) => new URL(frame.src).pathname === "/customers",
+        ),
+      );
+      await op("setText", { path: ["pages", "customers", "title"], text: original });
+      await op("setSectionLook", {
+        page: "home",
+        section: "header",
+        key: "position",
+        value: originalPosition ?? "default",
+      });
       // Back to its kind's, for the steps after this one.
-      await page.getByLabel("Frame of Customers").selectOption("default");
+      await sub("Layout");
+      await page.getByLabel("Page to style", { exact: true }).selectOption("customers");
+      await page.getByLabel("Frame of Customers", { exact: true }).selectOption("default");
       for (let i = 0; i < 60 * P && framed(); i++) await new Promise((r) => setTimeout(r, 1000));
       if (framed()) throw new Error("the customers kept the site's frame");
+      await openPreview("/customers");
+      const menuSource = /^navigation: (\S+)$/m.exec(
+        readFileSync(join(dir, "smithable.ux.yml"), "utf8"),
+      )?.[1];
+      const workspace = preview.locator('[data-sm-concept="navigation:workspace"]:visible').first();
+      const workspaceHeader = preview.locator('header[data-sm-concept="navigation:workspace"]');
+      const placement =
+        (await workspaceHeader.getAttribute("data-navigation")) === "topbar-centered"
+          ? "sidebar"
+          : "topbar-centered";
+      await pick(workspace, { x: 4, y: 4 });
+      const workspaceSettings = page.getByRole("form", { name: "App navigation", exact: true });
+      await workspaceSettings.getByLabel("Menu placement", { exact: true }).selectOption(placement);
+      await workspaceSettings.getByRole("button", { name: "Apply", exact: true }).click();
+      await workspaceSettings.waitFor({ state: "hidden" });
+      const positioned = workspaceHeader.and(preview.locator(`[data-navigation="${placement}"]`));
+      await positioned.waitFor({ state: "attached" });
+      // Apply can replace the preview frame. Open the page on the new layout before opening its
+      // mobile menu, so a frame replacement does not close the drawer under the click.
+      await openPreview("/customers");
+      await positioned.waitFor({ state: "attached" });
+      await preview.locator("body[data-hydrated=true]").waitFor();
+      const workspaceItem = preview
+        .locator(
+          'a:visible:has([data-sm-part="menu-item"][data-sm-concept="text:pages.customers.title"])',
+        )
+        .first();
+      if (!(await workspaceItem.isVisible())) {
+        await workspaceHeader
+          .getByRole("button", { name: "Open menu", exact: true })
+          .first()
+          .click();
+        await preview.locator('dialog[data-kit="drawer"][open]').waitFor();
+      }
+      await pick(workspaceItem, { x: 2, y: 2 });
+      await page
+        .getByRole("form", { name: original, exact: true })
+        .getByRole("button", { name: "Cancel", exact: true })
+        .click();
+      await op("setMenuLayout", { navigation: menuSource ?? "inherit" });
       await sub("Behavior");
     },
   );

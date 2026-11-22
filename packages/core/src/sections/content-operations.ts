@@ -2,12 +2,14 @@ import { parse, stringify } from "yaml";
 import {
   ASSISTANT_TEXTS,
   derivedTexts,
+  IMAGE_SRC,
   LANGUAGES,
   LOGO_SRC,
   notText,
   sectionItemTexts,
+  sectionTakesPicture,
 } from "../content.js";
-import type { YamlEditor } from "../edit.js";
+import type { YamlEditor, YamlValue } from "../edit.js";
 import type { SpecIR } from "../ir.js";
 import { humanize, plural } from "../naming.js";
 import { type AnyOperation, type Operation, OperationError, refTo } from "../operation.js";
@@ -68,9 +70,10 @@ const setText: Operation<{ path: string[]; text: string; language?: string }> = 
       content.removeAndPrune(path, 0);
     } else put(content, path, text);
     // Another file is not known to be made by an AI, nor to have the old one's smaller copies:
-    // the picture loses its mark and its widths, or wide screens would show the old picture.
+    // the picture loses its mark, its kind and its widths, or wide screens would show the old
+    // picture (and a kind left without the mark is an error, picture-kinds.md §2).
     if (path[path.length - 1] === "src" && before !== text)
-      for (const key of ["generated", "width", "widths"])
+      for (const key of ["generated", "kind", "width", "widths"])
         if (content.has([...parent, key])) content.remove([...parent, key]);
     return [];
   },
@@ -201,8 +204,8 @@ const setAssistantTexts: Operation<{
   },
 };
 
-/** Sets a text, creating missing parents (e.g. a page with no texts yet), but not list items. */
-function put(content: YamlEditor, path: string[], text: string) {
+/** Sets a text (or a picture), creating missing parents (e.g. a page with no texts yet), but not list items. */
+function put(content: YamlEditor, path: string[], text: YamlValue) {
   if (content.has(path)) return content.set(path, text);
   const parent = path.slice(0, -1);
   let found = parent;
@@ -458,6 +461,85 @@ const setLogo: Operation<{ src?: string; alt?: string }> = {
 };
 
 /**
+ * A landing section's own picture (a hero's, a media-and-text section's): another file under
+ * public/images/, or none. A new file is not known to be made by an AI nor to have smaller copies,
+ * so the mark, kind and widths go; the alt stays unless given. No src removes the picture, in
+ * every language file too; the section is then shown without one.
+ */
+const setSectionPicture: Operation<{ page: string; section: string; src?: string; alt?: string }> =
+  {
+    name: "setSectionPicture",
+    sets: ["smithable.content.yml:pages.*.*.image"],
+    summary:
+      "Set a landing section's picture (a hero or media-and-text section) to a file under public/images/, with what it shows; no src removes it.",
+    schema: {
+      type: "object",
+      required: ["page", "section"],
+      additionalProperties: false,
+      properties: {
+        page: refTo({ ref: "page", label: "Page" }, { description: "The page, e.g. home." }),
+        section: refTo(
+          { ref: "section", page: "page", label: "Section" },
+          { description: "The section, e.g. hero." },
+        ),
+        src: {
+          type: "string",
+          description: "The file, e.g. images/team.webp (webp, avif, jpg or png); none removes it.",
+        },
+        alt: {
+          type: "string",
+          description: "What the picture shows; without it, the one it has.",
+        },
+      },
+    },
+    positional: ["page", "section", "src"],
+    describe: ({ page, section, src }) =>
+      src
+        ? `Use ${src} as the picture of the ${section} section of ${page}`
+        : `Remove the picture of the ${section} section of ${page}`,
+    destructive: () => false,
+    apply({ content, translations }, { page, section, src, alt }, ir) {
+      const found = ir.pages.find((p) => p.id === page)?.sections.find((s) => s.name === section);
+      if (!found) throw new OperationError(`The ${page} page has no section named "${section}".`);
+      if (!sectionTakesPicture(found.kind))
+        throw new OperationError(`A ${found.kind} section has no picture of its own.`);
+      const path = ["pages", page, section, "image"];
+      if (src === undefined) {
+        if (!content.has(path)) throw new OperationError(`The ${section} section has no picture.`);
+        content.removeAndPrune(path, 0);
+        for (const language of (content.get(["languages"]) as string[] | undefined) ?? []) {
+          const other = translations.get(language);
+          if (other?.has(path)) other.removeAndPrune(path, 0);
+        }
+        return [];
+      }
+      if (!IMAGE_SRC.test(src))
+        throw new OperationError(
+          `"${src}" is not a file under public/images/: give it as images/<file> (webp, avif, jpg or png).`,
+        );
+      const had = content.get([...path, "alt"]);
+      const text = alt?.trim() || (typeof had === "string" ? had : "");
+      if (!text)
+        throw new OperationError("Say what the picture shows (alt), for people who cannot see it.");
+      const before = content.get(path);
+      const same =
+        !!before && typeof before === "object" && (before as { src?: unknown }).src === src;
+      const image: Record<string, YamlValue> = same
+        ? { ...(before as Record<string, YamlValue>), alt: text }
+        : { src, alt: text };
+      if (content.has(path)) content.set(path, image);
+      else put(content, path, image);
+      // Another language's words for the old picture say nothing of a new one: the main alt stands in.
+      if (!same)
+        for (const language of (content.get(["languages"]) as string[] | undefined) ?? []) {
+          const other = translations.get(language);
+          if (other?.has(path)) other.removeAndPrune(path, 0);
+        }
+      return [];
+    },
+  };
+
+/**
  * A section's items at once (a features section's points, a FAQ's questions and answers, the
  * testimonials), in place of the ones it had: a first draft writes them from what a page or a
  * description says, so the section is not a heading over nothing. No items removes them.
@@ -538,6 +620,7 @@ export const contentOperations: AnyOperation[] = [
   setText,
   setTexts,
   setItems,
+  setSectionPicture,
   nameRecords,
   setLanguage,
   addLanguage,

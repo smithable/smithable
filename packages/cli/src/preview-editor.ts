@@ -15,6 +15,14 @@ import { type LookPreviewConfig, lookPreviewHandler } from "./look-preview.js";
 import { RECORD_PROBE } from "./preview-discovery.js";
 import { writeTreeFile } from "./tree-files.js";
 
+/**
+ * Studio's preview shows no AI badge (picture-kinds.md §3): a rule in the app's own stylesheet,
+ * so it holds before the first paint, until the maker switches "Show AI badges here" on. The
+ * app's own builds, and an app run in development outside Studio, never have it.
+ */
+export const BADGES_HIDDEN =
+  'html:not([data-sm-badges]) [data-part="ai-mark"] { display: none !important; }';
+
 /** The runtime, run in the preview page inside Studio's iframe. */
 export const RUNTIME = `
 if (typeof window !== "undefined" && window.parent !== window) {
@@ -68,6 +76,12 @@ if (typeof window !== "undefined" && window.parent !== window) {
     studio = event.origin;
     followContext = event.data.context;
   });
+  // "Show AI badges here" (picture-kinds.md §3): the stylesheet hides the badge (BADGES_HIDDEN);
+  // shown, the page keeps the published rule, so the maker sees what will be published.
+  window.addEventListener("message", (event) => {
+    if (event.source !== window.parent || event.data?.type !== "smithable:show-badges" || !trusted(event.origin)) return;
+    document.documentElement.toggleAttribute("data-sm-badges", event.data.on === true);
+  });
   const markedAt = (element) => (element instanceof Element ? element.closest("[data-sm-concept]") : null);
   // A landing section (the kit's data-kit="section"), named by its texts' place in the content
   // file, "pages.<page>.<section>.<key>": what is picked where no closer part is marked.
@@ -95,12 +109,17 @@ if (typeof window !== "undefined" && window.parent !== window) {
     text && /^pages[.][^.]+[.][^.]+[.](button|secondButton)$/.test(text.dataset.smText ?? "")
       ? text.closest("[data-hero] a, [data-hero] button")
       : null;
+  const menuItemAt = (element) => {
+    const link = element instanceof Element ? element.closest("a") : null;
+    const mark = "[data-sm-part=menu-item]";
+    return link?.matches(mark) ? link : link?.querySelector(mark);
+  };
   const canPick = (event) => {
     if (selecting) return true;
     const target = event.target;
     if (!event.shiftKey || !(target instanceof Element) || editing(target)) return false;
-    // A marked hero action is one editor target, including the padding around its text.
-    if (heroButton(textAt(target))) return true;
+    // Preview actions and menu items include the padding around their text.
+    if (heroButton(textAt(target)) || menuItemAt(target)) return true;
     const mark = target.closest("[data-sm-concept], [data-sm-text]") ?? sectionAt(target)?.element;
     if (!mark) return false;
     const control = controlAt(target);
@@ -385,7 +404,11 @@ if (typeof window !== "undefined" && window.parent !== window) {
     hovered?.removeAttribute("data-sm-hover");
     hovered = null;
     if (!canPick(event)) return;
-    hovered = heroButton(textAt(event.target)) ?? markedAt(event.target) ?? sectionAt(event.target)?.element ?? null;
+    hovered = heroButton(textAt(event.target))
+      ?? menuItemAt(event.target)?.closest("a")
+      ?? markedAt(event.target)
+      ?? sectionAt(event.target)?.element
+      ?? null;
     hovered?.setAttribute("data-sm-hover", "");
     if (hovered?.dataset.smPart === "column") hovered.draggable = true;
   }, true);
@@ -428,7 +451,7 @@ if (typeof window !== "undefined" && window.parent !== window) {
   }, true);
   document.addEventListener("click", (event) => {
     if (designOnly() || !canPick(event)) return;
-    const marked = markedAt(event.target);
+    const marked = menuItemAt(event.target) ?? markedAt(event.target);
     event.preventDefault();
     event.stopPropagation();
     if (!marked) {
@@ -1041,8 +1064,8 @@ if (typeof window !== "undefined") {
             : "")
         : undefined,
     transform: (code: string, id: string) => {
-      if (look && id.split("?")[0]?.endsWith("/src/styles.css") && !id.includes("?url"))
-        return `${code}\n:root { --sm-look-generation: "${lookGeneration(dir, boot)}"; }\n`;
+      if (id.split("?")[0]?.endsWith("/src/styles.css") && !id.includes("?url"))
+        return `${code}\n${BADGES_HIDDEN}\n${look ? `:root { --sm-look-generation: "${lookGeneration(dir, boot)}"; }\n` : ""}`;
       return id.endsWith("/src/router.tsx") ? `${code}\nimport "${ID}";\n` : undefined;
     },
   };

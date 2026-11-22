@@ -17,7 +17,7 @@ export type PreviewMessage =
       type: "select";
       concept: string;
       /** A value is a record's or a formula's: it opens its field, never as text to change. */
-      part: "field" | "column" | "value" | null;
+      part: "field" | "column" | "value" | "menu-item" | null;
       page: string | null;
       columns: string[] | null;
       label?: string;
@@ -81,11 +81,32 @@ export function letGoTriedTheme(takeOff: boolean) {
   if (takeOff)
     previewWindow?.postMessage({ type: "smithable:theme-css", css: "" }, previewTarget());
 }
+
+const SHOWN = "smithable:show-ai-badges";
+/**
+ * Whether this person shows the AI badges in Studio's preview (picture-kinds.md §3). The preview
+ * server's own rule hides them before the first paint; shown, the page has the published rule.
+ */
+export function badgesShownHere() {
+  try {
+    return localStorage.getItem(SHOWN) === "1";
+  } catch {
+    return false;
+  }
+}
+export function showBadgesInPreview(on: boolean) {
+  try {
+    localStorage.setItem(SHOWN, on ? "1" : "0");
+  } catch {}
+  previewWindow?.postMessage({ type: "smithable:show-badges", on }, previewTarget());
+}
 if (typeof window !== "undefined")
   window.addEventListener("message", (e) => {
-    if (triedTheme === undefined || e.source !== previewWindow || !isPreviewMessage(e)) return;
-    if (e.data.type === "ready")
+    if (e.source !== previewWindow || !isPreviewMessage(e) || e.data.type !== "ready") return;
+    if (triedTheme !== undefined)
       previewWindow?.postMessage({ type: "smithable:theme-css", css: triedTheme }, previewTarget());
+    if (badgesShownHere())
+      previewWindow?.postMessage({ type: "smithable:show-badges", on: true }, previewTarget());
   });
 
 /** A section picked before the page loaded again is marked again in the new page. */

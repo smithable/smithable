@@ -1,7 +1,16 @@
-import { FONTS, humanize } from "@smithable/core";
+import { FONTS, humanize, type PictureKind } from "@smithable/core";
 import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { parseDocument } from "yaml";
+import {
+  BadgeNote,
+  BadgeSwitch,
+  badgeValue,
+  kindChoices,
+  ShowBadgesHere,
+  startingKind,
+} from "./AiBadge";
 import { api, type PictureStyles, type Project } from "./api";
+import { BADGE_WORDS, KIND_WORDS } from "./badge-words";
 import type { Spec } from "./engine";
 import { LookSession, triedThemeCss } from "./first-look";
 import { letGoTriedTheme, tryThemeInPreview } from "./preview";
@@ -20,9 +29,11 @@ const OWN = "";
 /**
  * Look (T1145): the whole app's most used look settings beside the running preview, each applied
  * at once through the operation layer, except the theme: a card only tries it on in the preview,
- * as the first visit's picker does (T1164), and Apply makes it one setTheme. Close keeps what was
- * applied and takes a tried theme off; Cancel undoes this panel's own changes and refuses when
- * another writer changed the app in between. Customise opens the theme lab.
+ * as the first visit's picker does (T1164), and Apply (at the foot, once a theme is tried on) makes
+ * it one setTheme. Close (X, Escape) keeps what was applied and applies a tried theme too, one Undo
+ * step away (T1195); Cancel undoes this panel's own changes, a tried theme with them, and refuses
+ * when another writer changed the app in between. Customize opens the theme lab on a draft of the
+ * tried theme (else the app's), handing this panel's changes over so the lab's Cancel undoes all.
  */
 export function LookPanel({
   project,
@@ -35,7 +46,12 @@ export function LookPanel({
   spec: Spec;
   place: "left" | "right" | "sheet";
   onRefresh: () => Promise<void>;
-  onClose: (options: { error?: string; customize?: boolean; kept?: boolean }) => void;
+  onClose: (options: {
+    error?: string;
+    kept?: boolean;
+    /** Customize: the lab opens on this theme with this panel's changes still undoable. */
+    customize?: { theme?: string; session: LookSession };
+  }) => void;
 }) {
   const lookProject = project.lookProject ?? "";
   const authored = (text: string | undefined, setting: Setting) => {
@@ -51,6 +67,7 @@ export function LookPanel({
             font: authored(project.files.ux, "font"),
             density: authored(project.files.ux, "density"),
             primary: authored(project.files.ux, "primary"),
+            aiBadge: badgeValue(spec.ux?.aiBadge),
           },
           revision: project.revision ?? "",
         },
@@ -92,7 +109,7 @@ export function LookPanel({
     return () => observer.disconnect();
   }, []);
   // Focus goes back to what opened Look (its toolbar button) when the panel closes, also when
-  // Customise opens the editor, so the editor gives it back there in turn.
+  // Customize opens the editor, so the editor gives it back there in turn.
   useEffect(() => {
     const previous = document.activeElement;
     heading.current?.focus();
@@ -127,11 +144,6 @@ export function LookPanel({
   const [tried, setTried] = useState<string>();
   const triedNow = useRef<string>(undefined);
   const applying = useRef(false);
-  // On a phone the sheet is short: a theme tried on brings its Apply row into view.
-  const applyRow = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (tried) applyRow.current?.scrollIntoView({ block: "nearest", behavior: "instant" });
-  }, [tried]);
   useEffect(() => {
     if (tried === undefined) return;
     let active = true;
@@ -159,9 +171,9 @@ export function LookPanel({
     setTried(triedNow.current);
     if (back) letGoTriedTheme(true);
   };
-  const applyTried = async () => {
+  const applyTried = async (): Promise<boolean> => {
     const theme = triedNow.current;
-    if (!theme || applying.current) return;
+    if (!theme || applying.current) return false;
     applying.current = true;
     // This page keeps the tried look until the theme is written.
     letGoTriedTheme(false);
@@ -172,7 +184,7 @@ export function LookPanel({
         // The preview may take the new stylesheet without a new page: the tried CSS comes off,
         // or it would hide every later change.
         letGoTriedTheme(true);
-        return;
+        return true;
       }
     } finally {
       applying.current = false;
@@ -185,6 +197,7 @@ export function LookPanel({
     } catch (reason) {
       setError((reason as Error).message);
     }
+    return false;
   };
   const setTheme = (key: Setting | "preset", value: string) =>
     change(key, value, (revision) =>
@@ -193,9 +206,18 @@ export function LookPanel({
         : api.lookChange("setTheme", { [key]: value }, revision, lookProject),
     );
   const close = async (keep: boolean, customize = false) => {
-    if (closing) return;
+    if (closed.current || applying.current) return;
+    // X and Escape apply a theme only tried on; a refused one keeps the panel open, still tried.
+    if (keep && !customize && triedNow.current && !(await applyTried())) return;
     closed.current = true;
     setClosing(true);
+    if (customize) {
+      // Nothing is finished here: the lab's Cancel undoes this session's changes, its Close keeps them.
+      const theme = triedNow.current;
+      await onRefresh();
+      onClose({ customize: { ...(theme ? { theme } : {}), session }, kept: session.changed });
+      return;
+    }
     let refusal: string | undefined;
     try {
       await session.finish(keep);
@@ -203,13 +225,23 @@ export function LookPanel({
       refusal = `Cancel could not restore the opening look: ${(reason as Error).message} Review the changes in Changes.`;
     }
     await onRefresh();
-    onClose({ ...(refusal ? { error: refusal } : {}), customize, kept: keep && session.changed });
+    onClose({ ...(refusal ? { error: refusal } : {}), kept: keep && session.changed });
   };
   const id = useId();
   const ux = project.files.ux;
   const preset = spec.ux?.theme.preset ?? "";
   const styles = pictures?.offer ? pictures.styles : [];
+  // The kind of pictures comes before their style (picture-kinds.md §1): the kind shown is the
+  // one chosen here, else the current style's.
+  const [chosenKind, setKind] = useState<PictureKind>();
+  const kind = chosenKind ?? startingKind(styles, pictures?.current);
+  const ofKind = kindChoices(styles).find((c) => c.kind === kind)?.styles ?? [];
   const busy = closing || session.refused;
+  // The theme in use first, then the rest in the gallery's order (T1195): the list scrolls.
+  const themes = [
+    ...project.themes.filter((t) => t.name === preset),
+    ...project.themes.filter((t) => t.name !== preset),
+  ];
   return (
     <aside
       aria-labelledby={`${id}-title`}
@@ -256,35 +288,49 @@ export function LookPanel({
           <legend className="mb-2 text-sm font-semibold">
             Theme <span className="font-normal text-muted">· {humanize(preset)}</span>
           </legend>
-          <div className="max-h-[17rem] overflow-auto rounded-md">
-            <ThemeCards
-              themes={project.themes}
-              preset={tried ?? preset}
-              inUse={preset}
-              onChoose={choose}
-            />
-          </div>
-          {tried && (
-            <div ref={applyRow} className="flex items-center justify-between gap-3 text-sm">
-              <span className="text-muted">Only the preview shows {humanize(tried)}.</span>
-              <Button className="shrink-0 whitespace-nowrap" onClick={() => void applyTried()}>
-                Apply theme
-              </Button>
-            </div>
-          )}
+          <ThemeList count={themes.length}>
+            <ThemeCards themes={themes} preset={tried ?? preset} inUse={preset} onChoose={choose} />
+          </ThemeList>
+          <p aria-live="polite" className="text-sm text-muted">
+            {tried && `Only the preview shows ${humanize(tried)}.`}
+          </p>
         </fieldset>
         <fieldset disabled={busy} className="space-y-3">
           <legend className="sr-only">Whole app settings</legend>
           {styles.length > 0 && (
+            <Row label="Kind of pictures" htmlFor={`${id}-kind`}>
+              <Select
+                id={`${id}-kind`}
+                value={kind}
+                options={kindChoices(styles).map(
+                  (c) =>
+                    [
+                      c.kind,
+                      c.styles.length
+                        ? KIND_WORDS[c.kind]
+                        : `${KIND_WORDS[c.kind]} (${BADGE_WORDS.notYet})`,
+                    ] as [string, string],
+                )}
+                onChange={(event) => setKind(event.target.value as PictureKind)}
+              />
+            </Row>
+          )}
+          {styles.length > 0 && kind === "ai-realistic" && <BadgeNote />}
+          {styles.length > 0 && !ofKind.length && (
+            <p className="text-sm text-muted" data-kind-not-yet>
+              {KIND_WORDS[kind]}: {BADGE_WORDS.notYet}.
+            </p>
+          )}
+          {ofKind.length > 0 && (
             <Row label="Image type" htmlFor={`${id}-pictures`}>
               <Select
                 id={`${id}-pictures`}
                 value={pictures?.current ?? ""}
                 options={[
-                  ...(pictures?.current && styles.some((s) => s.id === pictures.current)
+                  ...(pictures?.current && ofKind.some((s) => s.id === pictures.current)
                     ? []
                     : [["", "Current pictures"] as [string, string]]),
-                  ...styles.map((s) => [s.id, s.name] as [string, string]),
+                  ...ofKind.map((s) => [s.id, s.name] as [string, string]),
                 ]}
                 onChange={(event) => {
                   const style = event.target.value;
@@ -328,6 +374,22 @@ export function LookPanel({
             value={authored(ux, "primary")}
             onChange={(color) => void setTheme("primary", color)}
           />
+          <BadgeSwitch
+            id={`${id}-ai-badge`}
+            aiBadge={spec.ux?.aiBadge}
+            realistic={pictures?.realistic === true}
+            onChange={(value, acknowledged) =>
+              void change("aiBadge", value, (revision) =>
+                api.lookChange(
+                  "setAiBadge",
+                  { value, ...(acknowledged ? { acknowledged: true } : {}) },
+                  revision,
+                  lookProject,
+                ),
+              )
+            }
+          />
+          <ShowBadgesHere />
         </fieldset>
         {pictures?.error && <p className="text-sm text-muted">{pictures.error}</p>}
         {pending > 0 && (
@@ -346,11 +408,58 @@ export function LookPanel({
         <Button variant="ghost" disabled={closing} onClick={() => void close(false)}>
           Cancel
         </Button>
-        <Button disabled={closing} onClick={() => void close(true, true)}>
-          Customise
-        </Button>
+        <span className="flex items-center gap-2">
+          <Button
+            variant={tried ? "ghost" : "primary"}
+            disabled={closing}
+            onClick={() => void close(true, true)}
+          >
+            Customize
+          </Button>
+          {tried && (
+            <Button disabled={busy} onClick={() => void applyTried()}>
+              Apply
+            </Button>
+          )}
+        </span>
       </div>
     </aside>
+  );
+}
+
+/**
+ * The theme cards in a box that scrolls, taller than two rows, with a fade at its foot and a count
+ * while more cards lie below (T1195: the first cards are the top themes, the rest a scroll away).
+ */
+function ThemeList({ count, children }: { count: number; children: React.ReactNode }) {
+  const box = useRef<HTMLDivElement>(null);
+  const [more, setMore] = useState(true);
+  const measure = () => {
+    const el = box.current;
+    if (el) setMore(el.scrollTop + el.clientHeight < el.scrollHeight - 4);
+  };
+  // biome-ignore lint/correctness/useExhaustiveDependencies: a new count of themes changes what lies below
+  useLayoutEffect(measure, [count]);
+  return (
+    <div className="relative">
+      <div
+        ref={box}
+        onScroll={measure}
+        className="max-h-[min(26rem,45dvh)] overflow-auto rounded-md pb-1"
+      >
+        {children}
+      </div>
+      {more && (
+        <div
+          data-more-themes
+          className="pointer-events-none absolute inset-x-0 bottom-0 flex h-12 items-end justify-center bg-linear-to-t from-panel to-transparent pb-1 text-xs text-muted"
+        >
+          <span className="rounded-full bg-panel px-2 py-0.5 shadow-sm">
+            {count} themes · scroll for more
+          </span>
+        </div>
+      )}
+    </div>
   );
 }
 

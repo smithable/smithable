@@ -121,7 +121,7 @@ export interface OpFlags {
    * Files the change brings with it, by their path in the project (a logo Studio was given):
    * written with the change and committed in it, so an undo takes them back too.
    */
-  files?: { path: string; bytes: Uint8Array }[];
+  files?: { path: string; bytes: Uint8Array; fresh?: boolean }[];
   /** How the image library is reached (setPictureStyle); the global fetch when unsaid. */
   fetch?: typeof fetch;
   /** How deep to verify the change (change-verified.md §3.3); `change` when unsaid. */
@@ -689,7 +689,13 @@ async function applyAndCheckpoint(
   // From the first write to the commit: rollback only while no newer editor files would be lost.
   let committed = false;
   try {
-    const changes: TreeChange[] = [{ path: join(dir, SPEC), data: result.files.spec }];
+    // A fresh file the change brings goes first: one that is there by now stops it before any other write.
+    const changes: TreeChange[] = (flags.files ?? []).map((file) => ({
+      path: join(dir, file.path),
+      data: file.bytes,
+      fresh: file.fresh,
+    }));
+    changes.push({ path: join(dir, SPEC), data: result.files.spec });
     const write = (path: string, data: string | Uint8Array | undefined) => {
       if (data !== undefined) changes.push({ path, data });
     };
@@ -701,8 +707,7 @@ async function applyAndCheckpoint(
     for (const [language, text] of Object.entries(result.files.translations ?? {}))
       write(join(dir, translationPath(language)), text);
     for (const path of result.removed) changes.push({ path: join(dir, path), data: null });
-    for (const file of [...result.added, ...(flags.files ?? [])])
-      write(join(dir, file.path), "text" in file ? file.text : file.bytes);
+    for (const file of result.added) write(join(dir, file.path), file.text);
     for (const file of placed?.files ?? []) write(join(dir, file.path), file.bytes);
     for (const file of placed?.texts ?? [])
       changes.push({ path: join(dir, file.path), data: file.text || null });

@@ -11,7 +11,14 @@ import { asProject } from "./as-project.js";
  * `from`, a file of the tree renamed to `path`; with `folder`, a folder made with those above it.
  */
 export type TreeChange =
-  | { path: string; data: string | Uint8Array | null; mode?: number; append?: boolean }
+  | {
+      path: string;
+      data: string | Uint8Array | null;
+      mode?: number;
+      append?: boolean;
+      /** Only as a new file: the write fails (and the change with it) when one is there. */
+      fresh?: boolean;
+    }
   | { path: string; from: string }
   | { path: string; folder: true };
 
@@ -26,7 +33,7 @@ export const changeTree = asProject("changeTree", (changes: TreeChange[]): void 
       renameSync(change.from, change.path);
       continue;
     }
-    const { path, data, mode, append } = change;
+    const { path, data, mode, append, fresh } = change;
     if (data === null) {
       rmSync(path, { force: true });
       continue;
@@ -34,7 +41,7 @@ export const changeTree = asProject("changeTree", (changes: TreeChange[]): void 
     mkdirSync(dirname(path), { recursive: true });
     writeFileSync(path, data, {
       ...(mode === undefined ? {} : { mode }),
-      ...(append ? { flag: "a" } : {}),
+      ...(append ? { flag: "a" } : fresh ? { flag: "wx" } : {}),
     });
   }
 });

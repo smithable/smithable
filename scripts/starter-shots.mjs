@@ -146,6 +146,33 @@ const SHOTS = {
     ["jobs", "list", "visitor"],
     ["jobs", 1, "visitor", true],
   ],
+  "food-truck": [
+    [
+      "home",
+      "list",
+      "visitor",
+      true,
+      async (page, dir) => {
+        const Database = createRequire(join(dir, "package.json"))("better-sqlite3");
+        const db = new Database(join(dir, "data/db/app.db"));
+        const tomorrow = Date.now() + 86_400_000;
+        const starts = new Date(tomorrow).setUTCHours(10, 0, 0, 0);
+        db.prepare(
+          "INSERT INTO stops (place, address, starts_at, ends_at, directions_url, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, 'confirmed', unixepoch() * 1000, unixepoch() * 1000)",
+        ).run(
+          "Harbour market",
+          "Market Square",
+          starts,
+          starts + 10_800_000,
+          "https://example.com/map",
+        );
+        db.close();
+        await page.reload();
+        await page.getByRole("heading", { name: "Harbour market" }).waitFor();
+      },
+    ],
+    ["catering", "list", "visitor", true],
+  ],
   api: [
     ["admin", "tasks", "admin"],
     // A key just made: the card with the call to copy and an assistant's lines.

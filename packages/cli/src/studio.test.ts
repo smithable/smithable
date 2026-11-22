@@ -195,3 +195,38 @@ test("only the logo brings a picture with a change, so no upload replaces a pict
     /at most 2 MB/,
   );
 });
+
+test("a section's picture comes as a new picture file named as its src", () => {
+  const webp = new TextEncoder().encode("RIFF\0\0\0\0WEBPVP8 ");
+  const pad = (head: number[]) => new Uint8Array([...head, ...new Array(16).fill(0)]);
+  const png = pad([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+  const jpeg = pad([0xff, 0xd8, 0xff, 0xe0]);
+  // An AVIF that names itself mif1 first and avif among its other brands.
+  const avif = new TextEncoder().encode("\0\0\0\x1cftypmif1\0\0\0\0mif1avifmiaf\0\0\0\0");
+  const ok = (path: string, bytes: Uint8Array, there = false) =>
+    pictureRefusal("setSectionPicture", path, bytes, { src: path.slice(7) }, () => there);
+  expect(ok("public/images/hero-mine.webp", webp)).toBeUndefined();
+  expect(ok("public/images/hero-mine.png", png)).toBeUndefined();
+  expect(ok("public/images/hero-mine.jpg", jpeg)).toBeUndefined();
+  expect(ok("public/images/hero-mine.avif", avif)).toBeUndefined();
+  // A brand past the box it claims, or a box longer than the file, is no AVIF.
+  const cut = new TextEncoder().encode("\0\0\0\x10ftypmif1\0\0\0\0avifmiaf\0\0\0\0");
+  expect(ok("public/images/hero-mine.avif", cut)).toMatch(/at most 2 MB/);
+  const long = new TextEncoder().encode("\0\0\x01\0ftypavif\0\0\0\0mif1miaf\0\0\0\0");
+  expect(ok("public/images/hero-mine.avif", long)).toMatch(/at most 2 MB/);
+  // The header must be the extension's kind, and a whole one.
+  expect(ok("public/images/hero-mine.png", jpeg)).toMatch(/at most 2 MB/);
+  expect(ok("public/images/hero-mine.jpg", new Uint8Array([0xff, 0xd8, 0xff, 0xe0]))).toMatch(
+    /at most 2 MB/,
+  );
+  // A file that is there (the library's hero, another section's) is never written over.
+  expect(ok("public/images/hero.webp", webp, true)).toMatch(/already there/);
+  // Its bytes must be a picture's, whatever its name says; no SVG, no folder, no other src.
+  expect(ok("public/images/page.webp", new TextEncoder().encode("<html>"))).toMatch(/at most 2 MB/);
+  expect(ok("public/images/mark.svg", webp)).toMatch(/at most 2 MB/);
+  expect(ok("public/images/a/b.webp", webp)).toMatch(/at most 2 MB/);
+  expect(ok("public/index.webp", webp)).toMatch(/at most 2 MB/);
+  expect(
+    pictureRefusal("setSectionPicture", "public/images/a.webp", webp, { src: "images/b.webp" }),
+  ).toMatch(/at most 2 MB/);
+});

@@ -319,7 +319,7 @@ test("No code follows real preview navigation without losing edits or opening hi
     console.log("PASS preference reload and wrong-frame/malformed messages ignored");
 
     await page.getByRole("button", { name: "Look", exact: true }).click();
-    await page.getByRole("button", { name: "Customise", exact: true }).click();
+    await page.getByRole("button", { name: "Customize", exact: true }).click();
     const look = page.getByRole("dialog", { name: "Look", exact: true });
     await look.waitFor();
     await navigateInApp("/customers");

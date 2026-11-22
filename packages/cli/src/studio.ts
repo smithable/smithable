@@ -1,6 +1,6 @@
 import { type ChildProcess, spawn } from "node:child_process";
 import { createHash, randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
-import { existsSync, readFileSync, rmSync, statSync, watchFile } from "node:fs";
+import { existsSync, lstatSync, readFileSync, rmSync, statSync, watchFile } from "node:fs";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { extname, join, normalize, resolve } from "node:path";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
@@ -63,7 +63,12 @@ import {
 } from "./old-version.js";
 import { projectFiles, runOperation } from "./op.js";
 import { readOutbox } from "./outbox.js";
-import { type LibraryVersion, libraryVersion } from "./picture-style.js";
+import {
+  type LibraryVersion,
+  libraryVersion,
+  linkedRecordPath,
+  placedRealistic,
+} from "./picture-style.js";
 import { declaredPlugins, loadPlugins, pluginPath } from "./plugins.js";
 import {
   PREVIEW_TOKEN_DIGEST,
@@ -180,16 +185,54 @@ export const ownFile = (path: string) => path in EDITABLE_FILES || path.startsWi
  * answers as if done and writes nothing; the formatted text reaches the file with the next edit.
  */
 /**
- * Why a picture a change brings is refused, or undefined. Only the Look tab's logo brings one:
- * under public/images/, at most 2 MB. The logo has no smaller copies, so a file written over one
- * with the same name never leaves another picture's widths pointing at the old picture.
+ * Whether the bytes begin as a file of the extension's kind does (webp, avif, jpeg, png): its
+ * header, not its name. An AVIF may name itself mif1 first and avif among its other brands.
+ */
+export function pictureBytes(bytes: Uint8Array, ext: string): boolean {
+  if (bytes.byteLength < 16) return false;
+  const ascii = (from: number, to: number) => String.fromCharCode(...bytes.subarray(from, to));
+  if (ext === "webp") return ascii(0, 4) === "RIFF" && ascii(8, 12) === "WEBP";
+  if (ext === "png") return ascii(0, 8) === "\x89PNG\r\n\x1a\n";
+  if (ext === "jpg" || ext === "jpeg")
+    return bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
+  if (ext !== "avif" || ascii(4, 8) !== "ftyp") return false;
+  // The ftyp box: its length, the major brand at 8, the minor version at 12, other brands from 16.
+  const box = new DataView(bytes.buffer, bytes.byteOffset).getUint32(0);
+  if (box < 16 || box > bytes.byteLength || box % 4) return false;
+  const brands = [8, ...Array.from({ length: (box - 16) / 4 }, (_, k) => 16 + 4 * k)];
+  return brands.some((at) => /^avi[fs]$/.test(ascii(at, at + 4)));
+}
+
+/**
+ * Why a picture a change brings is refused, or undefined. The Look tab's logo brings one, and a
+ * section's picture (setSectionPicture): under public/images/, at most 2 MB. The logo has no
+ * smaller copies, so a file written over one with the same name never leaves another picture's
+ * widths pointing at the old picture. A section's picture is a new file, named as its src, never
+ * one that is there (a library picture with its record, or another section's), and a picture file
+ * by its bytes, not only by its name.
  */
 export function pictureRefusal(
   operation: string,
   path: unknown,
   bytes: Uint8Array | undefined,
+  args: Record<string, unknown> = {},
+  there: (path: string) => boolean = () => false,
 ): string | undefined {
-  if (operation !== "setLogo") return "Only the logo is uploaded with a change.";
+  if (operation === "setSectionPicture") {
+    if (
+      typeof path !== "string" ||
+      !/^public\/images\/[\w-][\w.-]*\.(webp|avif|jpe?g|png)$/.test(path) ||
+      path !== `public/${String(args.src)}` ||
+      !bytes ||
+      bytes.byteLength > 2 * 1024 * 1024 ||
+      !pictureBytes(bytes, path.slice(path.lastIndexOf(".") + 1))
+    )
+      return "A picture must be a webp, avif, jpg or png file of at most 2 MB.";
+    if (there(path)) return `${path} is already there: a new picture gets a name of its own.`;
+    return undefined;
+  }
+  if (operation !== "setLogo")
+    return "Only the logo and a section's picture are uploaded with a change.";
   if (
     typeof path !== "string" ||
     !/^public\/images\/[\w-][\w.-]*\.(webp|avif|jpe?g|png|svg)$/.test(path) ||
@@ -1269,6 +1312,7 @@ export async function studio(
           return json({
             styles: [],
             error: "Picture styles could not be reached. You can still choose a theme.",
+            realistic: placedRealistic(dir),
           });
         const hashes = pictureHashes(dir);
         const offer = randomUUID();
@@ -1281,7 +1325,8 @@ export async function studio(
         while (pictureOffers.size >= 20)
           pictureOffers.delete(pictureOffers.keys().next().value as string);
         pictureOffers.set(offer, { project, version, hashes, expires: Date.now() + 10 * 60_000 });
-        return json({ ...cards, offer, project });
+        // Whether switching the AI badge off asks first (picture-kinds.md §3).
+        return json({ ...cards, offer, project, realistic: placedRealistic(dir) });
       }
       // A style card's preview, served by Studio from its offer's pinned version (T951).
       if (req.method === "GET" && url.pathname === "/api/picture-styles/preview") {
@@ -1425,7 +1470,18 @@ export async function studio(
           return json({ ok: true, output: "Nothing to change.", unchanged: true });
         const given = file as { path?: unknown; data?: unknown } | undefined;
         let bytes = typeof given?.data === "string" ? Buffer.from(given.data, "base64") : undefined;
-        const refused = given && pictureRefusal(String(name), given.path, bytes);
+        const refused =
+          given &&
+          pictureRefusal(
+            String(name),
+            given.path,
+            bytes,
+            (args ?? {}) as Record<string, unknown>,
+            // A link for public/ or images/ would lead the write out of the project: refused as there.
+            (path) =>
+              linkedRecordPath(dir) !== undefined ||
+              lstatSync(join(dir, path), { throwIfNoEntry: false }) !== undefined,
+          );
         if (refused) return json({ ok: false, output: refused }, 400);
 
         if (given?.path && typeof given.path === "string" && given.path.endsWith(".svg") && bytes) {
@@ -1455,7 +1511,15 @@ export async function studio(
             onResult: (result) => {
               if (!result.ok && result.diagnostics.length) diagnostics = result.diagnostics;
               if (
-                ["setTheme", "resetThemeOverride", "setPictureStyle"].includes(String(name)) &&
+                // Look's and a section form's try-on (T1196): the change, so Cancel can undo it.
+                [
+                  "setTheme",
+                  "resetThemeOverride",
+                  "setPictureStyle",
+                  "setAiBadge",
+                  "setSectionLook",
+                  "setSectionPicture",
+                ].includes(String(name)) &&
                 result.ok &&
                 result.verification?.revision
               )
@@ -1477,7 +1541,17 @@ export async function studio(
             reportLater: true,
             where: "studio",
             trace: traceIdOf(req.headers.traceparent),
-            ...(given && bytes ? { files: [{ path: given.path as string, bytes }] } : {}),
+            ...(given && bytes
+              ? {
+                  files: [
+                    {
+                      path: given.path as string,
+                      bytes,
+                      fresh: String(name) === "setSectionPicture",
+                    },
+                  ],
+                }
+              : {}),
           }),
         );
         // A destructive operation stops to ask; the Studio shows the impact and a confirm button.

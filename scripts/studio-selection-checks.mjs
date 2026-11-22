@@ -147,6 +147,21 @@ export async function checkStudioSelection(browser, base) {
       ]);
       assert.equal((await response.json()).ok, true);
     };
+    // Its choices are drawn (T1196), and tried on in the preview: Cancel undoes them, the section
+    // back as it was and the selection closed.
+    assert.ok(
+      (await sectionForm.locator("[data-sketch]").count()) >= 3,
+      "a section's choices are drawn",
+    );
+    await choose("Text over picture");
+    await frame.locator('[data-hero][data-layout="centered"]').waitFor();
+    await sectionForm.getByRole("button", { name: "Cancel", exact: true }).click();
+    await sectionForm.waitFor({ state: "hidden" });
+    await frame.locator('[data-hero][data-layout="centered"]').waitFor({ state: "hidden" });
+    await frame.locator("[data-hero]").first().waitFor();
+    await select.click();
+    await hero.click({ position: { x: 4, y: 4 } });
+    await sectionForm.waitFor();
     await choose("Full width photo");
     await frame.locator('[data-hero][data-layout="photo"]').waitFor();
     await sectionForm
@@ -155,12 +170,34 @@ export async function checkStudioSelection(browser, base) {
       .waitFor();
     // Drawn again in its new layout, it is still the one selected, its form still open.
     await frame.locator('[data-hero][data-layout="photo"][data-sm-selected]').waitFor();
-    await sectionForm.getByRole("button", { name: "Ask Smith", exact: true }).click();
+    await sectionForm.getByRole("button", { name: "Describe another change", exact: true }).click();
     await page.locator("[data-guide=change]").first().waitFor();
+    // Escape keeps what was tried on, as Apply and the X do.
     await sectionForm.focus();
     await page.keyboard.press("Escape");
     await sectionForm.waitFor({ state: "hidden" });
     await frame.locator("[data-sm-selected]").waitFor({ state: "hidden" });
+    await frame.locator('[data-hero][data-layout="photo"]').waitFor();
+    // Its picture (T1183): shown in the kept photo layout, Remove is tried on like a layout, and Cancel brings the picture back.
+    const heroPicture = frame.locator("[data-hero] img").first();
+    await heroPicture.waitFor();
+    await select.click();
+    await hero.click({ position: { x: 4, y: 4 } });
+    await sectionForm.waitFor();
+    const removed = page.waitForResponse(
+      (response) =>
+        response.url() === `${base}/api/op` &&
+        response.request().postDataJSON()?.name === "setSectionPicture",
+    );
+    await sectionForm
+      .locator("[data-section-picture]")
+      .getByRole("button", { name: "Remove", exact: true })
+      .click();
+    assert.equal((await (await removed).json()).ok, true);
+    await heroPicture.waitFor({ state: "detached" });
+    await sectionForm.getByRole("button", { name: "Cancel", exact: true }).click();
+    await sectionForm.waitFor({ state: "hidden" });
+    await frame.locator("[data-hero] img").first().waitFor();
     await renamed.click();
     await hero.waitFor({ state: "hidden" });
   } finally {

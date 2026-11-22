@@ -148,6 +148,18 @@ export function textMarker(path: string) {
   return import.meta.env.DEV ? { "data-sm-text": path } : {};
 }
 
+export function navigationMarker(page?: string) {
+  return import.meta.env.DEV
+    ? { "data-sm-concept": page ? `navigation:landing.${page}` : "navigation:workspace" }
+    : {};
+}
+
+export function menuItemMarker(page: string | undefined) {
+  return import.meta.env.DEV && page
+    ? { "data-sm-concept": `text:pages.${page}.title`, "data-sm-part": "menu-item" }
+    : {};
+}
+
 /**
  * Marks an element with the part of the app description it shows, for the preview editor
  * (select a field, drag a column, a record's value: where it comes from). Only in development:
