@@ -52,6 +52,12 @@ test("an operation's tool takes only the operation's arguments (T1247)", async (
   const operations = tools.filter((t) => t.inputSchema.properties?.confirm);
   expect(operations.length).toBeGreaterThan(50);
   expect(operations.filter((t) => t.inputSchema.additionalProperties !== false)).toEqual([]);
+  const below = await mcp.callTool({
+    name: "smithable_move_section",
+    arguments: { page: "items", section: "a", below: "b" },
+  });
+  expect(below.isError).toBe(true);
+  expect((below.content as { text: string }[])[0]?.text).toContain('Unknown argument "below"');
 });
 
 test("an operation's result carries its verification as structured content", async () => {
