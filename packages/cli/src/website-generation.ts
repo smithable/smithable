@@ -12,7 +12,7 @@ import {
   validateImageInference,
 } from "./image-context.js";
 import type { Io } from "./io.js";
-import { sectionPictureKitRevision, templateKitRevision } from "./maintenance.js";
+import { landingKitRevision, templateKitRevision } from "./maintenance.js";
 import { addLibraryPictures, type PlacedPicture } from "./pictures.js";
 import { treeText } from "./secrets.js";
 import {
@@ -410,7 +410,7 @@ function compilerIdentity(
   const options = {
     smithableVersion: VERSION,
     kitRevision: templateKitRevision,
-    sectionPictureKitRevision,
+    resolveLandingKitRevision: landingKitRevision,
     auth,
     // The same spec files generate() passes, so the app card's facts match the written ones.
     cardFiles: cardFiles(dir, content ?? {}),

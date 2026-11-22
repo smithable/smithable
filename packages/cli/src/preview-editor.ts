@@ -93,7 +93,7 @@ if (typeof window !== "undefined" && window.parent !== window) {
       const navigation = footer.parentElement.querySelector(":scope > [data-sm-concept^='navigation:landing.']");
       const page = navigation?.dataset.smConcept.split(".")[1];
       if (!page) return null;
-      const section = [...footer.querySelectorAll("[data-sm-text^='pages.']")]
+      const section = footer.dataset.section ?? [...footer.querySelectorAll("[data-sm-text^='pages.']")]
         .map((marked) => marked.dataset.smText.split("."))
         .find((path) => path[1] === page)?.[2] ?? "@footer";
       return { element: footer, concept: "section:" + page + "." + section };

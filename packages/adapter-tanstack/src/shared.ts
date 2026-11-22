@@ -1,4 +1,5 @@
 // Part of the TanStack adapter's generator (generate.ts), split out by concern (C7).
+
 import {
   type AnalyticsSetting,
   type AuthIR,
@@ -25,6 +26,7 @@ import {
   uniqueScope,
 } from "@smithable/core";
 import { hasSignIn } from "./auth.js";
+import type { LandingKitFeature } from "./generate.js";
 
 /**
  * Who owns a file (ARCHITECTURE §6.4). "scaffold" files are created once and then belong
@@ -63,7 +65,7 @@ export interface GenerateOptions {
   smithableVersion: string;
   /** Template inventory fingerprint supplied by the host; absent in older generated projects. */
   kitRevision?: string;
-  sectionPictureKitRevision?: string;
+  resolveLandingKitRevision?: (features: readonly LandingKitFeature[]) => string;
   /** Visible text from smithable.content.yml; anything missing is derived from names. */
   content?: ContentIR;
   auth: AuthIR;

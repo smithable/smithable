@@ -55,11 +55,15 @@ test("the contact band takes its details from the existing site footer data", ()
   const baseline = generateApp(ir, options);
   const adapted = generateApp(ir, { ...options, ux: desired });
   const changes = adapted.filter((file, index) => file.content !== baseline[index]?.content);
-  expect(changes.map(({ path }) => path)).toEqual(["src/routes/index.tsx"]);
-  expect(changes[0]?.content).toContain("className={site.contact ?");
-  expect(changes[0]?.content).toContain("[&>div>footer]:bg-muted");
+  expect(changes.map(({ path }) => path)).toEqual(["src/kit/Landing.tsx", "src/routes/index.tsx"]);
+  expect(changes[0]?.content).toContain("{w.openingHours}");
   expect(changes[0]?.content).toContain("whitespace-pre-line");
-  expect(changes[0]?.content).toContain('label: "Home", link: "/"');
+  expect(changes[1]?.content).toContain("contactBand: true");
+  expect(changes[1]?.content).toContain('label: "Home", link: "/"');
+  const withoutContact = { ...options, content: undefined };
+  expect(generateApp(ir, { ...withoutContact, ux: desired })).toEqual(
+    generateApp(ir, withoutContact),
+  );
   expect(adapted.find(({ path }) => path === "src/generated/site.ts")?.content).toContain(
     "Monday 09–16",
   );

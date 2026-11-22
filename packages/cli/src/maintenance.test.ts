@@ -2,7 +2,7 @@ import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { STACK_PROFILE } from "@smithable/adapter-tanstack";
 import { expect, test } from "vitest";
-import { maintenanceInfo, sectionPictureKitRevision, templateKitRevision } from "./maintenance.js";
+import { landingKitRevision, maintenanceInfo, templateKitRevision } from "./maintenance.js";
 import { tempDir } from "./test-dir.js";
 import { VERSION } from "./version.js";
 
@@ -41,6 +41,7 @@ test("maintenance uses the matching kit revision for section pictures", () => {
       JSON.stringify({ smithable: VERSION, stackProfile: STACK_PROFILE.id, kitRevision }),
     );
 
+  const sectionPictureKitRevision = landingKitRevision(["section-pictures"]);
   lock("section-pictures:old");
   expect(maintenanceInfo(dir)).toMatchObject({
     currentKit: sectionPictureKitRevision,

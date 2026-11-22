@@ -62,7 +62,7 @@ function generate(files: { spec: string; content?: string; ux?: string }) {
   return generateApp(ir, {
     smithableVersion: "0.0.0",
     kitRevision: "base",
-    sectionPictureKitRevision: "section-pictures:opt-in",
+    resolveLandingKitRevision: (features) => `${features.join(",")}:opt-in`,
     auth,
     content: data.content,
     ux: looks.ux,

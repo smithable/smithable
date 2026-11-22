@@ -1,7 +1,13 @@
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { baselineKitSources, kitSources, STACK_PROFILE } from "@smithable/adapter-tanstack";
+import {
+  baselineKitSources,
+  LANDING_KIT_FEATURES,
+  type LandingKitFeature,
+  landingKitSources,
+  STACK_PROFILE,
+} from "@smithable/adapter-tanstack";
 import { git } from "./git.js";
 import { VERSION } from "./version.js";
 
@@ -14,8 +20,9 @@ function kitHash(sources: Record<string, string>): string {
 }
 
 export const templateKitRevision = kitHash(baselineKitSources);
-const SECTION_PICTURES = "section-pictures:";
-export const sectionPictureKitRevision = SECTION_PICTURES + kitHash(kitSources);
+export function landingKitRevision(features: readonly LandingKitFeature[]): string {
+  return `${features.join(",")}:${kitHash(landingKitSources(features))}`;
+}
 
 function json(dir: string, file: string): Record<string, unknown> | undefined {
   try {
@@ -31,9 +38,14 @@ export function maintenanceInfo(dir: string) {
   const generatedEngine = typeof lock?.smithable === "string" ? lock.smithable : undefined;
   const generatedProfile = typeof lock?.stackProfile === "string" ? lock.stackProfile : undefined;
   const generatedKit = typeof lock?.kitRevision === "string" ? lock.kitRevision : undefined;
-  const currentKit = generatedKit?.startsWith(SECTION_PICTURES)
-    ? sectionPictureKitRevision
-    : templateKitRevision;
+  const recordedFeatures = (generatedKit?.split(":")[0] ?? "").split(",");
+  const knownFeatures = LANDING_KIT_FEATURES.filter((feature) =>
+    recordedFeatures.includes(feature),
+  );
+  const currentKit =
+    knownFeatures.length === recordedFeatures.length
+      ? landingKitRevision(knownFeatures)
+      : templateKitRevision;
   const dependencies = Object.fromEntries(
     Object.entries({
       ...((pkg?.dependencies ?? {}) as object),
