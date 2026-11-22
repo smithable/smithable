@@ -7118,7 +7118,10 @@ async function aiMarkCheck(dir, base) {
         // A starter can render its hero from a custom section without a layout in the ux file.
         const veiled = /^<section[^>]*data-layout="(?:cover|centered|photo|tiles)"/.test(first);
         if (hero && veiled && marked) throw new Error("the hero under its wash is marked");
-        const words = /data-part="ai-mark"[^>]*><svg[^>]*>[\s\S]*?<\/svg><span[^>]*>AI-generated</;
+        // In English the EU's worded label, one drawing named for a screen reader; elsewhere the
+        // icon with the app's words beside it (AiMark.tsx).
+        const words =
+          /data-part="ai-mark"[^>]*>(?:<svg[^>]*\baria-label="AI-generated"|<span[^>]*><svg[^>]*>[\s\S]*?<\/svg>AI-generated<)/;
         if (hero && !veiled && !words.test(first))
           throw new Error("the hero is not marked AI-generated");
       },
