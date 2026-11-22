@@ -1035,7 +1035,13 @@ const setFormSections: Operation<{ page: string; sections?: string[] }> = {
   name: "setFormSections",
   summary:
     'Group a page\'s form into sections with headings, each "name:field,field"; fields in none follow at the end (none: one form).',
-  sets: ["smithable.ux.yml:pages.*.form.sections"],
+  sets: [
+    "smithable.ux.yml:pages.*.form.sections",
+    "smithable.ux.yml:pages.*.form.sections.*",
+    "smithable.ux.yml:pages.*.form.sections.*.name",
+    "smithable.ux.yml:pages.*.form.sections.*.fields",
+    "smithable.ux.yml:pages.*.form.sections.*.fields.*",
+  ],
   schema: {
     type: "object",
     required: ["page"],
