@@ -36,7 +36,7 @@ if (typeof window !== "undefined" && window.parent !== window) {
   let hovered = null;
   let dragged = null;
   let selected = null;
-  let selectedName = null;
+  let selectedSectionSelector = null;
   let watchSize = null;
   let watchSelection;
   const style = document.createElement("style");
@@ -85,8 +85,20 @@ if (typeof window !== "undefined" && window.parent !== window) {
   const markedAt = (element) => (element instanceof Element ? element.closest("[data-sm-concept]") : null);
   // A landing section (the kit's data-kit="section"), named by its texts' place in the content
   // file, "pages.<page>.<section>.<key>": what is picked where no closer part is marked.
+  const footerSelector = "[data-kit=landing] > footer[data-part=footer]";
   const sectionAt = (element) => {
-    const section = element instanceof Element ? element.closest("[data-kit=section][data-section]") : null;
+    if (!(element instanceof Element)) return null;
+    const footer = element.closest(footerSelector);
+    if (footer) {
+      const navigation = footer.parentElement.querySelector(":scope > [data-sm-concept^='navigation:landing.']");
+      const page = navigation?.dataset.smConcept.split(".")[1];
+      if (!page) return null;
+      const section = footer.dataset.section ?? [...footer.querySelectorAll("[data-sm-text^='pages.']")]
+        .map((marked) => marked.dataset.smText.split("."))
+        .find((path) => path[1] === page)?.[2] ?? "@footer";
+      return { element: footer, concept: "section:" + page + "." + section };
+    }
+    const section = element.closest("[data-kit=section][data-section]");
     const name = section?.dataset.section;
     const text = name && [...section.querySelectorAll("[data-sm-text^='pages.']")]
       .map((marked) => marked.dataset.smText.split("."))
@@ -129,13 +141,16 @@ if (typeof window !== "undefined" && window.parent !== window) {
   const selectPart = (marked, concept, part = null, quiet = false) => {
     clear("data-sm-selected");
     selected = marked;
-    selectedName = concept.startsWith("section:") ? marked.dataset.section : null;
+    selectedSectionSelector = concept.startsWith("section:")
+      ? marked.matches(footerSelector)
+        ? footerSelector
+        : '[data-kit=section][data-section="' + CSS.escape(marked.dataset.section) + '"]'
+      : null;
     marked.setAttribute("data-sm-selected", "");
-    // A section drawn again (its look changed) stays selected: the same section, found by its name.
+    // A section drawn again (its look changed) stays selected.
     watchSelection ??= new MutationObserver(() => {
       if (!selected || selected.isConnected) return;
-      const again = selectedName &&
-        document.querySelector('[data-kit=section][data-section="' + CSS.escape(selectedName) + '"]');
+      const again = selectedSectionSelector && document.querySelector(selectedSectionSelector);
       if (!again) return loseSelection();
       selected = again;
       again.setAttribute("data-sm-selected", "");
@@ -155,7 +170,7 @@ if (typeof window !== "undefined" && window.parent !== window) {
     const heading = concept.startsWith("section:") ? marked.querySelector("h1, h2") : null;
     post({
       type: "select", concept, part, page: marked.dataset.smPage ?? null, columns,
-      label: ((heading ?? marked).getAttribute("aria-label") || (heading ?? marked).textContent || "").trim().slice(0, 120),
+      label: marked.matches(footerSelector) ? "Footer" : ((heading ?? marked).getAttribute("aria-label") || (heading ?? marked).textContent || "").trim().slice(0, 120),
       anchor: { left, right, top, bottom },
     });
   };
@@ -191,7 +206,7 @@ if (typeof window !== "undefined" && window.parent !== window) {
   };
   const clearSelection = () => {
     selected = null;
-    selectedName = null;
+    selectedSectionSelector = null;
     watchSelection?.disconnect();
     watchSize?.disconnect();
     clear("data-sm-selected");

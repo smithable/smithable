@@ -479,7 +479,7 @@ const setSectionPicture: Operation<{
   name: "setSectionPicture",
   sets: ["smithable.content.yml:pages.*.*.image", "smithable.content.yml:pages.*.*.items"],
   summary:
-    "Set a landing section's picture (a hero or media-and-text section, or a gallery or media-and-text item by its place) to a file under public/images/, with what it shows; no src removes it. Media-and-text items can be added in order, up to three.",
+    "Set a landing section's picture, or a gallery, features or media-and-text item picture by its place, to a file under public/images/ with what it shows. No src removes it. Media-and-text items can be added in order, up to three.",
   schema: {
     type: "object",
     required: ["page", "section"],
@@ -502,7 +502,7 @@ const setSectionPicture: Operation<{
         type: "integer",
         minimum: 0,
         description:
-          "An item picture by its place, from 0. A media-and-text section takes up to three extra pictures in order.",
+          "A picture by its place, from 0. A media-and-text section takes up to three extra pictures in order.",
       },
       was: {
         type: "string",
@@ -532,16 +532,16 @@ const setSectionPicture: Operation<{
     const items = ["pages", page, section, "items"];
     let append = false;
     if (item !== undefined) {
-      if (found.kind !== "gallery" && found.kind !== "mediaText")
+      if (!["gallery", "features", "mediaText"].includes(found.kind))
         throw new OperationError(
-          `Only a gallery or media-and-text section's pictures are given by their place; ${section} is a ${found.kind} section.`,
+          `A ${found.kind} section's pictures cannot be set by place.`,
         );
       const list = content.get(items);
       const length = Array.isArray(list) ? list.length : 0;
       append = found.kind === "mediaText" && src !== undefined && item === length && item < 3;
       if (item >= length && !append)
         throw new OperationError(`The ${section} section has no picture ${item + 1}.`);
-      if (src === undefined) {
+      if (src === undefined && found.kind !== "features") {
         // The item goes, its caption with it, in every language file that has it.
         content.removeItem(items, item);
         if (length === 1) content.removeAndPrune(items, 0);

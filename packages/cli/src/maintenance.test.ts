@@ -2,7 +2,7 @@ import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { STACK_PROFILE } from "@smithable/adapter-tanstack";
 import { expect, test } from "vitest";
-import { maintenanceInfo, templateKitRevision } from "./maintenance.js";
+import { landingKitRevision, maintenanceInfo, templateKitRevision } from "./maintenance.js";
 import { tempDir } from "./test-dir.js";
 import { VERSION } from "./version.js";
 
@@ -31,4 +31,29 @@ test("unknown and old template versions do not claim a current deployed kit", ()
     VERSION === "0.0.0" ? "Development version" : "Recorded versions match",
   );
   expect(maintenanceInfo(dir).upgrade).toBeUndefined();
+});
+
+test("maintenance uses the matching kit revision for section pictures", () => {
+  const dir = tempDir("maintenance-section-pictures-");
+  const lock = (kitRevision: string) =>
+    writeFileSync(
+      join(dir, "smithable.lock"),
+      JSON.stringify({ smithable: VERSION, stackProfile: STACK_PROFILE.id, kitRevision }),
+    );
+
+  const sectionPictureKitRevision = landingKitRevision(["section-pictures"]);
+  lock("section-pictures:old");
+  expect(maintenanceInfo(dir)).toMatchObject({
+    currentKit: sectionPictureKitRevision,
+    status: expect.stringContaining("Template revision differs"),
+  });
+
+  lock(sectionPictureKitRevision);
+  expect(maintenanceInfo(dir)).toMatchObject({
+    generatedKit: sectionPictureKitRevision,
+    currentKit: sectionPictureKitRevision,
+    status: expect.stringContaining(
+      VERSION === "0.0.0" ? "Development version" : "Recorded versions match",
+    ),
+  });
 });

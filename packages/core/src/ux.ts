@@ -304,6 +304,8 @@ export interface SectionLook {
   columns?: number;
   highlight?: string;
   band?: Band;
+  /** A hero shows the app logo in place of its visible title. */
+  mark?: "title" | "logo";
   /** A cover or photo hero's wash over its picture: the brand's, or a dark scrim (look-gap §4). */
   overlay?: "brand" | "dark";
   /** A hero's line over its title from the contact section: its city, or its hours' first line. */
