@@ -474,6 +474,7 @@ const setSectionPicture: Operation<{
   src?: string;
   alt?: string;
   item?: number;
+  was?: string;
 }> = {
   name: "setSectionPicture",
   sets: ["smithable.content.yml:pages.*.*.image", "smithable.content.yml:pages.*.*.items"],
@@ -502,6 +503,11 @@ const setSectionPicture: Operation<{
         minimum: 0,
         description: "A gallery's picture by its place, from 0.",
       },
+      was: {
+        type: "string",
+        description:
+          "The file the caller saw there (a review's row); refused when another is there now.",
+      },
     },
   },
   positional: ["page", "section", "src"],
@@ -510,9 +516,17 @@ const setSectionPicture: Operation<{
     return src ? `Use ${src} as ${which}` : `Remove ${which}`;
   },
   destructive: () => false,
-  apply({ content, translations }, { page, section, src, alt, item }, ir) {
+  apply({ content, translations }, { page, section, src, alt, item, was }, ir) {
     const found = ir.pages.find((p) => p.id === page)?.sections.find((s) => s.name === section);
     if (!found) throw new OperationError(`The ${page} page has no section named "${section}".`);
+    const picturePath =
+      item === undefined
+        ? ["pages", page, section, "image"]
+        : ["pages", page, section, "items", String(item), "image"];
+    if (was !== undefined && content.get([...picturePath, "src"]) !== was)
+      throw new OperationError(
+        `The picture there is no longer ${was}: another change came between. Look again.`,
+      );
     const languages = (content.get(["languages"]) as string[] | undefined) ?? [];
     const items = ["pages", page, section, "items"];
     if (item !== undefined) {
@@ -582,7 +596,13 @@ const setSectionPicture: Operation<{
  * until another picture takes its place. Written on the picture in the content file, so undo takes
  * it back; not kept takes it off.
  */
-const keepPicture: Operation<{ page: string; section: string; item?: number; kept?: boolean }> = {
+const keepPicture: Operation<{
+  page: string;
+  section: string;
+  item?: number;
+  kept?: boolean;
+  was?: string;
+}> = {
   name: "keepPicture",
   sets: ["smithable.content.yml:pages.*.*.image.kept", "smithable.content.yml:pages.*.*.items"],
   summary:
@@ -603,15 +623,34 @@ const keepPicture: Operation<{ page: string; section: string; item?: number; kep
         description: "A gallery's picture by its place, from 0.",
       },
       kept: { type: "boolean", description: "false asks again; kept when not given." },
+      was: {
+        type: "string",
+        description:
+          "The file the caller saw there (a review's row); refused when another is there now.",
+      },
     },
   },
   positional: ["page", "section", "item"],
   describe: ({ page, section, item, kept }) =>
     `${kept === false ? "Ask again about" : "Keep"} ${item === undefined ? "the picture" : `picture ${item + 1}`} of the ${section} section of ${page}`,
   destructive: () => false,
-  apply({ content }, { page, section, item, kept = true }, ir) {
+  apply({ content }, { page, section, item, kept = true, was }, ir) {
     const found = ir.pages.find((p) => p.id === page)?.sections.find((s) => s.name === section);
     if (!found) throw new OperationError(`The ${page} page has no section named "${section}".`);
+    // Only a picture the release review asks about: kept ahead elsewhere, it would go unasked
+    // once its section is said to be the owner's work.
+    if (found.kind !== "hero" && found.pictures !== "work")
+      throw new OperationError(
+        `Only the hero's pictures and those of a section with "pictures: work" are kept; ${section} has none the review asks about.`,
+      );
+    const picturePath =
+      item === undefined
+        ? ["pages", page, section, "image"]
+        : ["pages", page, section, "items", String(item), "image"];
+    if (was !== undefined && content.get([...picturePath, "src"]) !== was)
+      throw new OperationError(
+        `The picture there is no longer ${was}: another change came between. Look again.`,
+      );
     if (item !== undefined && found.kind !== "gallery")
       throw new OperationError(
         `Only a gallery's pictures are given by their place; ${section} is a ${found.kind} section.`,

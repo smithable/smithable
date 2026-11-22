@@ -203,9 +203,45 @@ test("kept goes wherever another picture takes the place, whatever the operation
   expect(
     keptAt(run(kept, "setSectionPicture", { ...hero, src: "images/jobs/a.webp" }).content),
   ).toEqual(["images/jobs/a.webp", "images/jobs/b.webp"]);
+  // A file kept in another place is no keep here: the hero given the gallery's kept file by its
+  // src asks again (a second reviewer's point).
+  expect(
+    keptAt(
+      run(kept, "setText", {
+        text: "images/jobs/b.webp",
+        path: ["pages", "home", "hero", "image", "src"],
+      }).content,
+    ),
+  ).toEqual(["images/jobs/a.webp", "images/jobs/b.webp"]);
   // Studio's form tries a picture on (kept goes); its Cancel is undo, the files as they were,
   // where the picture the owner kept is back and still kept.
   const tried = run(kept, "setSectionPicture", { ...hero, src: "images/try.webp" });
   expect(keptAt(tried.content)).not.toContain("images/try.webp");
   expect(keptAt(kept.content)).toContain("images/hero.webp");
+});
+
+test("keepPicture keeps only what the review asks about, and a stale row changes nothing (T1175)", () => {
+  const files = keptFiles();
+  // A decorative gallery is never asked about, so nothing in it is kept ahead.
+  const decoration = { ...files, spec: spec("      hero: {}\n      jobs: { gallery: }\n") };
+  const ahead = applyOperation(decoration, "keepPicture", {
+    page: "home",
+    section: "jobs",
+    item: 0,
+  });
+  expect(ahead.ok).toBe(false);
+  // A row that shows another file than the one there now is refused, for each choice.
+  const was = { page: "home", section: "jobs", item: 0, was: "images/jobs/b.webp" };
+  for (const [op, args] of [
+    ["keepPicture", was],
+    ["setSectionPicture", was],
+    ["setSectionPicture", { ...was, src: "images/own.webp", alt: "Ours" }],
+  ] as const) {
+    const done = applyOperation(files, op, args);
+    expect(done.ok, op).toBe(false);
+    if (!done.ok) expect(done.message).toContain("no longer images/jobs/b.webp");
+  }
+  expect(applyOperation(files, "setSectionPicture", { ...was, was: "images/jobs/a.webp" }).ok).toBe(
+    true,
+  );
 });

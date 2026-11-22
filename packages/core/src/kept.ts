@@ -17,19 +17,22 @@ function pictures(value: unknown, at: string[] = [], found: Found[] = []): Found
 
 /**
  * Takes `kept` off every picture that is not the one the owner kept (picture-kinds.md §6): a picture
- * stays kept where the same file was there before, or where the same file was kept before (an item
- * that moved up a gallery). Any other file in its place, from whatever operation, asks again, and a
+ * stays kept where the same file was there before, or where the same file was kept before in the
+ * same list (an item that moved up a gallery), never because that file was kept in another place. Any other file in its place, from whatever operation, asks again, and a
  * picture no longer marked as made by an AI is never kept.
  * The one place this is done: applyOperation calls it after every operation.
  */
 export function forgetKept(before: unknown, content: YamlEditor): void {
   const was = pictures(before);
-  const keptFiles = new Set(was.filter((p) => p.kept).map((p) => p.src));
+  // A list's place, its number left out: the same gallery, wherever the item sits in it.
+  const list = (p: Found) =>
+    `${p.at.map((k) => (/^\d+$/.test(k) ? "#" : k)).join("\u0000")}\u0001${p.src}`;
+  const keptFiles = new Set(was.filter((p) => p.kept).map(list));
   const at = new Map(was.map((p) => [p.at.join("\u0000"), p.src]));
   for (const p of pictures(content.get([])))
     if (
       p.kept &&
-      (!p.generated || (at.get(p.at.join("\u0000")) !== p.src && !keptFiles.has(p.src)))
+      (!p.generated || (at.get(p.at.join("\u0000")) !== p.src && !keptFiles.has(list(p))))
     )
       content.remove([...p.at, "kept"]);
 }

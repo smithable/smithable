@@ -193,3 +193,14 @@ test("hosted: model changes still show when a comparison found them", () => {
     "migrations",
   ]);
 });
+
+test("pictures an AI made are a suggestion: shown, never counted, publishing stays open (T1175)", () => {
+  const review = {
+    ...fixture(),
+    pictures: [{ page: "home", section: "hero", src: "images/hero.webp", alt: "A roof" }],
+  };
+  expect(reviewSections(review).find((s) => s.id === "pictures")?.state).toBe("suggestion");
+  expect(needsLook(review)).toBe(0);
+  expect(needsLook(review, { hosted: true })).toBe(0);
+  expect(reviewSections(fixture()).find((s) => s.id === "pictures")).toBeUndefined();
+});

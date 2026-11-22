@@ -36,6 +36,7 @@ export function ReviewPictures({
           section,
           ...(item === undefined ? {} : { item }),
           ...(args.src ? { src: args.src, alt } : {}),
+          was: picture.src,
         },
         false,
         file,
