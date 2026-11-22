@@ -14,6 +14,7 @@ const SCHEMAS: Record<string, JsonSchema> = {
   "smithable.auth.yml": COMPANION_SCHEMAS["smithable.auth.yml"] as JsonSchema,
   "smithable.content.yml": COMPANION_SCHEMAS["smithable.content.yml"] as JsonSchema,
   "smithable.ux.yml": COMPANION_SCHEMAS["smithable.ux.yml"] as JsonSchema,
+  "smithable.context.yml": COMPANION_SCHEMAS["smithable.context.yml"] as JsonSchema,
 };
 
 /** Every key path a schema takes, "*" for a name in a named map, without the format version. */
