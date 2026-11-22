@@ -47,6 +47,7 @@ import {
   weekBy,
   writeExplicit,
 } from "@smithable/core";
+import { readFilm, sizeProblems } from "./film-check.js";
 import { hostedLevel, levelWarnings } from "./hosted-level.js";
 import type { Io } from "./io.js";
 import { INK_WASH_GREYSCALE_CUTOFF, inkWashTreatment } from "./picture-recolour.js";
@@ -309,15 +310,22 @@ export function validate(
       extraPlugins,
       found,
     );
-    if (ir && path) found.push(...privacyFindings(path, ir, auth, content, ux));
-    io.out(`${JSON.stringify({ valid: Boolean(ir), diagnostics: found }, null, 2)}\n`);
-    return ir ? 0 : 1;
+    const films = ir && path ? filmFindings(dirname(path), content) : [];
+    if (ir && path) found.push(...privacyFindings(path, ir, auth, content, ux), ...films);
+    const valid = Boolean(ir) && films.length === 0;
+    io.out(`${JSON.stringify({ valid, diagnostics: found }, null, 2)}\n`);
+    return valid ? 0 : 1;
   }
   const found: Diagnostic[] = [];
   const { ir, path, auth, ux, themes, content } = loadSpec(target, io, extraPlugins, found);
   if (!ir) return 1;
   // Warnings after loading, from validate alone: the privacy page's completeness and review.
   for (const d of privacyFindings(path, ir, auth, content, ux)) io.err(`${formatDiagnostic(d)}\n`);
+  // A film's bytes, read as Studio reads them at upload (section-film.md §2): one placed by hand
+  // that breaks a rule fails the check.
+  const films = filmFindings(dirname(path), content);
+  for (const d of films) io.err(`${formatDiagnostic(d)}\n`);
+  if (films.length) return 1;
   io.out(
     `${path} is valid: ${count(ir.models.length, "model")}, ${count(ir.pages.length, "page")}.\n`,
   );
@@ -355,6 +363,35 @@ export function validate(
     for (const d of notes) io.out(`${formatDiagnostic(d)}\n`);
   }
   return 0;
+}
+
+/** Each hero film whose file is missing or breaks a rule of section-film.md §2, as an error. */
+export function filmFindings(dir: string, content: ContentIR | undefined): Diagnostic[] {
+  const found: Diagnostic[] = [];
+  for (const [page, { sections = {} } = {}] of Object.entries(content?.pages ?? {}))
+    for (const [name, section] of Object.entries(sections)) {
+      const src = section.image?.film?.src;
+      if (!src) continue;
+      const file = join(dir, "public", src);
+      const size = existsSync(file) ? statSync(file).size : undefined;
+      const problems =
+        size === undefined
+          ? [`its file is not in public/${src}.`]
+          : size > 50_000_000
+            ? sizeProblems(size)
+            : readFilm(readFileSync(file)).problems;
+      for (const problem of problems)
+        found.push({
+          severity: "error",
+          code: "film-file",
+          message: `The film ${src} of ${page} ${name}: ${problem}`,
+          hint: `Put a file that meets the rules there, or remove the film: smithable op setSectionFilm ${page} ${name}`,
+          file: join(dir, "smithable.content.yml"),
+          line: 1,
+          column: 1,
+        });
+    }
+  return found;
 }
 
 /**
