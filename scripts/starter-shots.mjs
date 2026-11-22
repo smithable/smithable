@@ -244,7 +244,14 @@ try {
         const file = join(out, `${starter}-${n + 1}.webp`);
         writeFileSync(
           file,
-          await webp(browser, await page.screenshot({ fullPage, animations: "disabled" })),
+          await webp(
+            browser,
+            await page.screenshot({
+              fullPage,
+              animations: "disabled",
+              style: '[data-part="ai-mark"] { visibility: hidden !important }',
+            }),
+          ),
         );
         copyFileSync(file, join(opts.copy, `${starter}-${n + 1}.webp`));
         console.log(`${file}  (${path} as ${who})`);
