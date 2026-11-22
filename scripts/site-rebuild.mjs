@@ -298,6 +298,7 @@ function plan(read) {
       looks,
       gaps,
       items: Math.max(b.columns, Math.min(b.headings, 6)),
+      pictures: b.pictures,
     };
   });
 }
@@ -450,6 +451,21 @@ for (const m of sections) {
         Array.from({ length: Math.min(Math.max(m.items, 2), 6) }, (_, i) => ITEM[m.kind](i)),
       ),
     );
+  // A records block with pictures on the site: its model gets a pictures field (cards and the grid
+  // show the first as the cover), and a kept section loses the starter's own title and text.
+  if (m.kind === "records") {
+    const model =
+      (spec.match(new RegExp(`^ {6}${m.section}: \\{ ?records: (\\w+)`, "m")) ?? [])[1] ??
+      recordsModel;
+    const block = spec.match(new RegExp(`^  ${model}:\\n((?: {4,}.*\\n)*)`, "m"))?.[1] ?? "";
+    if (m.pictures >= 2 && model && !/: (picture|pictures)\b/.test(block))
+      if (!tryOp("addField", model, "photos", "pictures"))
+        m.gaps.push("no pictures field could be added");
+    if (m.reused) {
+      tryOp("setText", STAND_IN.title, "pages", "home", m.section, "title");
+      tryOp("setText", STAND_IN.text, "pages", "home", m.section, "text");
+    }
+  }
   if (m.kind !== "records" && !m.reused) {
     tryOp("setText", STAND_IN.title, "pages", "home", m.section, "title");
     tryOp("setText", STAND_IN.text, "pages", "home", m.section, "text");
@@ -482,7 +498,14 @@ await ours.goto(`http://localhost:${opts.port}/`);
 await ours.waitForLoadState("networkidle");
 await scrollThrough(ours);
 if (process.env.REBUILD_DEBUG)
-  console.log("our sections:", await ours.evaluate(() => [...document.querySelectorAll("[data-section]")].map((e) => `${e.tagName}:${e.getAttribute("data-section")}`).join(" ")));
+  console.log(
+    "our sections:",
+    await ours.evaluate(() =>
+      [...document.querySelectorAll("[data-section]")]
+        .map((e) => `${e.tagName}:${e.getAttribute("data-section")}`)
+        .join(" "),
+    ),
+  );
 
 /** Shoots each block of a page at the current width; ours by section name. */
 async function shots(page, selectors, viewport) {
@@ -528,7 +551,11 @@ async function shots(page, selectors, viewport) {
 }
 const sourceSel = sections.map((m) => `[data-rebuild="${m.block}"]`);
 const ourSel = sections.map((m) =>
-  m.kind === "hero" || m.kind === "footer" || m.added ? `[data-section="${m.section}"]` : null,
+  m.kind === "footer"
+    ? '[data-part="footer"]'
+    : m.kind === "hero" || m.added
+      ? `[data-section="${m.section}"]`
+      : null,
 );
 const pairs = {
   desk: [await shots(source, sourceSel, DESK), await shots(ours, ourSel, DESK)],
