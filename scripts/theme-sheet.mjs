@@ -4,22 +4,36 @@
 // theme applies it through the operation layer and screenshots the landing page, a list, a form
 // and a dialog in light and dark, laid out on one page per theme.
 // Run after `pnpm build`: `node scripts/theme-sheet.mjs [preset | themes/<name>.yml …] [--out <dir>]`.
-// Without themes it shoots the four presets. Not part of `check`.
+// Without themes it shoots the four presets. Use --all for every built-in theme. Not part of `check`.
 import { mkdirSync } from "node:fs";
 import { basename, join, resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { chromium } from "playwright";
+import { loadSpec } from "../packages/cli/dist/validate.js";
+import {
+  hexOf,
+  hexToRgb,
+  resolveLook,
+  rgbToOklch,
+  themeNames,
+} from "../packages/core/dist/index.js";
 import { newApp, op, open as openUrl, serveDev, signIn } from "./dev-app.mjs";
 import { checkAdminHeading, checkContactForm, checkRenderedFonts } from "./theme-form-checks.mjs";
 
 const { values: opts, positionals } = parseArgs({
   allowPositionals: true,
   options: {
+    all: { type: "boolean" },
     out: { type: "string", default: "/mnt/c/Users/johan/Pictures/claude/themes" },
     port: { type: "string", default: process.env.THEME_SHEET_PORT ?? "8402" },
   },
 });
-const themes = positionals.length ? positionals : ["modern", "minimal", "playful", "corporate"];
+if (opts.all && positionals.length) throw new Error("Use --all or name the themes to render.");
+const themes = opts.all
+  ? themeNames()
+  : positionals.length
+    ? positionals
+    : ["modern", "minimal", "playful", "corporate"];
 const port = Number(opts.port);
 const base = `http://localhost:${port}`;
 
@@ -71,6 +85,13 @@ try {
     const name = theme.endsWith(".yml") ? basename(theme, ".yml") : theme;
     if (theme.endsWith(".yml")) op(dir, "addTheme", name, "--text", `@${resolve(theme)}`, "--use");
     else op(dir, "setTheme", "--preset", name);
+    const project = loadSpec(dir, { out: () => {}, err: (text) => process.stderr.write(text) });
+    if (!project.ux) throw new Error(`Could not read the applied look for ${name}.`);
+    const primary = hexOf(resolveLook(project.ux, project.themes).tokens.light.primary);
+    const [, chroma] = rgbToOklch(hexToRgb(primary));
+    // Review thresholds from theme-pictures.md §10. At a boundary, use the calmer class.
+    const pictureClass = chroma <= 0.02 ? "greyscale" : chroma <= 0.12 ? "calm" : "strong";
+    const measurement = `Light primary ${primary} · OKLCH chroma ${chroma.toFixed(6)} · ${pictureClass} (proposed cutoffs 0.02 and 0.12)`;
     const stop = await serve();
     let context;
     try {
@@ -120,10 +141,11 @@ try {
       const html = `<!doctype html><meta charset="utf-8"><style>
       body { margin: 0; padding: 24px; background: #888; font: 600 20px system-ui, sans-serif; color: #111; }
       h1 { margin: 0 0 16px; font-size: 32px; }
+      p { margin: 0 0 24px; }
       main { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: start; }
       figure { margin: 0 0 24px; } figcaption { margin-bottom: 6px; }
       img { width: 100%; display: block; box-shadow: 0 2px 8px #0005; }
-    </style><h1>${name}</h1><main>${[0, 1]
+    </style><h1></h1><p>${measurement}</p><main>${[0, 1]
       .map(
         (half) =>
           `<div>${shots
@@ -134,10 +156,14 @@ try {
       .join("")}</main>`;
       const sheet = await browser.newPage({ viewport: { width: 2600, height: 1200 } });
       await sheet.setContent(html);
+      await sheet.locator("h1").evaluate((heading, title) => {
+        heading.textContent = title;
+      }, name);
       const file = join(opts.out, `${name}.png`);
       await sheet.screenshot({ path: file, fullPage: true });
       await sheet.close();
       console.log(file);
+      console.log(measurement);
     } finally {
       await context?.close();
       stop();
