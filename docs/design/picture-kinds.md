@@ -128,19 +128,25 @@ A starter for a trade shows finished jobs, and those pictures are generated. Pub
 would present work nobody did. So before an app goes live for the first time, and whenever such a
 picture is still in place at a later publish, the review lists them.
 
-- **Which pictures:** every placed library picture with `generated: true` whose recorded role is
-  `hero` or `work`. `work` is a new role in `pictures.json` beside `hero` and `sample`: a picture in
-  a slot that presents the owner's own work (a landing gallery of jobs, a named project). The slot says
-  so in the page's spec, explicitly, and a starter sets it; it is never guessed from a name or from where
-  the picture sits. Decorative pictures and sample records are not listed.
+- **Which pictures:** the hero's, and those of a gallery or `mediaText` section that presents the
+  owner's own work (a landing gallery of jobs, a kitchen's dishes), when they carry `generated: true` in
+  the content file. The section says so in the spec with `pictures: work` (spec reference, "pictures:
+  work"); a starter sets it, `validate --explain` shows it, and it is never guessed from a name or from
+  where the picture sits. Any other section with it is refused. Decorative pictures and sample records
+  are not listed.
 - **Per picture:** its thumbnail, where it shows, and the choices: replace it (the owner's own picture,
   which then carries no badge), keep it, or, where the slot is optional in the page's spec, remove it.
   The trade starters are built so a page reads well with text-only references.
 - **Each choice is an operation**, so it is in the history and can be undone. Replace and remove are the
   operations that already set and clear a slot's picture; replace clears `generated` and `kind` with the
-  file. Keep writes `kept` on that
-  placement in `pictures.json`, with the hash of the library original, so a recoloured copy of the same
-  picture does not ask again and a different picture in the slot does.
+  file; a gallery's picture is given by its place. Keep is `keepPicture`, which writes `kept: true`
+  on the picture in `smithable.content.yml`. Not in `pictures.json` (as first drafted here): the choice
+  must be an operation with undo, and `pictures.json` is written by the host, outside the operation
+  layer, and holds no records of a gallery's pictures. `kept` is only allowed beside `generated: true`,
+  so it cannot sit on an owner's picture as noise. It is dropped in one place, after every operation,
+  wherever a different file now takes the picture's place (and by a new library style, which writes the
+  hero outside the operations), so no operation has to remember it; the same file with new words, or
+  recoloured under its own name, stays kept.
 - **The review never blocks publishing.** An item left unanswered is published as it is and listed again
   at the next publish.
 

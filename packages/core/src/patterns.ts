@@ -112,7 +112,7 @@ export interface PagePattern<K extends PatternKind = PatternKind> {
  */
 export const LANDING_SECTIONS: Record<
   SectionKind,
-  { button?: true; secondButton?: true; form?: true; shortcuts?: true }
+  { button?: true; secondButton?: true; form?: true; shortcuts?: true; pictures?: true }
 > = {
   hero: { button: true, secondButton: true, shortcuts: true },
   features: {},
@@ -122,12 +122,12 @@ export const LANDING_SECTIONS: Record<
   faq: {},
   callToAction: { button: true },
   contact: { form: true },
-  gallery: {},
+  gallery: { pictures: true },
   footer: {},
   calculator: {},
   custom: {},
   text: {},
-  mediaText: { button: true },
+  mediaText: { button: true, pictures: true },
 };
 
 function readComponent(ctx: ParseContext, value: ParsedNode | null, where: string) {
@@ -324,6 +324,11 @@ const SECTIONS_SCHEMA = (of: string): JsonSchema => ({
           "A records section shows only records with these choice values (or lists of them) or yes/no values, e.g. { status: [investigating, identified] }.",
       },
       button: { type: "string", description: "The page the section's button opens." },
+      pictures: {
+        enum: ["work"],
+        description:
+          "A gallery's or media-and-text section's pictures present the owner's own work (finished jobs, a project): the publish review lists generated ones.",
+      },
       secondButton: {
         type: "string",
         description:
@@ -1366,6 +1371,7 @@ export function readSections(
         "button",
         "secondButton",
         "shortcuts",
+        "pictures",
         "limit",
         "form",
         "calculator",
@@ -1490,6 +1496,19 @@ export function readSections(
           ctx.error(option, "invalid-value", "A hero has at most four shortcuts.");
         for (const { name: page, at } of pages) ctx.reference("page", page, at);
         section.shortcuts = pages.slice(0, 4).map((p) => p.name);
+      } else if (key === "pictures") {
+        // Said by the spec, never guessed from a name: the publish review asks about these
+        // pictures when an image model made them (docs/design/picture-kinds.md §6).
+        const value = readString(ctx, option, `"pictures" in ${sectionWhere}`);
+        if (!allows.pictures)
+          ctx.error(
+            optionKey,
+            "invalid-key",
+            'Only a gallery or mediaText section has "pictures".',
+          );
+        else if (value !== undefined && value !== "work")
+          ctx.error(option, "invalid-value", `"pictures" is "work" or not said, not "${value}".`);
+        else if (value === "work") section.pictures = "work";
       } else if (key === "secondButton") {
         const page = readString(ctx, option, `"secondButton" in ${sectionWhere}`);
         if (page !== undefined) {

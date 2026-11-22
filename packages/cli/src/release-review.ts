@@ -22,6 +22,8 @@ import {
   type AuthIR,
   actionAccess,
   adminOnly,
+  type ContentImage,
+  type ContentIR,
   type Diagnostic,
   modelAccess,
   pageAccess,
@@ -424,6 +426,52 @@ function accessFacts(ir: SpecIR, auth: AuthIR) {
   };
 }
 
+/** A picture an image model made, where it would present the owner or their work. */
+export interface ReviewPicture {
+  page: string;
+  section: string;
+  /** The gallery item's place, for a gallery's picture. */
+  item?: number;
+  src: string;
+  alt: string;
+}
+
+/**
+ * The hero's picture, and those of sections whose pictures are the owner's work ("pictures: work"),
+ * that an image model made (docs/design/picture-kinds.md §6): published as they are they would
+ * present work nobody did. One the owner kept is not listed again (keepPicture). Decoration
+ * elsewhere is never listed, and the list never stops a release.
+ */
+export function picturesToReview(ir: SpecIR, content: ContentIR | undefined): ReviewPicture[] {
+  const found: ReviewPicture[] = [];
+  for (const page of ir.pages)
+    for (const section of page.sections) {
+      if (section.kind !== "hero" && section.pictures !== "work") continue;
+      const texts = content?.pages[page.id]?.sections?.[section.name];
+      const look = (image: ContentImage | undefined, item?: number) => {
+        if (image?.generated && !image.kept)
+          found.push({
+            page: page.id,
+            section: section.name,
+            ...(item === undefined ? {} : { item }),
+            src: image.src,
+            alt: image.alt,
+          });
+      };
+      look(texts?.image);
+      if (section.kind === "gallery")
+        texts?.items?.forEach((entry, i) => {
+          look(
+            typeof entry.image === "object" && !Array.isArray(entry.image)
+              ? entry.image
+              : undefined,
+            i,
+          );
+        });
+    }
+  return found;
+}
+
 export function releaseReview(dir: string, options: { hosted?: boolean } = {}) {
   const revision = projectRevision(dir);
   const recorded = { checks: checksRecord(dir), deployment: deploymentRecord(dir) };
@@ -563,6 +611,8 @@ export function releaseReview(dir: string, options: { hosted?: boolean } = {}) {
           ]
         : [],
     assets: assetReview(dir),
+    // Generated pictures that would present the owner's work, each with a choice (§6 of picture-kinds.md).
+    pictures: current.ir ? picturesToReview(current.ir, current.content) : [],
     // The privacy page: reviewed, changed since its review (and what), or never (§6.4).
     privacy: privacyStates(dir),
     baseline: baseline?.at,

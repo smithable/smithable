@@ -5,7 +5,7 @@
 import type { ContentImage } from "@smithable/core";
 import { useId, useState } from "react";
 
-const TYPES: Record<string, string> = {
+export const PICTURE_TYPES: Record<string, string> = {
   "image/webp": "webp",
   "image/avif": "avif",
   "image/jpeg": "jpg",
@@ -21,7 +21,7 @@ export const pictureName = (page: string, section: string, ext: string, now: num
 
 /** Why a chosen file is not sent, or undefined: by its type and size, before anything is read. */
 export function fileRefusal(file: { type: string; size: number }): string | undefined {
-  if (!TYPES[file.type]) return "A picture is a webp, jpg, png or avif file.";
+  if (!PICTURE_TYPES[file.type]) return "A picture is a webp, jpg, png or avif file.";
   if (file.size > 2 * 1024 * 1024)
     return `This file is ${(file.size / 1024 / 1024).toFixed(1)} MB; at most 2 MB.`;
   return undefined;
@@ -61,7 +61,7 @@ export function SectionPicture({
     reader.onload = () => {
       setReading(false);
       const data = String(reader.result).split(",")[1] ?? "";
-      const src = pictureName(page, section, TYPES[file.type] as string, Date.now());
+      const src = pictureName(page, section, PICTURE_TYPES[file.type] as string, Date.now());
       change({ src, alt: alt.trim() }, { path: `public/${src}`, data });
     };
     reader.readAsDataURL(file);

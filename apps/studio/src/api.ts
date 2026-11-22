@@ -117,6 +117,11 @@ export interface ReleaseReview {
     results: { what: string; ok: boolean; checked: boolean }[];
   };
   verifiedRestore?: string;
+  /**
+   * Pictures an image model made where they would present the owner's work: the hero's, and those
+   * of sections with "pictures: work" (picture-kinds.md §6). A suggestion; never holds a release.
+   */
+  pictures?: { page: string; section: string; item?: number; src: string; alt: string }[];
   /** Each privacy page's review (legal-page.md §6.4). */
   privacy?: {
     page: string;

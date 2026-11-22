@@ -1,6 +1,7 @@
 import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import { AppName } from "./AppName";
 import { api, type Project, type ReleaseReview as Review } from "./api";
+import { ReviewPictures } from "./ReviewPictures";
 import { checksPassed, needsLook, reviewSections } from "./release-review";
 import { Button, Tabs } from "./ui";
 
@@ -98,6 +99,7 @@ export function ReleaseReview({
         ))}
       </ul>
     ),
+    pictures: <ReviewPictures pictures={review.pictures ?? []} reload={reload} />,
     access: (
       <>
         {review.noSignIn && (
@@ -390,9 +392,10 @@ export function ReleaseReview({
                   data-review-state={part.state}
                   open={
                     part.state === "needs-look" ||
+                    part.state === "suggestion" ||
                     (part.id === "privacy" && readPrivacy !== undefined)
                   }
-                  className={`rounded-md border p-3 ${part.state === "needs-look" ? "border-accent text-fg" : "border-line text-muted open:text-fg"}`}
+                  className={`rounded-md border p-3 ${part.state === "needs-look" || part.state === "suggestion" ? "border-accent text-fg" : "border-line text-muted open:text-fg"}`}
                 >
                   <summary className="cursor-pointer text-sm">
                     <span className="font-semibold">{part.title}:</span> {part.summary}

@@ -4,6 +4,7 @@ import { type Language, validateContent } from "./content.js";
 import { type Diagnostic, hasErrors } from "./diagnostics.js";
 import { EditError, YamlEditor } from "./edit.js";
 import { editAsRename } from "./edit-rename.js";
+import { forgetKept } from "./kept.js";
 import {
   type AnyOperation,
   type Editors,
@@ -302,6 +303,10 @@ export function applyOperation(
           for (const language of translated.values()) c.follow?.(language, effect, before.ir);
       }
     }
+    // A kept picture is kept as the picture it was: whatever operation put another file in its
+    // place, the owner is asked again (picture-kinds.md §6). Here, so no operation has to remember.
+    if (editors.content && files.content !== undefined)
+      forgetKept(new YamlEditor(files.content).get([]), editors.content);
   } catch (error) {
     // An edit the files cannot take is the operation failing too, not a crash.
     if (error instanceof OperationError || error instanceof EditError) return fail(error.message);

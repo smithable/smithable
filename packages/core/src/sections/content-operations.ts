@@ -464,80 +464,212 @@ const setLogo: Operation<{ src?: string; alt?: string }> = {
  * A landing section's own picture (a hero's, a media-and-text section's): another file under
  * public/images/, or none. A new file is not known to be made by an AI nor to have smaller copies,
  * so the mark, kind and widths go; the alt stays unless given. No src removes the picture, in
- * every language file too; the section is then shown without one.
+ * every language file too; the section is then shown without one. With item, a gallery's picture
+ * by its place: no src removes that item, its caption with it (the release review's Remove,
+ * picture-kinds.md §6).
  */
-const setSectionPicture: Operation<{ page: string; section: string; src?: string; alt?: string }> =
-  {
-    name: "setSectionPicture",
-    sets: ["smithable.content.yml:pages.*.*.image"],
-    summary:
-      "Set a landing section's picture (a hero or media-and-text section) to a file under public/images/, with what it shows; no src removes it.",
-    schema: {
-      type: "object",
-      required: ["page", "section"],
-      additionalProperties: false,
-      properties: {
-        page: refTo({ ref: "page", label: "Page" }, { description: "The page, e.g. home." }),
-        section: refTo(
-          { ref: "section", page: "page", label: "Section" },
-          { description: "The section, e.g. hero." },
-        ),
-        src: {
-          type: "string",
-          description: "The file, e.g. images/team.webp (webp, avif, jpg or png); none removes it.",
-        },
-        alt: {
-          type: "string",
-          description: "What the picture shows; without it, the one it has.",
-        },
+const setSectionPicture: Operation<{
+  page: string;
+  section: string;
+  src?: string;
+  alt?: string;
+  item?: number;
+  was?: string;
+}> = {
+  name: "setSectionPicture",
+  sets: ["smithable.content.yml:pages.*.*.image", "smithable.content.yml:pages.*.*.items"],
+  summary:
+    "Set a landing section's picture (a hero or media-and-text section, or a gallery's item by its place) to a file under public/images/, with what it shows; no src removes it (a gallery's whole item).",
+  schema: {
+    type: "object",
+    required: ["page", "section"],
+    additionalProperties: false,
+    properties: {
+      page: refTo({ ref: "page", label: "Page" }, { description: "The page, e.g. home." }),
+      section: refTo(
+        { ref: "section", page: "page", label: "Section" },
+        { description: "The section, e.g. hero." },
+      ),
+      src: {
+        type: "string",
+        description: "The file, e.g. images/team.webp (webp, avif, jpg or png); none removes it.",
+      },
+      alt: {
+        type: "string",
+        description: "What the picture shows; without it, the one it has.",
+      },
+      item: {
+        type: "integer",
+        minimum: 0,
+        description: "A gallery's picture by its place, from 0.",
+      },
+      was: {
+        type: "string",
+        description:
+          "The file the caller saw there (a review's row); refused when another is there now.",
       },
     },
-    positional: ["page", "section", "src"],
-    describe: ({ page, section, src }) =>
-      src
-        ? `Use ${src} as the picture of the ${section} section of ${page}`
-        : `Remove the picture of the ${section} section of ${page}`,
-    destructive: () => false,
-    apply({ content, translations }, { page, section, src, alt }, ir) {
-      const found = ir.pages.find((p) => p.id === page)?.sections.find((s) => s.name === section);
-      if (!found) throw new OperationError(`The ${page} page has no section named "${section}".`);
-      if (!sectionTakesPicture(found.kind))
-        throw new OperationError(`A ${found.kind} section has no picture of its own.`);
-      const path = ["pages", page, section, "image"];
+  },
+  positional: ["page", "section", "src"],
+  describe: ({ page, section, src, item }) => {
+    const which = `${item === undefined ? "the picture" : `picture ${item + 1}`} of the ${section} section of ${page}`;
+    return src ? `Use ${src} as ${which}` : `Remove ${which}`;
+  },
+  destructive: () => false,
+  apply({ content, translations }, { page, section, src, alt, item, was }, ir) {
+    const found = ir.pages.find((p) => p.id === page)?.sections.find((s) => s.name === section);
+    if (!found) throw new OperationError(`The ${page} page has no section named "${section}".`);
+    const picturePath =
+      item === undefined
+        ? ["pages", page, section, "image"]
+        : ["pages", page, section, "items", String(item), "image"];
+    if (was !== undefined && content.get([...picturePath, "src"]) !== was)
+      throw new OperationError(
+        `The picture there is no longer ${was}: another change came between. Look again.`,
+      );
+    const languages = (content.get(["languages"]) as string[] | undefined) ?? [];
+    const items = ["pages", page, section, "items"];
+    if (item !== undefined) {
+      if (found.kind !== "gallery")
+        throw new OperationError(
+          `Only a gallery's pictures are given by their place; ${section} is a ${found.kind} section.`,
+        );
+      const list = content.get(items);
+      if (!Array.isArray(list) || item >= list.length)
+        throw new OperationError(`The ${section} section has no picture ${item + 1}.`);
       if (src === undefined) {
-        if (!content.has(path)) throw new OperationError(`The ${section} section has no picture.`);
-        content.removeAndPrune(path, 0);
-        for (const language of (content.get(["languages"]) as string[] | undefined) ?? []) {
+        // The item goes, its caption with it, in every language file that has it.
+        content.removeItem(items, item);
+        if (list.length === 1) content.removeAndPrune(items, 0);
+        for (const language of languages) {
           const other = translations.get(language);
-          if (other?.has(path)) other.removeAndPrune(path, 0);
+          const theirs = other?.get(items);
+          if (other && Array.isArray(theirs) && item < theirs.length) {
+            other.removeItem(items, item);
+            if (theirs.length === 1) other.removeAndPrune(items, 0);
+          }
         }
         return [];
       }
-      if (!IMAGE_SRC.test(src))
-        throw new OperationError(
-          `"${src}" is not a file under public/images/: give it as images/<file> (webp, avif, jpg or png).`,
-        );
-      const had = content.get([...path, "alt"]);
-      const text = alt?.trim() || (typeof had === "string" ? had : "");
-      if (!text)
-        throw new OperationError("Say what the picture shows (alt), for people who cannot see it.");
-      const before = content.get(path);
-      const same =
-        !!before && typeof before === "object" && (before as { src?: unknown }).src === src;
-      const image: Record<string, YamlValue> = same
-        ? { ...(before as Record<string, YamlValue>), alt: text }
-        : { src, alt: text };
-      if (content.has(path)) content.set(path, image);
-      else put(content, path, image);
-      // Another language's words for the old picture say nothing of a new one: the main alt stands in.
-      if (!same)
-        for (const language of (content.get(["languages"]) as string[] | undefined) ?? []) {
-          const other = translations.get(language);
-          if (other?.has(path)) other.removeAndPrune(path, 0);
-        }
+    } else if (!sectionTakesPicture(found.kind))
+      throw new OperationError(`A ${found.kind} section has no picture of its own.`);
+    const path =
+      item === undefined ? ["pages", page, section, "image"] : [...items, String(item), "image"];
+    if (src === undefined) {
+      if (!content.has(path)) throw new OperationError(`The ${section} section has no picture.`);
+      content.removeAndPrune(path, 0);
+      for (const language of languages) {
+        const other = translations.get(language);
+        if (other?.has(path)) other.removeAndPrune(path, 0);
+      }
       return [];
+    }
+    if (!IMAGE_SRC.test(src))
+      throw new OperationError(
+        `"${src}" is not a file under public/images/: give it as images/<file> (webp, avif, jpg or png).`,
+      );
+    const had = content.get([...path, "alt"]);
+    const text = alt?.trim() || (typeof had === "string" ? had : "");
+    if (!text)
+      throw new OperationError("Say what the picture shows (alt), for people who cannot see it.");
+    const before = content.get(path);
+    const same =
+      !!before && typeof before === "object" && (before as { src?: unknown }).src === src;
+    const image: Record<string, YamlValue> = same
+      ? { ...(before as Record<string, YamlValue>), alt: text }
+      : { src, alt: text };
+    if (content.has(path)) content.set(path, image);
+    else put(content, path, image);
+    // Another language's words for the old picture say nothing of a new one: the main alt stands in.
+    if (!same)
+      for (const language of languages) {
+        const other = translations.get(language);
+        if (other?.has(path)) other.removeAndPrune(path, 0);
+      }
+    return [];
+  },
+};
+
+/**
+ * The release review's Keep (picture-kinds.md §6): the owner keeps a picture an AI made where it
+ * presents their work, a hero's or a section's (a gallery's by its place), and is not asked again
+ * until another picture takes its place. Written on the picture in the content file, so undo takes
+ * it back; not kept takes it off.
+ */
+const keepPicture: Operation<{
+  page: string;
+  section: string;
+  item?: number;
+  kept?: boolean;
+  was?: string;
+}> = {
+  name: "keepPicture",
+  sets: ["smithable.content.yml:pages.*.*.image.kept", "smithable.content.yml:pages.*.*.items"],
+  summary:
+    "Keep a picture an AI made in a hero, or in a section whose pictures are the owner's work (a gallery's by its place), so the release review does not ask again; kept false asks again.",
+  schema: {
+    type: "object",
+    required: ["page", "section"],
+    additionalProperties: false,
+    properties: {
+      page: refTo({ ref: "page", label: "Page" }, { description: "The page, e.g. home." }),
+      section: refTo(
+        { ref: "section", page: "page", label: "Section" },
+        { description: "The section, e.g. hero." },
+      ),
+      item: {
+        type: "integer",
+        minimum: 0,
+        description: "A gallery's picture by its place, from 0.",
+      },
+      kept: { type: "boolean", description: "false asks again; kept when not given." },
+      was: {
+        type: "string",
+        description:
+          "The file the caller saw there (a review's row); refused when another is there now.",
+      },
     },
-  };
+  },
+  positional: ["page", "section", "item"],
+  describe: ({ page, section, item, kept }) =>
+    `${kept === false ? "Ask again about" : "Keep"} ${item === undefined ? "the picture" : `picture ${item + 1}`} of the ${section} section of ${page}`,
+  destructive: () => false,
+  apply({ content }, { page, section, item, kept = true, was }, ir) {
+    const found = ir.pages.find((p) => p.id === page)?.sections.find((s) => s.name === section);
+    if (!found) throw new OperationError(`The ${page} page has no section named "${section}".`);
+    // Only a picture the release review asks about: kept ahead elsewhere, it would go unasked
+    // once its section is said to be the owner's work.
+    if (found.kind !== "hero" && found.pictures !== "work")
+      throw new OperationError(
+        `Only the hero's pictures and those of a section with "pictures: work" are kept; ${section} has none the review asks about.`,
+      );
+    const picturePath =
+      item === undefined
+        ? ["pages", page, section, "image"]
+        : ["pages", page, section, "items", String(item), "image"];
+    if (was !== undefined && content.get([...picturePath, "src"]) !== was)
+      throw new OperationError(
+        `The picture there is no longer ${was}: another change came between. Look again.`,
+      );
+    if (item !== undefined && found.kind !== "gallery")
+      throw new OperationError(
+        `Only a gallery's pictures are given by their place; ${section} is a ${found.kind} section.`,
+      );
+    const path =
+      item === undefined
+        ? ["pages", page, section, "image"]
+        : ["pages", page, section, "items", String(item), "image"];
+    const image = content.get(path) as { generated?: unknown } | undefined;
+    if (!image || typeof image !== "object")
+      throw new OperationError(`The ${section} section has no such picture.`);
+    if (image.generated !== true)
+      throw new OperationError("Only a picture an AI made is kept: this one is the owner's own.");
+    if (kept) put(content, [...path, "kept"], true);
+    else if (content.has([...path, "kept"])) content.remove([...path, "kept"]);
+    else throw new OperationError("This picture is not kept.");
+    return [];
+  },
+};
 
 /**
  * A section's items at once (a features section's points, a FAQ's questions and answers, the
@@ -621,6 +753,7 @@ export const contentOperations: AnyOperation[] = [
   setTexts,
   setItems,
   setSectionPicture,
+  keepPicture,
   nameRecords,
   setLanguage,
   addLanguage,

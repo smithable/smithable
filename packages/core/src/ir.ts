@@ -546,6 +546,8 @@ export interface PageSection {
   view?: "cards" | "table" | "calendar";
   /** The date field a calendar view places the records by. */
   starts?: string;
+  /** A gallery's or media-and-text section's pictures present the owner's own work. */
+  pictures?: "work";
   /** The page a hero's or call to action's button opens. */
   button?: string;
   /** The page a hero's second button (an outline one beside the first) opens; none when not given. */

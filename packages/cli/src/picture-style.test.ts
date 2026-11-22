@@ -152,17 +152,18 @@ test("a style's pictures are fetched, checked and written with their record; the
   );
 });
 
-test("a new style takes off the hero's widths: its copies were the old picture's", async () => {
+test("a new style takes off the hero's widths and kept: they were the old picture's (T1175)", async () => {
   const dir = oldApp();
   writeFileSync(
     join(dir, "smithable.content.yml"),
-    "smithableContent: 0.1\npages:\n  home:\n    hero:\n      image: { src: images/hero.webp, alt: The cafe-hero, generated: true, width: 1536, widths: [2400] }\n",
+    "smithableContent: 0.1\npages:\n  home:\n    hero:\n      image: { src: images/hero.webp, alt: The cafe-hero, generated: true, kept: true, width: 1536, widths: [2400] }\n",
   );
   const placed = await placeStyle(dir, "pastel", library());
   if (typeof placed === "string") throw new Error(placed);
   const text = placed.texts.find((t) => t.path === "smithable.content.yml")?.text ?? "";
   expect(text).toContain("alt: The cafe-hero-pastel");
   expect(text).not.toContain("width");
+  expect(text).not.toContain("kept");
 });
 
 test("a picture the owner changed stays, and is named", async () => {

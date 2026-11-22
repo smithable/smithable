@@ -657,6 +657,9 @@ const section: JsonSchema = {
       type: "object",
       description: "A hero's picture: { src: /images/hero.webp, alt: what it shows }.",
       additionalProperties: false,
+      dependencies: {
+        kept: { required: ["generated"], properties: { generated: { const: true } } },
+      },
       properties: {
         src: { type: "string" },
         alt: { type: "string" },
@@ -669,6 +672,11 @@ const section: JsonSchema = {
           enum: [...PICTURE_KINDS],
           description:
             "What the picture is, as the image library said when it was placed: an AI picture that looks real, a drawn AI picture, or a photograph. The badge's default follows it.",
+        },
+        kept: {
+          const: true,
+          description:
+            "The owner kept this picture an AI made where it presents their work: the release review does not ask again. Only beside generated: true.",
         },
         width: {
           type: "integer",
@@ -698,6 +706,9 @@ const section: JsonSchema = {
           image: {
             type: "object",
             additionalProperties: false,
+            dependencies: {
+              kept: { required: ["generated"], properties: { generated: { const: true } } },
+            },
             properties: {
               src: { type: "string" },
               alt: { type: "string" },
@@ -710,6 +721,11 @@ const section: JsonSchema = {
                 enum: [...PICTURE_KINDS],
                 description:
                   "What the picture is, as the image library said when it was placed: an AI picture that looks real, a drawn AI picture, or a photograph. The badge's default follows it.",
+              },
+              kept: {
+                const: true,
+                description:
+                  "The owner kept this picture an AI made where it presents their work: the release review does not ask again. Only beside generated: true.",
               },
               width: {
                 type: "integer",
@@ -752,6 +768,9 @@ const section: JsonSchema = {
             type: "object",
             description: "A gallery picture: { src: images/…, alt: what it shows }.",
             additionalProperties: false,
+            dependencies: {
+              kept: { required: ["generated"], properties: { generated: { const: true } } },
+            },
             properties: {
               src: { type: "string" },
               alt: { type: "string" },
@@ -764,6 +783,11 @@ const section: JsonSchema = {
                 enum: [...PICTURE_KINDS],
                 description:
                   "What the picture is, as the image library said when it was placed: an AI picture that looks real, a drawn AI picture, or a photograph. The badge's default follows it.",
+              },
+              kept: {
+                const: true,
+                description:
+                  "The owner kept this picture an AI made where it presents their work: the release review does not ask again. Only beside generated: true.",
               },
               width: {
                 type: "integer",

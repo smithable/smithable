@@ -74,6 +74,19 @@ test("validate --explain says what a hero's buttons open, by rule or as written"
   expect(invoicing.stdout).toContain("home hero: button opens overview; no second button");
 });
 
+test("validate --explain says which sections' pictures are the owner's work (T1175)", async () => {
+  const restaurant = captureIo();
+  expect(await run(["validate", join(examples, "restaurant"), "--explain"], restaurant)).toBe(0);
+  expect(restaurant.stdout).toContain(
+    "home gallery: its pictures are the owner's work (pictures: work)",
+  );
+  const booking = captureIo();
+  expect(await run(["validate", join(examples, "booking"), "--explain"], booking)).toBe(0);
+  expect(booking.stdout).toMatch(
+    /gallery: its pictures are decoration, never asked about at release \(say pictures: work/,
+  );
+});
+
 test("validate --explain says which reference the contact block fills from the record", async () => {
   const io = captureIo();
   expect(await run(["validate", join(examples, "builder"), "--explain"], io)).toBe(0);
