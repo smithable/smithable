@@ -48,6 +48,32 @@ test("a sample the library marks fit for a hero may be the hero", () => {
   );
 });
 
+test("the hero's picture is not also a record's sample in the same app (T1055)", () => {
+  const harbour = {
+    ...entry("harbour-boats", "sample", ["sample", "harbour", "boat"]),
+    uses: ["hero"],
+  };
+  const ferry = entry("ferry-boat", "sample", ["sample", "ferry", "boat"]);
+  const ir = validateSpec({
+    path: "smithable.yml",
+    text: `smithable: 0.1
+app: { name: Harbour Boats }
+models:
+  Boat:
+    fields: { name: string!, photo: picture }
+pages:
+  boats: { crud: Boat }
+`,
+  }).ir;
+  if (!ir) throw new Error("invalid");
+  const picked = pickPictures([...index, harbour, ferry], {
+    description: "Boat rentals in the harbour",
+    ir,
+  });
+  expect(picked.hero?.id).toBe("harbour-boats");
+  expect(picked.models.Boat?.map((e) => e.id)).toEqual(["ferry-boat"]);
+});
+
 test("the models' names and fields count: a marketplace of items gets second-hand samples", () => {
   const ir = validateSpec({
     path: "smithable.yml",
