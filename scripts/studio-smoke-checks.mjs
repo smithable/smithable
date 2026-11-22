@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { join } from "node:path";
 import { stubPictureCatalogue } from "./first-look-checks.mjs";
 import {
+  checkAppOwnsPhoneSwipe,
   openFormEntry,
   openPreviewAddress,
   openSettings,
@@ -155,7 +156,8 @@ export async function checkStudioSmoke(browser, base, evidence, asMade) {
       assert.equal(await look.count(), 0);
       assert.equal(await presentation.count(), 0);
       await checkStudioHistory(page, phone, evidence);
-      if (!phone) {
+      if (phone) await checkAppOwnsPhoneSwipe(page);
+      else {
         // Range selection lives in the preview's table layout, which needs the full width.
         for (const side of ["left", "right"]) {
           const hide = page.getByRole("button", {

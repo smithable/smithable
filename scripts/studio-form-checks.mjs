@@ -34,6 +34,52 @@ export async function openStudioGuide(page) {
   await page.getByRole("button", { name: "Tour Studio", exact: true }).click();
 }
 
+export async function checkAppOwnsPhoneSwipe(page) {
+  const frame = 'iframe[title="App preview"]';
+  const arrow = (name) => page.getByRole("button", { name, exact: true });
+  const showApp = arrow("Show the app");
+  if (await showApp.isVisible()) await showApp.click();
+  await page.waitForFunction((selector) => {
+    const box = document.querySelector(selector)?.getBoundingClientRect();
+    return box && Math.abs(box.left) < 2;
+  }, frame);
+  await page.evaluate((selector) => {
+    const previewWindow = document.querySelector(selector)?.contentWindow;
+    delete document.documentElement.dataset.previewSwipeFixture;
+    const receive = (event) => {
+      if (event.source !== previewWindow || event.data?.type !== "swipe") return;
+      document.documentElement.dataset.previewSwipeFixture = "seen";
+      window.removeEventListener("message", receive);
+    };
+    window.addEventListener("message", receive);
+  }, frame);
+  await page
+    .frameLocator(frame)
+    .locator("body")
+    .evaluate((target) => {
+      const touch = (clientX) => new Touch({ identifier: 1, target, clientX, clientY: 150 });
+      target.dispatchEvent(
+        new TouchEvent("touchstart", { bubbles: true, touches: [touch(innerWidth * 0.85)] }),
+      );
+      target.dispatchEvent(
+        new TouchEvent("touchend", { bubbles: true, changedTouches: [touch(innerWidth * 0.15)] }),
+      );
+    });
+  await page.locator('html[data-preview-swipe-fixture="seen"]').waitFor({ state: "attached" });
+  await page.locator("main").evaluate(async (row) => {
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    await Promise.all(row.getAnimations().map((animation) => animation.finished.catch(() => {})));
+  });
+  const appBounds = await page.locator(frame).boundingBox();
+  if (
+    !appBounds ||
+    Math.abs(appBounds.x) > 2 ||
+    !(await arrow("Show settings").isVisible()) ||
+    !(await arrow("Show Smith").isVisible())
+  )
+    throw new Error("a swipe inside the app switched Studio away from its preview");
+}
+
 export async function openSmith(page) {
   const face = page
     .locator("[data-studio-header]")

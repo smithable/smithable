@@ -31,6 +31,7 @@ import { checkProjectLookApply } from "./project-look-checks.mjs";
 import { checkStaticStates } from "./static-state-checks.mjs";
 import { checkStudioDraft } from "./studio-draft-checks.mjs";
 import {
+  checkAppOwnsPhoneSwipe,
   openFormEntry,
   openPreviewAddress,
   openSettings,
@@ -866,7 +867,8 @@ try {
         await card.waitFor();
         if ((await card.getAttribute("data-guide-card")) !== "files")
           throw new Error("Guide with Code open did not start Code's tour");
-        // Esc ends it, as on a card.
+        // Esc ends it when focus is outside a control. Help returns focus to its button.
+        await fresh.evaluate(() => document.activeElement?.blur());
         await fresh.keyboard.press("Escape");
         await card.waitFor({ state: "detached" });
         await fresh.reload();
@@ -2050,37 +2052,7 @@ try {
         );
       await swipe('[data-guide="change"]', -400);
       await edge("Show Smith").waitFor();
-      await preview.locator("body").evaluate((element) => {
-        for (const [type, x] of [
-          ["pointerdown", 300],
-          ["pointermove", 90],
-          ["pointerup", 50],
-        ]) {
-          element.dispatchEvent(
-            new PointerEvent(type, {
-              bubbles: true,
-              pointerType: "touch",
-              isPrimary: true,
-              clientX: x,
-              clientY: 200,
-            }),
-          );
-        }
-      });
-      await page.locator("main").evaluate(async (row) => {
-        await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-        await Promise.all(
-          row.getAnimations().map((animation) => animation.finished.catch(() => {})),
-        );
-      });
-      const appBounds = await page.locator('iframe[title="App preview"]').boundingBox();
-      if (
-        !appBounds ||
-        Math.abs(appBounds.x) > 2 ||
-        !(await edge("Show settings").isVisible()) ||
-        !(await edge("Show Smith").isVisible())
-      )
-        throw new Error("a swipe inside the app switched Studio away from its preview");
+      await checkAppOwnsPhoneSwipe(page);
       await swipe("[data-preview-page]", 400);
       await edge("Show the app").waitFor();
       await page.getByRole("tab", { name: "Changes", exact: true }).click();
