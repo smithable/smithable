@@ -464,6 +464,7 @@ for (const m of sections) {
     if (m.reused) {
       tryOp("setText", STAND_IN.title, "pages", "home", m.section, "title");
       tryOp("setText", STAND_IN.text, "pages", "home", m.section, "text");
+      tryOp("setText", "", "pages", "home", m.section, "eyebrow");
     }
   }
   if (m.kind !== "records" && !m.reused) {
