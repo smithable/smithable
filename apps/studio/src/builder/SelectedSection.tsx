@@ -38,12 +38,14 @@ export function selectedSection(selection: Selection | undefined, spec: Spec) {
   const picked = /^section:([^.]+)\.(.+)$/.exec(selection?.concept ?? "");
   if (!picked || !spec.ir) return;
   const [, page = "", name = ""] = picked;
-  const section = spec.ir.pages
-    .find((item) => item.id === page)
-    ?.sections.find((item) => item.name === name);
+  const sections = spec.ir.pages.find((item) => item.id === page)?.sections;
+  const section =
+    sections?.find((item) => item.name === name) ??
+    (name === "@footer" ? sections?.find((item) => item.kind === "footer") : undefined);
   if (!section) return;
+  const sectionName = section.name;
   const looks = SECTION_LOOKS[section.kind] ?? {};
-  const look = (spec.ux?.pages[page]?.looks?.[name] ?? {}) as Record<string, unknown>;
+  const look = (spec.ux?.pages[page]?.looks?.[sectionName] ?? {}) as Record<string, unknown>;
   const layout = String(look.layout ?? (Array.isArray(looks.layout) ? looks.layout[0] : ""));
   // A hero's tiles are its two or three shortcuts, and its stage a list everyone sees: a layout
   // the section cannot take is not offered (T1196), unless it is the one it has.
@@ -77,19 +79,24 @@ export function selectedSection(selection: Selection | undefined, spec: Spec) {
   });
   return {
     page,
-    section: name,
+    section: sectionName,
     kind: section.kind,
-    label: selection?.label?.trim() || humanize(name),
+    label: selection?.label?.trim() || humanize(sectionName),
     choices,
     // A section with a picture of its own, and the one it has (none: the section shows its text).
     picture: sectionTakesPicture(section.kind)
-      ? { image: spec.content?.pages[page]?.sections?.[name]?.image }
+      ? { image: spec.content?.pages[page]?.sections?.[sectionName]?.image }
       : undefined,
   };
 }
 
 const named = (kind: string, key: string, value: string) =>
   (kind === "hero" && key === "layout" ? HERO_LAYOUTS[value] : undefined) ??
+  (kind === "footer" && key === "layout"
+    ? value === "contactBand"
+      ? "Contact band"
+      : "Standard footer"
+    : undefined) ??
   (key === "height" ? HEIGHTS[value] : undefined) ??
   humanize(value);
 

@@ -636,6 +636,12 @@ export function landingRoute(
   };
   const footerSection = sections.find((s) => s.kind === "footer");
   const footerTexts = footerSection ? text(footerSection.name) : undefined;
+  const contactBand =
+    footerSection && ux.pages[page.id]?.looks?.[footerSection.name]?.layout === "contactBand";
+  const footerBandOpen = contactBand
+    ? '<div className={site.contact ? "[&>div>footer]:bg-muted [&>div>footer_p]:whitespace-pre-line" : undefined}>\n    '
+    : "";
+  const footerBandClose = contactBand ? "\n    </div>" : "";
   const footer = footerSection
     ? ` footer={${literal({
         ...(footerTexts?.text ? { text: footerTexts.text } : {}),
@@ -733,9 +739,9 @@ ${loaded ? "  const data = Route.useLoaderData();\n" : ""}${
 `
     : ""
 }  return (
-    <LandingLayout appName={app.name}${t.logo} page=${attr(page.id)} link={${header}}${headerProp}${widthProp}${footer} site={site}${hasSignIn(auth) ? " viewer={viewer} onSignOut={viewer ? signOut : undefined}" : ""}>
+    ${footerBandOpen}<LandingLayout appName={app.name}${t.logo} page=${attr(page.id)} link={${header}}${headerProp}${widthProp}${footer} site={site}${hasSignIn(auth) ? " viewer={viewer} onSignOut={viewer ? signOut : undefined}" : ""}>
       ${parts.join("\n      ")}
-    </LandingLayout>
+    </LandingLayout>${footerBandClose}
   );
 }
 `;

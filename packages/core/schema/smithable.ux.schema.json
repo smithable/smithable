@@ -849,6 +849,19 @@
                   "type": "object",
                   "additionalProperties": false,
                   "properties": {
+                    "layout": {
+                      "enum": [
+                        "standard",
+                        "contactBand"
+                      ],
+                      "description": "One of standard, contactBand; the first is the default."
+                    }
+                  }
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
                     "rhythm": {
                       "enum": [
                         "standard",

@@ -52,6 +52,7 @@ export const SECTION_LOOKS: Partial<
   gallery: { ...RHYTHM, ...MEDIA_LOOKS, columns: [3, 2, 4, 5, 6], band: BANDS },
   callToAction: { ...RHYTHM, band: BANDS },
   contact: { ...RHYTHM, band: BANDS },
+  footer: { layout: ["standard", "contactBand"] },
   text: { ...RHYTHM, measure: READING_MEASURES, band: BANDS },
   calculator: { ...RHYTHM, band: BANDS },
 };
