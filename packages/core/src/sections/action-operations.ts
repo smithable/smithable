@@ -553,7 +553,7 @@ const setAction: Operation<{
       throw new OperationError(
         "Say what to change: --intent, --when, --set, --confirm, --reads, --writes, --triggers or --touches none.",
       );
-    if (confirm && (found.custom || found.merge || found.split))
+    if (confirm !== undefined && (found.custom || found.merge || found.split))
       throw new OperationError(
         `"${action}" is not a standard action that changes or copies a record: a merge, a split and custom code have their own dialog or none, so --confirm is not for it.`,
       );
