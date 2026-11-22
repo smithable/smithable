@@ -24,6 +24,7 @@ const WRITES_ITSELF: Record<string, string> = {
   "detach.ts": "the command line's detach, on a project of the person's own",
   "generation-job.ts": "beside the project, not in it",
   "import.ts": "inside asProject",
+  "ink-wash-worker.ts": "the prepared offer in Studio's private scratch folder",
   "managed.ts": "its own scratch folder (wx)",
   "new.ts": "a new folder, or the folder beside the project a replacement is made in",
   "old-version.ts":
@@ -45,6 +46,7 @@ const WRITES_ITSELF: Record<string, string> = {
   "security.ts":
     "the command line's security and deploy, in data/.smithable/reports of a project of the person's own",
   "static.ts": "--out, or data/static of a project of the person's own (command line only)",
+  "studio-ink-wash.ts": "cleans up its private scratch folder outside the project",
   "studio.ts": "the notice goes through changeTree; removes nothing else in the tree",
   "teach.ts": "refused where no project code loads",
   "test-dir.ts": "the tests' folders",
