@@ -49,7 +49,7 @@ pages:
     landing:
       hero: { custom: RestaurantHero }
       visit: { custom: VisitToday }
-      gallery:
+      gallery: { pictures: work }
       footer:
   menu:
     sections:

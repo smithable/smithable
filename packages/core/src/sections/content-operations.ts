@@ -577,6 +577,62 @@ const setSectionPicture: Operation<{
 };
 
 /**
+ * The release review's Keep (picture-kinds.md §6): the owner keeps a picture an AI made where it
+ * presents their work, a hero's or a section's (a gallery's by its place), and is not asked again
+ * until another picture takes its place. Written on the picture in the content file, so undo takes
+ * it back; not kept takes it off.
+ */
+const keepPicture: Operation<{ page: string; section: string; item?: number; kept?: boolean }> = {
+  name: "keepPicture",
+  sets: ["smithable.content.yml:pages.*.*.image.kept", "smithable.content.yml:pages.*.*.items"],
+  summary:
+    "Keep a picture an AI made in a hero, or in a section whose pictures are the owner's work (a gallery's by its place), so the release review does not ask again; kept false asks again.",
+  schema: {
+    type: "object",
+    required: ["page", "section"],
+    additionalProperties: false,
+    properties: {
+      page: refTo({ ref: "page", label: "Page" }, { description: "The page, e.g. home." }),
+      section: refTo(
+        { ref: "section", page: "page", label: "Section" },
+        { description: "The section, e.g. hero." },
+      ),
+      item: {
+        type: "integer",
+        minimum: 0,
+        description: "A gallery's picture by its place, from 0.",
+      },
+      kept: { type: "boolean", description: "false asks again; kept when not given." },
+    },
+  },
+  positional: ["page", "section", "item"],
+  describe: ({ page, section, item, kept }) =>
+    `${kept === false ? "Ask again about" : "Keep"} ${item === undefined ? "the picture" : `picture ${item + 1}`} of the ${section} section of ${page}`,
+  destructive: () => false,
+  apply({ content }, { page, section, item, kept = true }, ir) {
+    const found = ir.pages.find((p) => p.id === page)?.sections.find((s) => s.name === section);
+    if (!found) throw new OperationError(`The ${page} page has no section named "${section}".`);
+    if (item !== undefined && found.kind !== "gallery")
+      throw new OperationError(
+        `Only a gallery's pictures are given by their place; ${section} is a ${found.kind} section.`,
+      );
+    const path =
+      item === undefined
+        ? ["pages", page, section, "image"]
+        : ["pages", page, section, "items", String(item), "image"];
+    const image = content.get(path) as { generated?: unknown } | undefined;
+    if (!image || typeof image !== "object")
+      throw new OperationError(`The ${section} section has no such picture.`);
+    if (image.generated !== true)
+      throw new OperationError("Only a picture an AI made is kept: this one is the owner's own.");
+    if (kept) put(content, [...path, "kept"], true);
+    else if (content.has([...path, "kept"])) content.remove([...path, "kept"]);
+    else throw new OperationError("This picture is not kept.");
+    return [];
+  },
+};
+
+/**
  * A section's items at once (a features section's points, a FAQ's questions and answers, the
  * testimonials), in place of the ones it had: a first draft writes them from what a page or a
  * description says, so the section is not a heading over nothing. No items removes them.
@@ -658,6 +714,7 @@ export const contentOperations: AnyOperation[] = [
   setTexts,
   setItems,
   setSectionPicture,
+  keepPicture,
   nameRecords,
   setLanguage,
   addLanguage,

@@ -136,6 +136,11 @@ export interface ContentImage {
   generated?: true;
   /** What the picture is, as the image library said when it was placed (picture-kinds.md §2). */
   kind?: PictureKind;
+  /**
+   * The owner kept a picture an AI made where it presents their work (picture-kinds.md §6): the
+   * release review does not ask again. Gone as soon as the picture changes (forgetKept).
+   */
+  kept?: true;
   /** The file's own width in pixels, so a screen may choose it among its copies. */
   width?: number;
   /**
@@ -250,6 +255,7 @@ export const NOT_TEXT = new Set([
   "icon",
   "for",
   "generated",
+  "kept",
   "kind",
   "email",
   "phone",
@@ -922,15 +928,17 @@ function readPicture(
   src?: string;
   alt?: string;
   generated?: true;
+  kept?: true;
   kind?: PictureKind;
   width?: number;
   widths?: number[];
 } {
   // A mark is shown small: one file.
   const entries = checkKeys(ctx, mapEntries(ctx, node, where) ?? [], where, {
-    allowed: ["src", "alt", "generated", ...(sized ? ["kind", "width", "widths"] : [])],
+    allowed: ["src", "alt", "generated", ...(sized ? ["kind", "kept", "width", "widths"] : [])],
   });
   const flag = entries.find((e) => e.key === "generated");
+  const keep = entries.find((e) => e.key === "kept");
   const sort = entries.find((e) => e.key === "kind");
   const kind = sort && readPictureKind(ctx, sort.value, where);
   const own = entries.find((e) => e.key === "width");
@@ -940,7 +948,7 @@ function readPicture(
     node,
     where,
     ["src", "alt"],
-    entries.filter((e) => e !== flag && e !== sort && e !== own && e !== copies),
+    entries.filter((e) => e !== flag && e !== keep && e !== sort && e !== own && e !== copies),
   );
   const width = own && readWidths(ctx, own.value, where, false)?.[0];
   const widths = copies && readWidths(ctx, copies.value, where, true);
@@ -965,9 +973,18 @@ function readPicture(
         ? `"kind" of ${where} is photograph, but it says "generated: true": an AI picture is ai-realistic or ai-drawn.`
         : `"kind" of ${where} is ${kind}, a picture an AI made: say "generated: true" beside it.`,
     );
+  const kept = keep && readBoolean(ctx, keep.value, `"kept" of ${where}`) === true;
+  // Kept answers the release review's question about a picture an AI made; on another it is noise.
+  if (kept && !generated)
+    ctx.error(
+      keep?.value ?? null,
+      "invalid-value",
+      `"kept" of ${where} says the owner kept a picture an AI made: it needs "generated: true" beside it.`,
+    );
   return {
     ...texts,
     ...(generated ? { generated: true as const } : {}),
+    ...(kept && generated ? { kept: true as const } : {}),
     ...(kind ? { kind } : {}),
     ...(width ? { width } : {}),
     ...(widths && !misfit ? { widths } : {}),
@@ -1028,7 +1045,7 @@ function readImage(
   node: ParsedNode | null,
   where: string,
 ): ContentImage | undefined {
-  const { src, alt, generated, kind, width, widths } = readPicture(ctx, node, where);
+  const { src, alt, generated, kept, kind, width, widths } = readPicture(ctx, node, where);
   // In a language file a picture says what it shows only: its file is the content file's.
   if (ctx.emptyTexts) return { alt: alt ?? "" } as ContentImage;
   if (!src || !IMAGE_SRC.test(src)) {
@@ -1051,6 +1068,7 @@ function readImage(
     src,
     alt,
     ...(generated ? { generated } : {}),
+    ...(kept ? { kept } : {}),
     ...(kind ? { kind } : {}),
     ...(width ? { width } : {}),
     ...(widths ? { widths } : {}),

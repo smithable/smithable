@@ -1,7 +1,7 @@
 // The release review's pictures (docs/design/picture-kinds.md §6): the hero's, and those of
 // sections whose pictures are the owner's work, that an image model made. Published as they are
-// they would present work nobody did, so each offers the owner's own file or, where the slot may
-// be empty, Remove. Each is one setSectionPicture that undo takes back; none stops publishing.
+// they would present work nobody did, so each offers the owner's own file, Keep, or Remove. Each
+// is one operation (setSectionPicture, keepPicture) that undo takes back; none stops publishing.
 import { useState } from "react";
 import { api, type ReleaseReview } from "./api";
 import { fileRefusal, PICTURE_TYPES, pictureName } from "./builder/SectionPicture";
@@ -22,7 +22,7 @@ export function ReviewPictures({
   const [refused, setRefused] = useState<string>();
   const run = async (
     picture: Picture,
-    args: { src?: string },
+    args: { src?: string; keep?: true },
     file?: { path: string; data: string },
   ) => {
     setBusy(true);
@@ -30,7 +30,7 @@ export function ReviewPictures({
     const { page, section, item, alt } = picture;
     const result = await api
       .operation(
-        "setSectionPicture",
+        args.keep ? "keepPicture" : "setSectionPicture",
         {
           page,
           section,
@@ -68,8 +68,8 @@ export function ReviewPictures({
     <>
       <p>
         An image model made these pictures. Where they show your work or your business, people may
-        take them for real jobs: replace them with your own photos, or remove them. Publishing is
-        not held up by them.
+        take them for real jobs: replace them with your own photos, keep them, or remove them.
+        Publishing is not held up by them.
       </p>
       <ul className="space-y-2" data-review-pictures>
         {pictures.map((p) => (
@@ -101,6 +101,15 @@ export function ReviewPictures({
                 }}
               />
             </label>
+            <button
+              type="button"
+              disabled={busy}
+              aria-label={`Keep: ${pictureWhere(p)}`}
+              className="rounded border border-line px-2 py-1 hover:bg-subtle disabled:opacity-60"
+              onClick={() => void run(p, { keep: true })}
+            >
+              Keep
+            </button>
             <button
               type="button"
               disabled={busy}

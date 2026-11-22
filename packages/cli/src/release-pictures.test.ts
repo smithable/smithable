@@ -42,4 +42,15 @@ test("the release review lists the hero's and the work sections' generated pictu
     { page: "home", section: "jobs", item: 1, src: "images/jobs/made.webp", alt: "A roof" },
   ]);
   expect(picturesToReview(ir, undefined)).toEqual([]);
+  // A picture the owner kept is not asked about again.
+  const kept = validateContent(
+    {
+      path: "smithable.content.yml",
+      text: content
+        .split("images/hero.webp, alt: A roof, generated: true")
+        .join("images/hero.webp, alt: A roof, generated: true, kept: true"),
+    },
+    ir,
+  );
+  expect(picturesToReview(ir, kept.content).map((p) => p.src)).toEqual(["images/jobs/made.webp"]);
 });

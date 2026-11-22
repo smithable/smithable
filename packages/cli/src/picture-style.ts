@@ -543,8 +543,9 @@ function heroWords(dir: string, entry: VersionEntry): string | undefined {
   for (const at of found) {
     editor.set([...at, "alt"], entry.alt);
     editor.set([...at, "generated"], entry.generated ?? true);
-    // Its width and copies were the old picture's.
-    for (const key of ["width", "widths"])
+    // Its width and copies were the old picture's, and the owner kept the old picture, not this
+    // one (picture-kinds.md §6): the release review asks again.
+    for (const key of ["width", "widths", "kept"])
       if (editor.has([...at, key])) editor.remove([...at, key]);
   }
   return editor.text;

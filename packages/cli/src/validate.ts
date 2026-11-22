@@ -529,6 +529,19 @@ export function explainSpec(ir: SpecIR, auth: AuthIR, ux?: UxIR, language?: stri
       `${page.id} hero: button ${opens}; ${hero.secondButton ? `second button opens ${hero.secondButton}` : "no second button (secondButton)"}`,
     );
   }
+  // Which pictures the release review asks about (picture-kinds.md §6): the hero's always, a
+  // gallery's or mediaText's only when the spec says they are the owner's work, never by name.
+  for (const page of ir.pages) {
+    if (page.pattern.kind !== "landing") continue;
+    for (const section of page.pattern.sections) {
+      if (section.kind !== "gallery" && section.kind !== "mediaText") continue;
+      lines.push(
+        section.pictures === "work"
+          ? `${page.id} ${section.name}: its pictures are the owner's work (pictures: work); the release review asks about those an AI made`
+          : `${page.id} ${section.name}: its pictures are decoration, never asked about at release (say pictures: work for the owner's work)`,
+      );
+    }
+  }
   // How a list page's filter on a reference is picked (A 208): the ux file's word, else the count.
   for (const page of ir.pages) {
     const model = ir.models.find((m) => m.name === pageModel(page));

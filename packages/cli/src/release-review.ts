@@ -439,7 +439,8 @@ export interface ReviewPicture {
 /**
  * The hero's picture, and those of sections whose pictures are the owner's work ("pictures: work"),
  * that an image model made (docs/design/picture-kinds.md §6): published as they are they would
- * present work nobody did. Decoration elsewhere is never listed, and the list never stops a release.
+ * present work nobody did. One the owner kept is not listed again (keepPicture). Decoration
+ * elsewhere is never listed, and the list never stops a release.
  */
 export function picturesToReview(ir: SpecIR, content: ContentIR | undefined): ReviewPicture[] {
   const found: ReviewPicture[] = [];
@@ -448,7 +449,7 @@ export function picturesToReview(ir: SpecIR, content: ContentIR | undefined): Re
       if (section.kind !== "hero" && section.pictures !== "work") continue;
       const texts = content?.pages[page.id]?.sections?.[section.name];
       const look = (image: ContentImage | undefined, item?: number) => {
-        if (image?.generated)
+        if (image?.generated && !image.kept)
           found.push({
             page: page.id,
             section: section.name,
