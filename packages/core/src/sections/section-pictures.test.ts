@@ -51,3 +51,37 @@ test("setSectionPictures marks a section's pictures as work and takes it off aga
   });
   expect(faq.ok).toBe(false);
 });
+
+test("setSectionPicture replaces or removes a gallery's picture by its place (T1175)", () => {
+  const files = {
+    spec: spec("      hero: {}\n      jobs: { gallery:, pictures: work }\n      faq:\n"),
+    content: `smithableContent: 0.1
+pages:
+  home:
+    jobs:
+      items:
+        - image: { src: images/jobs/a.webp, alt: A roof, generated: true, kind: ai-realistic }
+          caption: First
+        - image: { src: images/jobs/b.webp, alt: B roof, generated: true }
+          caption: Second
+`,
+  };
+  const picture = (args: Record<string, unknown>) =>
+    applyOperation(files, "setSectionPicture", { page: "home", section: "jobs", ...args });
+  // The owner's own file in its place: the mark and the kind go, the caption and alt stay.
+  const own = picture({ item: 0, src: "images/jobs-own.webp" });
+  if (!own.ok) throw new Error(own.message);
+  expect(own.files.content).toContain("images/jobs-own.webp");
+  expect(own.files.content).toContain("caption: First");
+  expect(own.files.content).not.toContain("ai-realistic");
+  expect(own.files.content).toMatch(/b\.webp.*generated: true/);
+  // Remove takes the item, caption and all; the other stays.
+  const gone = picture({ item: 0 });
+  if (!gone.ok) throw new Error(gone.message);
+  expect(gone.files.content).not.toContain("First");
+  expect(gone.files.content).toContain("caption: Second");
+  expect(picture({ item: 2 }).ok).toBe(false);
+  expect(
+    applyOperation(files, "setSectionPicture", { page: "home", section: "hero", item: 0 }).ok,
+  ).toBe(false);
+});

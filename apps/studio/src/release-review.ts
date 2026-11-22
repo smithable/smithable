@@ -1,8 +1,10 @@
 import type { ReleaseReview as Review } from "./api";
 
-export type ReviewState = "needs-look" | "fine" | "unchanged" | "not-applicable";
+/** A suggestion is shown open but is not an open item: it never holds up publishing. */
+export type ReviewState = "needs-look" | "suggestion" | "fine" | "unchanged" | "not-applicable";
 export type ReviewPart =
   | "noting"
+  | "pictures"
   | "access"
   | "privacy"
   | "migrations"
@@ -55,6 +57,19 @@ export function reviewSections(
             state: "needs-look" as const,
             summary:
               warnings.length === 1 ? "one thing to check" : `${warnings.length} things to check`,
+          },
+        ]
+      : []),
+    ...(review.pictures?.length
+      ? [
+          {
+            id: "pictures" as const,
+            title: "Pictures",
+            state: "suggestion" as const,
+            summary:
+              review.pictures.length === 1
+                ? "one made by an image model may pass for your work"
+                : `${review.pictures.length} made by an image model may pass for your work`,
           },
         ]
       : []),
