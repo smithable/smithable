@@ -1,0 +1,21 @@
+smithableUx: 0.1
+
+theme:
+  preset: restaurant
+
+tones:
+  Stop.status: { draft: neutral, confirmed: success, cancelled: neutral }
+  CateringEnquiry.status: { new: warning, booked: success, closed: neutral }
+
+pages:
+  home:
+    sections:
+      gallery: { columns: 2, band: muted }
+  menu:
+    frame: site
+  catering:
+    frame: site
+  stops:
+    table: { columns: [place, startsAt, endsAt, status], sort: startsAt }
+  enquiries:
+    table: { columns: [name, eventDate, guests, status, followUpOn], sort: followUpOn, actions: menu }

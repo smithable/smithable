@@ -1,0 +1,80 @@
+# yaml-language-server: $schema=../../packages/core/schema/smithable.schema.json
+smithable: 0.1
+
+app:
+  name: Ember & Wheel
+  description: A food truck's stops, street-food menu and catering enquiries.
+  timezone: Europe/Mariehamn
+  currency: EUR
+
+models:
+  Stop:
+    fields:
+      place: string!
+      address: string
+      startsAt: datetime!
+      endsAt: datetime!
+      directionsUrl: url
+      menuOverride: text
+      status: { type: draft | confirmed | cancelled, default: draft }
+  MenuItem:
+    fields:
+      name: string!
+      category: mains | sides | drinks
+      description: text
+      price: { type: money!, min: 0 }
+      photo: picture
+  CateringEnquiry:
+    fields:
+      name: string!
+      email: email!
+      eventDate: date
+      guests: { type: int, min: 1 }
+      message: text!
+      status: { type: new | contacted | booked | closed, default: new, by: app }
+      followUpOn: { type: date, default: TODAY(), by: app }
+
+actions:
+  contacted:
+    on: CateringEnquiry
+    when: { status: new }
+    set: { status: contacted, followUpOn: 'DATEADD(TODAY(), 3, "day")' }
+  booked:
+    on: CateringEnquiry
+    when: { status: contacted }
+    set: { status: booked }
+  closed:
+    on: CateringEnquiry
+    when: { status: [new, contacted, booked] }
+    set: { status: closed }
+
+pages:
+  home:
+    route: /
+    landing:
+      hero: { button: menu }
+      stops: { custom: UpcomingStops }
+      gallery:
+      footer:
+  menu:
+    sections:
+      menu: { records: MenuItem, filters: [category] }
+  catering:
+    sections:
+      contact: { form: CateringEnquiry }
+  stops:
+    crud: Stop
+    filters: [startsAt, status]
+    sortable: [startsAt]
+  menu-items:
+    crud: MenuItem
+    filters: [category]
+  enquiries:
+    crud: CateringEnquiry
+    filters: [status]
+    defaultFilter: { status: [new, contacted] }
+    sortable: [followUpOn]
+    actions: [contacted, booked, closed]
+  team: { users: manage }
+
+navigation: [menu, catering, stops, menu-items, enquiries, team]

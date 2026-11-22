@@ -16,7 +16,8 @@ export type Kind =
   | "barbers"
   | "restaurant"
   | "builder"
-  | "painter";
+  | "painter"
+  | "food-truck";
 
 export interface Question {
   about: "kind" | "audience" | "visitors" | "languages";
@@ -121,6 +122,8 @@ cue(
 cue("builder", 2, "renovation renovations enquiry enquiries plumber electrician roofer");
 cue("painter", 4, "painter painters painting decorator decorators");
 cue("painter", 2, "facade facades repaint repainting wallpaper");
+cue("food-truck", 4, "catering cater");
+cue("food-truck", 2, "food-truck truck");
 
 // Who it is for. "My" and "our" say whose it is, which is the app's audience only for an app
 // that looks inward (my clients, our pipeline): "my shop" and "our workshops" are a business
@@ -180,7 +183,7 @@ const NOT = set("nothing not no never without");
 // Words for the people of a team are who uses it, never a thing it keeps.
 const NOT_THINGS = set("team colleague staff member");
 // Shapes that face outward: who signs in and what is seen are never taken from "my" or "our".
-const OUTWARD = new Set<string>(["booking", "marketplace", "status", "restaurant"]);
+const OUTWARD = new Set<string>(["booking", "marketplace", "status", "restaurant", "food-truck"]);
 
 // Things people keep records of, by the word they use (singular).
 const THING = set(`customer client contact company lead deal follow-up invoice payment quote
@@ -188,7 +191,7 @@ const THING = set(`customer client contact company lead deal follow-up invoice p
   product ingredient supplier job application team player match talk speaker attendee ticket
   recipe incident outage maintenance update component album artist object fuel visit guest
   sighting species plot shoot project task note order member event habit check-in streak
-  case request message reply
+  case request message reply stop
   household colleague neighbor translator freelancer schedule blog catalog catalogue line
   picture contact-form`);
 // What a record holds.
