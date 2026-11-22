@@ -21,6 +21,7 @@ import {
   STARTER_TEXTS,
   starterScore,
   type Usage,
+  websiteDraftProblem,
 } from "@smithable/ai";
 import {
   applyOperations,
@@ -439,6 +440,7 @@ export async function create(
     // Drafting as operations (an empty app, one checked operation at a time; the default, see
     // docs/benchmarks/draft-modes-*.md) or as whole files adapted from the starter.
     options.onStage?.("drafting");
+    const fullWebsiteImport = website?.contentMode === "full" && !options.websiteOwnerDescription;
     const draft: Awaited<ReturnType<typeof draftProject>> = starterOnly
       ? {
           kind: "draft",
@@ -466,7 +468,7 @@ export async function create(
             providers,
             language: website?.language,
             preserveSourceCopy: website?.contentMode === "full",
-            requireLanding: website?.contentMode === "full" && !options.websiteOwnerDescription,
+            fullWebsiteImport,
             starter: { name, files },
             // The bench's harness switches (backlog Experiments 7); unset, the draft is made as always.
             ...(/^\d+$/.test(process.env.SMITHABLE_REPAIRS ?? "")
@@ -563,15 +565,17 @@ export async function create(
       path: "smithable.auth.yml",
       text: files["smithable.auth.yml"] ?? "",
     }).auth;
-    const ir = validateSpec({ path: "smithable.yml", text: files["smithable.yml"] ?? "" }).ir;
-    if (
-      website?.contentMode === "full" &&
-      !options.websiteOwnerDescription &&
-      !ir?.pages.some((page) => page.pattern.kind === "landing")
-    ) {
-      io.err("The website draft has no landing page. No app was created.\n");
-      return 1;
+    if (fullWebsiteImport) {
+      const problem = websiteDraftProblem({
+        spec: files["smithable.yml"] ?? "",
+        auth: files["smithable.auth.yml"],
+      });
+      if (problem) {
+        io.err(`${problem} No app was created.\n`);
+        return 1;
+      }
     }
+    const ir = validateSpec({ path: "smithable.yml", text: files["smithable.yml"] ?? "" }).ir;
     const content = files["smithable.content.yml"];
     if (ir) {
       const texts = content

@@ -747,6 +747,18 @@ const EXPOSES = new Set(["public-personal-data", "visitors-read-drafts"]);
 const weigh = (flaws: { code: string }[]) =>
   flaws.reduce((n, f) => n + (EXPOSES.has(f.code) ? 100 : 1), 0);
 
+/** Requirements shared by the two drafting modes for a full website import. */
+export function websiteDraftProblem(
+  files: Pick<ProjectFiles, "spec" | "auth">,
+): string | undefined {
+  const ir = validateSpec({ path: "smithable.yml", text: files.spec }).ir;
+  if (!ir?.pages.some((page) => page.pattern.kind === "landing"))
+    return "The website draft has no landing page.";
+  const { diagnostics } = validateAuth({ path: "smithable.auth.yml", text: files.auth ?? "" }, ir);
+  if (diagnostics.some(({ code }) => EXPOSES.has(code)))
+    return "The website draft would expose private records to visitors.";
+}
+
 const toProject = (files: SpecFiles): ProjectFiles => ({
   spec: files["smithable.yml"] ?? "",
   auth: files["smithable.auth.yml"],
@@ -787,7 +799,7 @@ export async function draftProjectByOperations(options: {
   description: string;
   language?: Language;
   preserveSourceCopy?: boolean;
-  requireLanding?: boolean;
+  fullWebsiteImport?: boolean;
   providers: Provider[];
   /** The closest starter (clarify's choice): the example of shape, and the access default. */
   starter?: { name: string; files: SpecFiles };
@@ -829,7 +841,7 @@ export async function draftProjectByOperations(options: {
     if (language && language !== "en")
       files = applyAll(files, done, [{ op: "setLanguage", args: { language } }]).files;
     const wording = languageNote(options.description, language, options.preserveSourceCopy);
-    const landing = options.requireLanding
+    const landing = options.fullWebsiteImport
       ? "\nThe result needs a landing page with the source home page's content. Start it with addLandingPage."
       : "";
     let prompt = `${options.attempt ? `(${options.attempt}.) ` : ""}Description: ${options.description}${wording}${landing}${done.length ? `\n\nApplied so far (do not repeat them):\n${JSON.stringify(done)}` : ""}${shape}`;
@@ -849,11 +861,8 @@ export async function draftProjectByOperations(options: {
     const others = otherLanguages(options.description, language ?? "en");
     const draftOf = (dropped: string[]): Draft & { operations?: Step[] } => {
       const selected = best?.files ?? files;
-      const ir = options.requireLanding
-        ? validateSpec({ path: "smithable.yml", text: selected.spec }).ir
-        : undefined;
-      if (options.requireLanding && !ir?.pages.some((page) => page.pattern.kind === "landing"))
-        return { kind: "failed", message: "The website draft has no landing page.", usage };
+      const failure = options.fullWebsiteImport && websiteDraftProblem(selected);
+      if (failure) return { kind: "failed", message: failure, usage };
       const steps = [...(best ? done.slice(0, best.count) : done)];
       const chosen = applyAll(
         selected,
@@ -923,12 +932,12 @@ export async function draftProjectByOperations(options: {
         ];
         if (done.length > 0) {
           files = mended(files, done);
-          const found = flawsOf(files, options.requireLanding);
+          const found = flawsOf(files, options.fullWebsiteImport);
           const score = weigh(found);
-          if (
-            !found.some((flaw) => flaw.code === "missing-landing") &&
-            (!best || score < best.score)
-          )
+          const eligible =
+            !options.fullWebsiteImport ||
+            !found.some(({ code }) => code === "missing-landing" || EXPOSES.has(code));
+          if (eligible && (!best || score < best.score))
             best = { files, count: done.length, score };
           const flaws = last ? [] : found.map((f) => f.message);
           if (critique && round === 1) {

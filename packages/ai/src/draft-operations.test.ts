@@ -992,15 +992,20 @@ test("a website import repairs a draft that only created a privacy page", async 
       { op: "setPublic", args: { pages: ["home"], read: ["Contact"] } },
     ],
   });
+  const closeRecords = answering({
+    operations: [{ op: "setPublic", args: { pages: ["home"], read: [] } }],
+  });
   const draft = await draftProjectByOperations({
     description: "Import the website for a bicycle shop.",
-    requireLanding: true,
+    fullWebsiteImport: true,
     providers: [
       {
         ...first,
         complete(request) {
           prompts.push(request.user);
-          return (prompts.length === 1 ? first : repair).complete(request);
+          return (
+            prompts.length === 1 ? first : prompts.length === 2 ? repair : closeRecords
+          ).complete(request);
         },
       },
     ],
@@ -1008,9 +1013,19 @@ test("a website import repairs a draft that only created a privacy page", async 
   expect(prompts[1]).toContain("The imported website needs a landing page");
   expect(prompts[2]).toContain("including personal data");
   expect(draft.kind === "draft" && draft.files["smithable.yml"]).toContain("landing:");
+  const exposed = await draftProjectByOperations({
+    description: "Import the website for a bicycle shop.",
+    fullWebsiteImport: true,
+    repairs: 0,
+    providers: [repair],
+  });
+  expect(exposed).toMatchObject({
+    kind: "failed",
+    message: "The website draft would expose private records to visitors.",
+  });
   const incomplete = await draftProjectByOperations({
     description: "Import the website for a bicycle shop.",
-    requireLanding: true,
+    fullWebsiteImport: true,
     repairs: 0,
     providers: [first],
   });
