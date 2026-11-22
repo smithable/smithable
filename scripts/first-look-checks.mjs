@@ -207,7 +207,9 @@ export async function checkFirstLook(browser, base) {
     await page.goto(`${base}/?guide=off`);
     await page.setViewportSize({ width: 390, height: 844 });
     await (await toolbarAction(page, "Look")).click();
-    const box = await panel.boundingBox();
+    const sheet = page.locator('[data-look-panel="sheet"]');
+    await sheet.waitFor();
+    const box = await sheet.boundingBox();
     assert.ok(box && box.y > 250 && box.height < 550, "phone Look is not a lower sheet");
     await panel.getByRole("button", { name: "Customise", exact: true }).click();
     await page.getByRole("dialog", { name: "Look", exact: true }).waitFor();
