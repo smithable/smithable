@@ -25,6 +25,8 @@ import {
 } from "./smith-cases.mjs";
 
 const TURN_LIMIT = 12;
+const unavailable =
+  /\b429\b|rate limit|timed? out|fetch failed|network|overloaded|(?:answered|status|http)[: ]+5\d\d\b/i;
 
 function changes(before, after, path = []) {
   if (isDeepStrictEqual(before, after)) return [];
@@ -174,7 +176,9 @@ export async function runTalk(scenario, { project, person, providers, docsIndex,
       usage.push(...phraseUsage);
       proposal = await retryLimited(ask, (previous) => usage.push(...(previous.usage ?? [])));
       usage.push(...(proposal.usage ?? []));
-    } catch {
+    } catch (error) {
+      if (!unavailable.test(error?.message ?? ""))
+        throw new Error("The benchmark could not evaluate a Smith reply.", { cause: error });
       entry.visible = { kind: "failed", text: "Smith could not answer this request." };
       end = "Smith provider unavailable";
       break;
@@ -189,8 +193,7 @@ export async function runTalk(scenario, { project, person, providers, docsIndex,
     }
     if (
       proposal.kind === "paused" ||
-      (proposal.kind === "failed" &&
-        /\b429\b|rate limit|timed? out|fetch failed|network/i.test(proposal.message))
+      (proposal.kind === "failed" && unavailable.test(proposal.message))
     ) {
       end = proposal.kind === "paused" ? "paused" : "Smith provider unavailable";
       break;
@@ -209,7 +212,13 @@ export async function runTalk(scenario, { project, person, providers, docsIndex,
       }).ir?.models.find(({ name }) => name === path[2]);
       const field = model?.fields.find(({ name }) => name === path[4]);
       right =
-        field?.type.kind === "scalar" && field.type.name === optionalFieldType && !field.required;
+        path[0] === "spec" &&
+        path[1] === "models" &&
+        path[3] === "fields" &&
+        field?.type.kind === "scalar" &&
+        field.type.name === optionalFieldType &&
+        !field.required &&
+        !field.requiredWhen;
     }
     return { path, right };
   });
@@ -389,7 +398,8 @@ export function budgetGuard(limit) {
             return completion;
           } catch (error) {
             if (error instanceof CutOffAnswerError) settle(error.completion);
-            else if (/ answered 429:| returned status 429\./.test(error.message)) spent -= reserve;
+            else if (/ answered 429:| returned status 429\./.test(error?.message ?? ""))
+              spent -= reserve;
             throw error;
           }
         },

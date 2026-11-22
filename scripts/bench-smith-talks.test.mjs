@@ -3,10 +3,11 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
 import { cached, openAICompatible } from "../packages/ai/dist/index.js";
+import { applyOperations, YamlEditor } from "../packages/core/dist/index.js";
 import { budgetGuard, replayOnly, runTalk } from "./bench-smith-talks.mjs";
 import { repo } from "./dev-app.mjs";
 import { startFakeModel } from "./fake-model.mjs";
-import { starterProject } from "./smith-cases.mjs";
+import { indexedProject, starterProject } from "./smith-cases.mjs";
 
 test("a person reads Smith's answers, applies a real proposal and undoes it", async () => {
   const model = await startFakeModel();
@@ -124,5 +125,28 @@ test("the labelled source checks distinguish untouched starters from applied cha
       },
     );
     assert.equal(result.right, Boolean(scenario.unchanged && !scenario.undo), scenario.id);
+  }
+});
+
+test("a declared optional date passes the same goal in long and short forms", async () => {
+  const project = starterProject(repo, "crm");
+  const path = ["models", "Order", "fields", "deliveryDate"];
+  const result = applyOperations(project.files, [
+    { op: "addField", args: { model: "Order", field: "deliveryDate", type: "date" } },
+  ]);
+  assert.equal(result.ok, true);
+  const editor = new YamlEditor(result.files.spec);
+  editor.set(path, { type: "date" });
+  for (const spec of [result.files.spec, editor.text]) {
+    const talk = await runTalk(
+      { id: "delivery", checks: [{ path: ["spec", ...path], optionalFieldType: "date" }] },
+      {
+        project: indexedProject({ ...result.files, spec }),
+        person: async () => ({ action: "done" }),
+        providers: [],
+        docsIndex: { pages: [], parts: [] },
+      },
+    );
+    assert.equal(talk.right, true);
   }
 });
