@@ -234,6 +234,8 @@ export const w = {
   more: "Mer",
   moreArticles: "Fler artiklar",
   moreBelow: "Mer längre ned",
+  pauseFilm: "Pausa filmen",
+  playFilm: "Spela filmen",
   movedToTrash: (title: string) => `”${title}” ligger i papperskorgen.`,
   moveToTrash: "Flytta till papperskorgen",
   moveAllToTrash: "Flytta allt till papperskorgen",

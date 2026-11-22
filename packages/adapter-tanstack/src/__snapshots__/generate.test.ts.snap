@@ -166,8 +166,8 @@ exports[`../../../examples/api/smithable.yml > file list and generated code > pa
 
 exports[`../../../examples/api/smithable.yml > file list and generated code > public/favicon.svg 1`] = `
 "<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  <rect width="32" height="32" rx="6.4" fill="#4f46e5"/>
-  <text x="16" y="21" text-anchor="middle" style="unicode-bidi:plaintext" font-family="system-ui, sans-serif" font-size="14" font-weight="700" fill="#ffffff">TT</text>
+  <rect width="32" height="32" rx="7" fill="#3b5bdb"/>
+  <text x="16" y="22" text-anchor="middle" font-family="system-ui, sans-serif" font-size="18" font-weight="700" fill="#fff">T</text>
 </svg>
 "
 `;
@@ -1332,18 +1332,10 @@ exports[`../../../examples/api/smithable.yml > file list and generated code > sr
 // spec's field names, amounts as decimal texts, times as ISO texts) and their values back, checked
 // by each model's own schema, as a form's are.
 import { BadInput } from "#/kit/api.server";
-import { isoIn } from "#/kit/zoned";
 import { projectSchema } from "#/generated/project.schema";
 import { taskSchema } from "#/generated/task.schema";
 import { noteSchema } from "#/generated/note.schema";
 
-/** A stored moment as the API gives it: with UTC's offset, and its milliseconds when it has any. */
-export function momentOut(v: unknown): string | null {
-  if (!(v instanceof Date)) return (v as string | null) ?? null;
-  const text = isoIn(v, "UTC");
-  const ms = v.getUTCMilliseconds();
-  return ms ? \`\${text.slice(0, -6)}.\${String(ms).padStart(3, "0")}\${text.slice(-6)}\` : text;
-}
 const whole = (v: unknown, field: string) => {
   if (Number.isInteger(v)) return v as number;
   throw new BadInput(\`"\${field}" must be a record's id, a whole number.\`);
@@ -1367,8 +1359,8 @@ export function projectToApi(row: Record<string, any>) {
     id: row.id as number,
     name: row.name ?? null,
     description: row.description ?? null,
-    createdAt: momentOut(row.createdAt),
-    updatedAt: momentOut(row.updatedAt),
+    createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
+    updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : row.updatedAt,
   };
 }
 
@@ -1404,8 +1396,8 @@ export function taskToApi(row: Record<string, any>) {
     dueDate: row.dueDate ?? null,
     assignee: row.assigneeId ?? null,
     details: row.details ?? null,
-    createdAt: momentOut(row.createdAt),
-    updatedAt: momentOut(row.updatedAt),
+    createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
+    updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : row.updatedAt,
   };
 }
 
@@ -1450,8 +1442,8 @@ export function noteToApi(row: Record<string, any>) {
     title: row.title ?? null,
     project: row.projectId ?? null,
     body: row.body ?? null,
-    createdAt: momentOut(row.createdAt),
-    updatedAt: momentOut(row.updatedAt),
+    createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
+    updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : row.updatedAt,
   };
 }
 
@@ -5200,18 +5192,10 @@ import { projectUi } from "./project";
 import { taskUi } from "./task";
 import { runComplete } from "./actions/complete.server";
 import { runReopen } from "./actions/reopen.server";
-import { isoIn } from "#/kit/zoned";
 import { projectSchema } from "#/generated/project.schema";
 import { taskSchema } from "#/generated/task.schema";
 import { noteSchema } from "#/generated/note.schema";
 
-/** A stored moment as the API gives it: with UTC's offset, and its milliseconds when it has any. */
-export function momentOut(v: unknown): string | null {
-  if (!(v instanceof Date)) return (v as string | null) ?? null;
-  const text = isoIn(v, "UTC");
-  const ms = v.getUTCMilliseconds();
-  return ms ? \`\${text.slice(0, -6)}.\${String(ms).padStart(3, "0")}\${text.slice(-6)}\` : text;
-}
 const whole = (v: unknown, field: string) => {
   if (Number.isInteger(v)) return v as number;
   throw new BadInput(\`"\${field}" must be a record's id, a whole number.\`);
@@ -5235,8 +5219,8 @@ export function projectToApi(row: Record<string, any>) {
     id: row.id as number,
     name: row.name ?? null,
     description: row.description ?? null,
-    createdAt: momentOut(row.createdAt),
-    updatedAt: momentOut(row.updatedAt),
+    createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
+    updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : row.updatedAt,
   };
 }
 
@@ -5272,8 +5256,8 @@ export function taskToApi(row: Record<string, any>) {
     dueDate: row.dueDate ?? null,
     assignee: row.assigneeId ?? null,
     details: row.details ?? null,
-    createdAt: momentOut(row.createdAt),
-    updatedAt: momentOut(row.updatedAt),
+    createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
+    updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : row.updatedAt,
   };
 }
 
@@ -5318,8 +5302,8 @@ export function noteToApi(row: Record<string, any>) {
     title: row.title ?? null,
     project: row.projectId ?? null,
     body: row.body ?? null,
-    createdAt: momentOut(row.createdAt),
-    updatedAt: momentOut(row.updatedAt),
+    createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
+    updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : row.updatedAt,
   };
 }
 
@@ -14086,7 +14070,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "package.json": "9d0004ce generated",
   "playwright.config.ts": "5ffef2a7 kit",
   "pnpm-workspace.yaml": "1da1537f scaffold",
-  "public/favicon.svg": "ebbd34a1 generated",
+  "public/favicon.svg": "246dedca generated",
   "server.mjs": "e77d2b28 kit",
   "smithable.lock": "2c03be87 generated",
   "src/components/ui/badge.tsx": "7c9b048e kit",
@@ -14105,9 +14089,9 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/generated/actions/reopen.server.ts": "6d1e193a generated",
   "src/generated/actions/reopen.ts": "3317e68c generated",
   "src/generated/activity.server.ts": "3bfe13cf generated",
-  "src/generated/api.server.ts": "c927ab08 generated",
+  "src/generated/api.server.ts": "d3d27b03 generated",
   "src/generated/app.ts": "547ab03a generated",
-  "src/generated/ask.server.ts": "d1d6d1d5 generated",
+  "src/generated/ask.server.ts": "4f092194 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/dev-door.server.ts": "4ab97120 generated",
   "src/generated/hooks.ts": "d6804a3c generated",
@@ -14141,7 +14125,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/AiMark.tsx": "f9eb07a2 kit",
   "src/kit/AppCard.tsx": "76e8455d kit",
   "src/kit/AppLink.tsx": "841a9af0 kit",
-  "src/kit/AppShell.tsx": "6dca6653 kit",
+  "src/kit/AppShell.tsx": "7cdeb539 kit",
   "src/kit/AppearancePicker.tsx": "0cd564d2 kit",
   "src/kit/Ask.tsx": "e5277427 kit",
   "src/kit/Combobox.tsx": "c3a18c75 kit",
@@ -14210,7 +14194,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "a509a677 kit",
+  "src/kit/words/en.ts": "49f0cba5 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/app-card.server.ts": "9b4d94be generated",
   "src/lib/app-card.ts": "93f0b476 generated",
@@ -14265,7 +14249,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/routes/team/activity.tsx": "f071bc95 generated",
   "src/routes/team/index.tsx": "c1b1e9fc generated",
   "src/start.ts": "6b874d2d kit",
-  "src/styles.css": "1f4ccc9e kit",
+  "src/styles.css": "706d757b kit",
   "src/theme.css": "1fd40aa1 generated",
   "tests/smoke.spec.ts": "24a5a8cb generated",
   "tsconfig.json": "802b1b64 kit",
@@ -14435,8 +14419,8 @@ exports[`../../../examples/barbers/smithable.yml > file list and generated code 
 
 exports[`../../../examples/barbers/smithable.yml > file list and generated code > public/favicon.svg 1`] = `
 "<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  <rect width="32" height="32" rx="6.4" fill="#4f46e5"/>
-  <text x="16" y="21" text-anchor="middle" style="unicode-bidi:plaintext" font-family="system-ui, sans-serif" font-size="14" font-weight="700" fill="#ffffff">HC</text>
+  <rect width="32" height="32" rx="7" fill="#3b5bdb"/>
+  <text x="16" y="22" text-anchor="middle" font-family="system-ui, sans-serif" font-size="18" font-weight="700" fill="#fff">H</text>
 </svg>
 "
 `;
@@ -21901,7 +21885,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "package.json": "ce8ec275 generated",
   "playwright.config.ts": "5ffef2a7 kit",
   "pnpm-workspace.yaml": "1da1537f scaffold",
-  "public/favicon.svg": "3806c8e2 generated",
+  "public/favicon.svg": "220f4dc6 generated",
   "server.mjs": "e77d2b28 kit",
   "smithable.lock": "2c03be87 generated",
   "src/components/ui/badge.tsx": "7c9b048e kit",
@@ -21955,7 +21939,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/AiMark.tsx": "f9eb07a2 kit",
   "src/kit/AppCard.tsx": "76e8455d kit",
   "src/kit/AppLink.tsx": "841a9af0 kit",
-  "src/kit/AppShell.tsx": "6dca6653 kit",
+  "src/kit/AppShell.tsx": "7cdeb539 kit",
   "src/kit/AppearancePicker.tsx": "0cd564d2 kit",
   "src/kit/Calendar.tsx": "5f787e2e kit",
   "src/kit/Combobox.tsx": "c3a18c75 kit",
@@ -21965,7 +21949,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/Filters.tsx": "0f5bfdfd kit",
   "src/kit/ImportDialog.tsx": "d65da47a kit",
   "src/kit/InlineRows.tsx": "5a097006 kit",
-  "src/kit/Landing.tsx": "5263c55e kit",
+  "src/kit/Landing.tsx": "3e45088e kit",
   "src/kit/LegalPage.tsx": "f9a9df1e kit",
   "src/kit/Live.tsx": "fbaa47cd kit",
   "src/kit/ModelForm.tsx": "f90ea7e8 kit",
@@ -22023,7 +22007,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/uploads.ts": "4e982bfe kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "a509a677 kit",
+  "src/kit/words/en.ts": "49f0cba5 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/app-card.server.ts": "86f8f526 generated",
   "src/lib/app-card.ts": "93f0b476 generated",
@@ -22062,7 +22046,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/routes/time-off/index.tsx": "0126663b generated",
   "src/routes/time-off/new.tsx": "007c55c8 generated",
   "src/start.ts": "6b874d2d kit",
-  "src/styles.css": "1f4ccc9e kit",
+  "src/styles.css": "706d757b kit",
   "src/theme.css": "1fd40aa1 generated",
   "tests/smoke.spec.ts": "dabb9af3 generated",
   "tsconfig.json": "802b1b64 kit",
@@ -22232,8 +22216,8 @@ exports[`../../../examples/booking/smithable.yml > file list and generated code 
 
 exports[`../../../examples/booking/smithable.yml > file list and generated code > public/favicon.svg 1`] = `
 "<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  <rect width="32" height="32" rx="6.4" fill="#4f46e5"/>
-  <text x="16" y="21" text-anchor="middle" style="unicode-bidi:plaintext" font-family="system-ui, sans-serif" font-size="14" font-weight="700" fill="#ffffff">SY</text>
+  <rect width="32" height="32" rx="7" fill="#3b5bdb"/>
+  <text x="16" y="22" text-anchor="middle" font-family="system-ui, sans-serif" font-size="18" font-weight="700" fill="#fff">S</text>
 </svg>
 "
 `;
@@ -23812,7 +23796,6 @@ import { messageUi } from "./message";
 import { postUi } from "./post";
 import { sessionUi } from "./session";
 import { runPublish } from "./actions/publish.server";
-import { instantOf, isoIn } from "#/kit/zoned";
 import { classTypeSchema } from "#/generated/class-type.schema";
 import { instructorSchema } from "#/generated/instructor.schema";
 import { sessionSchema } from "#/generated/session.schema";
@@ -23820,13 +23803,6 @@ import { bookingSchema } from "#/generated/booking.schema";
 import { postSchema } from "#/generated/post.schema";
 import { messageSchema } from "#/generated/message.schema";
 
-/** A stored moment as the API gives it: with Europe/Mariehamn's offset, and its milliseconds when it has any. */
-export function momentOut(v: unknown): string | null {
-  if (!(v instanceof Date)) return (v as string | null) ?? null;
-  const text = isoIn(v, "Europe/Mariehamn");
-  const ms = v.getUTCMilliseconds();
-  return ms ? \`\${text.slice(0, -6)}.\${String(ms).padStart(3, "0")}\${text.slice(-6)}\` : text;
-}
 const whole = (v: unknown, field: string) => {
   if (Number.isInteger(v)) return v as number;
   throw new BadInput(\`"\${field}" must be a record's id, a whole number.\`);
@@ -23835,25 +23811,10 @@ const userId = (v: unknown, field: string) => {
   if (typeof v === "string" && v.length > 0) return v;
   throw new BadInput(\`"\${field}" must be a user's id, a nonempty text.\`);
 };
-/**
- * An ISO date and time, on a day the calendar has (JavaScript would roll 30 February over); one
- * without an offset is a wall time in the app's zone, seconds kept.
- */
 const moment = (v: unknown, field: string) => {
-  const parts =
-    typeof v === "string"
-      ? /^(\\d{4}-\\d{2}-\\d{2})T(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(Z|[+-]\\d{2}:\\d{2})?$/.exec(v)
-      : null;
-  const at = parts ? Date.parse(parts[2] ? parts[0] : \`\${parts[0]}Z\`) : Number.NaN;
-  const day = parts ? Date.parse(\`\${parts[1]}T00:00:00Z\`) : Number.NaN;
-  const d =
-    !parts || !Number.isFinite(at) || !Number.isFinite(day) || new Date(day).toISOString().slice(0, 10) !== parts[1]
-      ? undefined
-      : parts[2]
-        ? new Date(at)
-        : new Date(instantOf(parts[0], "Europe/Mariehamn").getTime() + at - Date.parse(\`\${parts[0].slice(0, 16)}:00Z\`));
+  const d = typeof v === "string" ? new Date(v) : undefined;
   if (d && !Number.isNaN(d.getTime())) return d;
-  throw new BadInput(\`"\${field}" must be a date and time, like "2026-10-04T09:30" (in Europe/Mariehamn) or "2026-10-04T09:30:00Z".\`);
+  throw new BadInput(\`"\${field}" must be a date and time, like "2026-10-04T09:30:00Z".\`);
 };
 
 /** The body as an object of known fields, or a refusal naming the first unknown one. */
@@ -23872,8 +23833,8 @@ export function classTypeToApi(row: Record<string, any>) {
     summary: row.summary ?? null,
     level: row.level ?? null,
     durationMinutes: row.durationMinutes ?? null,
-    createdAt: momentOut(row.createdAt),
-    updatedAt: momentOut(row.updatedAt),
+    createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
+    updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : row.updatedAt,
   };
 }
 
@@ -23911,8 +23872,8 @@ export function instructorToApi(row: Record<string, any>) {
     id: row.id as number,
     name: row.name ?? null,
     bio: row.bio ?? null,
-    createdAt: momentOut(row.createdAt),
-    updatedAt: momentOut(row.updatedAt),
+    createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
+    updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : row.updatedAt,
   };
 }
 
@@ -23944,11 +23905,11 @@ export function sessionToApi(row: Record<string, any>) {
     id: row.id as number,
     classType: row.classTypeId ?? null,
     instructor: row.instructorId ?? null,
-    startsAt: momentOut(row.startsAt),
+    startsAt: row.startsAt instanceof Date ? row.startsAt.toISOString() : (row.startsAt ?? null),
     capacity: row.capacity ?? null,
     placesLeft: row.placesLeft ?? null,
-    createdAt: momentOut(row.createdAt),
-    updatedAt: momentOut(row.updatedAt),
+    createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
+    updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : row.updatedAt,
   };
 }
 
@@ -23986,8 +23947,8 @@ export function bookingToApi(row: Record<string, any>) {
     id: row.id as number,
     session: row.sessionId ?? null,
     attendee: row.attendeeId ?? null,
-    createdAt: momentOut(row.createdAt),
-    updatedAt: momentOut(row.updatedAt),
+    createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
+    updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : row.updatedAt,
   };
 }
 
@@ -24023,8 +23984,8 @@ export function postToApi(row: Record<string, any>) {
     body: row.body ?? null,
     publishedOn: row.publishedOn ?? null,
     status: row.status ?? null,
-    createdAt: momentOut(row.createdAt),
-    updatedAt: momentOut(row.updatedAt),
+    createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
+    updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : row.updatedAt,
   };
 }
 
@@ -24069,8 +24030,8 @@ export function messageToApi(row: Record<string, any>) {
     name: row.name ?? null,
     email: row.email ?? null,
     message: row.message ?? null,
-    createdAt: momentOut(row.createdAt),
-    updatedAt: momentOut(row.updatedAt),
+    createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
+    updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : row.updatedAt,
   };
 }
 
@@ -24105,7 +24066,7 @@ export function messageFromApi(body: unknown, current?: Record<string, unknown>)
  */
 const OFFERS: Record<string, Offer & { describe: Record<string, string> }> = {
   "admin": {
-    "summary": "Stillwater Yoga: Class schedule and online booking for a small yoga studio.\\nClassType (class types): name*, summary, level* (beginner | allLevels | advanced), durationMinutes* (number). Title: name.\\nInstructor (instructors): name*, bio, portrait (picture). Title: name.\\nSession (sessions): classType* -> ClassType, instructor* -> Instructor, startsAt* (datetime), capacity* (number), placesLeft (number, computed). Title: id.\\nBooking (bookings): session* -> Session, attendee -> User. Title: id.\\nPost (posts): title*, address, summary, cover (picture), body*, publishedOn (date), status* (draft | published). Title: title.\\nMessage (messages): name*, email*, message*. Title: name.\\nTimes are in Europe/Mariehamn: one without an offset, like 2026-10-04T09:30, is read there, and times come back with its offset.\\n* required. You act as someone with the role admin.\\nAnswer with what a tool returned; a number, a name or \\"none\\" you did not get from a tool is not an answer.",
+    "summary": "Stillwater Yoga: Class schedule and online booking for a small yoga studio.\\nClassType (class types): name*, summary, level* (beginner | allLevels | advanced), durationMinutes* (number). Title: name.\\nInstructor (instructors): name*, bio, portrait (picture). Title: name.\\nSession (sessions): classType* -> ClassType, instructor* -> Instructor, startsAt* (datetime), capacity* (number), placesLeft (number, computed). Title: id.\\nBooking (bookings): session* -> Session, attendee -> User. Title: id.\\nPost (posts): title*, address, summary, cover (picture), body*, publishedOn (date), status* (draft | published). Title: title.\\nMessage (messages): name*, email*, message*. Title: name.\\n* required. You act as someone with the role admin.\\nAnswer with what a tool returned; a number, a name or \\"none\\" you did not get from a tool is not an answer.",
     "tools": [
       {
         "name": "find",
@@ -24274,7 +24235,7 @@ const OFFERS: Record<string, Offer & { describe: Record<string, string> }> = {
     }
   },
   "staff": {
-    "summary": "Stillwater Yoga: Class schedule and online booking for a small yoga studio.\\nClassType (class types): name*, summary, level* (beginner | allLevels | advanced), durationMinutes* (number). Title: name.\\nInstructor (instructors): name*, bio, portrait (picture). Title: name.\\nSession (sessions): classType* -> ClassType, instructor* -> Instructor, startsAt* (datetime), capacity* (number), placesLeft (number, computed). Title: id.\\nBooking (bookings): session* -> Session, attendee -> User. Title: id.\\nPost (posts): title*, address, summary, cover (picture), body*, publishedOn (date), status* (draft | published). Title: title.\\nMessage (messages): name*, email*, message*. Title: name.\\nTimes are in Europe/Mariehamn: one without an offset, like 2026-10-04T09:30, is read there, and times come back with its offset.\\n* required. You act as someone with the role staff.\\nAnswer with what a tool returned; a number, a name or \\"none\\" you did not get from a tool is not an answer.",
+    "summary": "Stillwater Yoga: Class schedule and online booking for a small yoga studio.\\nClassType (class types): name*, summary, level* (beginner | allLevels | advanced), durationMinutes* (number). Title: name.\\nInstructor (instructors): name*, bio, portrait (picture). Title: name.\\nSession (sessions): classType* -> ClassType, instructor* -> Instructor, startsAt* (datetime), capacity* (number), placesLeft (number, computed). Title: id.\\nBooking (bookings): session* -> Session, attendee -> User. Title: id.\\nPost (posts): title*, address, summary, cover (picture), body*, publishedOn (date), status* (draft | published). Title: title.\\nMessage (messages): name*, email*, message*. Title: name.\\n* required. You act as someone with the role staff.\\nAnswer with what a tool returned; a number, a name or \\"none\\" you did not get from a tool is not an answer.",
     "tools": [
       {
         "name": "find",
@@ -24443,7 +24404,7 @@ const OFFERS: Record<string, Offer & { describe: Record<string, string> }> = {
     }
   },
   "member": {
-    "summary": "Stillwater Yoga: Class schedule and online booking for a small yoga studio.\\nClassType (class types): name*, summary, level* (beginner | allLevels | advanced), durationMinutes* (number). Title: name.\\nInstructor (instructors): name*, bio, portrait (picture). Title: name.\\nSession (sessions): classType* -> ClassType, instructor* -> Instructor, startsAt* (datetime), capacity* (number), placesLeft (number, computed). Title: id.\\nBooking (bookings): session* -> Session, attendee -> User. Title: id.\\nPost (posts): title*, address, summary, cover (picture), body*, publishedOn (date), status* (draft | published). Title: title.\\nMessage (messages): name*, email*, message*. Title: name.\\nTimes are in Europe/Mariehamn: one without an offset, like 2026-10-04T09:30, is read there, and times come back with its offset.\\n* required. You act as someone with the role member.\\nAnswer with what a tool returned; a number, a name or \\"none\\" you did not get from a tool is not an answer.",
+    "summary": "Stillwater Yoga: Class schedule and online booking for a small yoga studio.\\nClassType (class types): name*, summary, level* (beginner | allLevels | advanced), durationMinutes* (number). Title: name.\\nInstructor (instructors): name*, bio, portrait (picture). Title: name.\\nSession (sessions): classType* -> ClassType, instructor* -> Instructor, startsAt* (datetime), capacity* (number), placesLeft (number, computed). Title: id.\\nBooking (bookings): session* -> Session, attendee -> User. Title: id.\\nPost (posts): title*, address, summary, cover (picture), body*, publishedOn (date), status* (draft | published). Title: title.\\nMessage (messages): name*, email*, message*. Title: name.\\n* required. You act as someone with the role member.\\nAnswer with what a tool returned; a number, a name or \\"none\\" you did not get from a tool is not an answer.",
     "tools": [
       {
         "name": "find",
@@ -37261,7 +37222,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "package.json": "b9c002e6 generated",
   "playwright.config.ts": "5ffef2a7 kit",
   "pnpm-workspace.yaml": "1da1537f scaffold",
-  "public/favicon.svg": "d6f525dd generated",
+  "public/favicon.svg": "059fe4c5 generated",
   "server.mjs": "e77d2b28 kit",
   "smithable.lock": "2c03be87 generated",
   "src/components/ui/badge.tsx": "7c9b048e kit",
@@ -37279,7 +37240,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/actions/publish.ts": "21bb5fc0 generated",
   "src/generated/activity.server.ts": "b8ebc789 generated",
   "src/generated/app.ts": "7320a04b generated",
-  "src/generated/ask.server.ts": "b6328eaf generated",
+  "src/generated/ask.server.ts": "b4df25e5 generated",
   "src/generated/booking.import.server.ts": "5dd23f09 generated",
   "src/generated/booking.import.ts": "19831a63 generated",
   "src/generated/booking.name.ts": "aba5786c generated",
@@ -37333,7 +37294,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/AiMark.tsx": "f9eb07a2 kit",
   "src/kit/AppCard.tsx": "76e8455d kit",
   "src/kit/AppLink.tsx": "841a9af0 kit",
-  "src/kit/AppShell.tsx": "6dca6653 kit",
+  "src/kit/AppShell.tsx": "7cdeb539 kit",
   "src/kit/AppearancePicker.tsx": "0cd564d2 kit",
   "src/kit/Articles.tsx": "f3fb4114 kit",
   "src/kit/Ask.tsx": "e5277427 kit",
@@ -37347,7 +37308,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/ImportDialog.tsx": "d65da47a kit",
   "src/kit/InlineRows.tsx": "5a097006 kit",
   "src/kit/Inspector.tsx": "2425cac5 kit",
-  "src/kit/Landing.tsx": "5263c55e kit",
+  "src/kit/Landing.tsx": "3e45088e kit",
   "src/kit/LegalPage.tsx": "f9a9df1e kit",
   "src/kit/Live.tsx": "fbaa47cd kit",
   "src/kit/Markdown.tsx": "24e2fcd2 kit",
@@ -37416,7 +37377,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "a509a677 kit",
+  "src/kit/words/en.ts": "49f0cba5 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/app-card.server.ts": "72496fa8 generated",
   "src/lib/app-card.ts": "93f0b476 generated",
@@ -37489,7 +37450,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/sign-in.tsx": "64dbc342 generated",
   "src/routes/sitemap[.]xml.ts": "018df36b generated",
   "src/start.ts": "6b874d2d kit",
-  "src/styles.css": "1f4ccc9e kit",
+  "src/styles.css": "706d757b kit",
   "src/theme.css": "1fd40aa1 generated",
   "tests/smoke.spec.ts": "c6858e63 generated",
   "tsconfig.json": "802b1b64 kit",
@@ -37665,8 +37626,8 @@ exports[`../../../examples/builder/smithable.yml > file list and generated code 
 
 exports[`../../../examples/builder/smithable.yml > file list and generated code > public/favicon.svg 1`] = `
 "<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  <rect width="32" height="32" rx="6.4" fill="#4f46e5"/>
-  <text x="16" y="21" text-anchor="middle" style="unicode-bidi:plaintext" font-family="system-ui, sans-serif" font-size="14" font-weight="700" fill="#ffffff">NJ</text>
+  <rect width="32" height="32" rx="7" fill="#3b5bdb"/>
+  <text x="16" y="22" text-anchor="middle" font-family="system-ui, sans-serif" font-size="18" font-weight="700" fill="#fff">N</text>
 </svg>
 "
 `;
@@ -45224,7 +45185,7 @@ exports[`../../../examples/builder/smithable.yml > the generated files are as re
   "package.json": "a09e32a1 generated",
   "playwright.config.ts": "5ffef2a7 kit",
   "pnpm-workspace.yaml": "1da1537f scaffold",
-  "public/favicon.svg": "8a054009 generated",
+  "public/favicon.svg": "e4b054e8 generated",
   "server.mjs": "e77d2b28 kit",
   "smithable.lock": "2c03be87 generated",
   "src/components/ui/badge.tsx": "7c9b048e kit",
@@ -45281,7 +45242,7 @@ exports[`../../../examples/builder/smithable.yml > the generated files are as re
   "src/kit/AiMark.tsx": "f9eb07a2 kit",
   "src/kit/AppCard.tsx": "76e8455d kit",
   "src/kit/AppLink.tsx": "841a9af0 kit",
-  "src/kit/AppShell.tsx": "6dca6653 kit",
+  "src/kit/AppShell.tsx": "7cdeb539 kit",
   "src/kit/AppearancePicker.tsx": "0cd564d2 kit",
   "src/kit/Combobox.tsx": "c3a18c75 kit",
   "src/kit/Consent.tsx": "c5ee7e50 kit",
@@ -45292,7 +45253,7 @@ exports[`../../../examples/builder/smithable.yml > the generated files are as re
   "src/kit/Filters.tsx": "0f5bfdfd kit",
   "src/kit/ImportDialog.tsx": "d65da47a kit",
   "src/kit/InlineRows.tsx": "5a097006 kit",
-  "src/kit/Landing.tsx": "5263c55e kit",
+  "src/kit/Landing.tsx": "3e45088e kit",
   "src/kit/LegalPage.tsx": "f9a9df1e kit",
   "src/kit/ModelForm.tsx": "f90ea7e8 kit",
   "src/kit/ModelTable.tsx": "5252e1d6 kit",
@@ -45344,7 +45305,7 @@ exports[`../../../examples/builder/smithable.yml > the generated files are as re
   "src/kit/uploads.ts": "4e982bfe kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "a509a677 kit",
+  "src/kit/words/en.ts": "49f0cba5 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/app-card.server.ts": "b498b974 generated",
   "src/lib/app-card.ts": "93f0b476 generated",
@@ -45381,7 +45342,7 @@ exports[`../../../examples/builder/smithable.yml > the generated files are as re
   "src/routes/team/activity.tsx": "6b0a8c76 generated",
   "src/routes/team/index.tsx": "66862ce0 generated",
   "src/start.ts": "6b874d2d kit",
-  "src/styles.css": "1f4ccc9e kit",
+  "src/styles.css": "706d757b kit",
   "src/theme.css": "1fd40aa1 generated",
   "tests/smoke.spec.ts": "8b39da31 generated",
   "tsconfig.json": "802b1b64 kit",
@@ -45557,8 +45518,8 @@ exports[`../../../examples/crm/smithable.yml > file list and generated code > pa
 
 exports[`../../../examples/crm/smithable.yml > file list and generated code > public/favicon.svg 1`] = `
 "<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  <rect width="32" height="32" rx="6.4" fill="#4f46e5"/>
-  <text x="16" y="21" text-anchor="middle" style="unicode-bidi:plaintext" font-family="system-ui, sans-serif" font-size="14" font-weight="700" fill="#ffffff">AC</text>
+  <rect width="32" height="32" rx="7" fill="#3b5bdb"/>
+  <text x="16" y="22" text-anchor="middle" font-family="system-ui, sans-serif" font-size="18" font-weight="700" fill="#fff">A</text>
 </svg>
 "
 `;
@@ -46802,18 +46763,10 @@ import { customerUi } from "./customer";
 import { followUpUi } from "./follow-up";
 import { orderUi } from "./order";
 
-import { instantOf, isoIn } from "#/kit/zoned";
 import { customerSchema } from "#/generated/customer.schema";
 import { orderSchema } from "#/generated/order.schema";
 import { followUpSchema } from "#/generated/follow-up.schema";
 
-/** A stored moment as the API gives it: with Europe/Mariehamn's offset, and its milliseconds when it has any. */
-export function momentOut(v: unknown): string | null {
-  if (!(v instanceof Date)) return (v as string | null) ?? null;
-  const text = isoIn(v, "Europe/Mariehamn");
-  const ms = v.getUTCMilliseconds();
-  return ms ? \`\${text.slice(0, -6)}.\${String(ms).padStart(3, "0")}\${text.slice(-6)}\` : text;
-}
 const whole = (v: unknown, field: string) => {
   if (Number.isInteger(v)) return v as number;
   throw new BadInput(\`"\${field}" must be a record's id, a whole number.\`);
@@ -46827,25 +46780,10 @@ const amount = (v: unknown, field: string) => {
   if (Number.isFinite(n)) return n;
   throw new BadInput(\`"\${field}" must be an amount, like "12.50".\`);
 };
-/**
- * An ISO date and time, on a day the calendar has (JavaScript would roll 30 February over); one
- * without an offset is a wall time in the app's zone, seconds kept.
- */
 const moment = (v: unknown, field: string) => {
-  const parts =
-    typeof v === "string"
-      ? /^(\\d{4}-\\d{2}-\\d{2})T(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(Z|[+-]\\d{2}:\\d{2})?$/.exec(v)
-      : null;
-  const at = parts ? Date.parse(parts[2] ? parts[0] : \`\${parts[0]}Z\`) : Number.NaN;
-  const day = parts ? Date.parse(\`\${parts[1]}T00:00:00Z\`) : Number.NaN;
-  const d =
-    !parts || !Number.isFinite(at) || !Number.isFinite(day) || new Date(day).toISOString().slice(0, 10) !== parts[1]
-      ? undefined
-      : parts[2]
-        ? new Date(at)
-        : new Date(instantOf(parts[0], "Europe/Mariehamn").getTime() + at - Date.parse(\`\${parts[0].slice(0, 16)}:00Z\`));
+  const d = typeof v === "string" ? new Date(v) : undefined;
   if (d && !Number.isNaN(d.getTime())) return d;
-  throw new BadInput(\`"\${field}" must be a date and time, like "2026-10-04T09:30" (in Europe/Mariehamn) or "2026-10-04T09:30:00Z".\`);
+  throw new BadInput(\`"\${field}" must be a date and time, like "2026-10-04T09:30:00Z".\`);
 };
 
 /** The body as an object of known fields, or a refusal naming the first unknown one. */
@@ -46867,8 +46805,8 @@ export function customerToApi(row: Record<string, any>) {
     creditLimit: row.creditLimit == null ? null : (Number(row.creditLimit) / 100).toFixed(2),
     notes: row.notes ?? null,
     accountManager: row.accountManagerId ?? null,
-    createdAt: momentOut(row.createdAt),
-    updatedAt: momentOut(row.updatedAt),
+    createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
+    updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : row.updatedAt,
   };
 }
 
@@ -46919,9 +46857,9 @@ export function orderToApi(row: Record<string, any>) {
     total: row.total == null ? null : (Number(row.total) / 100).toFixed(2),
     shippingMethod: row.shippingMethod ?? null,
     shippingCost: row.shippingCost == null ? null : (Number(row.shippingCost) / 100).toFixed(2),
-    placedAt: momentOut(row.placedAt),
-    createdAt: momentOut(row.createdAt),
-    updatedAt: momentOut(row.updatedAt),
+    placedAt: row.placedAt instanceof Date ? row.placedAt.toISOString() : (row.placedAt ?? null),
+    createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
+    updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : row.updatedAt,
   };
 }
 
@@ -46967,8 +46905,8 @@ export function followUpToApi(row: Record<string, any>) {
     dueOn: row.dueOn ?? null,
     done: row.done ?? null,
     note: row.note ?? null,
-    createdAt: momentOut(row.createdAt),
-    updatedAt: momentOut(row.updatedAt),
+    createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
+    updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : row.updatedAt,
   };
 }
 
@@ -47006,7 +46944,7 @@ export function followUpFromApi(body: unknown, current?: Record<string, unknown>
  */
 const OFFERS: Record<string, Offer & { describe: Record<string, string> }> = {
   "admin": {
-    "summary": "Acme CRM: Lightweight CRM for a small B2B sales team.\\nCustomer (customers): name*, email, phone, segment* (smb | enterprise | government), creditLimit (money), notes, accountManager -> User. Title: name.\\nOrder (orders): number*, customer* -> Customer, status* (draft | placed | shipped | canceled), total* (money), shippingMethod* (standard | express), shippingCost (money, computed), placedAt (datetime). Title: number.\\nFollowUp (follow ups): customer* -> Customer, dueOn* (date), done (yes/no), note. Title: note.\\nTimes are in Europe/Mariehamn: one without an offset, like 2026-10-04T09:30, is read there, and times come back with its offset.\\n* required. You act as someone with the role admin.\\nAnswer with what a tool returned; a number, a name or \\"none\\" you did not get from a tool is not an answer.",
+    "summary": "Acme CRM: Lightweight CRM for a small B2B sales team.\\nCustomer (customers): name*, email, phone, segment* (smb | enterprise | government), creditLimit (money), notes, accountManager -> User. Title: name.\\nOrder (orders): number*, customer* -> Customer, status* (draft | placed | shipped | canceled), total* (money), shippingMethod* (standard | express), shippingCost (money, computed), placedAt (datetime). Title: number.\\nFollowUp (follow ups): customer* -> Customer, dueOn* (date), done (yes/no), note. Title: note.\\n* required. You act as someone with the role admin.\\nAnswer with what a tool returned; a number, a name or \\"none\\" you did not get from a tool is not an answer.",
     "tools": [
       {
         "name": "find",
@@ -47160,7 +47098,7 @@ const OFFERS: Record<string, Offer & { describe: Record<string, string> }> = {
     }
   },
   "sales": {
-    "summary": "Acme CRM: Lightweight CRM for a small B2B sales team.\\nCustomer (customers): name*, email, phone, segment* (smb | enterprise | government), creditLimit (money), notes, accountManager -> User. Title: name.\\nOrder (orders): number*, customer* -> Customer, status* (draft | placed | shipped | canceled), total* (money), shippingMethod* (standard | express), shippingCost (money, computed), placedAt (datetime). Title: number.\\nFollowUp (follow ups): customer* -> Customer, dueOn* (date), done (yes/no), note. Title: note.\\nTimes are in Europe/Mariehamn: one without an offset, like 2026-10-04T09:30, is read there, and times come back with its offset.\\n* required. You act as someone with the role sales.\\nAnswer with what a tool returned; a number, a name or \\"none\\" you did not get from a tool is not an answer.",
+    "summary": "Acme CRM: Lightweight CRM for a small B2B sales team.\\nCustomer (customers): name*, email, phone, segment* (smb | enterprise | government), creditLimit (money), notes, accountManager -> User. Title: name.\\nOrder (orders): number*, customer* -> Customer, status* (draft | placed | shipped | canceled), total* (money), shippingMethod* (standard | express), shippingCost (money, computed), placedAt (datetime). Title: number.\\nFollowUp (follow ups): customer* -> Customer, dueOn* (date), done (yes/no), note. Title: note.\\n* required. You act as someone with the role sales.\\nAnswer with what a tool returned; a number, a name or \\"none\\" you did not get from a tool is not an answer.",
     "tools": [
       {
         "name": "find",
@@ -55164,7 +55102,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "package.json": "12aee325 generated",
   "playwright.config.ts": "5ffef2a7 kit",
   "pnpm-workspace.yaml": "1da1537f scaffold",
-  "public/favicon.svg": "a04fad4d generated",
+  "public/favicon.svg": "3567ba27 generated",
   "server.mjs": "e77d2b28 kit",
   "smithable.lock": "2c03be87 generated",
   "src/components/ui/badge.tsx": "7c9b048e kit",
@@ -55186,7 +55124,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/generated/actions/schedule-follow-ups.ts": "3190ea81 generated",
   "src/generated/activity.server.ts": "b375128c generated",
   "src/generated/app.ts": "4f89cb6c generated",
-  "src/generated/ask.server.ts": "048dd510 generated",
+  "src/generated/ask.server.ts": "08318b05 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/customer.import.server.ts": "6460f913 generated",
   "src/generated/customer.import.ts": "53f4b1d0 generated",
@@ -55221,7 +55159,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/AiMark.tsx": "f9eb07a2 kit",
   "src/kit/AppCard.tsx": "76e8455d kit",
   "src/kit/AppLink.tsx": "841a9af0 kit",
-  "src/kit/AppShell.tsx": "6dca6653 kit",
+  "src/kit/AppShell.tsx": "7cdeb539 kit",
   "src/kit/AppearancePicker.tsx": "0cd564d2 kit",
   "src/kit/Ask.tsx": "e5277427 kit",
   "src/kit/Combobox.tsx": "c3a18c75 kit",
@@ -55232,7 +55170,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/ImportDialog.tsx": "d65da47a kit",
   "src/kit/InlineRows.tsx": "5a097006 kit",
   "src/kit/Inspector.tsx": "2425cac5 kit",
-  "src/kit/Landing.tsx": "5263c55e kit",
+  "src/kit/Landing.tsx": "3e45088e kit",
   "src/kit/MergeDialog.tsx": "9794e745 kit",
   "src/kit/ModelForm.tsx": "f90ea7e8 kit",
   "src/kit/ModelTable.tsx": "5252e1d6 kit",
@@ -55291,7 +55229,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "a509a677 kit",
+  "src/kit/words/en.ts": "49f0cba5 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/app-card.server.ts": "a5f24452 generated",
   "src/lib/app-card.ts": "93f0b476 generated",
@@ -55329,7 +55267,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/routes/team/index.tsx": "6349287f generated",
   "src/routes/team/trash.tsx": "bbce40d6 generated",
   "src/start.ts": "6b874d2d kit",
-  "src/styles.css": "1f4ccc9e kit",
+  "src/styles.css": "706d757b kit",
   "src/theme.css": "1fd40aa1 generated",
   "tests/smoke.spec.ts": "cd6797d3 generated",
   "tsconfig.json": "802b1b64 kit",
@@ -55505,8 +55443,8 @@ exports[`../../../examples/food-truck/smithable.yml > file list and generated co
 
 exports[`../../../examples/food-truck/smithable.yml > file list and generated code > public/favicon.svg 1`] = `
 "<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  <rect width="32" height="32" rx="6.4" fill="#4f46e5"/>
-  <text x="16" y="21" text-anchor="middle" style="unicode-bidi:plaintext" font-family="system-ui, sans-serif" font-size="14" font-weight="700" fill="#ffffff">EW</text>
+  <rect width="32" height="32" rx="7" fill="#3b5bdb"/>
+  <text x="16" y="22" text-anchor="middle" font-family="system-ui, sans-serif" font-size="18" font-weight="700" fill="#fff">E</text>
 </svg>
 "
 `;
@@ -55656,7 +55594,6 @@ export const stops = sqliteTable(
     startsAt: integer({ mode: "timestamp_ms" }).notNull(),
     endsAt: integer({ mode: "timestamp_ms" }).notNull(),
     directionsUrl: text(),
-    photo: text({ mode: "json" }).$type<Picture>(),
     menuOverride: text(),
     status: text({ enum: ["draft", "confirmed", "cancelled"] }).notNull().default("draft"),
     ownerId: text().references(() => user.id, { onDelete: "set null" }),
@@ -55721,14 +55658,14 @@ import { samplePicture } from "#/kit/uploads";
 if (db.select().from(schema.stops).limit(1).all().length === 0) {
   db.insert(schema.stops)
     .values([
-    { place: "place 1", address: "address 1", startsAt: new Date("2026-09-01T08:00:00.000Z"), endsAt: new Date("2026-09-01T08:00:00.000Z"), directionsUrl: "https://example.com/stop/1", photo: samplePicture("stop", 0, "A picture of place 1"), menuOverride: "A short description of place 1.", status: "draft" },
-    { place: "place 2", address: "address 2", startsAt: new Date("2026-09-02T10:00:00.000Z"), endsAt: new Date("2026-09-02T10:00:00.000Z"), directionsUrl: "https://example.com/stop/2", photo: samplePicture("stop", 1, "A picture of place 2"), menuOverride: "A short description of place 2.", status: "confirmed" },
-    { place: "place 3", address: "address 3", startsAt: new Date("2026-09-03T12:00:00.000Z"), endsAt: new Date("2026-09-03T12:00:00.000Z"), directionsUrl: "https://example.com/stop/3", photo: samplePicture("stop", 2, "A picture of place 3"), menuOverride: "A short description of place 3.", status: "cancelled" },
-    { place: "place 4", address: "address 4", startsAt: new Date("2026-09-04T08:00:00.000Z"), endsAt: new Date("2026-09-04T08:00:00.000Z"), directionsUrl: "https://example.com/stop/4", photo: samplePicture("stop", 0, "A picture of place 4"), menuOverride: "A short description of place 4.", status: "draft" },
-    { place: "place 5", address: "address 5", startsAt: new Date("2026-09-05T10:00:00.000Z"), endsAt: new Date("2026-09-05T10:00:00.000Z"), directionsUrl: "https://example.com/stop/5", photo: samplePicture("stop", 1, "A picture of place 5"), menuOverride: "A short description of place 5.", status: "confirmed" },
-    { place: "place 6", address: "address 6", startsAt: new Date("2026-09-06T12:00:00.000Z"), endsAt: new Date("2026-09-06T12:00:00.000Z"), directionsUrl: "https://example.com/stop/6", photo: samplePicture("stop", 2, "A picture of place 6"), menuOverride: "A short description of place 6.", status: "cancelled" },
-    { place: "place 7", address: "address 7", startsAt: new Date("2026-09-07T08:00:00.000Z"), endsAt: new Date("2026-09-07T08:00:00.000Z"), directionsUrl: "https://example.com/stop/7", photo: samplePicture("stop", 0, "A picture of place 7"), menuOverride: "A short description of place 7.", status: "draft" },
-    { place: "place 8", address: "address 8", startsAt: new Date("2026-09-08T10:00:00.000Z"), endsAt: new Date("2026-09-08T10:00:00.000Z"), directionsUrl: "https://example.com/stop/8", photo: samplePicture("stop", 1, "A picture of place 8"), menuOverride: "A short description of place 8.", status: "confirmed" },
+    { place: "place 1", address: "address 1", startsAt: new Date("2026-09-01T08:00:00.000Z"), endsAt: new Date("2026-09-01T08:00:00.000Z"), directionsUrl: "https://example.com/stop/1", menuOverride: "A short description of place 1.", status: "draft" },
+    { place: "place 2", address: "address 2", startsAt: new Date("2026-09-02T10:00:00.000Z"), endsAt: new Date("2026-09-02T10:00:00.000Z"), directionsUrl: "https://example.com/stop/2", menuOverride: "A short description of place 2.", status: "confirmed" },
+    { place: "place 3", address: "address 3", startsAt: new Date("2026-09-03T12:00:00.000Z"), endsAt: new Date("2026-09-03T12:00:00.000Z"), directionsUrl: "https://example.com/stop/3", menuOverride: "A short description of place 3.", status: "cancelled" },
+    { place: "place 4", address: "address 4", startsAt: new Date("2026-09-04T08:00:00.000Z"), endsAt: new Date("2026-09-04T08:00:00.000Z"), directionsUrl: "https://example.com/stop/4", menuOverride: "A short description of place 4.", status: "draft" },
+    { place: "place 5", address: "address 5", startsAt: new Date("2026-09-05T10:00:00.000Z"), endsAt: new Date("2026-09-05T10:00:00.000Z"), directionsUrl: "https://example.com/stop/5", menuOverride: "A short description of place 5.", status: "confirmed" },
+    { place: "place 6", address: "address 6", startsAt: new Date("2026-09-06T12:00:00.000Z"), endsAt: new Date("2026-09-06T12:00:00.000Z"), directionsUrl: "https://example.com/stop/6", menuOverride: "A short description of place 6.", status: "cancelled" },
+    { place: "place 7", address: "address 7", startsAt: new Date("2026-09-07T08:00:00.000Z"), endsAt: new Date("2026-09-07T08:00:00.000Z"), directionsUrl: "https://example.com/stop/7", menuOverride: "A short description of place 7.", status: "draft" },
+    { place: "place 8", address: "address 8", startsAt: new Date("2026-09-08T10:00:00.000Z"), endsAt: new Date("2026-09-08T10:00:00.000Z"), directionsUrl: "https://example.com/stop/8", menuOverride: "A short description of place 8.", status: "confirmed" },
     ])
     .run();
 }
@@ -55827,7 +55764,7 @@ async function reads(
 
 function stopValues(_owner: string | null) {
   const n = next();
-  return { place: \`Stop place \${n}\`, address: null, startsAt: new Date("2099-01-15T10:00:00Z"), endsAt: new Date("2099-01-15T10:00:00Z"), directionsUrl: null, photo: null, menuOverride: null, status: "draft" } as const;
+  return { place: \`Stop place \${n}\`, address: null, startsAt: new Date("2099-01-15T10:00:00Z"), endsAt: new Date("2099-01-15T10:00:00Z"), directionsUrl: null, menuOverride: null, status: "draft" } as const;
 }
 
 function insertStop(owner: string | null, values: Record<string, unknown> = {}) {
@@ -57336,7 +57273,6 @@ const MOVES: Record<string, DoorMove[]> = {
   admin: [
     { id: "open:home", kind: "open", page: "home", route: "/" },
     { id: "open:menu", kind: "open", page: "menu", route: "/menu" },
-    { id: "open:where", kind: "open", page: "where", route: "/where" },
     { id: "open:catering", kind: "open", page: "catering", route: "/catering" },
     { id: "open:stops", kind: "open", page: "stops", route: "/stops" },
     {
@@ -57472,7 +57408,6 @@ const MOVES: Record<string, DoorMove[]> = {
   crew: [
     { id: "open:home", kind: "open", page: "home", route: "/" },
     { id: "open:menu", kind: "open", page: "menu", route: "/menu" },
-    { id: "open:where", kind: "open", page: "where", route: "/where" },
     { id: "open:catering", kind: "open", page: "catering", route: "/catering" },
     { id: "open:stops", kind: "open", page: "stops", route: "/stops" },
     {
@@ -57607,7 +57542,6 @@ const MOVES: Record<string, DoorMove[]> = {
   visitor: [
     { id: "open:home", kind: "open", page: "home", route: "/" },
     { id: "open:menu", kind: "open", page: "menu", route: "/menu" },
-    { id: "open:where", kind: "open", page: "where", route: "/where" },
     { id: "open:catering", kind: "open", page: "catering", route: "/catering" },
     {
       id: "add:CateringEnquiry",
@@ -57642,7 +57576,6 @@ function ready(move: OpenMove): OpenMove | undefined {
 const OPEN: Record<string, (viewer: Viewer | null, move: DoorMove) => Promise<OpenMove | undefined>> = {
   "open:home": async (viewer, move) => (allows(pageAccess["home"], viewer) ? move : undefined),
   "open:menu": async (viewer, move) => (allows(pageAccess["menu"], viewer) ? move : undefined),
-  "open:where": async (viewer, move) => (allows(pageAccess["where"], viewer) ? move : undefined),
   "open:catering": async (viewer, move) => (allows(pageAccess["catering"], viewer) ? move : undefined),
   "open:stops": async (viewer, move) => (allows(pageAccess["stops"], viewer) ? move : undefined),
   "open:menu-items": async (viewer, move) => (allows(pageAccess["menu-items"], viewer) ? move : undefined),
@@ -57715,10 +57648,6 @@ const ACTS: Record<string, (viewer: Viewer | null, move: DoorMove, body: DoorBod
     if (!allows(pageAccess["menu"], viewer)) throw new AccessDenied(viewer !== null);
     return { route: "/menu" };
   },
-  "open:where": async (viewer) => {
-    if (!allows(pageAccess["where"], viewer)) throw new AccessDenied(viewer !== null);
-    return { route: "/where" };
-  },
   "open:catering": async (viewer) => {
     if (!allows(pageAccess["catering"], viewer)) throw new AccessDenied(viewer !== null);
     return { route: "/catering" };
@@ -57745,7 +57674,6 @@ const ACTS: Record<string, (viewer: Viewer | null, move: DoorMove, body: DoorBod
   startsAt: "startsAt",
   endsAt: "endsAt",
   directionsUrl: "directionsUrl",
-  photo: "photo",
   menuOverride: "menuOverride",
   status: "status",
 }))),
@@ -57755,7 +57683,6 @@ const ACTS: Record<string, (viewer: Viewer | null, move: DoorMove, body: DoorBod
   startsAt: "startsAt",
   endsAt: "endsAt",
   directionsUrl: "directionsUrl",
-  photo: "photo",
   menuOverride: "menuOverride",
   status: "status",
 }))),
@@ -58470,7 +58397,6 @@ import { app } from "#/generated/app";
 export const pageAccess = {
   home: { public: true, roles: ["admin", "crew"], owner: false },
   menu: { public: true, roles: ["admin", "crew"], owner: false },
-  where: { public: true, roles: ["admin", "crew"], owner: false },
   catering: { public: true, roles: ["admin", "crew"], owner: false },
   stops: { public: false, roles: ["admin", "crew"], owner: false },
   "menu-items": { public: false, roles: ["admin", "crew"], owner: false },
@@ -58491,7 +58417,6 @@ export const pageUi = {
     description: "A food truck's stops, street-food menu and catering enquiries.",
   },
   menu: { title: "Menu" },
-  where: { title: "Where" },
   catering: { title: "Catering" },
   stops: { title: "Stops" },
   "menu-items": { title: "Menu items" },
@@ -58526,7 +58451,10 @@ import type { LandingSite } from "#/kit/Landing";
 /** The public site's frame: the pages visitors may open, and how to reach the business. */
 export const site: LandingSite = {
   home: "/",
-  menu: [{ to: "/menu", label: pageUi["menu"].title, page: "menu" }],
+  menu: [
+    { to: "/menu", label: pageUi["menu"].title, page: "menu" },
+    { to: "/catering", label: pageUi["catering"].title, page: "catering" },
+  ],
 };
 "
 `;
@@ -58638,7 +58566,6 @@ export const stopSettable = createInsertSchema(schema.stops, {
   place: (s) => s.trim().min(1, w.required).max(200, w.atMostCharacters(200)),
   address: (s) => s.max(200, w.atMostCharacters(200)),
   directionsUrl: z.url({ protocol: /^https?$/, error: w.enterValidUrl }).nullish(),
-  photo: z.object({ file: z.string().regex(/^stop\\/[a-f0-9]{24}\\.webp$/), alt: z.string().trim().max(200), width: z.int().positive(), height: z.int().positive(), generated: z.literal(true).optional(), kind: z.enum(["ai-realistic", "ai-drawn", "photograph"]).optional(), smaller: z.array(z.object({ file: z.string().regex(/^stop\\/[a-f0-9]{24}\\.webp$/), width: z.union([z.literal(480), z.literal(960)]), height: z.int().positive() })).max(2).optional(), receipt: z.string().max(64).optional() }).nullish(),
   menuOverride: (s) => s.max(10000, w.atMostCharacters(10000)),
 }).omit({ id: true, ownerId: true, createdAt: true, updatedAt: true });
 /** What a stop's form sends, checked. */
@@ -58657,8 +58584,6 @@ import * as schema from "#/db/schema";
 import { AccessDenied, allows, check, Conflict, type ModelAccess, personOf, readScope, type Viewer } from "#/kit/access";
 import { audit, changedFields } from "#/kit/audit.server";
 import { refusal } from "#/kit/log.server";
-import { deletePicture, dropCopies } from "#/kit/uploads";
-import { acceptFiles, cleanUploads, keepsUpload } from "#/kit/receipts.server";
 import { afterChange, afterDelete } from "./hooks";
 import { type StopSettable } from "./stop";
 
@@ -58686,14 +58611,6 @@ function shownTo<R extends { ownerId: string | null }>(viewer: Viewer | null, ro
 
 
 
-/** Each picture or document new to the record must come with the receipt its upload gave the viewer (src/kit/receipts.server.ts); the receipts are not kept. */
-function checkFiles<V extends Partial<StopSettable>>(viewer: Viewer | null, values: V, before?: Record<string, unknown>): V {
-  return {
-    ...values,
-    ...("photo" in values ? { photo: acceptFiles(viewer, "stop", "photo", values.photo, before?.photo) } : {}),
-  };
-}
-
 export const stopData = {
   shownTo,
   /** The rows with each reference to a record the viewer may not read set to nothing: a related record's title is shown only to who may read it (only its id stays). */
@@ -58701,18 +58618,12 @@ export const stopData = {
     return rows;
   },
 
-  /** Whether a stored picture or document is on any record (the trash too): a file no record has may go. */
-  uses(file: string): boolean {
-    return keepsUpload(file) || !!db.select({ id: schema.stops.id }).from(schema.stops).where(sql\`\${schema.stops.photo} like \${\`%"file":"\${file}"%\`}\`).get();
-  },
-
   /**
    * What a new stop must pass, in the transaction that adds it (A 153): its files and
    * references, its rules, its capacity and time. create() and an action that adds one call it.
    */
-  checkCreate(_tx: Tx, viewer: Viewer | null, given: StopSettable): StopSettable {
-    let values = given;
-    values = checkFiles(viewer, values);
+  checkCreate(_tx: Tx, _viewer: Viewer | null, given: StopSettable): StopSettable {
+    const values = given;
 
     return values;
   },
@@ -58722,8 +58633,8 @@ export const stopData = {
    * its files and references, holds, capacity, the record's rules and its time. update() and an
    * action that changes it in a transaction of its own call it; access stays with the caller.
    */
-  checkUpdate(_tx: Tx, viewer: Viewer | null, _id: number, given: Partial<StopSettable>, before: typeof schema.stops.$inferSelect): Partial<StopSettable> {
-    const updated = checkFiles(viewer, given, before);
+  checkUpdate(_tx: Tx, _viewer: Viewer | null, _id: number, given: Partial<StopSettable>, _before: typeof schema.stops.$inferSelect): Partial<StopSettable> {
+    const updated = given;
 
     return updated;
   },
@@ -58832,7 +58743,7 @@ export const stopData = {
   /** Changes the fields given; what names the action ("changed" for a form), frees the fields it may change although locked (its own set). */
   async update(viewer: Viewer | null, id: number, values: Partial<StopSettable>, what = "changed", _frees: readonly string[] = []) {
     const row = db
-      .select({ ownerId: schema.stops.ownerId, photo: schema.stops.photo })
+      .select({ ownerId: schema.stops.ownerId })
       .from(schema.stops)
       .where(and(eq(schema.stops.id, id), stopData.readable(viewer)))
       .get();
@@ -58863,10 +58774,6 @@ export const stopData = {
     } catch (error) {
       throw refusal(error);
     }
-    cleanUploads(() => {
-    if (row.photo && row.photo.file !== changed.photo?.file) deletePicture(row.photo, keepsUpload(row.photo.file) || !!db.select({ id: schema.stops.id }).from(schema.stops).where(sql\`\${schema.stops.photo} like \${\`%"file":"\${row.photo.file}"%\`}\`).get(), (file) => keepsUpload(file) || !!db.select({ id: schema.stops.id }).from(schema.stops).where(sql\`\${schema.stops.photo} like \${\`%"file":"\${file}"%\`}\`).get());
-    dropCopies(row.photo, changed.photo, (file) => keepsUpload(file) || !!db.select({ id: schema.stops.id }).from(schema.stops).where(sql\`\${schema.stops.photo} like \${\`%"file":"\${file}"%\`}\`).get());
-    });
     await afterChange("afterUpdate", "Stop", changed, viewer);
     return changed;
   },
@@ -58874,7 +58781,7 @@ export const stopData = {
   /** Deletes the record; \`together\` takes the records that point to it along to the trash (delete-together.md). */
   async remove(viewer: Viewer | null, id: number, _together = false): Promise<void> {
     const row = db
-      .select({ ownerId: schema.stops.ownerId, photo: schema.stops.photo })
+      .select({ ownerId: schema.stops.ownerId })
       .from(schema.stops)
       .where(and(eq(schema.stops.id, id), stopData.readable(viewer)))
       .get();
@@ -58894,9 +58801,6 @@ export const stopData = {
     } catch (error) {
       throw refusal(error);
     }
-    cleanUploads(() => {
-    if (row.photo && row.photo.file !== undefined) deletePicture(row.photo, keepsUpload(row.photo.file) || !!db.select({ id: schema.stops.id }).from(schema.stops).where(sql\`\${schema.stops.photo} like \${\`%"file":"\${row.photo.file}"%\`}\`).get(), (file) => keepsUpload(file) || !!db.select({ id: schema.stops.id }).from(schema.stops).where(sql\`\${schema.stops.photo} like \${\`%"file":"\${file}"%\`}\`).get());
-    });
     await afterDelete("Stop", id, viewer);
   },
 
@@ -58906,7 +58810,7 @@ export const stopData = {
    */
   async removeMany(viewer: Viewer | null, ids: number[], _together = false): Promise<{ deleted: number; skipped: number }> {
     const rows = db
-      .select({ id: schema.stops.id, ownerId: schema.stops.ownerId, photo: schema.stops.photo })
+      .select({ id: schema.stops.id, ownerId: schema.stops.ownerId })
       .from(schema.stops)
       .where(and(inArray(schema.stops.id, ids), stopData.readable(viewer)))
       .all()
@@ -58929,9 +58833,6 @@ export const stopData = {
         }
     });
     for (const row of rows) {
-      cleanUploads(() => {
-      if (row.photo && row.photo.file !== undefined) deletePicture(row.photo, keepsUpload(row.photo.file) || !!db.select({ id: schema.stops.id }).from(schema.stops).where(sql\`\${schema.stops.photo} like \${\`%"file":"\${row.photo.file}"%\`}\`).get(), (file) => keepsUpload(file) || !!db.select({ id: schema.stops.id }).from(schema.stops).where(sql\`\${schema.stops.photo} like \${\`%"file":"\${file}"%\`}\`).get());
-      });
       await afterDelete("Stop", row.id, viewer);
     }
     return { deleted: rows.length, skipped: new Set(ids).size - rows.length };
@@ -58948,7 +58849,6 @@ import { z } from "zod";
 import type * as schema from "#/db/schema";
 import { allows, type Rule } from "#/kit/access";
 import type { RecordUi } from "#/kit/model";
-import { bindPicture } from "#/kit/PictureInput";
 import { stopAccess, stopData } from "./stop.server";
 import { writeAllowed } from "#/kit/limit";
 import { currentViewer } from "#/lib/viewer.server";
@@ -58971,7 +58871,7 @@ export const stopUi: RecordUi<StopRow> = {
   label: "Stop",
   pluralLabel: "Stops",
   titleField: "place",
-  columns: ["place", "photo", "startsAt", "endsAt", "status"],
+  columns: ["place", "startsAt", "endsAt", "status", "address"],
   fields: [
     {
       name: "place",
@@ -59007,14 +58907,6 @@ export const stopUi: RecordUi<StopRow> = {
       kind: "url",
       required: false,
       get: (row) => row.directionsUrl,
-    },
-    {
-      name: "photo",
-      label: "Photo",
-      kind: "picture",
-      required: false,
-      input: bindPicture("stop", "photo"),
-      get: (row) => row.photo,
     },
     {
       name: "menuOverride",
@@ -59085,7 +58977,6 @@ exports[`../../../examples/food-truck/smithable.yml > file list and generated co
 "// Generated by Smithable from smithable.yml. Do not edit: this file is overwritten on every change.
 // The records' pictures and documents: which data function and access each one goes through (src/routes/files/).
 import type { ModelAccess, Viewer } from "#/kit/access";
-import { stopAccess, stopData } from "./stop.server";
 import { menuItemAccess, menuItemData } from "./menu-item.server";
 
 export interface UploadField {
@@ -59097,9 +58988,6 @@ export interface UploadField {
 }
 
 export const UPLOADS: Record<string, Record<string, UploadField>> = {
-  "stop": {
-    "photo": { kind: "picture", data: stopData, access: stopAccess, key: "photo" },
-  },
   "menu-item": {
     "photo": { kind: "picture", data: menuItemData, access: menuItemAccess, key: "photo" },
   },
@@ -59541,7 +59429,6 @@ export const CARDS: Record<string, CardFacts> = {
             { name: "startsAt", label: "Starts at", kind: "datetime", required: true },
             { name: "endsAt", label: "Ends at", kind: "datetime", required: true },
             { name: "directionsUrl", label: "Directions url", kind: "url", required: false },
-            { name: "photo", label: "Photo", kind: "picture", required: false },
             { name: "menuOverride", label: "Menu override", kind: "text", required: false },
             {
               name: "status",
@@ -59597,8 +59484,7 @@ export const CARDS: Record<string, CardFacts> = {
       pages: [
         { id: "home", title: "Home", kind: "landing", route: "/" },
         { id: "menu", title: "Menu", kind: "sections", route: "/menu" },
-        { id: "where", title: "Where", kind: "landing", route: "/where" },
-        { id: "catering", title: "Catering", kind: "landing", route: "/catering" },
+        { id: "catering", title: "Catering", kind: "sections", route: "/catering" },
         { id: "stops", title: "Stops", kind: "crud", route: "/stops", model: "Stops" },
         {
           id: "menu-items",
@@ -59654,7 +59540,7 @@ export const CARDS: Record<string, CardFacts> = {
           owner: false,
         },
       ],
-      uploads: ["Stops", "Menu items"],
+      uploads: ["Menu items"],
       sensitive: [],
     },
     access: {
@@ -59684,16 +59570,7 @@ export const CARDS: Record<string, CardFacts> = {
               delete: { all: true, own: false },
             },
           ],
-          pages: [
-            "home",
-            "menu",
-            "where",
-            "catering",
-            "stops",
-            "menu-items",
-            "enquiries",
-            "team",
-          ],
+          pages: ["home", "menu", "catering", "stops", "menu-items", "enquiries", "team"],
           actions: [
             { action: "contacted", all: true, own: false, while: "status is new" },
             { action: "booked", all: true, own: false, while: "status is contacted" },
@@ -59731,7 +59608,7 @@ export const CARDS: Record<string, CardFacts> = {
               delete: { all: false, own: true },
             },
           ],
-          pages: ["home", "menu", "where", "catering", "stops", "menu-items", "enquiries"],
+          pages: ["home", "menu", "catering", "stops", "menu-items", "enquiries"],
           actions: [
             { action: "contacted", all: true, own: false, while: "status is new" },
             { action: "booked", all: true, own: false, while: "status is contacted" },
@@ -59768,7 +59645,7 @@ export const CARDS: Record<string, CardFacts> = {
               delete: { all: false, own: false },
             },
           ],
-          pages: ["home", "menu", "where", "catering"],
+          pages: ["home", "menu", "catering"],
           actions: [],
           reviews: [],
         },
@@ -59786,10 +59663,7 @@ export const CARDS: Record<string, CardFacts> = {
     built: {
       customActions: [],
       customPages: [],
-      customSections: [
-        { page: "home", section: "stops", component: "UpcomingStops" },
-        { page: "where", section: "stops", component: "UpcomingStops" },
-      ],
+      customSections: [{ page: "home", section: "stops", component: "UpcomingStops" }],
       customQueries: [],
       customIncoming: [],
       plugins: [],
@@ -60207,7 +60081,7 @@ exports[`../../../examples/food-truck/smithable.yml > file list and generated co
 import { createRootRoute, HeadContent, Scripts, ScriptOnce, useRouter, useRouterState } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
-import { History, House, List, Package, Users } from "lucide-react";
+import { History, List, Package, Users } from "lucide-react";
 import { app } from "#/generated/app";
 import { pageAccess, pageUi } from "#/generated/pages";
 import { currentViewer } from "#/lib/viewer.server";
@@ -60238,16 +60112,9 @@ const menus: MenuUi[] = [
         page: "menu",
       },
       {
-        to: "/where",
-        label: pageUi["where"].title,
-        icon: House,
-        access: pageAccess["where"],
-        page: "where",
-      },
-      {
         to: "/catering",
         label: pageUi["catering"].title,
-        icon: House,
+        icon: List,
         access: pageAccess["catering"],
         page: "catering",
       },
@@ -60295,9 +60162,9 @@ const menus: MenuUi[] = [
   },
 ];
 
-const landingRoutes = ["/", "/where", "/catering"];
+const landingRoutes = ["/"];
 /** Public pages that visitors see in the site's frame (signed in, the app's). */
-const visitorRoutes = ["/menu", "/sign-in"];
+const visitorRoutes = ["/menu", "/catering", "/sign-in"];
 
 /** Each page's route and name, longest route first. */
 const pageRoutes: [string, string][] = [
@@ -60305,7 +60172,6 @@ const pageRoutes: [string, string][] = [
   ["/enquiries", "enquiries"],
   ["/catering", "catering"],
   ["/stops", "stops"],
-  ["/where", "where"],
   ["/menu", "menu"],
   ["/team", "team"],
   ["/", "home"],
@@ -60437,18 +60303,15 @@ export const Route = createFileRoute("/app-card")({
 
 exports[`../../../examples/food-truck/smithable.yml > file list and generated code > src/routes/catering/index.tsx 1`] = `
 "// Generated by Smithable from smithable.yml. Do not edit: this file is overwritten on every change.
-import { createFileRoute, useRouter } from "@tanstack/react-router";
-import { pageAccess, pageHead } from "#/generated/pages";
+import { createFileRoute } from "@tanstack/react-router";
+import { pageAccess, pageUi, pageHead } from "#/generated/pages";
 import { guardPage } from "#/kit/page-guard";
-import { authClient } from "#/lib/auth-client";
-import { rememberPerson } from "#/kit/time-text";
-import { LandingLayout, Hero, Contact } from "#/kit/Landing";
-import { w } from "#/kit/words";
-import { site } from "#/generated/site";
+import { Contact } from "#/kit/Landing";
 import { createCateringEnquiry, cateringEnquiryUi } from "#/generated/catering-enquiry";
 import { cateringEnquirySchema } from "#/generated/catering-enquiry.schema";
 import { app } from "#/generated/app";
 import { ModelForm } from "#/kit/ModelForm";
+import { PageHeader } from "#/kit/AppShell";
 
 export const Route = createFileRoute("/catering/")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["catering"], context.viewer, location.href),
@@ -60457,22 +60320,9 @@ export const Route = createFileRoute("/catering/")({
 });
 
 function CateringPage() {
-  const { viewer } = Route.useRouteContext();
-  const router = useRouter();
-  const signOut = async () => {
-    await authClient.signOut();
-    rememberPerson();
-    await router.invalidate();
-  };
   return (
-    <LandingLayout appName={app.name} page="catering" link={viewer ? { to: "/menu", label: w.openApp(app.name) } : { to: "/sign-in", label: w.signIn }} site={site} viewer={viewer} onSignOut={viewer ? signOut : undefined}>
-      <Hero
-          texts="pages.catering.hero"
-          title="Ember & Wheel"
-          subtitle="A food truck's stops, street-food menu and catering enquiries."
-          link={{ to: "/menu", label: "Get started" }}
-          more
-        />
+    <div data-kit="sections">
+      <PageHeader page="catering" title={pageUi["catering"].title} />
       <Contact
           texts="pages.catering.contact"
           form={(sent, human) => (
@@ -60489,7 +60339,7 @@ function CateringPage() {
             />
           )}
         />
-    </LandingLayout>
+    </div>
   );
 }
 "
@@ -61252,7 +61102,7 @@ exports[`../../../examples/food-truck/smithable.yml > file list and generated co
 import { createFileRoute } from "@tanstack/react-router";
 import { originOf } from "#/kit/origin";
 
-const ROBOTS = "User-agent: *\\nAllow: /$\\nAllow: /menu\\nAllow: /where\\nAllow: /catering\\nAllow: /assets/\\nAllow: /images/\\nAllow: /files/\\nDisallow: /\\n";
+const ROBOTS = "User-agent: *\\nAllow: /$\\nAllow: /menu\\nAllow: /catering\\nAllow: /assets/\\nAllow: /images/\\nAllow: /files/\\nDisallow: /\\n";
 
 export const Route = createFileRoute("/robots.txt")({
   server: {
@@ -61409,7 +61259,7 @@ exports[`../../../examples/food-truck/smithable.yml > file list and generated co
 import { createFileRoute } from "@tanstack/react-router";
 import { originOf } from "#/kit/origin";
 
-const PAGES = ["/","/menu","/where","/catering"];
+const PAGES = ["/","/menu","/catering"];
 
 const escape = (s: string) =>
   s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
@@ -61567,7 +61417,6 @@ import { w } from "#/kit/words";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelTable } from "#/kit/ModelTable";
 import { Filters } from "#/kit/Filters";
-import { List } from "lucide-react";
 
 /** The stops matching the search and the filters, among those the viewer may read. */
 const searchStops = createServerFn()
@@ -61667,7 +61516,6 @@ function StopsPage() {
         exportRows={async () => (await searchStops({ data: { q, sort, f: values, all: true } }))} exportName="stops"
         rows={rows}
         sorting={{ keys: { startsAt: "startsAt" }, value: sort, onChange: (next) => navigate({ to: "/stops", search: (prev) => ({ ...prev, sort: next, page: undefined }), replace: true, resetScroll: false }) }}
-        icon={List}
         selection={selectable ? { ids: selected, onChange: setSelected } : undefined}
         emptyMessage={q || Object.values(values).some(Boolean) ? "No stops match the search and filters." : undefined}
         emptyAction={newButton || undefined}
@@ -61963,52 +61811,6 @@ function TeamPage() {
 "
 `;
 
-exports[`../../../examples/food-truck/smithable.yml > file list and generated code > src/routes/where/index.tsx 1`] = `
-"// Generated by Smithable from smithable.yml. Do not edit: this file is overwritten on every change.
-import { createFileRoute, useRouter } from "@tanstack/react-router";
-import { pageAccess, pageHead } from "#/generated/pages";
-import { guardPage } from "#/kit/page-guard";
-import { authClient } from "#/lib/auth-client";
-import { rememberPerson } from "#/kit/time-text";
-import { LandingLayout, Hero } from "#/kit/Landing";
-import { w } from "#/kit/words";
-import { site } from "#/generated/site";
-import { UpcomingStops } from "#/custom/sections/UpcomingStops";
-import { app } from "#/generated/app";
-
-export const Route = createFileRoute("/where/")({
-  beforeLoad: ({ context, location }) => guardPage(pageAccess["where"], context.viewer, location.href),
-  head: () => pageHead("where"),
-  component: WherePage,
-});
-
-function WherePage() {
-  const { viewer } = Route.useRouteContext();
-  const router = useRouter();
-  const signOut = async () => {
-    await authClient.signOut();
-    rememberPerson();
-    await router.invalidate();
-  };
-  return (
-    <LandingLayout appName={app.name} page="where" link={viewer ? { to: "/menu", label: w.openApp(app.name) } : { to: "/sign-in", label: w.signIn }} site={site} viewer={viewer} onSignOut={viewer ? signOut : undefined}>
-      <Hero
-          texts="pages.where.hero"
-          title="Ember & Wheel"
-          subtitle="A food truck's stops, street-food menu and catering enquiries."
-          link={{ to: "/menu", label: "Get started" }}
-          more
-        />
-      <UpcomingStops
-          name="stops"
-          texts="pages.where.stops"
-        />
-    </LandingLayout>
-  );
-}
-"
-`;
-
 exports[`../../../examples/food-truck/smithable.yml > file list and generated code > src/theme.css 1`] = `
 "/* Generated by Smithable from smithable.ux.yml. Do not edit: this file is overwritten on every change. */
 @import "@fontsource-variable/inter";
@@ -62209,7 +62011,7 @@ test.beforeAll(async ({ browser }) => {
     for (const route of routes) await open(route);
     await context.close();
   };
-  await warm(undefined, ["/", "/menu", "/where", "/catering"]);
+  await warm(undefined, ["/", "/menu", "/catering"]);
   await warm("admin", ["/stops", "/menu-items", "/enquiries", "/team"]);
   if (slow.length) throw new Error(\`Pages that did not open while warming up: \${slow.join(", ")}\`);
 });
@@ -62219,9 +62021,6 @@ test("Home opens for a visitor", async ({ page }) => {
 });
 test("Menu opens for a visitor", async ({ page }) => {
   await visit(page, "/menu");
-});
-test("Where opens for a visitor", async ({ page }) => {
-  await visit(page, "/where");
 });
 test("Catering opens for a visitor", async ({ page }) => {
   await visit(page, "/catering");
@@ -62474,7 +62273,6 @@ exports[`../../../examples/food-truck/smithable.yml > file list and generated co
   "generated: src/routes/stops/new.tsx",
   "generated: src/routes/team/activity.tsx",
   "generated: src/routes/team/index.tsx",
-  "generated: src/routes/where/index.tsx",
   "kit: src/start.ts",
   "kit: src/styles.css",
   "generated: src/theme.css",
@@ -62503,7 +62301,7 @@ exports[`../../../examples/food-truck/smithable.yml > the generated files are as
   "package.json": "53253c45 generated",
   "playwright.config.ts": "5ffef2a7 kit",
   "pnpm-workspace.yaml": "1da1537f scaffold",
-  "public/favicon.svg": "1a0f4d35 generated",
+  "public/favicon.svg": "32812053 generated",
   "server.mjs": "e77d2b28 kit",
   "smithable.lock": "2c03be87 generated",
   "src/components/ui/badge.tsx": "7c9b048e kit",
@@ -62515,9 +62313,9 @@ exports[`../../../examples/food-truck/smithable.yml > the generated files are as
   "src/custom/sections/UpcomingStops.tsx": "bb6bf194 custom",
   "src/custom/styles.css": "87d7c518 custom",
   "src/db/index.ts": "ba378d34 kit",
-  "src/db/schema.ts": "e1b214ba generated",
-  "src/db/seed.ts": "5147e0ed generated",
-  "src/generated/access.test.ts": "87c0619e generated",
+  "src/db/schema.ts": "b1e96bf8 generated",
+  "src/db/seed.ts": "33583bfc generated",
+  "src/generated/access.test.ts": "9406033b generated",
   "src/generated/actions/booked.server.ts": "1dfec7b8 generated",
   "src/generated/actions/booked.ts": "56b73060 generated",
   "src/generated/actions/closed.server.ts": "14fa92cc generated",
@@ -62533,7 +62331,7 @@ exports[`../../../examples/food-truck/smithable.yml > the generated files are as
   "src/generated/catering-enquiry.server.ts": "cf9f68cf generated",
   "src/generated/catering-enquiry.ts": "f42fe4ed generated",
   "src/generated/custom.ts": "5801b2b0 generated",
-  "src/generated/dev-door.server.ts": "96b5f894 generated",
+  "src/generated/dev-door.server.ts": "919a3d65 generated",
   "src/generated/hooks.ts": "7c59609b generated",
   "src/generated/menu-item.import.server.ts": "efe6d55d generated",
   "src/generated/menu-item.import.ts": "623c8323 generated",
@@ -62541,15 +62339,15 @@ exports[`../../../examples/food-truck/smithable.yml > the generated files are as
   "src/generated/menu-item.server.ts": "2c166751 generated",
   "src/generated/menu-item.ts": "d9bb91b5 generated",
   "src/generated/my-time.ts": "c315432b generated",
-  "src/generated/pages.ts": "904401fa generated",
+  "src/generated/pages.ts": "37ed2be7 generated",
   "src/generated/roles.ts": "2040923c generated",
-  "src/generated/site.ts": "997347ac generated",
+  "src/generated/site.ts": "c7aafea3 generated",
   "src/generated/stop.import.server.ts": "5aca6a4a generated",
   "src/generated/stop.import.ts": "1d2a5d38 generated",
-  "src/generated/stop.schema.ts": "5a7ccc63 generated",
-  "src/generated/stop.server.ts": "7e8313ce generated",
-  "src/generated/stop.ts": "f8b4b942 generated",
-  "src/generated/uploads.ts": "b8149f19 generated",
+  "src/generated/stop.schema.ts": "83468546 generated",
+  "src/generated/stop.server.ts": "e1c42488 generated",
+  "src/generated/stop.ts": "3122c70f generated",
+  "src/generated/uploads.ts": "90e4c260 generated",
   "src/generated/users.server.ts": "ffd2d3f7 generated",
   "src/generated/users.test.ts": "8000264e generated",
   "src/kit/ActionButton.tsx": "6a3b0c0a kit",
@@ -62557,7 +62355,7 @@ exports[`../../../examples/food-truck/smithable.yml > the generated files are as
   "src/kit/AiMark.tsx": "f9eb07a2 kit",
   "src/kit/AppCard.tsx": "76e8455d kit",
   "src/kit/AppLink.tsx": "841a9af0 kit",
-  "src/kit/AppShell.tsx": "6dca6653 kit",
+  "src/kit/AppShell.tsx": "7cdeb539 kit",
   "src/kit/AppearancePicker.tsx": "0cd564d2 kit",
   "src/kit/Combobox.tsx": "c3a18c75 kit",
   "src/kit/Consent.tsx": "c5ee7e50 kit",
@@ -62566,7 +62364,7 @@ exports[`../../../examples/food-truck/smithable.yml > the generated files are as
   "src/kit/Filters.tsx": "0f5bfdfd kit",
   "src/kit/ImportDialog.tsx": "d65da47a kit",
   "src/kit/InlineRows.tsx": "5a097006 kit",
-  "src/kit/Landing.tsx": "5263c55e kit",
+  "src/kit/Landing.tsx": "3e45088e kit",
   "src/kit/ModelForm.tsx": "f90ea7e8 kit",
   "src/kit/ModelTable.tsx": "5252e1d6 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
@@ -62616,9 +62414,9 @@ exports[`../../../examples/food-truck/smithable.yml > the generated files are as
   "src/kit/uploads.ts": "4e982bfe kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "a509a677 kit",
+  "src/kit/words/en.ts": "49f0cba5 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
-  "src/lib/app-card.server.ts": "a4898189 generated",
+  "src/lib/app-card.server.ts": "9188d876 generated",
   "src/lib/app-card.ts": "93f0b476 generated",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "638a20ef generated",
@@ -62628,10 +62426,10 @@ exports[`../../../examples/food-truck/smithable.yml > the generated files are as
   "src/routes/[_dev]/act.ts": "c57e01e2 generated",
   "src/routes/[_dev]/clock.ts": "a1ccbe93 generated",
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
-  "src/routes/__root.tsx": "f8655fb2 generated",
+  "src/routes/__root.tsx": "0e0471db generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/app-card.tsx": "a74639e0 generated",
-  "src/routes/catering/index.tsx": "fdbb7931 generated",
+  "src/routes/catering/index.tsx": "d1b61ee2 generated",
   "src/routes/enquiries/$id.tsx": "aa658206 generated",
   "src/routes/enquiries/index.tsx": "3b73d9ea generated",
   "src/routes/enquiries/new.tsx": "20d6dfa3 generated",
@@ -62644,19 +62442,18 @@ exports[`../../../examples/food-truck/smithable.yml > the generated files are as
   "src/routes/menu-items/index.tsx": "d0ff6046 generated",
   "src/routes/menu-items/new.tsx": "dac20cf7 generated",
   "src/routes/menu/index.tsx": "c49116bb generated",
-  "src/routes/robots[.]txt.ts": "48c5f34d generated",
+  "src/routes/robots[.]txt.ts": "16a3f54e generated",
   "src/routes/sign-in.tsx": "fc26205e generated",
-  "src/routes/sitemap[.]xml.ts": "8043560e generated",
+  "src/routes/sitemap[.]xml.ts": "a9b3d652 generated",
   "src/routes/stops/$id.tsx": "7d3c395b generated",
-  "src/routes/stops/index.tsx": "5641736c generated",
+  "src/routes/stops/index.tsx": "27b6e968 generated",
   "src/routes/stops/new.tsx": "0033752d generated",
   "src/routes/team/activity.tsx": "200307a5 generated",
   "src/routes/team/index.tsx": "b480dbbe generated",
-  "src/routes/where/index.tsx": "a3a356b3 generated",
   "src/start.ts": "6b874d2d kit",
-  "src/styles.css": "1f4ccc9e kit",
+  "src/styles.css": "706d757b kit",
   "src/theme.css": "1fd40aa1 generated",
-  "tests/smoke.spec.ts": "39765be4 generated",
+  "tests/smoke.spec.ts": "ebf39c13 generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "3ee61b99 kit",
   "vite.config.ts": "9350497c kit",
@@ -62824,8 +62621,8 @@ exports[`../../../examples/invoicing/smithable.yml > file list and generated cod
 
 exports[`../../../examples/invoicing/smithable.yml > file list and generated code > public/favicon.svg 1`] = `
 "<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  <rect width="32" height="32" rx="6.4" fill="#4f46e5"/>
-  <text x="16" y="22" text-anchor="middle" style="unicode-bidi:plaintext" font-family="system-ui, sans-serif" font-size="18" font-weight="700" fill="#ffffff">I</text>
+  <rect width="32" height="32" rx="7" fill="#3b5bdb"/>
+  <text x="16" y="22" text-anchor="middle" font-family="system-ui, sans-serif" font-size="18" font-weight="700" fill="#fff">I</text>
 </svg>
 "
 `;
@@ -64534,21 +64331,8 @@ const amount = (v: unknown, field: string) => {
   if (Number.isFinite(n)) return n;
   throw new BadInput(\`"\${field}" must be an amount, like "12.50".\`);
 };
-/**
- * An ISO date and time, on a day the calendar has (JavaScript would roll 30 February over); one
- * without an offset is a wall time in UTC, seconds kept.
- */
 const moment = (v: unknown, field: string) => {
-  const parts =
-    typeof v === "string"
-      ? /^(\\d{4}-\\d{2}-\\d{2})T(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(Z|[+-]\\d{2}:\\d{2})?$/.exec(v)
-      : null;
-  const at = parts ? Date.parse(parts[2] ? parts[0] : \`\${parts[0]}Z\`) : Number.NaN;
-  const day = parts ? Date.parse(\`\${parts[1]}T00:00:00Z\`) : Number.NaN;
-  const d =
-    !parts || !Number.isFinite(at) || !Number.isFinite(day) || new Date(day).toISOString().slice(0, 10) !== parts[1]
-      ? undefined
-      : new Date(at);
+  const d = typeof v === "string" ? new Date(v) : undefined;
   if (d && !Number.isNaN(d.getTime())) return d;
   throw new BadInput(\`"\${field}" must be a date and time, like "2026-10-04T09:30:00Z".\`);
 };
@@ -72731,7 +72515,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "package.json": "adf2eeb2 generated",
   "playwright.config.ts": "5ffef2a7 kit",
   "pnpm-workspace.yaml": "1da1537f scaffold",
-  "public/favicon.svg": "07f97e21 generated",
+  "public/favicon.svg": "288fe58f generated",
   "server.mjs": "e77d2b28 kit",
   "smithable.lock": "2c03be87 generated",
   "src/components/ui/badge.tsx": "7c9b048e kit",
@@ -72755,7 +72539,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/generated/actions/send-invoice.ts": "2efd6b21 generated",
   "src/generated/activity.server.ts": "2b56b888 generated",
   "src/generated/app.ts": "74f19a10 generated",
-  "src/generated/ask.server.ts": "991a0923 generated",
+  "src/generated/ask.server.ts": "3ce34cf9 generated",
   "src/generated/business-profile.schema.ts": "7037e2dd generated",
   "src/generated/business-profile.server.ts": "cf159176 generated",
   "src/generated/business-profile.ts": "734f08c4 generated",
@@ -72791,7 +72575,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/AiMark.tsx": "f9eb07a2 kit",
   "src/kit/AppCard.tsx": "76e8455d kit",
   "src/kit/AppLink.tsx": "841a9af0 kit",
-  "src/kit/AppShell.tsx": "6dca6653 kit",
+  "src/kit/AppShell.tsx": "7cdeb539 kit",
   "src/kit/AppearancePicker.tsx": "0cd564d2 kit",
   "src/kit/Ask.tsx": "e5277427 kit",
   "src/kit/Combobox.tsx": "c3a18c75 kit",
@@ -72804,7 +72588,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/ImportDialog.tsx": "d65da47a kit",
   "src/kit/InlineRows.tsx": "5a097006 kit",
   "src/kit/Inspector.tsx": "2425cac5 kit",
-  "src/kit/Landing.tsx": "5263c55e kit",
+  "src/kit/Landing.tsx": "3e45088e kit",
   "src/kit/LegalPage.tsx": "f9a9df1e kit",
   "src/kit/Live.tsx": "fbaa47cd kit",
   "src/kit/ModelForm.tsx": "f90ea7e8 kit",
@@ -72872,7 +72656,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "a509a677 kit",
+  "src/kit/words/en.ts": "49f0cba5 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/app-card.server.ts": "eacbd913 generated",
   "src/lib/app-card.ts": "93f0b476 generated",
@@ -72909,7 +72693,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/routes/sitemap[.]xml.ts": "5c8fa673 generated",
   "src/routes/welcome/index.tsx": "ad2a6a87 generated",
   "src/start.ts": "6b874d2d kit",
-  "src/styles.css": "1f4ccc9e kit",
+  "src/styles.css": "706d757b kit",
   "src/theme.css": "1fd40aa1 generated",
   "tests/smoke.spec.ts": "dadec54d generated",
   "tsconfig.json": "802b1b64 kit",
@@ -73087,8 +72871,8 @@ exports[`../../../examples/kiosk/smithable.yml > file list and generated code > 
 
 exports[`../../../examples/kiosk/smithable.yml > file list and generated code > public/favicon.svg 1`] = `
 "<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  <rect width="32" height="32" rx="6.4" fill="#4f46e5"/>
-  <text x="16" y="22" text-anchor="middle" style="unicode-bidi:plaintext" font-family="system-ui, sans-serif" font-size="18" font-weight="700" fill="#ffffff">K</text>
+  <rect width="32" height="32" rx="7" fill="#3b5bdb"/>
+  <text x="16" y="22" text-anchor="middle" font-family="system-ui, sans-serif" font-size="18" font-weight="700" fill="#fff">K</text>
 </svg>
 "
 `;
@@ -82098,7 +81882,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "package.json": "f840bb3a generated",
   "playwright.config.ts": "5ffef2a7 kit",
   "pnpm-workspace.yaml": "1da1537f scaffold",
-  "public/favicon.svg": "70fe2e53 generated",
+  "public/favicon.svg": "e09d9afd generated",
   "public/manifest.webmanifest": "5ed0ee91 generated",
   "public/sw.js": "107e85e9 generated",
   "server.mjs": "e77d2b28 kit",
@@ -82165,7 +81949,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/AiMark.tsx": "f9eb07a2 kit",
   "src/kit/AppCard.tsx": "76e8455d kit",
   "src/kit/AppLink.tsx": "841a9af0 kit",
-  "src/kit/AppShell.tsx": "6dca6653 kit",
+  "src/kit/AppShell.tsx": "7cdeb539 kit",
   "src/kit/AppearancePicker.tsx": "0cd564d2 kit",
   "src/kit/Combobox.tsx": "c3a18c75 kit",
   "src/kit/Consent.tsx": "c5ee7e50 kit",
@@ -82174,7 +81958,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/Filters.tsx": "0f5bfdfd kit",
   "src/kit/ImportDialog.tsx": "d65da47a kit",
   "src/kit/InlineRows.tsx": "5a097006 kit",
-  "src/kit/Landing.tsx": "5263c55e kit",
+  "src/kit/Landing.tsx": "3e45088e kit",
   "src/kit/Live.tsx": "fbaa47cd kit",
   "src/kit/ModelForm.tsx": "f90ea7e8 kit",
   "src/kit/ModelTable.tsx": "5252e1d6 kit",
@@ -82236,7 +82020,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/uploads.ts": "4e982bfe kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "a509a677 kit",
+  "src/kit/words/en.ts": "49f0cba5 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/app-card.server.ts": "ac4195c6 generated",
   "src/lib/app-card.ts": "93f0b476 generated",
@@ -82273,7 +82057,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/routes/team/index.tsx": "d0aa5bca generated",
   "src/routes/where/index.tsx": "712d3315 generated",
   "src/start.ts": "6b874d2d kit",
-  "src/styles.css": "1f4ccc9e kit",
+  "src/styles.css": "706d757b kit",
   "src/theme.css": "1fd40aa1 generated",
   "tests/smoke.spec.ts": "7a8dce6a generated",
   "tsconfig.json": "802b1b64 kit",
@@ -82443,8 +82227,8 @@ exports[`../../../examples/marketplace/smithable.yml > file list and generated c
 
 exports[`../../../examples/marketplace/smithable.yml > file list and generated code > public/favicon.svg 1`] = `
 "<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  <rect width="32" height="32" rx="6.4" fill="#4f46e5"/>
-  <text x="16" y="22" text-anchor="middle" style="unicode-bidi:plaintext" font-family="system-ui, sans-serif" font-size="18" font-weight="700" fill="#ffffff">T</text>
+  <rect width="32" height="32" rx="7" fill="#3b5bdb"/>
+  <text x="16" y="22" text-anchor="middle" font-family="system-ui, sans-serif" font-size="18" font-weight="700" fill="#fff">T</text>
 </svg>
 "
 `;
@@ -87579,7 +87363,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "package.json": "a1c55e4d generated",
   "playwright.config.ts": "5ffef2a7 kit",
   "pnpm-workspace.yaml": "1da1537f scaffold",
-  "public/favicon.svg": "1c3b511c generated",
+  "public/favicon.svg": "246dedca generated",
   "server.mjs": "e77d2b28 kit",
   "smithable.lock": "2c03be87 generated",
   "src/components/ui/badge.tsx": "7c9b048e kit",
@@ -87616,7 +87400,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/AiMark.tsx": "f9eb07a2 kit",
   "src/kit/AppCard.tsx": "76e8455d kit",
   "src/kit/AppLink.tsx": "841a9af0 kit",
-  "src/kit/AppShell.tsx": "6dca6653 kit",
+  "src/kit/AppShell.tsx": "7cdeb539 kit",
   "src/kit/AppearancePicker.tsx": "0cd564d2 kit",
   "src/kit/Ask.tsx": "e5277427 kit",
   "src/kit/Combobox.tsx": "c3a18c75 kit",
@@ -87628,7 +87412,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/ImportDialog.tsx": "d65da47a kit",
   "src/kit/InlineRows.tsx": "5a097006 kit",
   "src/kit/Inspector.tsx": "2425cac5 kit",
-  "src/kit/Landing.tsx": "5263c55e kit",
+  "src/kit/Landing.tsx": "3e45088e kit",
   "src/kit/ModelForm.tsx": "f90ea7e8 kit",
   "src/kit/ModelTable.tsx": "5252e1d6 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
@@ -87688,7 +87472,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "a509a677 kit",
+  "src/kit/words/en.ts": "49f0cba5 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/app-card.server.ts": "f87d436f generated",
   "src/lib/app-card.ts": "93f0b476 generated",
@@ -87724,7 +87508,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/routes/sitemap[.]xml.ts": "abb491ed generated",
   "src/routes/welcome/index.tsx": "427e81bc generated",
   "src/start.ts": "6b874d2d kit",
-  "src/styles.css": "1f4ccc9e kit",
+  "src/styles.css": "706d757b kit",
   "src/theme.css": "1fd40aa1 generated",
   "tests/smoke.spec.ts": "dcf4060e generated",
   "tsconfig.json": "802b1b64 kit",
@@ -87900,8 +87684,8 @@ exports[`../../../examples/painter/smithable.yml > file list and generated code 
 
 exports[`../../../examples/painter/smithable.yml > file list and generated code > public/favicon.svg 1`] = `
 "<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  <rect width="32" height="32" rx="6.4" fill="#4f46e5"/>
-  <text x="16" y="21" text-anchor="middle" style="unicode-bidi:plaintext" font-family="system-ui, sans-serif" font-size="14" font-weight="700" fill="#ffffff">FP</text>
+  <rect width="32" height="32" rx="7" fill="#3b5bdb"/>
+  <text x="16" y="22" text-anchor="middle" font-family="system-ui, sans-serif" font-size="18" font-weight="700" fill="#fff">F</text>
 </svg>
 "
 `;
@@ -94407,7 +94191,7 @@ exports[`../../../examples/painter/smithable.yml > the generated files are as re
   "package.json": "98cc3fb3 generated",
   "playwright.config.ts": "5ffef2a7 kit",
   "pnpm-workspace.yaml": "1da1537f scaffold",
-  "public/favicon.svg": "bb99542b generated",
+  "public/favicon.svg": "2fd773a0 generated",
   "server.mjs": "e77d2b28 kit",
   "smithable.lock": "2c03be87 generated",
   "src/components/ui/badge.tsx": "7c9b048e kit",
@@ -94459,7 +94243,7 @@ exports[`../../../examples/painter/smithable.yml > the generated files are as re
   "src/kit/AiMark.tsx": "f9eb07a2 kit",
   "src/kit/AppCard.tsx": "76e8455d kit",
   "src/kit/AppLink.tsx": "841a9af0 kit",
-  "src/kit/AppShell.tsx": "6dca6653 kit",
+  "src/kit/AppShell.tsx": "7cdeb539 kit",
   "src/kit/AppearancePicker.tsx": "0cd564d2 kit",
   "src/kit/Combobox.tsx": "c3a18c75 kit",
   "src/kit/Consent.tsx": "c5ee7e50 kit",
@@ -94470,7 +94254,7 @@ exports[`../../../examples/painter/smithable.yml > the generated files are as re
   "src/kit/Filters.tsx": "0f5bfdfd kit",
   "src/kit/ImportDialog.tsx": "d65da47a kit",
   "src/kit/InlineRows.tsx": "5a097006 kit",
-  "src/kit/Landing.tsx": "5263c55e kit",
+  "src/kit/Landing.tsx": "3e45088e kit",
   "src/kit/LegalPage.tsx": "f9a9df1e kit",
   "src/kit/ModelForm.tsx": "f90ea7e8 kit",
   "src/kit/ModelTable.tsx": "5252e1d6 kit",
@@ -94522,7 +94306,7 @@ exports[`../../../examples/painter/smithable.yml > the generated files are as re
   "src/kit/uploads.ts": "4e982bfe kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "a509a677 kit",
+  "src/kit/words/en.ts": "49f0cba5 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/app-card.server.ts": "fa86ab68 generated",
   "src/lib/app-card.ts": "93f0b476 generated",
@@ -94556,7 +94340,7 @@ exports[`../../../examples/painter/smithable.yml > the generated files are as re
   "src/routes/team/activity.tsx": "5a20d270 generated",
   "src/routes/team/index.tsx": "a6bc2c30 generated",
   "src/start.ts": "6b874d2d kit",
-  "src/styles.css": "1f4ccc9e kit",
+  "src/styles.css": "706d757b kit",
   "src/theme.css": "1fd40aa1 generated",
   "tests/smoke.spec.ts": "6b877684 generated",
   "tsconfig.json": "802b1b64 kit",
@@ -94726,8 +94510,8 @@ exports[`../../../examples/records/smithable.yml > file list and generated code 
 
 exports[`../../../examples/records/smithable.yml > file list and generated code > public/favicon.svg 1`] = `
 "<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  <rect width="32" height="32" rx="6.4" fill="#4f46e5"/>
-  <text x="16" y="21" text-anchor="middle" style="unicode-bidi:plaintext" font-family="system-ui, sans-serif" font-size="14" font-weight="700" fill="#ffffff">OC</text>
+  <rect width="32" height="32" rx="7" fill="#3b5bdb"/>
+  <text x="16" y="22" text-anchor="middle" font-family="system-ui, sans-serif" font-size="18" font-weight="700" fill="#fff">O</text>
 </svg>
 "
 `;
@@ -95178,16 +94962,8 @@ import type { Offer } from "#/kit/tools";
 import { itemData } from "./item.server";
 import { itemUi } from "./item";
 
-import { isoIn } from "#/kit/zoned";
 import { itemSchema } from "#/generated/item.schema";
 
-/** A stored moment as the API gives it: with Europe/Mariehamn's offset, and its milliseconds when it has any. */
-export function momentOut(v: unknown): string | null {
-  if (!(v instanceof Date)) return (v as string | null) ?? null;
-  const text = isoIn(v, "Europe/Mariehamn");
-  const ms = v.getUTCMilliseconds();
-  return ms ? \`\${text.slice(0, -6)}.\${String(ms).padStart(3, "0")}\${text.slice(-6)}\` : text;
-}
 
 /** The body as an object of known fields, or a refusal naming the first unknown one. */
 function fieldsOf(body: unknown, known: readonly string[]): Record<string, unknown> {
@@ -95206,8 +94982,8 @@ export function itemToApi(row: Record<string, any>) {
     kind: row.kind ?? null,
     link: row.link ?? null,
     addedOn: row.addedOn ?? null,
-    createdAt: momentOut(row.createdAt),
-    updatedAt: momentOut(row.updatedAt),
+    createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
+    updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : row.updatedAt,
   };
 }
 
@@ -98531,7 +98307,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "package.json": "f5422993 generated",
   "playwright.config.ts": "5ffef2a7 kit",
   "pnpm-workspace.yaml": "1da1537f scaffold",
-  "public/favicon.svg": "d370f823 generated",
+  "public/favicon.svg": "57bda269 generated",
   "server.mjs": "e77d2b28 kit",
   "smithable.lock": "2c03be87 generated",
   "src/components/ui/badge.tsx": "7c9b048e kit",
@@ -98547,7 +98323,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/generated/access.test.ts": "2a3af11c generated",
   "src/generated/activity.server.ts": "4ed2a764 generated",
   "src/generated/app.ts": "2da3a528 generated",
-  "src/generated/ask.server.ts": "ecb33006 generated",
+  "src/generated/ask.server.ts": "bfe90d6d generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/dev-door.server.ts": "8d9bb3d1 generated",
   "src/generated/hooks.ts": "e268b462 generated",
@@ -98566,7 +98342,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/AiMark.tsx": "f9eb07a2 kit",
   "src/kit/AppCard.tsx": "76e8455d kit",
   "src/kit/AppLink.tsx": "841a9af0 kit",
-  "src/kit/AppShell.tsx": "6dca6653 kit",
+  "src/kit/AppShell.tsx": "7cdeb539 kit",
   "src/kit/AppearancePicker.tsx": "0cd564d2 kit",
   "src/kit/Ask.tsx": "e5277427 kit",
   "src/kit/Combobox.tsx": "c3a18c75 kit",
@@ -98576,7 +98352,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/ImportDialog.tsx": "d65da47a kit",
   "src/kit/InlineRows.tsx": "5a097006 kit",
   "src/kit/Inspector.tsx": "2425cac5 kit",
-  "src/kit/Landing.tsx": "5263c55e kit",
+  "src/kit/Landing.tsx": "3e45088e kit",
   "src/kit/ModelForm.tsx": "f90ea7e8 kit",
   "src/kit/ModelTable.tsx": "5252e1d6 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
@@ -98631,7 +98407,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "a509a677 kit",
+  "src/kit/words/en.ts": "49f0cba5 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/app-card.server.ts": "57b7eaca generated",
   "src/lib/app-card.ts": "93f0b476 generated",
@@ -98656,7 +98432,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/routes/sign-in.tsx": "563d1820 generated",
   "src/routes/sitemap[.]xml.ts": "8c1882fb generated",
   "src/start.ts": "6b874d2d kit",
-  "src/styles.css": "1f4ccc9e kit",
+  "src/styles.css": "706d757b kit",
   "src/theme.css": "1fd40aa1 generated",
   "tests/smoke.spec.ts": "b04668e0 generated",
   "tsconfig.json": "802b1b64 kit",
@@ -98832,8 +98608,8 @@ exports[`../../../examples/restaurant/smithable.yml > file list and generated co
 
 exports[`../../../examples/restaurant/smithable.yml > file list and generated code > public/favicon.svg 1`] = `
 "<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  <rect width="32" height="32" rx="6.4" fill="#4f46e5"/>
-  <text x="16" y="21" text-anchor="middle" style="unicode-bidi:plaintext" font-family="system-ui, sans-serif" font-size="14" font-weight="700" fill="#ffffff">AQ</text>
+  <rect width="32" height="32" rx="7" fill="#3b5bdb"/>
+  <text x="16" y="22" text-anchor="middle" font-family="system-ui, sans-serif" font-size="18" font-weight="700" fill="#fff">A</text>
 </svg>
 "
 `;
@@ -105687,6 +105463,7 @@ exports[`../../../examples/restaurant/smithable.yml > file list and generated co
   "custom: src/custom/sections/RestaurantHero.tsx",
   "custom: src/custom/sections/ServiceMenu.tsx",
   "custom: src/custom/sections/VisitToday.tsx",
+  "custom: src/custom/sections/VisitToday.tsx",
   "custom: src/custom/styles.css",
   "kit: src/db/index.ts",
   "generated: src/db/schema.ts",
@@ -105843,7 +105620,7 @@ exports[`../../../examples/restaurant/smithable.yml > the generated files are as
   "package.json": "c199f139 generated",
   "playwright.config.ts": "5ffef2a7 kit",
   "pnpm-workspace.yaml": "1da1537f scaffold",
-  "public/favicon.svg": "ebbede8f generated",
+  "public/favicon.svg": "3567ba27 generated",
   "server.mjs": "e77d2b28 kit",
   "smithable.lock": "2c03be87 generated",
   "src/components/ui/badge.tsx": "7c9b048e kit",
@@ -105895,7 +105672,7 @@ exports[`../../../examples/restaurant/smithable.yml > the generated files are as
   "src/kit/AiMark.tsx": "f9eb07a2 kit",
   "src/kit/AppCard.tsx": "76e8455d kit",
   "src/kit/AppLink.tsx": "841a9af0 kit",
-  "src/kit/AppShell.tsx": "6dca6653 kit",
+  "src/kit/AppShell.tsx": "7cdeb539 kit",
   "src/kit/AppearancePicker.tsx": "0cd564d2 kit",
   "src/kit/Combobox.tsx": "c3a18c75 kit",
   "src/kit/Consent.tsx": "c5ee7e50 kit",
@@ -105903,7 +105680,7 @@ exports[`../../../examples/restaurant/smithable.yml > the generated files are as
   "src/kit/Filters.tsx": "0f5bfdfd kit",
   "src/kit/ImportDialog.tsx": "d65da47a kit",
   "src/kit/InlineRows.tsx": "5a097006 kit",
-  "src/kit/Landing.tsx": "5263c55e kit",
+  "src/kit/Landing.tsx": "3e45088e kit",
   "src/kit/ModelForm.tsx": "f90ea7e8 kit",
   "src/kit/ModelTable.tsx": "5252e1d6 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
@@ -105950,7 +105727,7 @@ exports[`../../../examples/restaurant/smithable.yml > the generated files are as
   "src/kit/unused-samples.ts": "860c6650 kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "a509a677 kit",
+  "src/kit/words/en.ts": "49f0cba5 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/app-card.server.ts": "4e0e6697 generated",
   "src/lib/app-card.ts": "93f0b476 generated",
@@ -105984,7 +105761,7 @@ exports[`../../../examples/restaurant/smithable.yml > the generated files are as
   "src/routes/team/index.tsx": "9781ccd6 generated",
   "src/routes/venue/index.tsx": "d91537a5 generated",
   "src/start.ts": "6b874d2d kit",
-  "src/styles.css": "1f4ccc9e kit",
+  "src/styles.css": "706d757b kit",
   "src/theme.css": "1fd40aa1 generated",
   "tests/smoke.spec.ts": "3a404ee7 generated",
   "tsconfig.json": "802b1b64 kit",
@@ -106160,8 +105937,8 @@ exports[`../../../examples/status/smithable.yml > file list and generated code >
 
 exports[`../../../examples/status/smithable.yml > file list and generated code > public/favicon.svg 1`] = `
 "<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  <rect width="32" height="32" rx="6.4" fill="#4f46e5"/>
-  <text x="16" y="21" text-anchor="middle" style="unicode-bidi:plaintext" font-family="system-ui, sans-serif" font-size="14" font-weight="700" fill="#ffffff">NS</text>
+  <rect width="32" height="32" rx="7" fill="#3b5bdb"/>
+  <text x="16" y="22" text-anchor="middle" font-family="system-ui, sans-serif" font-size="18" font-weight="700" fill="#fff">N</text>
 </svg>
 "
 `;
@@ -107634,40 +107411,17 @@ exports[`../../../examples/status/smithable.yml > file list and generated code >
 // spec's field names, amounts as decimal texts, times as ISO texts) and their values back, checked
 // by each model's own schema, as a form's are.
 import { BadInput } from "#/kit/api.server";
-import { instantOf, isoIn } from "#/kit/zoned";
 import { componentSchema } from "#/generated/component.schema";
 import { incidentSchema } from "#/generated/incident.schema";
 
-/** A stored moment as the API gives it: with Europe/Mariehamn's offset, and its milliseconds when it has any. */
-export function momentOut(v: unknown): string | null {
-  if (!(v instanceof Date)) return (v as string | null) ?? null;
-  const text = isoIn(v, "Europe/Mariehamn");
-  const ms = v.getUTCMilliseconds();
-  return ms ? \`\${text.slice(0, -6)}.\${String(ms).padStart(3, "0")}\${text.slice(-6)}\` : text;
-}
 const whole = (v: unknown, field: string) => {
   if (Number.isInteger(v)) return v as number;
   throw new BadInput(\`"\${field}" must be a record's id, a whole number.\`);
 };
-/**
- * An ISO date and time, on a day the calendar has (JavaScript would roll 30 February over); one
- * without an offset is a wall time in the app's zone, seconds kept.
- */
 const moment = (v: unknown, field: string) => {
-  const parts =
-    typeof v === "string"
-      ? /^(\\d{4}-\\d{2}-\\d{2})T(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(Z|[+-]\\d{2}:\\d{2})?$/.exec(v)
-      : null;
-  const at = parts ? Date.parse(parts[2] ? parts[0] : \`\${parts[0]}Z\`) : Number.NaN;
-  const day = parts ? Date.parse(\`\${parts[1]}T00:00:00Z\`) : Number.NaN;
-  const d =
-    !parts || !Number.isFinite(at) || !Number.isFinite(day) || new Date(day).toISOString().slice(0, 10) !== parts[1]
-      ? undefined
-      : parts[2]
-        ? new Date(at)
-        : new Date(instantOf(parts[0], "Europe/Mariehamn").getTime() + at - Date.parse(\`\${parts[0].slice(0, 16)}:00Z\`));
+  const d = typeof v === "string" ? new Date(v) : undefined;
   if (d && !Number.isNaN(d.getTime())) return d;
-  throw new BadInput(\`"\${field}" must be a date and time, like "2026-10-04T09:30" (in Europe/Mariehamn) or "2026-10-04T09:30:00Z".\`);
+  throw new BadInput(\`"\${field}" must be a date and time, like "2026-10-04T09:30:00Z".\`);
 };
 
 /** The body as an object of known fields, or a refusal naming the first unknown one. */
@@ -107685,8 +107439,8 @@ export function componentToApi(row: Record<string, any>) {
     name: row.name ?? null,
     status: row.status ?? null,
     description: row.description ?? null,
-    createdAt: momentOut(row.createdAt),
-    updatedAt: momentOut(row.updatedAt),
+    createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
+    updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : row.updatedAt,
   };
 }
 
@@ -107722,11 +107476,11 @@ export function incidentToApi(row: Record<string, any>) {
     title: row.title ?? null,
     status: row.status ?? null,
     component: row.componentId ?? null,
-    detectedAt: momentOut(row.detectedAt),
-    resolvedAt: momentOut(row.resolvedAt),
+    detectedAt: row.detectedAt instanceof Date ? row.detectedAt.toISOString() : (row.detectedAt ?? null),
+    resolvedAt: row.resolvedAt instanceof Date ? row.resolvedAt.toISOString() : (row.resolvedAt ?? null),
     summary: row.summary ?? null,
-    createdAt: momentOut(row.createdAt),
-    updatedAt: momentOut(row.updatedAt),
+    createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
+    updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : row.updatedAt,
   };
 }
 
@@ -108335,11 +108089,11 @@ export const OPENAPI = {
           },
           "detectedAt": {
             "type": "string",
-            "description": "In Europe/Mariehamn when given without an offset, like 2026-10-04T09:30; given back with that zone's offset."
+            "format": "date-time"
           },
           "resolvedAt": {
             "type": "string",
-            "description": "In Europe/Mariehamn when given without an offset, like 2026-10-04T09:30; given back with that zone's offset."
+            "format": "date-time"
           },
           "summary": {
             "type": "string"
@@ -108621,11 +108375,11 @@ export const VISITOR_OPENAPI = {
           },
           "detectedAt": {
             "type": "string",
-            "description": "In Europe/Mariehamn when given without an offset, like 2026-10-04T09:30; given back with that zone's offset."
+            "format": "date-time"
           },
           "resolvedAt": {
             "type": "string",
-            "description": "In Europe/Mariehamn when given without an offset, like 2026-10-04T09:30; given back with that zone's offset."
+            "format": "date-time"
           },
           "summary": {
             "type": "string"
@@ -109242,11 +108996,11 @@ export const OPENAPI_BY_ROLE: ReadonlyMap<string, unknown> = new Map([
               },
               "detectedAt": {
                 "type": "string",
-                "description": "In Europe/Mariehamn when given without an offset, like 2026-10-04T09:30; given back with that zone's offset."
+                "format": "date-time"
               },
               "resolvedAt": {
                 "type": "string",
-                "description": "In Europe/Mariehamn when given without an offset, like 2026-10-04T09:30; given back with that zone's offset."
+                "format": "date-time"
               },
               "summary": {
                 "type": "string"
@@ -109873,11 +109627,11 @@ export const OPENAPI_BY_ROLE: ReadonlyMap<string, unknown> = new Map([
               },
               "detectedAt": {
                 "type": "string",
-                "description": "In Europe/Mariehamn when given without an offset, like 2026-10-04T09:30; given back with that zone's offset."
+                "format": "date-time"
               },
               "resolvedAt": {
                 "type": "string",
-                "description": "In Europe/Mariehamn when given without an offset, like 2026-10-04T09:30; given back with that zone's offset."
+                "format": "date-time"
               },
               "summary": {
                 "type": "string"
@@ -109972,42 +109726,19 @@ import { maintenanceUi } from "./maintenance";
 import { runIdentified } from "./actions/identified.server";
 import { runMonitoring } from "./actions/monitoring.server";
 import { runResolve } from "./actions/resolve.server";
-import { instantOf, isoIn } from "#/kit/zoned";
 import { componentSchema } from "#/generated/component.schema";
 import { incidentSchema } from "#/generated/incident.schema";
 import { incidentUpdateSchema } from "#/generated/incident-update.schema";
 import { maintenanceSchema } from "#/generated/maintenance.schema";
 
-/** A stored moment as the API gives it: with Europe/Mariehamn's offset, and its milliseconds when it has any. */
-export function momentOut(v: unknown): string | null {
-  if (!(v instanceof Date)) return (v as string | null) ?? null;
-  const text = isoIn(v, "Europe/Mariehamn");
-  const ms = v.getUTCMilliseconds();
-  return ms ? \`\${text.slice(0, -6)}.\${String(ms).padStart(3, "0")}\${text.slice(-6)}\` : text;
-}
 const whole = (v: unknown, field: string) => {
   if (Number.isInteger(v)) return v as number;
   throw new BadInput(\`"\${field}" must be a record's id, a whole number.\`);
 };
-/**
- * An ISO date and time, on a day the calendar has (JavaScript would roll 30 February over); one
- * without an offset is a wall time in the app's zone, seconds kept.
- */
 const moment = (v: unknown, field: string) => {
-  const parts =
-    typeof v === "string"
-      ? /^(\\d{4}-\\d{2}-\\d{2})T(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(Z|[+-]\\d{2}:\\d{2})?$/.exec(v)
-      : null;
-  const at = parts ? Date.parse(parts[2] ? parts[0] : \`\${parts[0]}Z\`) : Number.NaN;
-  const day = parts ? Date.parse(\`\${parts[1]}T00:00:00Z\`) : Number.NaN;
-  const d =
-    !parts || !Number.isFinite(at) || !Number.isFinite(day) || new Date(day).toISOString().slice(0, 10) !== parts[1]
-      ? undefined
-      : parts[2]
-        ? new Date(at)
-        : new Date(instantOf(parts[0], "Europe/Mariehamn").getTime() + at - Date.parse(\`\${parts[0].slice(0, 16)}:00Z\`));
+  const d = typeof v === "string" ? new Date(v) : undefined;
   if (d && !Number.isNaN(d.getTime())) return d;
-  throw new BadInput(\`"\${field}" must be a date and time, like "2026-10-04T09:30" (in Europe/Mariehamn) or "2026-10-04T09:30:00Z".\`);
+  throw new BadInput(\`"\${field}" must be a date and time, like "2026-10-04T09:30:00Z".\`);
 };
 
 /** The body as an object of known fields, or a refusal naming the first unknown one. */
@@ -110025,8 +109756,8 @@ export function componentToApi(row: Record<string, any>) {
     name: row.name ?? null,
     status: row.status ?? null,
     description: row.description ?? null,
-    createdAt: momentOut(row.createdAt),
-    updatedAt: momentOut(row.updatedAt),
+    createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
+    updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : row.updatedAt,
   };
 }
 
@@ -110062,11 +109793,11 @@ export function incidentToApi(row: Record<string, any>) {
     title: row.title ?? null,
     status: row.status ?? null,
     component: row.componentId ?? null,
-    detectedAt: momentOut(row.detectedAt),
-    resolvedAt: momentOut(row.resolvedAt),
+    detectedAt: row.detectedAt instanceof Date ? row.detectedAt.toISOString() : (row.detectedAt ?? null),
+    resolvedAt: row.resolvedAt instanceof Date ? row.resolvedAt.toISOString() : (row.resolvedAt ?? null),
     summary: row.summary ?? null,
-    createdAt: momentOut(row.createdAt),
-    updatedAt: momentOut(row.updatedAt),
+    createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
+    updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : row.updatedAt,
   };
 }
 
@@ -110109,11 +109840,11 @@ export function incidentUpdateToApi(row: Record<string, any>) {
   return {
     id: row.id as number,
     incident: row.incidentId ?? null,
-    at: momentOut(row.at),
+    at: row.at instanceof Date ? row.at.toISOString() : (row.at ?? null),
     status: row.status ?? null,
     message: row.message ?? null,
-    createdAt: momentOut(row.createdAt),
-    updatedAt: momentOut(row.updatedAt),
+    createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
+    updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : row.updatedAt,
   };
 }
 
@@ -110151,11 +109882,11 @@ export function maintenanceToApi(row: Record<string, any>) {
     id: row.id as number,
     title: row.title ?? null,
     component: row.componentId ?? null,
-    startsAt: momentOut(row.startsAt),
-    endsAt: momentOut(row.endsAt),
+    startsAt: row.startsAt instanceof Date ? row.startsAt.toISOString() : (row.startsAt ?? null),
+    endsAt: row.endsAt instanceof Date ? row.endsAt.toISOString() : (row.endsAt ?? null),
     description: row.description ?? null,
-    createdAt: momentOut(row.createdAt),
-    updatedAt: momentOut(row.updatedAt),
+    createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
+    updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : row.updatedAt,
   };
 }
 
@@ -110196,7 +109927,7 @@ export function maintenanceFromApi(body: unknown, current?: Record<string, unkno
  */
 const OFFERS: Record<string, Offer & { describe: Record<string, string> }> = {
   "admin": {
-    "summary": "Northwind Status: Is it working? The state of our services, live.\\nComponent (components): name*, status* (operational | degraded | down | maintenance), description. Title: name.\\nIncident (incidents): title*, status* (investigating | identified | monitoring | resolved), component -> Component, detectedAt* (datetime), resolvedAt (datetime), summary. Title: title.\\nIncidentUpdate (incident updates): incident* -> Incident, at* (datetime), status* (investigating | identified | monitoring | resolved), message*. Title: message.\\nMaintenance (maintenances): title*, component -> Component, startsAt* (datetime), endsAt* (datetime), description. Title: title.\\nTimes are in Europe/Mariehamn: one without an offset, like 2026-10-04T09:30, is read there, and times come back with its offset.\\n* required. You act as someone with the role admin.\\nAnswer with what a tool returned; a number, a name or \\"none\\" you did not get from a tool is not an answer.",
+    "summary": "Northwind Status: Is it working? The state of our services, live.\\nComponent (components): name*, status* (operational | degraded | down | maintenance), description. Title: name.\\nIncident (incidents): title*, status* (investigating | identified | monitoring | resolved), component -> Component, detectedAt* (datetime), resolvedAt (datetime), summary. Title: title.\\nIncidentUpdate (incident updates): incident* -> Incident, at* (datetime), status* (investigating | identified | monitoring | resolved), message*. Title: message.\\nMaintenance (maintenances): title*, component -> Component, startsAt* (datetime), endsAt* (datetime), description. Title: title.\\n* required. You act as someone with the role admin.\\nAnswer with what a tool returned; a number, a name or \\"none\\" you did not get from a tool is not an answer.",
     "tools": [
       {
         "name": "find",
@@ -110355,7 +110086,7 @@ const OFFERS: Record<string, Offer & { describe: Record<string, string> }> = {
     }
   },
   "staff": {
-    "summary": "Northwind Status: Is it working? The state of our services, live.\\nComponent (components): name*, status* (operational | degraded | down | maintenance), description. Title: name.\\nIncident (incidents): title*, status* (investigating | identified | monitoring | resolved), component -> Component, detectedAt* (datetime), resolvedAt (datetime), summary. Title: title.\\nIncidentUpdate (incident updates): incident* -> Incident, at* (datetime), status* (investigating | identified | monitoring | resolved), message*. Title: message.\\nMaintenance (maintenances): title*, component -> Component, startsAt* (datetime), endsAt* (datetime), description. Title: title.\\nTimes are in Europe/Mariehamn: one without an offset, like 2026-10-04T09:30, is read there, and times come back with its offset.\\n* required. You act as someone with the role staff.\\nAnswer with what a tool returned; a number, a name or \\"none\\" you did not get from a tool is not an answer.",
+    "summary": "Northwind Status: Is it working? The state of our services, live.\\nComponent (components): name*, status* (operational | degraded | down | maintenance), description. Title: name.\\nIncident (incidents): title*, status* (investigating | identified | monitoring | resolved), component -> Component, detectedAt* (datetime), resolvedAt (datetime), summary. Title: title.\\nIncidentUpdate (incident updates): incident* -> Incident, at* (datetime), status* (investigating | identified | monitoring | resolved), message*. Title: message.\\nMaintenance (maintenances): title*, component -> Component, startsAt* (datetime), endsAt* (datetime), description. Title: title.\\n* required. You act as someone with the role staff.\\nAnswer with what a tool returned; a number, a name or \\"none\\" you did not get from a tool is not an answer.",
     "tools": [
       {
         "name": "find",
@@ -114831,7 +114562,7 @@ import { runResolve } from "./actions/resolve.server";
  */
 const OFFERS: Record<string, Offer & { describe: Record<string, string> }> = {
   "admin": {
-    "summary": "Northwind Status: Is it working? The state of our services, live.\\nComponent (components): name*, status* (operational | degraded | down | maintenance), description. Title: name.\\nIncident (incidents): title*, status* (investigating | identified | monitoring | resolved), component -> Component, detectedAt* (datetime), resolvedAt (datetime), summary. Title: title.\\nActions: resolve (Incident, when status is investigating or identified or monitoring).\\nTimes are in Europe/Mariehamn: one without an offset, like 2026-10-04T09:30, is read there, and times come back with its offset.\\n* required. You act as someone with the role admin.\\nAnswer with what a tool returned; a number, a name or \\"none\\" you did not get from a tool is not an answer.",
+    "summary": "Northwind Status: Is it working? The state of our services, live.\\nComponent (components): name*, status* (operational | degraded | down | maintenance), description. Title: name.\\nIncident (incidents): title*, status* (investigating | identified | monitoring | resolved), component -> Component, detectedAt* (datetime), resolvedAt (datetime), summary. Title: title.\\nActions: resolve (Incident, when status is investigating or identified or monitoring).\\n* required. You act as someone with the role admin.\\nAnswer with what a tool returned; a number, a name or \\"none\\" you did not get from a tool is not an answer.",
     "tools": [
       {
         "name": "find",
@@ -114952,7 +114683,7 @@ const OFFERS: Record<string, Offer & { describe: Record<string, string> }> = {
       },
       {
         "name": "add",
-        "description": "Add a record. Amounts as decimal texts (\\"12.50\\"), dates as ISO texts. A time without an offset is in Europe/Mariehamn. A refusal says why, in the app's words.",
+        "description": "Add a record. Amounts as decimal texts (\\"12.50\\"), dates as ISO texts. A refusal says why, in the app's words.",
         "inputSchema": {
           "type": "object",
           "required": [
@@ -114979,7 +114710,7 @@ const OFFERS: Record<string, Offer & { describe: Record<string, string> }> = {
       },
       {
         "name": "change",
-        "description": "Change a record: only the fields given. A time without an offset is in Europe/Mariehamn.",
+        "description": "Change a record: only the fields given.",
         "inputSchema": {
           "type": "object",
           "required": [
@@ -115067,7 +114798,7 @@ const OFFERS: Record<string, Offer & { describe: Record<string, string> }> = {
     }
   },
   "staff": {
-    "summary": "Northwind Status: Is it working? The state of our services, live.\\nComponent (components): name*, status* (operational | degraded | down | maintenance), description. Title: name.\\nIncident (incidents): title*, status* (investigating | identified | monitoring | resolved), component -> Component, detectedAt* (datetime), resolvedAt (datetime), summary. Title: title.\\nActions: resolve (Incident, when status is investigating or identified or monitoring).\\nTimes are in Europe/Mariehamn: one without an offset, like 2026-10-04T09:30, is read there, and times come back with its offset.\\n* required. You act as someone with the role staff.\\nAnswer with what a tool returned; a number, a name or \\"none\\" you did not get from a tool is not an answer.",
+    "summary": "Northwind Status: Is it working? The state of our services, live.\\nComponent (components): name*, status* (operational | degraded | down | maintenance), description. Title: name.\\nIncident (incidents): title*, status* (investigating | identified | monitoring | resolved), component -> Component, detectedAt* (datetime), resolvedAt (datetime), summary. Title: title.\\nActions: resolve (Incident, when status is investigating or identified or monitoring).\\n* required. You act as someone with the role staff.\\nAnswer with what a tool returned; a number, a name or \\"none\\" you did not get from a tool is not an answer.",
     "tools": [
       {
         "name": "find",
@@ -115188,7 +114919,7 @@ const OFFERS: Record<string, Offer & { describe: Record<string, string> }> = {
       },
       {
         "name": "add",
-        "description": "Add a record. Amounts as decimal texts (\\"12.50\\"), dates as ISO texts. A time without an offset is in Europe/Mariehamn. A refusal says why, in the app's words.",
+        "description": "Add a record. Amounts as decimal texts (\\"12.50\\"), dates as ISO texts. A refusal says why, in the app's words.",
         "inputSchema": {
           "type": "object",
           "required": [
@@ -115215,7 +114946,7 @@ const OFFERS: Record<string, Offer & { describe: Record<string, string> }> = {
       },
       {
         "name": "change",
-        "description": "Change a record: only the fields given. A time without an offset is in Europe/Mariehamn.",
+        "description": "Change a record: only the fields given.",
         "inputSchema": {
           "type": "object",
           "required": [
@@ -115303,7 +115034,7 @@ const OFFERS: Record<string, Offer & { describe: Record<string, string> }> = {
     }
   },
   "visitor": {
-    "summary": "Northwind Status: Is it working? The state of our services, live.\\nComponent (components): name*, status* (operational | degraded | down | maintenance), description. Title: name.\\nIncident (incidents): title*, status* (investigating | identified | monitoring | resolved), component -> Component, detectedAt* (datetime), resolvedAt (datetime), summary. Title: title.\\nTimes are in Europe/Mariehamn: one without an offset, like 2026-10-04T09:30, is read there, and times come back with its offset.\\n* required. You act as a visitor, without a key.\\nAnswer with what a tool returned; a number, a name or \\"none\\" you did not get from a tool is not an answer.",
+    "summary": "Northwind Status: Is it working? The state of our services, live.\\nComponent (components): name*, status* (operational | degraded | down | maintenance), description. Title: name.\\nIncident (incidents): title*, status* (investigating | identified | monitoring | resolved), component -> Component, detectedAt* (datetime), resolvedAt (datetime), summary. Title: title.\\n* required. You act as a visitor, without a key.\\nAnswer with what a tool returned; a number, a name or \\"none\\" you did not get from a tool is not an answer.",
     "tools": [
       {
         "name": "find",
@@ -120377,7 +120108,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "package.json": "80b7f102 generated",
   "playwright.config.ts": "5ffef2a7 kit",
   "pnpm-workspace.yaml": "1da1537f scaffold",
-  "public/favicon.svg": "44f7ef50 generated",
+  "public/favicon.svg": "e4b054e8 generated",
   "server.mjs": "e77d2b28 kit",
   "smithable.lock": "2c03be87 generated",
   "src/components/ui/badge.tsx": "7c9b048e kit",
@@ -120399,9 +120130,9 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/generated/actions/resolve.server.ts": "a2a5449e generated",
   "src/generated/actions/resolve.ts": "ff4366e0 generated",
   "src/generated/activity.server.ts": "dc01d286 generated",
-  "src/generated/api.server.ts": "612331e0 generated",
+  "src/generated/api.server.ts": "edc266dd generated",
   "src/generated/app.ts": "c7fc730f generated",
-  "src/generated/ask.server.ts": "b733e4d9 generated",
+  "src/generated/ask.server.ts": "c57aa2a0 generated",
   "src/generated/component.import.server.ts": "25ae311e generated",
   "src/generated/component.import.ts": "53644553 generated",
   "src/generated/component.schema.ts": "8a49641f generated",
@@ -120427,7 +120158,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/generated/maintenance.schema.ts": "80ec6842 generated",
   "src/generated/maintenance.server.ts": "fa0d4501 generated",
   "src/generated/maintenance.ts": "e16bc0e1 generated",
-  "src/generated/mcp.server.ts": "f9a1b714 generated",
+  "src/generated/mcp.server.ts": "247e37bf generated",
   "src/generated/my-time.ts": "c315432b generated",
   "src/generated/pages.ts": "bf2f0857 generated",
   "src/generated/roles.ts": "6b44c69a generated",
@@ -120439,7 +120170,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/AiMark.tsx": "f9eb07a2 kit",
   "src/kit/AppCard.tsx": "76e8455d kit",
   "src/kit/AppLink.tsx": "841a9af0 kit",
-  "src/kit/AppShell.tsx": "6dca6653 kit",
+  "src/kit/AppShell.tsx": "7cdeb539 kit",
   "src/kit/AppearancePicker.tsx": "0cd564d2 kit",
   "src/kit/Articles.tsx": "f3fb4114 kit",
   "src/kit/Ask.tsx": "e5277427 kit",
@@ -120452,7 +120183,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/InlineRows.tsx": "5a097006 kit",
   "src/kit/Inspector.tsx": "2425cac5 kit",
   "src/kit/Keys.tsx": "f32c246d kit",
-  "src/kit/Landing.tsx": "5263c55e kit",
+  "src/kit/Landing.tsx": "3e45088e kit",
   "src/kit/Markdown.tsx": "24e2fcd2 kit",
   "src/kit/MarkdownFormatted.tsx": "300ef9a1 kit",
   "src/kit/ModelForm.tsx": "f90ea7e8 kit",
@@ -120513,7 +120244,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "a509a677 kit",
+  "src/kit/words/en.ts": "49f0cba5 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/app-card.server.ts": "944abfcc generated",
   "src/lib/app-card.ts": "93f0b476 generated",
@@ -120564,7 +120295,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/routes/updates/index.tsx": "11c7f442 generated",
   "src/routes/updates/new.tsx": "ac78941b generated",
   "src/start.ts": "6b874d2d kit",
-  "src/styles.css": "1f4ccc9e kit",
+  "src/styles.css": "706d757b kit",
   "src/theme.css": "1fd40aa1 generated",
   "tests/smoke.spec.ts": "5de3170c generated",
   "tsconfig.json": "802b1b64 kit",
@@ -120740,8 +120471,8 @@ exports[`../../../examples/support/smithable.yml > file list and generated code 
 
 exports[`../../../examples/support/smithable.yml > file list and generated code > public/favicon.svg 1`] = `
 "<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  <rect width="32" height="32" rx="6.4" fill="#4f46e5"/>
-  <text x="16" y="21" text-anchor="middle" style="unicode-bidi:plaintext" font-family="system-ui, sans-serif" font-size="14" font-weight="700" fill="#ffffff">HS</text>
+  <rect width="32" height="32" rx="7" fill="#3b5bdb"/>
+  <text x="16" y="22" text-anchor="middle" font-family="system-ui, sans-serif" font-size="18" font-weight="700" fill="#fff">H</text>
 </svg>
 "
 `;
@@ -122334,17 +122065,9 @@ import { startWorkAsks } from "./actions/start-work";
 import { runClose } from "./actions/close.server";
 import { closeAsks } from "./actions/close";
 import { runReopen } from "./actions/reopen.server";
-import { isoIn } from "#/kit/zoned";
 import { supportCaseSchema } from "#/generated/support-case.schema";
 import { messageSchema } from "#/generated/message.schema";
 
-/** A stored moment as the API gives it: with Europe/Mariehamn's offset, and its milliseconds when it has any. */
-export function momentOut(v: unknown): string | null {
-  if (!(v instanceof Date)) return (v as string | null) ?? null;
-  const text = isoIn(v, "Europe/Mariehamn");
-  const ms = v.getUTCMilliseconds();
-  return ms ? \`\${text.slice(0, -6)}.\${String(ms).padStart(3, "0")}\${text.slice(-6)}\` : text;
-}
 const whole = (v: unknown, field: string) => {
   if (Number.isInteger(v)) return v as number;
   throw new BadInput(\`"\${field}" must be a record's id, a whole number.\`);
@@ -122372,8 +122095,8 @@ export function supportCaseToApi(row: Record<string, any>) {
     priority: row.priority ?? null,
     assignee: row.assigneeId ?? null,
     body: row.body ?? null,
-    createdAt: momentOut(row.createdAt),
-    updatedAt: momentOut(row.updatedAt),
+    createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
+    updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : row.updatedAt,
   };
 }
 
@@ -122420,8 +122143,8 @@ export function messageToApi(row: Record<string, any>) {
     agent: row.agentId ?? null,
     fromEmail: row.fromEmail ?? null,
     supportCase: row.supportCaseId ?? null,
-    createdAt: momentOut(row.createdAt),
-    updatedAt: momentOut(row.updatedAt),
+    createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
+    updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : row.updatedAt,
   };
 }
 
@@ -128484,7 +128207,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "package.json": "1bc9ee5d generated",
   "playwright.config.ts": "5ffef2a7 kit",
   "pnpm-workspace.yaml": "1da1537f scaffold",
-  "public/favicon.svg": "21a3a3f2 generated",
+  "public/favicon.svg": "220f4dc6 generated",
   "server.mjs": "e77d2b28 kit",
   "smithable.lock": "2c03be87 generated",
   "src/components/ui/badge.tsx": "7c9b048e kit",
@@ -128510,7 +128233,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/generated/actions/start-work.ts": "2fdc7c64 generated",
   "src/generated/activity.server.ts": "958f7815 generated",
   "src/generated/app.ts": "50242584 generated",
-  "src/generated/ask.server.ts": "b033dbac generated",
+  "src/generated/ask.server.ts": "8e379833 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/dev-door.server.ts": "3782a982 generated",
   "src/generated/hooks.ts": "1260830e generated",
@@ -128536,7 +128259,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/AiMark.tsx": "f9eb07a2 kit",
   "src/kit/AppCard.tsx": "76e8455d kit",
   "src/kit/AppLink.tsx": "841a9af0 kit",
-  "src/kit/AppShell.tsx": "6dca6653 kit",
+  "src/kit/AppShell.tsx": "7cdeb539 kit",
   "src/kit/AppearancePicker.tsx": "0cd564d2 kit",
   "src/kit/Ask.tsx": "e5277427 kit",
   "src/kit/Combobox.tsx": "c3a18c75 kit",
@@ -128611,7 +128334,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "a509a677 kit",
+  "src/kit/words/en.ts": "49f0cba5 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/app-card.server.ts": "eb1c3b3c generated",
   "src/lib/app-card.ts": "93f0b476 generated",
@@ -128642,7 +128365,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/routes/team/activity.tsx": "468cb15a generated",
   "src/routes/team/index.tsx": "b9305ec9 generated",
   "src/start.ts": "6b874d2d kit",
-  "src/styles.css": "1f4ccc9e kit",
+  "src/styles.css": "706d757b kit",
   "src/theme.css": "1fd40aa1 generated",
   "tests/smoke.spec.ts": "ed46d289 generated",
   "tsconfig.json": "802b1b64 kit",
