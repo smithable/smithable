@@ -1,6 +1,6 @@
 import { type ChildProcess, spawn } from "node:child_process";
 import { createHash, randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
-import { existsSync, readFileSync, rmSync, statSync, watchFile } from "node:fs";
+import { existsSync, lstatSync, readFileSync, rmSync, statSync, watchFile } from "node:fs";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { extname, join, normalize, resolve } from "node:path";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
@@ -179,17 +179,47 @@ export const ownFile = (path: string) => path in EDITABLE_FILES || path.startsWi
  * comments apart): formatting is never a change (docs/design/studio-v3.md §7), so the daemon
  * answers as if done and writes nothing; the formatted text reaches the file with the next edit.
  */
+/** Whether the bytes begin as a webp, avif, jpeg or png file does, whatever the file is called. */
+export function pictureBytes(bytes: Uint8Array): boolean {
+  const ascii = (from: number, to: number) => String.fromCharCode(...bytes.subarray(from, to));
+  return (
+    (ascii(0, 4) === "RIFF" && ascii(8, 12) === "WEBP") ||
+    (ascii(4, 8) === "ftyp" && /^avi[fs]$/.test(ascii(8, 12))) ||
+    (bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) ||
+    ascii(0, 8) === "\x89PNG\r\n\x1a\n"
+  );
+}
+
 /**
- * Why a picture a change brings is refused, or undefined. Only the Look tab's logo brings one:
- * under public/images/, at most 2 MB. The logo has no smaller copies, so a file written over one
- * with the same name never leaves another picture's widths pointing at the old picture.
+ * Why a picture a change brings is refused, or undefined. The Look tab's logo brings one, and a
+ * section's picture (setSectionPicture): under public/images/, at most 2 MB. The logo has no
+ * smaller copies, so a file written over one with the same name never leaves another picture's
+ * widths pointing at the old picture. A section's picture is a new file, named as its src, never
+ * one that is there (a library picture with its record, or another section's), and a picture file
+ * by its bytes, not only by its name.
  */
 export function pictureRefusal(
   operation: string,
   path: unknown,
   bytes: Uint8Array | undefined,
+  args: Record<string, unknown> = {},
+  there: (path: string) => boolean = () => false,
 ): string | undefined {
-  if (operation !== "setLogo") return "Only the logo is uploaded with a change.";
+  if (operation === "setSectionPicture") {
+    if (
+      typeof path !== "string" ||
+      !/^public\/images\/[\w-][\w.-]*\.(webp|avif|jpe?g|png)$/.test(path) ||
+      path !== `public/${String(args.src)}` ||
+      !bytes ||
+      bytes.byteLength > 2 * 1024 * 1024 ||
+      !pictureBytes(bytes)
+    )
+      return "A picture must be a webp, avif, jpg or png file of at most 2 MB.";
+    if (there(path)) return `${path} is already there: a new picture gets a name of its own.`;
+    return undefined;
+  }
+  if (operation !== "setLogo")
+    return "Only the logo and a section's picture are uploaded with a change.";
   if (
     typeof path !== "string" ||
     !/^public\/images\/[\w-][\w.-]*\.(webp|avif|jpe?g|png|svg)$/.test(path) ||
@@ -1427,7 +1457,15 @@ export async function studio(
           return json({ ok: true, output: "Nothing to change.", unchanged: true });
         const given = file as { path?: unknown; data?: unknown } | undefined;
         let bytes = typeof given?.data === "string" ? Buffer.from(given.data, "base64") : undefined;
-        const refused = given && pictureRefusal(String(name), given.path, bytes);
+        const refused =
+          given &&
+          pictureRefusal(
+            String(name),
+            given.path,
+            bytes,
+            (args ?? {}) as Record<string, unknown>,
+            (path) => lstatSync(join(dir, path), { throwIfNoEntry: false }) !== undefined,
+          );
         if (refused) return json({ ok: false, output: refused }, 400);
 
         if (given?.path && typeof given.path === "string" && given.path.endsWith(".svg") && bytes) {
@@ -1464,6 +1502,7 @@ export async function studio(
                   "setPictureStyle",
                   "setAiBadge",
                   "setSectionLook",
+                  "setSectionPicture",
                 ].includes(String(name)) &&
                 result.ok &&
                 result.verification?.revision

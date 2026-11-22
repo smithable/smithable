@@ -1,10 +1,11 @@
-import { humanize, SECTION_LOOKS, stagePage } from "@smithable/core";
+import { humanize, SECTION_LOOKS, sectionTakesPicture, stagePage } from "@smithable/core";
 import { type CSSProperties, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { api } from "../api";
 import type { Spec } from "../engine";
 import { LookSession } from "../first-look";
 import type { Selection } from "../preview";
 import { Button, useMedia } from "../ui";
+import { SectionPicture } from "./SectionPicture";
 import { SectionSketch } from "./SectionSketch";
 
 /** A hero's layouts by what they look like (docs/spec/v0.1.md, sections); the two across the width say so. */
@@ -80,6 +81,10 @@ export function selectedSection(selection: Selection | undefined, spec: Spec) {
     kind: section.kind,
     label: selection?.label?.trim() || humanize(name),
     choices,
+    // A section with a picture of its own, and the one it has (none: the section shows its text).
+    picture: sectionTakesPicture(section.kind)
+      ? { image: spec.content?.pages[page]?.sections?.[name]?.image }
+      : undefined,
   };
 }
 
@@ -126,7 +131,10 @@ export function SelectedSection({
     () =>
       new LookSession(
         {
-          values: Object.fromEntries(section.choices.map((c) => [c.key, c.current])),
+          values: {
+            ...Object.fromEntries(section.choices.map((c) => [c.key, c.current])),
+            picture: pictureValue(section.picture?.image),
+          },
           revision: project.revision ?? "",
         },
         (change, revision) => api.undoThemeChoice(change, revision, lookProject),
@@ -172,20 +180,44 @@ export function SelectedSection({
     observer.observe(form);
     return () => observer.disconnect();
   }, [narrow, measured]);
-  const choose = async (key: string, value: string) => {
+  const choose = (key: string, value: string) =>
+    attempt(key, value, (revision) =>
+      api.lookChange(
+        "setSectionLook",
+        { page: section.page, section: section.section, key, value },
+        revision,
+        lookProject,
+      ),
+    );
+  // A picture replaced, removed or described is tried on like a layout: Cancel puts it back, and
+  // an uploaded file leaves with the change that brought it.
+  const choosePicture = (
+    args: { src?: string; alt?: string },
+    file?: { path: string; data: string },
+  ) =>
+    attempt(
+      "picture",
+      pictureValue(args.src ? { src: args.src, alt: args.alt ?? "" } : undefined),
+      (revision) =>
+        api.lookChange(
+          "setSectionPicture",
+          { page: section.page, section: section.section, ...args },
+          revision,
+          lookProject,
+          file,
+        ),
+    );
+  const attempt = async (
+    key: string,
+    value: string,
+    apply: (revision: string) => ReturnType<typeof api.lookChange>,
+  ) => {
     if (running.current) return;
     running.current = true;
     setBusy(true);
     setError(undefined);
     try {
-      await session.set(key, value, (revision) =>
-        api.lookChange(
-          "setSectionLook",
-          { page: section.page, section: section.section, key, value },
-          revision,
-          lookProject,
-        ),
-      );
+      await session.set(key, value, apply);
     } catch (reason) {
       setError((reason as Error).message);
     } finally {
@@ -258,7 +290,7 @@ export function SelectedSection({
         </button>
       </header>
       <div className="min-h-0 flex-1 space-y-3 overflow-auto overscroll-contain px-3 py-2">
-        {section.choices.length === 0 && (
+        {section.choices.length === 0 && !section.picture && (
           <p className="text-sm text-muted">
             This section has no arrangement to choose. Describe the change to Smith instead.
           </p>
@@ -283,13 +315,23 @@ export function SelectedSection({
             </div>
           </fieldset>
         ))}
+        {section.picture && (
+          <SectionPicture
+            key={section.picture.image?.src}
+            page={section.page}
+            section={section.section}
+            image={section.picture.image}
+            change={(args, file) => void choosePicture(args, file)}
+            busy={busy}
+          />
+        )}
         {error && (
           <p role="alert" className="text-sm text-red-700">
             {error}
           </p>
         )}
       </div>
-      {section.choices.length > 0 && (
+      {(section.choices.length > 0 || section.picture) && (
         <footer className="flex items-center justify-between gap-2 border-t border-line px-3 py-2">
           <p aria-live="polite" className="min-w-0 text-xs text-muted">
             {changed
@@ -311,6 +353,10 @@ export function SelectedSection({
     </div>
   );
 }
+
+/** A section picture as one value of the form's session: its file and what it shows. */
+const pictureValue = (image: { src: string; alt?: string } | undefined) =>
+  image ? `${image.src}\n${image.alt ?? ""}` : "";
 
 type Box = { left: number; right: number; top: number; bottom: number };
 /**

@@ -504,7 +504,11 @@ export const api = {
     args: Record<string, unknown>,
     revision: string,
     lookProject: string,
-  ) => changing(call<Result>("/api/op", { name, args, expectedRevision: revision, lookProject })),
+    file?: { path: string; data: string },
+  ) =>
+    changing(
+      call<Result>("/api/op", { name, args, expectedRevision: revision, lookProject, file }),
+    ),
   undoThemeChoice: (change: string, revision: string, lookProject: string) =>
     changing(
       call<Result>("/api/undo", {
