@@ -191,7 +191,7 @@ const THING = set(`customer client contact company lead deal follow-up invoice p
   product ingredient supplier job application team player match talk speaker attendee ticket
   recipe incident outage maintenance update component album artist object fuel visit guest
   sighting species plot shoot project task note order member event habit check-in streak
-  case request message reply stop
+  case request message reply
   household colleague neighbor translator freelancer schedule blog catalog catalogue line
   picture contact-form`);
 // What a record holds.
@@ -271,6 +271,7 @@ export function readDescription(given: string): Reading {
   reading.read = true;
 
   const text = description.toLowerCase();
+  const cateringTruck = /\bfood[- ]truck\b/.test(text) && /\bcater(?:ing)?\b/.test(text);
   const votes = new Map<Kind, number>();
   const who = { me: 0, ours: 0, team: 0, people: 0, contribute: 0, look: 0 };
   let open = 0;
@@ -295,6 +296,7 @@ export function readDescription(given: string): Reading {
     // "Books" are things one reads; "book" and "booking" are what one does.
     const cues = /^books$/i.test(word) ? [] : (KIND[w] ?? []);
     for (const [kind, weight] of cues) {
+      if (kind === "food-truck" && !cateringTruck) continue;
       votes.set(kind, (votes.get(kind) ?? 0) + weight);
       as.push(`${kind} +${weight}`);
     }
@@ -348,7 +350,10 @@ export function readDescription(given: string): Reading {
       closed++;
       as.push("closed");
     }
-    if ((THING.has(w) || KIND_THINGS.has(w)) && !NOT_THINGS.has(w)) {
+    if (
+      (THING.has(w) || KIND_THINGS.has(w) || (cateringTruck && w === "stop")) &&
+      !NOT_THINGS.has(w)
+    ) {
       if (!reading.things.includes(w)) reading.things.push(w);
       as.push("thing");
     }
