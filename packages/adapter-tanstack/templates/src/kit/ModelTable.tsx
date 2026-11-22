@@ -435,6 +435,15 @@ export function ModelTable<R extends Row>({
         onToggle={() => saved.onToggle(row.id)}
       />
     );
+  // Cards show a picture on top when the model has pictures and a record shown has one: a
+  // record without one gets the placeholder so the cards stay even, and a page of records
+  // without any shows text cards, never a row of empty slots.
+  const cardPicture =
+    view === "cards" &&
+    pictureField &&
+    shown.some((row) => formatValue(pictureField, displayValue(pictureField, row), app) !== "—")
+      ? pictureField
+      : undefined;
   return (
     <div data-kit="model-table">
       {/* Phones: one card per record: its name and status, a contact or other identifier, its description, then a date and a key amount. */}
@@ -448,11 +457,11 @@ export function ModelTable<R extends Row>({
             <Card
               className={cn(
                 "relative space-y-3 p-5 hover:bg-hover",
-                view === "cards" && pictureField && "overflow-hidden pt-0",
+                cardPicture && "overflow-hidden pt-0",
               )}
             >
               {/* The checkbox sits in the picture's corner, or in a column of its own beside the title. */}
-              {selection && view === "cards" && pictureField && (
+              {selection && cardPicture && (
                 <span className="absolute top-1 left-1 z-10">
                   {check(
                     row,
@@ -463,21 +472,20 @@ export function ModelTable<R extends Row>({
                 </span>
               )}
               {/* Cards of a model with pictures show the record's, or a placeholder without one. */}
-              {view === "cards" &&
-                pictureField &&
-                (formatValue(pictureField, displayValue(pictureField, row), app) !== "—" ? (
+              {cardPicture &&
+                (formatValue(cardPicture, displayValue(cardPicture, row), app) !== "—" ? (
                   <AiMarked
-                    generated={generatedPicture(row, pictureField)}
+                    generated={generatedPicture(row, cardPicture)}
                     className="-mx-5 w-[calc(100%+2.5rem)]"
                   >
                     <img
-                      {...pictureAt(pictureField, row)}
+                      {...pictureAt(cardPicture, row)}
                       sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
-                      alt={formatValue(pictureField, displayValue(pictureField, row), app)}
+                      alt={formatValue(cardPicture, displayValue(cardPicture, row), app)}
                       loading="lazy"
                       className={cn(
                         "aspect-[3/2] object-cover",
-                        generatedPicture(row, pictureField)
+                        generatedPicture(row, cardPicture)
                           ? "w-full"
                           : "-mx-5 w-[calc(100%+2.5rem)] max-w-none",
                       )}
@@ -490,7 +498,7 @@ export function ModelTable<R extends Row>({
                   />
                 ))}
               <div className="flex items-start justify-between gap-3">
-                {selection && !(view === "cards" && pictureField) && (
+                {selection && !cardPicture && (
                   <span className="relative z-10 -my-2.5 -ml-3 flex size-11 shrink-0">
                     {check(
                       row,
@@ -502,7 +510,7 @@ export function ModelTable<R extends Row>({
                 )}
                 {/* The mark before the title, on a card too (a phone shows cards); a cards view
                     with a picture shows it on top instead. */}
-                {mark && !(view === "cards" && pictureField) && markOf(row)}
+                {mark && !cardPicture && markOf(row)}
                 <div className="min-w-0 flex-1 space-y-1">
                   {named(row) !== undefined
                     ? open(row, named(row), "break-words text-base font-semibold")

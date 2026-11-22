@@ -1,0 +1,103 @@
+# What visitors read. Derived from names when not given here.
+smithableContent: 0.1
+
+models:
+  Job:
+    fields:
+      surface: { values: { facade: Facade, roof: Roof, windows: Windows, woodwork: Woodwork, walls: Walls and ceilings, floors: Floors } }
+      setting: { label: Indoors or out, values: { outdoor: Outdoors, indoor: Indoors } }
+      place: { label: Where }
+      photos: { label: After }
+      before: { label: Before }
+  Enquiry:
+    label: Enquiry
+    fields:
+      job: { label: About the job }
+      message: { label: What you would like painted }
+      followUpOn: { label: Follow up on }
+      status: { values: { new: New, contacted: Contacted, visited: Visited, quoted: Quoted, won: Won, lost: Lost } }
+
+actions:
+  contacted: { label: Mark contacted }
+  visited: { label: Site visited }
+  quoted: { label: Quote sent }
+  won: { label: Won }
+  lost: { label: Lost }
+
+pages:
+  privacy:
+    title: Privacy
+    operator:
+      name: Fairweather Painters Ab
+      address: Hamngatan 12, 22100 Mariehamn
+      email: hello@fairweather.example
+      country: Åland, Finland
+      hosting: in the EU
+  home:
+    description: Facades, roofs, windows and interiors painted on the islands by a small firm. See our work by surface and ask for a quote.
+    hero:
+      title: Paint that stands the sea air
+      subtitle: Facades, roofs, windows and rooms, painted with the right paint for the surface and the weather. Look through our work and ask for a quote on one like yours.
+      button: See our work
+    latest:
+      eyebrow: Recent work
+      title: Jobs
+      text: Pick a surface, indoors or out, and open a job to ask for a quote on something like it.
+    features:
+      eyebrow: What we paint
+      title: The surface decides the paint
+      items:
+        - title: Facades and wooden cladding
+          text: Washed, scraped and mended before a drop of paint. Linseed oil paint or acrylic, chosen for the wood and what was on it before.
+        - title: Roofs
+          text: Tin roofs cleaned, rust treated and painted in two coats, from a lift or with roof safety, never from a ladder alone.
+        - title: Windows and woodwork
+          text: Old windows taken out, puttied and painted in the workshop over winter, then put back in spring.
+        - title: Rooms indoors
+          text: Walls, ceilings and floors, with the furniture covered and the room clean at the end of each day.
+    testimonials:
+      eyebrow: What clients say
+      title: In their words
+      items:
+        - quote: They spent three days scraping before they painted, and you can tell. The house looks as it did when it was built.
+          name: A homeowner
+          role: Facade, Jomala
+        - quote: Our windows were rotting at the sills. They came back in spring looking new, and they open again.
+          name: A summer resident
+          role: Windows, Föglö
+        - quote: Two rooms and a hall in a week, with us living in the house. Clean every evening.
+          name: A family
+          role: Walls and ceilings, Mariehamn
+    faq:
+      eyebrow: Before you ask
+      title: Common questions
+      items:
+        - question: When is the season for outdoor work?
+          answer: From May to September, when the wood is dry and nights are above five degrees. Indoor work and windows in the workshop go on all winter.
+        - question: Is the visit free?
+          answer: Yes, within mainland Åland. In the archipelago we charge the ferry, and deduct it if you go ahead.
+        - question: Do you choose the paint?
+          answer: We propose it in the quote, from what is on the surface now and how exposed it is. The colour is yours; we bring samples.
+        - question: Can I do part of the work myself?
+          answer: Often, yes. Clearing and moving furniture are common. Say so in your enquiry and we price the rest.
+    footer:
+      text: Fairweather Painters · Hamngatan 12, Mariehamn
+      items:
+        - { label: Our work, link: /jobs }
+        - { label: Email us, link: "mailto:hello@fairweather.example" }
+  jobs:
+    title: Our work
+    subtitle: Jobs we have finished on the islands, by surface, indoors and out. Open one to ask for a quote on something like it.
+    contact:
+      title: Ask for a quote
+      text: Tell us what you would like painted. We answer within two working days and book a visit.
+      button: Send enquiry
+      thanks: Thank you. We will get back to you within two working days.
+  start:
+    title: Today
+  enquiries:
+    title: Enquiries
+    form:
+      sections:
+        who: { title: Who asked }
+        what: { title: What they asked about }

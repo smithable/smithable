@@ -1,6 +1,6 @@
 # Starters
 
-A starter is a complete app to begin from: its spec, real sample records and pictures, and the generated code. Make one with `smithable new <folder> --starter <name>`, change it with [operations](change.md) or in your own words, or start it without the sample records with `--no-sample-data`. The pictures below are the starters as `smithable new` makes them, at desktop width. Seven of the twelve also have a page of their own on smithable.ai, all at [smithable.ai/starters](https://smithable.ai/starters); the support desk, the food truck, the barbershop, the builder and the restaurant are made with `smithable new` on your own machine.
+A starter is a complete app to begin from: its spec, real sample records and pictures, and the generated code. Make one with `smithable new <folder> --starter <name>`, change it with [operations](change.md) or in your own words, or start it without the sample records with `--no-sample-data`. The pictures below are the starters as `smithable new` makes them, at desktop width. Seven of the thirteen also have a page of their own on smithable.ai, all at [smithable.ai/starters](https://smithable.ai/starters); the support desk, the food truck, the barbershop, the builder, the painter and the restaurant are made with `smithable new` on your own machine.
 
 ## CRM
 
@@ -129,10 +129,25 @@ See it live: coming soon.
 ![A past project with its estimate request, as a visitor sees it, with the builder starter, Northshore Joinery](starters/builder-1.webp)
 ![The enquiries to follow up, with their status and the next date](starters/builder-2.webp)
 
-For a joiner, a builder, a painter or any trade whose work is shown by what it has done. Visitors see the services and the past projects (the builder adds their own photos), and ask for an estimate from the project nearest what they want: their name, email, phone and a message. The enquiry is kept with the project it came from, filled in by the app and never by the visitor, and the builder is mailed. The builder follows each enquiry up, from contacted to a site visit, a quote, and won or lost, with the date of the next step.
+For a joiner, a builder or any trade whose work is shown by what it has done. Visitors see the services and the past projects (the builder adds their own photos), and ask for an estimate from the project nearest what they want: their name, email, phone and a message. The enquiry is kept with the project it came from, filled in by the app and never by the visitor, and the builder is mailed. The builder follows each enquiry up, from contacted to a site visit, a quote, and won or lost, with the date of the next step.
 
 ```sh
 smithable new my-firm --starter builder
+```
+
+See it live: coming soon.
+
+## Painter
+
+*A painter's jobs by surface, indoors and out, and a quote asked for from any of them.*
+
+![The jobs, filtered by surface and indoors or out, as a visitor sees them, with the painter starter, Fairweather Painters](starters/painter-1.webp)
+![A job with its quote request, as a visitor sees it](starters/painter-2.webp)
+
+For a painter, a decorator or any trade whose work is told by the surface it was done on. Visitors see the finished jobs and filter them by surface (facade, roof, windows, woodwork, walls, floors) and by indoors or out, and ask for a quote from the job nearest what they want. Each job reads well on its words alone: photos of the work after, and optionally before, are added when the painter has them, each with its description as the caption. What clients said is on the landing page as text, with no photos needed. The enquiries are followed up as in the builder starter, from contacted to a site visit, a quote, and won or lost.
+
+```sh
+smithable new my-firm --starter painter
 ```
 
 See it live: coming soon.

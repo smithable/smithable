@@ -60,5 +60,6 @@ test("outside a project, only what needs no spec completes", () => {
     "barbers",
     "restaurant",
     "builder",
+    "painter",
   ]);
 });

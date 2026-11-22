@@ -1233,10 +1233,12 @@ function RecordCardsView({
       card.title
     );
   // A record without a picture gets the placeholder when its model has pictures (it is given
-  // an icon then), so the cards stay even; a model without pictures keeps text cards.
+  // an icon then) and another card shown has one, so the cards stay even; a model without
+  // pictures, or a section of records without any, keeps text cards.
+  const pictured = cards.some((card) => card.picture);
   const picture = (card: CardItem, className: string) =>
     !card.picture ? (
-      icon && <PicturePlaceholder icon={icon} className={className} />
+      icon && pictured && <PicturePlaceholder icon={icon} className={className} />
     ) : (
       <AiMarked generated={card.picture.generated} className="shrink-0">
         <img

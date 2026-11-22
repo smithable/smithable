@@ -1,0 +1,90 @@
+# yaml-language-server: $schema=../../packages/core/schema/smithable.schema.json
+smithable: 0.1
+
+app:
+  name: Fairweather Painters
+  description: A painter's jobs by surface, and the enquiries followed up.
+  currency: EUR
+  timezone: Europe/Mariehamn
+
+models:
+  Job:
+    description: A finished job shown to visitors.
+    fields:
+      title: string!
+      surface: { type: facade | roof | windows | woodwork | walls | floors, default: facade }
+      setting: { type: outdoor | indoor, default: outdoor }
+      place: string                     # the village or the island, never the client's address
+      year: string                      # the year it was finished, as written: 2025
+      summary: text
+      photos: pictures                  # optional, after the work; each photo's description is its caption
+      before: pictures                  # optional, the same surface before the work
+
+  Enquiry:
+    description: A visitor's request for a quote.
+    fields:
+      job: Job                          # the job the visitor asked from, filled from its page
+      name: string!
+      email: email!
+      phone: phone
+      message: text!
+      # The painter's own: moved on by the actions below, never asked of the visitor.
+      status: { type: new | contacted | visited | quoted | won | lost, default: new, by: app }
+      followUpOn: { type: date, default: TODAY(), by: app }   # when to get back to them next
+
+actions:
+  contacted:
+    on: Enquiry
+    when: { status: new }
+    set: { status: contacted, followUpOn: 'DATEADD(TODAY(), 3, "day")' }
+  visited:
+    on: Enquiry
+    when: { status: contacted }
+    set: { status: visited, followUpOn: 'DATEADD(TODAY(), 2, "day")' }
+  quoted:
+    on: Enquiry
+    when: { status: [contacted, visited] }
+    set: { status: quoted, followUpOn: 'DATEADD(TODAY(), 7, "day")' }
+  won:
+    on: Enquiry
+    when: { status: quoted }
+    set: { status: won }
+  lost:
+    on: Enquiry
+    when: { status: [new, contacted, visited, quoted] }
+    set: { status: lost }
+
+pages:
+  home:
+    route: /
+    landing:
+      hero: { button: jobs }
+      latest: { records: Job, filters: [surface, setting], limit: 6 }
+      features:                         # what is painted and how, as text
+      testimonials:                     # what clients said, as text: no photos needed
+      faq:
+      footer:
+  jobs:                                 # public: each job with "Ask for a quote"
+    crud: Job
+    filters: [surface, setting]
+    sortable: [year]
+    contact: { to: owner, keep: Enquiry }
+  start:                                # the painter's morning: what is new, what is due
+    dashboard:
+      new: { count: Enquiry, where: { status: new } }
+      open: { count: Enquiry, where: { status: [contacted, visited, quoted] } }
+      due: { list: Enquiry, when: followUpOn, within: 2 weeks, where: { status: [new, contacted, visited, quoted] } }
+  enquiries:
+    crud: Enquiry
+    search: [name, email, message]
+    filters: [status]
+    defaultFilter: { status: [new, contacted, visited, quoted] }   # the open ones; Won and Lost behind the chips
+    sortable: [createdAt, followUpOn]
+    actions: [contacted, quoted, won, lost]
+  team:
+    users: manage
+  privacy:
+    route: /privacy
+    legal: privacy
+
+navigation: [start, enquiries, jobs, team]
