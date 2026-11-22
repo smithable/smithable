@@ -71,6 +71,16 @@ test("a timer never runs an action whose condition names the person signed in", 
   ]);
 });
 
+test("an action cannot ask for a sequence value", () => {
+  const text = spec("{ assignee: any }")
+    .replace("      subject:", "      number: { type: int!, sequence: true }\n      subject:")
+    .replace("set: { assignee: ME() }", "set: { number: }");
+  expect(errors(text)).toContainEqual(
+    expect.stringContaining("SupportCase.number cannot be set, the app counts it up."),
+  );
+  expect(errors(text.replace("set: { number: }", "set: { number: 5 }"))).toEqual([]);
+});
+
 test("a reference wants only those forms, and ME() needs a field that refers to User", () => {
   expect(errors(spec("{ assignee: bob }"))).toEqual([
     expect.stringContaining(

@@ -458,7 +458,12 @@ export function askedKeys(action: StandardActionIR, ir: SpecIR) {
   return askedFields(action).map((x) => {
     const field = modelNamed(ir, x.model).fields.find((f) => f.name === x.field) as FieldIR;
     const stored = dataKey(field);
-    return { ...x, field: stored, key: x.key === x.field ? stored : `${x.model}.${stored}` };
+    return {
+      ...x,
+      field: stored,
+      key: x.key === x.field ? stored : `${x.model}.${stored}`,
+      fieldSpec: field,
+    };
   });
 }
 
@@ -469,8 +474,8 @@ export function askedKeys(action: StandardActionIR, ir: SpecIR) {
 export function askOptions(action: StandardActionIR, ir: SpecIR, t: Texts) {
   const imports = new Map<string, string>();
   const entries = askedKeys(action, ir).flatMap((x) => {
-    const field = modelNamed(ir, x.model).fields.find((f) => dataKey(f) === x.field);
-    if (field?.type.kind !== "relation") return [];
+    const field = x.fieldSpec;
+    if (field.type.kind !== "relation") return [];
     if (field.type.model === USER_MODEL) {
       imports.set("userOptions", "#/generated/users");
       return [`${JSON.stringify(x.key)}: await userOptions()`];
@@ -494,14 +499,15 @@ export function standardActionModule(
   const asked = askedKeys(action, ir);
   // Where an asked field's label is kept: under its own model, by its name in the spec (a
   // reference's, not its key's).
-  const labelText = (x: { model: string; field: string }) => {
-    const own = ir.models
-      .find((m) => m.name === x.model)
-      ?.fields.find((f) => f.name === x.field || dataKey(f) === x.field);
-    return `models.${x.model}.fields.${own?.name ?? x.field}.label`;
-  };
-  const models = [...new Set(asked.map((x) => x.model))].map((m) => names(modelNamed(ir, m), t));
+  const labelText = (x: (typeof asked)[number]) =>
+    `models.${x.model}.fields.${x.fieldSpec.name}.label`;
   const named = (m: string) => names(modelNamed(ir, m), t);
+  const schemaName = (x: (typeof asked)[number]) =>
+    x.fieldSpec.byApp ? named(x.model).settable : named(x.model).schema;
+  const models = [...new Set(asked.map((x) => x.model))].map((m) => ({
+    ...named(m),
+    schemas: [...new Set(asked.filter((x) => x.model === m).map(schemaName))],
+  }));
   const choices = askOptions(action, ir, t);
   // What the change makes required is required in its dialog, whatever the record is now.
   const required = new Set(
@@ -509,11 +515,13 @@ export function standardActionModule(
       dataKey(modelNamed(ir, action.on).fields.find((f) => f.name === name) as FieldIR),
     ),
   );
+  // The ordinary form omits by-app fields. The action can ask for them using the same
+  // column refinements on the settable schema, which makes them optional for ordinary writes.
   const asks = asked.length
     ? `
 /** What the "${action.name}" action asks for when its button is pressed. */
 export const ${a.asks} = z.object({
-${asked.map((x) => `  ${JSON.stringify(x.key)}: ${named(x.model).schema}.shape.${x.field},`).join("\n")}
+${asked.map((x) => `  ${JSON.stringify(x.key)}: ${schemaName(x)}.shape.${x.field}${x.fieldSpec.byApp && x.fieldSpec.required ? ".nonoptional()" : ""},`).join("\n")}
 });
 
 /** The dialog's fields: the ${inert(n.label.toLowerCase())}'s own, then each added record's under its heading. */
@@ -523,7 +531,7 @@ export const ${a.askUi}: ModelUi = {
   titleField: "id",
   columns: [],
   fields: [
-${asked.map((x) => `    ...${named(x.model).ui}.fields.filter((f) => f.name === ${JSON.stringify(x.field)}).map((f) => ({ ...f, ${x.key === x.field ? "" : `name: ${JSON.stringify(x.key)}, `}text: ${JSON.stringify(labelText(x))} }))${required.has(x.key) ? ".map((f) => ({ ...f, required: true }))" : ""},`).join("\n")}
+${asked.map((x) => `    ...${named(x.model).ui}.fields.filter((f) => f.name === ${JSON.stringify(x.field)}).map((f) => ({ ...f, ${x.key === x.field ? "" : `name: ${JSON.stringify(x.key)}, `}${x.fieldSpec.byApp ? "byApp: false, " : ""}text: ${JSON.stringify(labelText(x))} }))${required.has(x.key) ? ".map((f) => ({ ...f, required: true }))" : ""},`).join("\n")}
   ],
   sections: ${literal(
     [...new Set(asked.filter((x) => x.key !== x.field).map((x) => x.model))].map((m) => ({
@@ -546,7 +554,7 @@ export async function ${a.askOptions}() {
     : "";
   return `${HEADER}import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-${models.map((m) => `import { ${m.ui} } from "${m.module}";\nimport { ${m.schema} } from "${m.module}.schema";\n`).join("")}import type { Rule } from "#/kit/access";
+${models.map((m) => `import { ${m.ui} } from "${m.module}";\nimport { ${m.schemas.join(", ")} } from "${m.module}.schema";\n`).join("")}import type { Rule } from "#/kit/access";
 import { w } from "#/kit/words";
 import { getRequestHeaders } from "@tanstack/react-start/server";
 ${asked.length ? 'import type { ModelUi } from "#/kit/model";\n' : ""}${choices ? [...choices.imports].map(([fn, module]) => `import { ${fn} } from "${module}";\n`).join("") : ""}import { writeAllowed } from "#/kit/limit";

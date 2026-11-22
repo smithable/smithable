@@ -515,9 +515,8 @@ ${pairOf(role === null ? (signedIn ? "stranger.id" : "null") : "viewer.id")}    
     // What the action asks for, as a test gives it: a value each field accepts.
     const askedValues = askedKeys(action, ir).map((x) => {
       const target = ir.models.find((m) => m.name === x.model) as ModelIR;
-      const field = target.fields.find((f) => dataKey(f) === x.field) as FieldIR;
       // A person or a record asked for: the stranger, or one of theirs.
-      return `${JSON.stringify(x.key)}: ${testValue(field, target, ir, "stranger.id")}`;
+      return `${JSON.stringify(x.key)}: ${testValue(x.fieldSpec, target, ir, "stranger.id")}`;
     });
     // Each run gets its own values (a unique number must differ between two copies).
     const fresh = askedValues.some((v) => /\bn\b/.test(v));
