@@ -479,7 +479,7 @@ const setSectionPicture: Operation<{
   name: "setSectionPicture",
   sets: ["smithable.content.yml:pages.*.*.image", "smithable.content.yml:pages.*.*.items"],
   summary:
-    "Set a landing section's picture (a hero or media-and-text section, or a gallery's item by its place) to a file under public/images/, with what it shows; no src removes it (a gallery's whole item).",
+    "Set a landing section's picture (a hero or media-and-text section, or a gallery or media-and-text item by its place) to a file under public/images/, with what it shows; no src removes it. Media-and-text items can be added in order, up to three.",
   schema: {
     type: "object",
     required: ["page", "section"],
@@ -501,7 +501,8 @@ const setSectionPicture: Operation<{
       item: {
         type: "integer",
         minimum: 0,
-        description: "A gallery's picture by its place, from 0.",
+        description:
+          "An item picture by its place, from 0. A media-and-text section takes up to three extra pictures in order.",
       },
       was: {
         type: "string",
@@ -529,18 +530,21 @@ const setSectionPicture: Operation<{
       );
     const languages = (content.get(["languages"]) as string[] | undefined) ?? [];
     const items = ["pages", page, section, "items"];
+    let append = false;
     if (item !== undefined) {
-      if (found.kind !== "gallery")
+      if (found.kind !== "gallery" && found.kind !== "mediaText")
         throw new OperationError(
-          `Only a gallery's pictures are given by their place; ${section} is a ${found.kind} section.`,
+          `Only a gallery or media-and-text section's pictures are given by their place; ${section} is a ${found.kind} section.`,
         );
       const list = content.get(items);
-      if (!Array.isArray(list) || item >= list.length)
+      const length = Array.isArray(list) ? list.length : 0;
+      append = found.kind === "mediaText" && src !== undefined && item === length && item < 3;
+      if (item >= length && !append)
         throw new OperationError(`The ${section} section has no picture ${item + 1}.`);
       if (src === undefined) {
         // The item goes, its caption with it, in every language file that has it.
         content.removeItem(items, item);
-        if (list.length === 1) content.removeAndPrune(items, 0);
+        if (length === 1) content.removeAndPrune(items, 0);
         for (const language of languages) {
           const other = translations.get(language);
           const theirs = other?.get(items);
@@ -578,7 +582,10 @@ const setSectionPicture: Operation<{
     const image: Record<string, YamlValue> = same
       ? { ...(before as Record<string, YamlValue>), alt: text }
       : { src, alt: text };
-    if (content.has(path)) content.set(path, image);
+    if (append) {
+      if (content.has(items)) content.appendItem(items, { image });
+      else put(content, items, [{ image }]);
+    } else if (content.has(path)) content.set(path, image);
     else put(content, path, image);
     // Another language's words for the old picture say nothing of a new one: the main alt stands in.
     if (!same)

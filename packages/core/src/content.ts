@@ -177,7 +177,11 @@ const SECTION_TEXTS: Record<
   string,
   { texts: string[]; items?: string[]; image?: true; fields?: true }
 > = {
-  mediaText: { texts: ["eyebrow", "title", "text", "button", "caption"], image: true },
+  mediaText: {
+    texts: ["eyebrow", "title", "text", "button", "caption"],
+    image: true,
+    items: ["image"],
+  },
   hero: { texts: ["eyebrow", "title", "subtitle", "button", "secondButton"], image: true },
   features: { texts: ["eyebrow", "title", "text"], items: ["title", "text"] },
   records: { texts: ["eyebrow", "title", "text"] },
@@ -857,7 +861,18 @@ function readPage(ctx: ParseContext, node: ParsedNode | null, id: string, ir: Sp
         sectionFields,
       );
     const items = known.find((e) => e.key === "items");
-    if (items && rules.items) section.items = readItems(ctx, items.value, partWhere, rules.items);
+    if (items && rules.items) {
+      section.items = readItems(ctx, items.value, partWhere, rules.items);
+      if (
+        kind === "mediaText" &&
+        (section.items.length > 3 || section.items.some((item) => !item.image))
+      )
+        ctx.error(
+          items.value,
+          "invalid-value",
+          `The items of ${partWhere} are up to three extra pictures, each with an image and its alternative text.`,
+        );
+    }
     const image = known.find((e) => e.key === "image");
     if (image) {
       const read = readImage(ctx, image.value, `the image of ${partWhere}`);
