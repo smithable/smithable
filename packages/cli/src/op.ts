@@ -19,6 +19,7 @@ import {
   PEOPLE_PATH,
   parseOperationArgs,
   parseTheme,
+  resolveLook,
   type SpecIR,
   setCheck,
   storageOf,
@@ -26,6 +27,7 @@ import {
   validateAuth,
   validateContent,
   validateSpec,
+  validateUx,
   verificationBefore,
   YamlEditor,
 } from "@smithable/core";
@@ -54,6 +56,7 @@ import {
   prepareImport,
   refusalText,
 } from "./import.js";
+import type { InkWashColours } from "./ink-wash-raster.js";
 import { type Io, lap, lapFrom } from "./io.js";
 import { SPEC_FILES } from "./managed.js";
 import { currentHashes, placedRealistic, placeStyle, reseedPictures } from "./picture-style.js";
@@ -570,7 +573,20 @@ async function applyAndCheckpoint(
   }
   // A picture style: every file fetched and checked before anything is written, or nothing is.
   const placing = result.effects.find((e) => e.kind === "place-pictures");
-  const placed = placing && (await placeStyle(dir, placing.style, flags.fetch ?? fetch));
+  const recolourRevision = placing?.recolour ? projectRevision(dir) : undefined;
+  let recolour: InkWashColours | undefined;
+  if (placing?.recolour && result.files.ux) {
+    const themes = files.themes ?? [];
+    const ux = validateUx({ path: UX, text: result.files.ux }, after, themes).ux;
+    if (!ux) {
+      io.err("The current theme could not be read for recolouring.\n");
+      return 1;
+    }
+    const { primary, foreground, background } = resolveLook(ux, themes).tokens.light;
+    recolour = { primary, foreground, background };
+  }
+  const placed =
+    placing && (await placeStyle(dir, placing.style, flags.fetch ?? fetch, undefined, recolour));
   if (typeof placed === "string") {
     io.err(`${placed}\n`);
     return 1;
@@ -681,6 +697,10 @@ async function applyAndCheckpoint(
     io.err("The project source changed before Apply could write it. The draft was not written.\n");
     return 1;
   }
+  if (recolourRevision && projectRevision(dir) !== recolourRevision) {
+    io.err("The project changed while the pictures were prepared. Nothing was changed.\n");
+    return 1;
+  }
   // The pictures were planned before their files were fetched: someone may have changed one since.
   if (placed && JSON.stringify(currentHashes(dir)) !== JSON.stringify(placed.planned)) {
     io.err("A picture changed while the style's pictures were fetched. Nothing was changed.\n");
@@ -715,6 +735,7 @@ async function applyAndCheckpoint(
     changeTree(changes);
     if (placed) {
       const reseeded = reseedPictures(dir, placed.swaps);
+      if (placed.asDrawn) io.out(`${placed.asDrawn}\n`);
       io.out(
         `Pictures placed: ${placed.files.length ? placed.files.map((f) => f.path.replace("public/images/", "")).join(", ") : "none needed changing"}.${placed.kept.length ? ` Your own pictures stay: ${placed.kept.join(", ")}.` : ""}${reseeded ? ` Sample records with the new pictures: ${reseeded}.` : ""}\n`,
       );

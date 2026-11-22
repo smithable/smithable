@@ -19,6 +19,8 @@ import type { PictureCredit, PictureEntry } from "@smithable/ai";
 import { badgedByDefault, type PictureKind, YamlEditor } from "@smithable/core";
 import { asProject } from "./as-project.js";
 import { databasePath } from "./database.js";
+import type { InkWashColours } from "./ink-wash-raster.js";
+import { inkWashTreatment } from "./picture-recolour.js";
 import { atLibrary, type Fetch, libraryBase } from "./pictures.js";
 import { readTreeOrNone, treeBytes, treeText } from "./secrets.js";
 
@@ -30,6 +32,7 @@ export interface LibraryStyle {
   id: string;
   generated: boolean;
   words: Record<string, { name: string; line: string }>;
+  washHue?: number;
 }
 
 /** An entry of a library version: today's fields, its style and subject, and its file's hash. */
@@ -60,6 +63,11 @@ export interface PictureRecord {
   /** What the picture is (docs/design/picture-kinds.md §2); a generated one without it looks real. */
   kind?: PictureKind;
   credit?: PictureCredit;
+  /** The library file's hash when the bytes placed may have been recoloured. */
+  source?: string;
+  colours?: InkWashColours;
+  rule?: "ink-wash-b90" | "none";
+  fallback?: "theme" | "picture" | "codec";
 }
 
 export type PictureRecords = Record<string, PictureRecord>;
@@ -251,7 +259,12 @@ export interface StylePlan {
  * the mark) whose bytes still match its record, by its entry's subject. A picture the owner
  * changed, and one with no record, stays.
  */
-export function planStyle(dir: string, version: LibraryVersion, style: string): StylePlan {
+export function planStyle(
+  dir: string,
+  version: LibraryVersion,
+  style: string,
+  tint?: InkWashColours,
+): StylePlan {
   const records = rebuildRecords(dir, version);
   const byId = new Map(version.entries.map((e) => [e.id, e]));
   const plan: StylePlan = { writes: [], kept: [], missing: [] };
@@ -273,7 +286,18 @@ export function planStyle(dir: string, version: LibraryVersion, style: string): 
       plan.missing.push(file);
       continue;
     }
-    if (entry.sha256 === record.sha256) continue;
+    if (tint) {
+      if (
+        record.source === entry.sha256 &&
+        record.colours?.primary === tint.primary &&
+        record.colours.background === tint.background &&
+        record.colours.foreground === tint.foreground &&
+        (record.rule === "ink-wash-b90" ||
+          record.fallback === "theme" ||
+          record.fallback === "picture")
+      )
+        continue;
+    } else if (entry.sha256 === record.sha256) continue;
     plan.writes.push({ file, entry, record: recordOf(version, entry, role ?? "sample") });
   }
   return plan;
@@ -340,6 +364,7 @@ export interface PlacedStyle {
   kept: string[];
   /** Each sample picture replaced: its old bytes and new, for the records seeded with it. */
   swaps: { from: Uint8Array; to: Uint8Array; generated: boolean }[];
+  asDrawn?: string;
 }
 
 /**
@@ -352,29 +377,65 @@ export async function placeStyle(
   style: string,
   fetchFn: Fetch,
   given?: LibraryVersion,
+  recolour?: InkWashColours,
 ): Promise<PlacedStyle | string> {
   const version = given ?? (await libraryVersion(fetchFn));
   if (typeof version === "string") return `No pictures were changed: ${version}.`;
-  if (!version.styles.some((s) => s.id === style))
+  const libraryStyle = version.styles.find((s) => s.id === style);
+  if (!libraryStyle)
     return `The image library has no style "${style}"; it has ${version.styles.map((s) => s.id).join(", ")}.`;
   const linked = linkedRecordPath(dir);
   if (linked)
     return `No pictures were changed: ${linked} is a link or not a plain ${/\.\w+$/.test(linked) ? "file" : "folder"}, so the record would be written outside the project.`;
+  const washHue = libraryStyle.washHue;
+  if (
+    recolour &&
+    (style !== "ink-wash" ||
+      !libraryStyle.generated ||
+      washHue === undefined ||
+      !Number.isFinite(washHue) ||
+      washHue < 0 ||
+      washHue >= 360)
+  )
+    return `No pictures were changed: the ${style} style has no Ink wash tint rule in this library version.`;
+  const tint =
+    recolour && inkWashTreatment(recolour.primary).rule !== "none" ? recolour : undefined;
+  const render = tint ? (await import("./ink-wash-webp.js")).renderInkWashWebp : undefined;
   const planned = currentHashes(dir);
-  const plan = planStyle(dir, version, style);
+  const plan = planStyle(dir, version, style, tint);
   if (plan.missing.length)
     return `The ${style} style has no picture for ${plan.missing.join(", ")}, so it is not offered for this app.`;
   const files: PlacedStyle["files"] = [];
   const swaps: PlacedStyle["swaps"] = [];
   const failed: string[] = [];
   for (const write of plan.writes) {
-    const bytes = await fetchChecked(write.entry, fetchFn);
+    const old = join(dir, "public", "images", write.file);
+    const original =
+      tint && planned[write.file] === write.entry.sha256 ? readTreeOrNone(old) : undefined;
+    let bytes =
+      original && sha256(original) === write.entry.sha256
+        ? original
+        : await fetchChecked(write.entry, fetchFn);
     if (typeof bytes === "string") failed.push(bytes);
     else {
-      files.push({ path: `public/images/${write.file}`, bytes });
-      const old = join(dir, "public", "images", write.file);
-      if (roleOf(write.file) === "sample" && existsSync(old))
-        swaps.push({ from: treeBytes(old), to: bytes, generated: !!write.record.generated });
+      if (tint && render && washHue !== undefined) {
+        const result = await render(Buffer.from(bytes), tint, washHue);
+        write.record.source = write.entry.sha256;
+        write.record.colours = tint;
+        if ("bytes" in result) {
+          bytes = result.bytes;
+          write.record.sha256 = sha256(bytes);
+          write.record.rule = "ink-wash-b90";
+        } else {
+          write.record.rule = "none";
+          write.record.fallback = result.reason;
+        }
+      }
+      if (planned[write.file] !== write.record.sha256) {
+        files.push({ path: `public/images/${write.file}`, bytes });
+        if (roleOf(write.file) === "sample" && existsSync(old))
+          swaps.push({ from: treeBytes(old), to: bytes, generated: !!write.record.generated });
+      }
     }
   }
   if (failed.length) return `No pictures were changed: ${failed.join("; ")}.`;
@@ -396,7 +457,16 @@ export async function placeStyle(
   const hero = plan.writes.find((w) => w.file === "hero.webp");
   const content = hero && heroWords(dir, hero.entry);
   if (content) texts.push({ path: "smithable.content.yml", text: content });
-  return { files, texts, kept: plan.kept, planned, swaps };
+  return {
+    files,
+    texts,
+    kept: plan.kept,
+    planned,
+    swaps,
+    ...(recolour && !tint
+      ? { asDrawn: "The theme is greyscale, so it uses the original drawings." }
+      : {}),
+  };
 }
 
 /** The width and height of a WebP file, from its header (as the app kit's uploads.ts reads it). */
