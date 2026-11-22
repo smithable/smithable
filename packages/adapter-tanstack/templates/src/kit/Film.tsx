@@ -35,18 +35,21 @@ export function Film({
     const v = video.current;
     if (!v || failed) return;
     const less = matchMedia("(prefers-reduced-motion: reduce)");
-    const saving =
-      (navigator as { connection?: { saveData?: boolean } }).connection?.saveData === true;
+    // Data saving, where the browser tells it, heard as it changes, as reduced motion is.
+    const connection = (navigator as { connection?: EventTarget & { saveData?: boolean } })
+      .connection;
     let inView = false;
     const update = () => {
-      if (less.matches || saving) {
+      if (less.matches || connection?.saveData === true) {
         v.pause();
         setPlaying(false);
         return;
       }
       if (inView && !paused && document.visibilityState === "visible") {
         if (!v.getAttribute("src")) v.src = src;
-        v.play().catch(() => setFailed(true));
+        // A play the page itself stopped (paused, scrolled away) is no failure; a blocked or
+        // undecodable one is, and the picture shows.
+        v.play().catch((error: Error) => error.name !== "AbortError" && setFailed(true));
       } else v.pause();
     };
     const seen = new IntersectionObserver(([entry]) => {
@@ -55,13 +58,16 @@ export function Film({
     });
     seen.observe(v);
     less.addEventListener("change", update);
+    connection?.addEventListener?.("change", update);
     document.addEventListener("visibilitychange", update);
     return () => {
       seen.disconnect();
       less.removeEventListener("change", update);
+      connection?.removeEventListener?.("change", update);
       document.removeEventListener("visibilitychange", update);
     };
-  }, [src, paused, failed]);
+    // ready: the video is there only from the render after it.
+  }, [ready, src, paused, failed]);
   if (!ready || failed) return null;
   const film = (
     <video

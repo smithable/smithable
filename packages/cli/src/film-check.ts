@@ -64,17 +64,21 @@ export function readFilm(bytes: Uint8Array): FilmReading {
     return {
       problems: ["Format: it is not an MP4 file; save the film as MP4 with H.264 picture."],
     };
-  if (mdat >= 0 && mdat < moov)
+  if (mdat < 0) problems.push("Format: it has no film data (mdat) after its index.");
+  else if (mdat < moov)
     problems.push(
       "Format: its index (moov) comes after the film's data, so nothing shows until the whole file is fetched; save it again with the index first (often called fast start).",
     );
 
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   const index = top[moov];
+  // Each field is read only when its box holds it: a short box is unreadable, never borrowed from.
+  const holds = (box: Box | undefined, from: number, length: number): box is Box =>
+    box !== undefined && box.start + from + length <= box.end;
   const mvhd = child(bytes, index, "mvhd");
   let seconds: number | undefined;
-  if (mvhd) {
-    const v1 = bytes[mvhd.start] === 1;
+  const v1 = mvhd !== undefined && bytes[mvhd.start] === 1;
+  if (holds(mvhd, 0, v1 ? 32 : 20)) {
     const scale = view.getUint32(mvhd.start + (v1 ? 20 : 12));
     const length = v1
       ? Number(view.getBigUint64(mvhd.start + 24))
@@ -84,33 +88,38 @@ export function readFilm(bytes: Uint8Array): FilmReading {
 
   let width: number | undefined;
   let height: number | undefined;
-  let codec: string | undefined;
+  const codecs: string[] = [];
+  const sizes: [number, number][] = [];
+  let unmeasured = false;
   let sound = false;
   for (const trak of boxes(bytes, index?.start ?? 0, index?.end ?? 0)) {
     if (trak.type !== "trak") continue;
     const mdia = child(bytes, trak, "mdia");
     const hdlr = child(bytes, mdia, "hdlr");
-    const handler = hdlr && hdlr.start + 12 <= hdlr.end ? text(bytes, hdlr.start + 8) : "";
+    const handler = holds(hdlr, 8, 4) ? text(bytes, hdlr.start + 8) : "";
     if (handler === "soun") sound = true;
-    if (handler !== "vide" || codec) continue;
+    if (handler !== "vide") continue;
+    // Every picture track, and every sample description in it, is H.264.
     const stsd = child(bytes, child(bytes, child(bytes, mdia, "minf"), "stbl"), "stsd");
-    codec = stsd && stsd.start + 16 <= stsd.end ? text(bytes, stsd.start + 12) : "";
+    const entries = holds(stsd, 8, 0) ? boxes(bytes, stsd.start + 8, stsd.end) : [];
+    codecs.push(...(entries.length ? entries.map((e) => e.type) : ["an unreadable kind"]));
     const tkhd = child(bytes, trak, "tkhd");
-    if (tkhd) {
-      // The matrix, then the width and height after it (16.16 each).
-      const at = tkhd.start + (bytes[tkhd.start] === 1 ? 52 : 40);
-      if (at + 44 <= tkhd.end) {
-        const w = view.getUint32(at + 36) / 65536;
-        const h = view.getUint32(at + 40) / 65536;
-        // A turned film (a = 0 in its matrix) is shown with its sides swapped.
-        const turned = view.getInt32(at) === 0;
-        [width, height] = turned ? [h, w] : [w, h];
-      }
+    // The matrix, then the width and height after it (16.16 each).
+    const at = tkhd ? (bytes[tkhd.start] === 1 ? 52 : 40) : 0;
+    if (!holds(tkhd, at, 44)) {
+      unmeasured = true;
+      continue;
     }
+    const w = view.getUint32(tkhd.start + at + 36) / 65536;
+    const h = view.getUint32(tkhd.start + at + 40) / 65536;
+    // A turned film (a = 0 in its matrix) is shown with its sides swapped.
+    const shown: [number, number] = view.getInt32(tkhd.start + at) === 0 ? [h, w] : [w, h];
+    sizes.push(shown);
+    [width, height] = sizes[0] as [number, number];
   }
 
-  if (!codec) problems.push("Format: it has no picture track.");
-  else if (codec !== "avc1" && codec !== "avc3")
+  if (!codecs.length) problems.push("Format: it has no picture track.");
+  for (const codec of new Set(codecs.filter((c) => c !== "avc1" && c !== "avc3")))
     problems.push(
       `Format: its picture is ${codec.trim()}, not H.264; save it again with H.264 (AVC) picture.`,
     );
@@ -123,14 +132,14 @@ export function readFilm(bytes: Uint8Array): FilmReading {
     problems.push(
       `Length: it runs ${seconds.toFixed(1)} seconds; a film runs ${FILM_SECONDS[0]} to ${FILM_SECONDS[1]} seconds.`,
     );
-  if (width !== undefined && height !== undefined) {
-    const long = Math.max(width, height);
-    const short = Math.min(width, height);
-    if (long > FILM_LONG_SIDE || short > FILM_SHORT_SIDE)
-      problems.push(
-        `Picture size: it is shown ${Math.round(width)}×${Math.round(height)}; at most ${FILM_LONG_SIDE} on the long side and ${FILM_SHORT_SIDE} on the short.`,
-      );
-  }
+  if (unmeasured) problems.push("Picture size: its shown size could not be read.");
+  const over = sizes.find(
+    ([w, h]) => Math.max(w, h) > FILM_LONG_SIDE || Math.min(w, h) > FILM_SHORT_SIDE,
+  );
+  if (over)
+    problems.push(
+      `Picture size: it is shown ${Math.round(over[0])}×${Math.round(over[1])}; at most ${FILM_LONG_SIDE} on the long side and ${FILM_SHORT_SIDE} on the short.`,
+    );
   problems.push(...sizeProblems(bytes.length, seconds));
   return { problems, seconds, width, height };
 }
