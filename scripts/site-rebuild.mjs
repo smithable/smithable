@@ -1,37 +1,45 @@
-// A site rebuilt as a landing page, to see how near the landing sections come to a real site
-// (no model). Step 1: the public page is read once as a visitor (robots.txt first), its theme
-// taken with `smithable theme --from`, its blocks listed top to bottom (size, background,
-// heading, pictures or video, columns), and each block mapped to the nearest landing section and
-// look through operations on a fresh starter, with stand-in text and the starter's own library
-// pictures: nothing is copied from the site. Step 2: both pages scrolled through (a site that
-// reveals on scroll shows its blocks), each block and its section shot at desk and phone width,
-// paired in one sheet per section with a rough score (boxes and colour), and what could not be
-// mapped listed per section.
-// Run after `pnpm build`: `node scripts/site-rebuild.mjs <url> --out <dir> [--copy <dir>]
-// [--starter booking] [--port 8405]`. The script names no site; the results (sheets, report.md,
-// report.json) go where --out says, outside the public repository. Not part of `check`.
+// How near the app `smithable new <dir> --from <url>` made comes to the site it read, and how near
+// the kit's other looks and kinds would come. Step 1: the public page is read once as a visitor
+// (robots.txt first) and its blocks listed top to bottom; the app's landing sections are paired
+// with them in order (same kind first). Step 2: each block and its section measured at desk and
+// phone width (height, background, columns, words, and where its headings, pictures and buttons
+// sit) and scored 0-100. Step 3: per section, every other value of its kind's looks and its
+// nearest kinds (texts carried over), each made through operations, measured and undone; the best
+// is kept when it gains 3 points, for at most three rounds. Step 4: one sheet per pair. Step 5:
+// report.md lists what new --from got wrong or left out (candidate changes to it, not made here)
+// and what no candidate reached (the kit's gaps), with the tries and the run's model and spend.
+// Run after `pnpm build`: `node scripts/site-rebuild.mjs <url> --app <dir> --out <dir>
+// [--new-log <file>] [--copy <dir>] [--port 8405]`. The script names no site; the app, which keeps
+// the tries that gained, and the results stay where the arguments say, outside the public
+// repository. Not part of `check`.
 
 import { lookup } from "node:dns/promises";
-import { copyFileSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { createRequire } from "node:module";
+import { homedir } from "node:os";
 import { join } from "node:path";
 import { parseArgs } from "node:util";
 import { chromium } from "playwright";
 import { allowedByRobots, get, isPrivate } from "../packages/cli/dist/from-page.js";
-import { cli, newApp, op, run, serveDev } from "./dev-app.mjs";
+import { SECTION_LOOKS } from "../packages/core/dist/section-looks.js";
+import { cli, op, run, serveDev } from "./dev-app.mjs";
+
+const YAML = createRequire(new URL("../packages/core/package.json", import.meta.url))("yaml");
 
 const { values: opts, positionals } = parseArgs({
   allowPositionals: true,
   options: {
     out: { type: "string" },
     copy: { type: "string" },
-    starter: { type: "string", default: "booking" },
+    app: { type: "string" },
+    "new-log": { type: "string" },
     port: { type: "string", default: process.env.SITE_REBUILD_PORT ?? "8405" },
   },
 });
 const address = positionals[0];
-if (!address || !opts.out) {
+if (!address || !opts.out || !opts.app) {
   console.error(
-    "Usage: node scripts/site-rebuild.mjs <url> --out <dir> [--copy <dir>] [--starter x]",
+    "Usage: node scripts/site-rebuild.mjs <url> --app <dir> --out <dir> [--new-log f] [--copy d]",
   );
   process.exit(2);
 }
@@ -303,7 +311,7 @@ function plan(read) {
   });
 }
 
-// ---- Step 1: read the source, then build its nearest landing page.
+// ---- Step 1: read the source; read the app `new --from` made (its home page's landing sections).
 const browser = await chromium.launch();
 const context = await browser.newContext({ userAgent: AGENT, viewport: DESK });
 const source = await context.newPage();
@@ -312,287 +320,409 @@ await source.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {})
 await scrollThrough(source);
 const read = await source.evaluate(BLOCKS);
 const mapped = plan(read);
-const sections = mapped.filter((m) => m.kind !== "header");
+const site = mapped.filter((m) => m.kind !== "header");
 const header = mapped.find((m) => m.kind === "header");
-const headerOver =
-  header &&
-  read.blocks[header.block].fixed &&
-  read.blocks[1] &&
-  read.blocks[1].top < read.blocks[0].height;
 
-const dir = newApp(opts.starter, "rebuild");
-const log = [];
-const tryOp = (...args) => {
+const dir = opts.app;
+const yml = (file) => {
+  const path = join(dir, file);
+  return existsSync(path) ? (YAML.parse(readFileSync(path, "utf8")) ?? {}) : {};
+};
+/** The landing page's sections in order, each with its kind, looks and texts. */
+function ourSections() {
+  const spec = yml("smithable.yml");
+  const ux = yml("smithable.ux.yml");
+  const content = yml("smithable.content.yml");
+  const pages = Object.entries(spec.pages ?? {}).filter(([, p]) => p?.landing);
+  const [page, body] = pages.find(([n, p]) => n === "home" || p.route === "/") ??
+    pages[0] ?? [null, null];
+  if (!page) return { page: null, list: [] };
+  const list = Object.entries(body.landing).map(([name, value]) => {
+    const base = name.replace(/\d+$/, "");
+    const kind = value?.records
+      ? "records"
+      : value?.text === true
+        ? "text"
+        : value?.kind
+          ? value.kind
+          : value?.custom
+            ? "custom"
+            : base === "footer" || base === "hero" || SECTION_LOOKS[base]
+              ? base
+              : "custom";
+    const looks = ux.pages?.[page]?.sections?.[name] ?? {};
+    const texts = content.pages?.[page]?.[name] ?? {};
+    return { name, kind, looks, texts, records: value?.records };
+  });
+  return { page, list };
+}
+const before = ourSections();
+if (!before.page) throw new Error(`${dir} has no landing page`);
+const page = before.page;
+
+/** Site blocks paired with our sections in order: same kind first; hero and footer only to their own. */
+function pair(a, b) {
+  const fixed = (k) => k === "hero" || k === "footer";
+  const w = (x, y) =>
+    x.kind === y.kind ? 3 : fixed(x.kind) || fixed(y.kind) ? Number.NEGATIVE_INFINITY : 1;
+  const t = Array.from({ length: a.length + 1 }, () => Array(b.length + 1).fill(0));
+  for (let i = a.length - 1; i >= 0; i--)
+    for (let j = b.length - 1; j >= 0; j--)
+      t[i][j] = Math.max(t[i + 1][j], t[i][j + 1], w(a[i], b[j]) + t[i + 1][j + 1]);
+  const out = [];
+  let i = 0;
+  let j = 0;
+  while (i < a.length && j < b.length) {
+    if (t[i][j] === w(a[i], b[j]) + t[i + 1][j + 1]) out.push([i++, j++]);
+    else if (t[i][j] === t[i + 1][j]) i++;
+    else j++;
+  }
+  return out;
+}
+const pairs = pair(site, before.list).map(([i, j]) => ({ site: site[i], ours: before.list[j] }));
+const sel = (s) => (s.kind === "footer" ? '[data-part="footer"]' : `[data-section="${s.name}"]`);
+
+// ---- Step 2: measure. In the page: an element's boxes (headings, pictures, filled buttons) by
+// their cell in a 3 x 3 grid over it, its columns, words, height and background.
+const MEASURE = (selector) => {
+  const el = document.querySelector(selector);
+  if (!el) return null;
+  const rect = (e) => e.getBoundingClientRect();
+  const r = rect(el);
+  if (r.height < 8) return null;
+  const shown = (e) => {
+    const s = getComputedStyle(e);
+    const b = rect(e);
+    return s.display !== "none" && s.visibility !== "hidden" && b.width > 0 && b.height > 0;
+  };
+  let bg = "rgb(255, 255, 255)";
+  for (let e = el; e; e = e.parentElement) {
+    const c = getComputedStyle(e).backgroundColor;
+    if (c && c !== "transparent" && !/rgba\(.*, 0\)$/.test(c)) {
+      bg = c;
+      break;
+    }
+  }
+  const area = r.width * r.height;
+  const pictures = [...el.querySelectorAll("img,picture,svg,video,[style*='background-image']")]
+    .filter(shown)
+    .filter((p) => !p.closest("picture") || p.tagName === "PICTURE")
+    .map(rect)
+    .filter((p) => p.width * p.height > area * 0.03 && p.width > 80);
+  const headings = [...el.querySelectorAll("h1,h2,h3,h4")].filter(shown).map(rect);
+  const buttons = [...el.querySelectorAll("a,button")]
+    .filter((b) => {
+      const c = getComputedStyle(b).backgroundColor;
+      return shown(b) && c !== "transparent" && !/rgba\(.*, 0\)$/.test(c);
+    })
+    .map(rect);
+  let columns = 1;
+  for (const e of [el, ...el.querySelectorAll("*")].slice(0, 1500)) {
+    const row = [...e.children].filter(
+      (c) => shown(c) && rect(c).width >= 100 && rect(c).height >= 60,
+    );
+    if (row.length < 2) continue;
+    const t = rect(row[0]).top;
+    columns = Math.max(
+      columns,
+      Math.min(row.filter((c) => Math.abs(rect(c).top - t) < 12).length, 6),
+    );
+  }
+  const cell = (b) =>
+    `${Math.min(2, Math.max(0, Math.floor((3 * (b.left + b.width / 2 - r.left)) / r.width)))}${Math.min(2, Math.max(0, Math.floor((3 * (b.top + b.height / 2 - r.top)) / r.height)))}`;
+  const text = el.innerText.replace(/\s+/g, " ").trim();
+  return {
+    height: Math.round(r.height),
+    bg,
+    words: text ? text.split(" ").length : 0,
+    columns,
+    pics: pictures.length,
+    boxes: {
+      h: headings.slice(0, 8).map(cell),
+      p: pictures.slice(0, 8).map(cell),
+      b: buttons.slice(0, 6).map(cell),
+    },
+  };
+};
+async function measure(pg, selector, viewport) {
+  if (pg.viewportSize().width !== viewport.width) await pg.setViewportSize(viewport);
+  const loc = pg.locator(selector).first();
+  await loc.scrollIntoViewIfNeeded({ timeout: 3000 }).catch(() => {});
+  await pg.waitForTimeout(250);
+  return pg.evaluate(MEASURE, selector);
+}
+
+const ratio = (a, b) => (a === 0 && b === 0 ? 1 : Math.min(a, b) / Math.max(a, b));
+/** How alike two lists of cells are: as many boxes, in the same cells. */
+function boxesLike(a, b) {
+  if (!a.length && !b.length) return 1;
+  const count = (xs) => xs.reduce((m, c) => m.set(c, (m.get(c) ?? 0) + 1), new Map());
+  const ca = count(a);
+  const cb = count(b);
+  let same = 0;
+  for (const [c, n] of ca) same += Math.min(n, cb.get(c) ?? 0);
+  return 0.5 * ratio(a.length, b.length) + (0.5 * same) / Math.max(a.length, b.length);
+}
+const WEIGHTS = {
+  height: 0.15,
+  colour: 0.15,
+  pictures: 0.1,
+  columns: 0.1,
+  words: 0.1,
+  headings: 0.15,
+  pictureBoxes: 0.15,
+  buttons: 0.1,
+};
+/** A likeness, 0–100, of one width's measures. */
+function like(a, b) {
+  if (!a || !b) return 0;
+  const parts = {
+    height: ratio(a.height, b.height),
+    colour: 1 - Math.min(1, distance(a.bg, b.bg) * 2),
+    pictures: ratio(Math.min(a.pics, 8), Math.min(b.pics, 8)),
+    columns: ratio(a.columns, b.columns),
+    words: ratio(Math.min(a.words, 400), Math.min(b.words, 400)),
+    headings: boxesLike(a.boxes.h, b.boxes.h),
+    pictureBoxes: boxesLike(a.boxes.p, b.boxes.p),
+    buttons: boxesLike(a.boxes.b, b.boxes.b),
+  };
+  return 100 * Object.entries(WEIGHTS).reduce((s, [k, w]) => s + w * parts[k], 0);
+}
+/** The score: desk counts 60, phone 40. */
+const score = (src, ours) =>
+  Math.round(0.6 * like(src.desk, ours.desk) + 0.4 * like(src.phone, ours.phone));
+
+const sourceMeasure = {};
+for (const [name, viewport] of [
+  ["desk", DESK],
+  ["phone", PHONE],
+]) {
+  await source.setViewportSize(viewport);
+  await scrollThrough(source);
+  for (const p of pairs) {
+    sourceMeasure[p.site.block] ??= {};
+    sourceMeasure[p.site.block][name] = await measure(
+      source,
+      `[data-rebuild="${p.site.block}"]`,
+      viewport,
+    );
+  }
+}
+
+const stop = await serveDev(dir, Number(opts.port));
+const ours = await context.newPage();
+const base = `http://localhost:${opts.port}/`;
+async function reload() {
+  await ours.setViewportSize(DESK);
+  await ours.goto(base);
+  await ours.waitForLoadState("networkidle").catch(() => {});
+}
+async function measureOurs(s) {
+  return {
+    desk: await measure(ours, sel(s), DESK),
+    phone: await measure(ours, sel(s), PHONE),
+  };
+}
+await reload();
+await scrollThrough(ours);
+for (const p of pairs) {
+  p.first = await measureOurs(p.ours);
+  p.before = score(sourceMeasure[p.site.block], p.first);
+  p.best = p.before;
+  p.kept = [];
+}
+
+// ---- Step 3: the loop. For each paired section, every other value of its kind's looks
+// (layout, columns, band, picture side, hero height) and its two or three nearest kinds (texts
+// carried over), each through operations, measured, then undone; the best kept when it gains 3.
+const LOOK_KEYS = ["layout", "columns", "band", "image", "height"];
+const NEAR = {
+  text: ["mediaText", "callToAction"],
+  mediaText: ["text", "features"],
+  callToAction: ["text", "mediaText"],
+  features: ["text", "mediaText", "gallery"],
+  gallery: ["features", "mediaText"],
+  testimonials: ["features"],
+  faq: ["text"],
+  pricing: ["features"],
+  contact: ["callToAction"],
+};
+const CARRY = new Set([
+  "text",
+  "mediaText",
+  "callToAction",
+  "features",
+  "gallery",
+  "faq",
+  "pricing",
+  "testimonials",
+  "contact",
+]);
+const opLog = [];
+const tries = [];
+function runOp(args) {
   try {
     op(dir, ...args);
-    log.push(`ok   ${args.join(" ")}`);
+    opLog.push(`ok   ${args.join(" ")}`);
     return true;
   } catch (error) {
-    log.push(
+    opLog.push(
       `no   ${args.join(" ")}: ${String(error.message).split("\n").filter(Boolean).slice(1, 3).join(" ")}`,
     );
     return false;
   }
-};
-try {
-  run(["node", cli, "theme", "--from", url.href, "--name", "source", "--use", "--yes"], dir);
-  log.push("ok   theme --from (used)");
-} catch (error) {
-  log.push(`no   theme --from: ${String(error.message).split("\n").slice(1, 3).join(" ")}`);
 }
-const spec = readFileSync(join(dir, "smithable.yml"), "utf8");
-// The home page's landing sections: the lines one level under its "landing:", up to the next key.
-const lines = spec
-  .slice(spec.indexOf("\n    landing:") + 1)
-  .split("\n")
-  .slice(1);
-const existing = [];
-for (const line of lines) {
-  if (/^ {0,5}\S/.test(line)) break;
-  const key = line.match(/^ {6}([A-Za-z]\w*):/);
-  if (key) existing.push(key[1]);
+function undo(n) {
+  for (let i = 0; i < n; i++) run(["node", cli, "undo", "--yes", "--dir", dir], dir);
 }
-const recordsModel = (spec.match(/records: (\w+)/) ?? [])[1];
-const recordsSections = existing.filter((s) =>
-  new RegExp(`^ {6}${s}: \\{ ?records:`, "m").test(spec),
-);
-// A planned section takes the starter's own of its kind when there is one (its pictures and items
-// kept), first come first served; the starter's others go.
-const claimed = new Set();
-for (const m of sections) {
-  if (m.kind === "hero" || m.kind === "footer") continue;
-  const own =
-    m.kind === "records"
-      ? recordsSections.find((s) => !claimed.has(s))
-      : existing.find((s) => s === m.kind && !claimed.has(s));
-  if (own) {
-    claimed.add(own);
-    m.section = own;
-    m.reused = true;
+/** The candidates for a section: each a label, its operations and the section's name after. */
+function candidates(s) {
+  const out = [];
+  const table = SECTION_LOOKS[s.kind] ?? {};
+  for (const key of LOOK_KEYS) {
+    const values = table[key];
+    if (!Array.isArray(values)) continue;
+    const now = String(s.looks[key] ?? values[0]);
+    for (const v of values)
+      if (String(v) !== now)
+        out.push({
+          label: `${key} ${v}`,
+          ops: [["setSectionLook", page, s.name, key, String(v)]],
+          name: s.name,
+          kind: s.kind,
+        });
   }
-}
-for (const s of existing)
-  if (s !== "hero" && s !== "footer" && !claimed.has(s)) tryOp("removeSection", "home", s);
-const width = read.contentWidth >= 1500 ? "full" : read.contentWidth > 1216 ? "wide" : "contained";
-tryOp("setLandingWidth", "home", width);
-if (header)
-  tryOp(
-    "setSectionLook",
-    "home",
-    "header",
-    "position",
-    read.blocks[header.block].fixed ? "sticky" : "scrolling",
-  );
-// Library pictures for the hero and the sections with one: the starter's, else a library style's.
-const images = join(dir, "public/images");
-const listPictures = () => {
-  try {
-    return readdirSync(images, { recursive: true })
-      .filter((f) => /\.(webp|jpe?g|png)$/.test(f) && !/logo/.test(f))
-      .sort();
-  } catch {
-    return [];
-  }
-};
-if (listPictures().length === 0) tryOp("setPictureStyle", "photographs");
-const pictures = listPictures();
-const STAND_IN = {
-  title: "A heading of about this length",
-  text: "A sentence or two of stand-in text where the site says what this part is about.",
-};
-const ITEM = {
-  features: (i) => ({ title: `Point ${i + 1}`, text: "A short line of stand-in text." }),
-  faq: (i) => ({
-    question: `A question a visitor asks, number ${i + 1}?`,
-    answer: "A plain answer in a sentence.",
-  }),
-  testimonials: (i) => ({
-    quote: "A sentence a client said, in stand-in words.",
-    name: `Client ${i + 1}`,
-    role: "Homeowner",
-  }),
-  pricing: (i) => ({
-    name: `Plan ${i + 1}`,
-    price: `${(i + 1) * 100}`,
-    period: "job",
-    text: "What is included.",
-    button: "Ask",
-  }),
-};
-for (const m of sections) {
-  if (m.kind === "hero") {
-    for (const [k, v] of Object.entries(m.looks)) tryOp("setSectionLook", "home", "hero", k, v);
-    tryOp("setText", STAND_IN.title, "pages", "home", "hero", "title");
-    tryOp("setText", STAND_IN.text, "pages", "home", "hero", "subtitle");
-    continue;
-  }
-  if (m.kind === "footer") continue;
-  let added = m.reused;
-  if (added) log.push(`ok   kept the starter's ${m.section} as ${m.kind}`);
-  else if (m.kind === "records")
-    added = recordsModel && tryOp("addSection", "home", m.section, "--records", recordsModel);
-  else if (m.kind === "text") added = tryOp("addSection", "home", m.section, "--text", "true");
-  else if (m.section === m.kind) added = tryOp("addSection", "home", m.section);
-  else added = tryOp("addSection", "home", m.section, "--kind", m.kind);
-  if (!added) {
-    m.gaps.push(`no ${m.kind} section could be added`);
-    continue;
-  }
-  m.added = true;
-  for (const [k, v] of Object.entries(m.looks))
-    if (!tryOp("setSectionLook", "home", m.section, k, v)) m.gaps.push(`look ${k} ${v} refused`);
-  if (ITEM[m.kind] && !m.reused)
-    tryOp(
-      "setItems",
-      "home",
-      m.section,
-      "--items",
-      JSON.stringify(
-        Array.from({ length: Math.min(Math.max(m.items, 2), 6) }, (_, i) => ITEM[m.kind](i)),
-      ),
-    );
-  // A records block with pictures on the site: its model gets a pictures field (cards and the grid
-  // show the first as the cover), and a kept section loses the starter's own title and text.
-  if (m.kind === "records") {
-    const model =
-      (spec.match(new RegExp(`^ {6}${m.section}: \\{ ?records: (\\w+)`, "m")) ?? [])[1] ??
-      recordsModel;
-    const block = spec.match(new RegExp(`^  ${model}:\\n((?: {4,}.*\\n)*)`, "m"))?.[1] ?? "";
-    if (m.pictures >= 2 && model && !/: (picture|pictures)\b/.test(block))
-      if (!tryOp("addField", model, "photos", "pictures"))
-        m.gaps.push("no pictures field could be added");
-    if (m.reused) {
-      tryOp("setText", STAND_IN.title, "pages", "home", m.section, "title");
-      tryOp("setText", STAND_IN.text, "pages", "home", m.section, "text");
-      tryOp("setText", "", "pages", "home", m.section, "eyebrow");
+  if (CARRY.has(s.kind))
+    for (const k of NEAR[s.kind] ?? []) {
+      const names = new Set(ourSections().list.map((x) => x.name));
+      let name = k;
+      for (let i = 2; names.has(name); i++) name = `${k}${i}`;
+      const add = ["addSection", page, name];
+      if (k === "text") add.push("--text", "true");
+      else if (name !== k) add.push("--kind", k);
+      const ops = [add];
+      for (const field of ["title", "text", "eyebrow"])
+        if (typeof s.texts[field] === "string" && s.texts[field])
+          ops.push(["setText", s.texts[field], "pages", page, name, field]);
+      ops.push(["moveSection", page, name, "--before", s.name], ["removeSection", page, s.name]);
+      out.push({ label: `kind ${k}`, ops, name, kind: k });
     }
-  }
-  if (m.kind !== "records" && !m.reused) {
-    tryOp("setText", STAND_IN.title, "pages", "home", m.section, "title");
-    tryOp("setText", STAND_IN.text, "pages", "home", m.section, "text");
-  }
-  if (m.kind === "mediaText" && pictures.length) {
-    const picture = pictures[sections.indexOf(m) % pictures.length];
-    tryOp("setText", `images/${picture}`, "pages", "home", m.section, "image", "src");
-    tryOp("setText", "A stand-in picture", "pages", "home", m.section, "image", "alt");
-  }
+  return out;
 }
-// In the site's order: each section in turn moved to just above the footer.
-for (const m of sections)
-  if (m.added && m.kind !== "hero" && m.kind !== "footer")
-    tryOp("moveSection", "home", m.section, "--before", "footer");
-if (headerOver) {
-  const hero = sections.find((m) => m.kind === "hero");
-  if (
-    !["cover", "photo"].includes(hero?.looks.layout) ||
-    !tryOp("setSectionLook", "home", "header", "over", "hero")
-  )
-    header.gaps.push("header over the hero");
-}
-const extraFonts = read.fonts.filter((f, i, all) => all.indexOf(f) === i).slice(1);
-writeFileSync(join(opts.out, "operations.log"), `${log.join("\n")}\n`);
-
-// ---- Step 2: both pages through, each block beside its section at desk and phone width.
-const stop = await serveDev(dir, Number(opts.port));
-const ours = await context.newPage();
-await ours.goto(`http://localhost:${opts.port}/`);
-await ours.waitForLoadState("networkidle");
-await scrollThrough(ours);
-if (process.env.REBUILD_DEBUG)
-  console.log(
-    "our sections:",
-    await ours.evaluate(() =>
-      [...document.querySelectorAll("[data-section]")]
-        .map((e) => `${e.tagName}:${e.getAttribute("data-section")}`)
-        .join(" "),
-    ),
-  );
-
-/** Shoots each block of a page at the current width; ours by section name. */
-async function shots(page, selectors, viewport) {
-  await page.setViewportSize(viewport);
-  await scrollThrough(page);
-  const result = [];
-  for (const sel of selectors) {
-    const box =
-      sel &&
-      (await page
-        .locator(sel)
-        .first()
-        .boundingBox()
-        .catch(() => null));
-    if (!box || box.height < 8) {
-      result.push(null);
-      continue;
-    }
-    const y = box.y + (await page.evaluate(() => scrollY));
-    const clip = { x: 0, y, width: viewport.width, height: Math.min(box.height, 2400) };
-    const look = await page.evaluate(
-      ({ sel }) => {
-        const el = document.querySelector(sel);
-        let bg = "rgb(255, 255, 255)";
-        for (let e = el; e; e = e.parentElement) {
-          const c = getComputedStyle(e).backgroundColor;
-          if (c && c !== "transparent" && !/rgba\(.*, 0\)$/.test(c)) {
-            bg = c;
-            break;
-          }
+const MAX_ROUNDS = 3;
+let open = pairs.filter((p) => p.ours.kind !== "footer" && p.ours.kind !== "custom");
+for (let round = 1; round <= MAX_ROUNDS && open.length; round++) {
+  const gained = [];
+  for (const p of open) {
+    const current = ourSections().list.find((x) => x.name === p.ours.name);
+    if (!current) continue;
+    let best = null;
+    for (const c of candidates(current)) {
+      if (existsSync(join(homedir(), "repos/stop"))) throw new Error("stop file: halting the loop");
+      let done = 0;
+      let ok = true;
+      for (const args of c.ops) {
+        if (!runOp(args)) {
+          ok = false;
+          break;
         }
-        const pics = [...el.querySelectorAll("img,picture,video")].filter(
-          (p) => p.getBoundingClientRect().width > 80,
-        ).length;
-        return { bg, pics };
-      },
-      { sel },
-    );
-    const png = await page.screenshot({ fullPage: true, clip });
-    result.push({ png, height: box.height, ...look });
+        done++;
+      }
+      let s = null;
+      if (ok) {
+        await ours.waitForTimeout(600);
+        await reload();
+        s = score(sourceMeasure[p.site.block], await measureOurs({ name: c.name, kind: c.kind }));
+      }
+      undo(done);
+      tries.push({
+        round,
+        section: p.ours.name,
+        try: c.label,
+        score: ok ? s : "refused",
+        from: p.best,
+      });
+      if (ok && s >= p.best + 3 && (!best || s > best.score)) best = { ...c, score: s };
+    }
+    if (best) {
+      for (const args of best.ops)
+        if (!runOp(args))
+          throw new Error(`could not make the kept change again: ${args.join(" ")}`);
+      tries.push({
+        round,
+        section: p.ours.name,
+        try: best.label,
+        score: best.score,
+        from: p.best,
+        kept: true,
+      });
+      p.kept.push(best.label);
+      p.best = best.score;
+      p.ours = { ...p.ours, name: best.name, kind: best.kind };
+      gained.push(p);
+    }
   }
-  return result;
+  open = gained;
 }
-const sourceSel = sections.map((m) => `[data-rebuild="${m.block}"]`);
-const ourSel = sections.map((m) =>
-  m.kind === "footer"
-    ? '[data-part="footer"]'
-    : m.kind === "hero" || m.added
-      ? `[data-section="${m.section}"]`
-      : null,
-);
-const pairs = {
-  desk: [await shots(source, sourceSel, DESK), await shots(ours, ourSel, DESK)],
-  phone: [await shots(source, sourceSel, PHONE), await shots(ours, ourSel, PHONE)],
-};
+await reload();
+await scrollThrough(ours);
+for (const p of pairs) {
+  p.ours = { ...p.ours, ...ourSections().list.find((x) => x.name === p.ours.name) };
+  p.last = await measureOurs(p.ours);
+  p.after = score(sourceMeasure[p.site.block], p.last);
+}
 
-/** A rough likeness, 0–100: height, pictures and background colour at desk width. */
-function score(a, b, m) {
-  if (!a || !b) return 0;
-  const height = Math.min(a.height, b.height) / Math.max(a.height, b.height);
-  const pics = Math.min(a.pics, b.pics, 6) / Math.max(Math.min(Math.max(a.pics, b.pics), 6), 1);
-  const colour = 1 - Math.min(1, distance(a.bg, b.bg) * 2);
-  const missing = m.gaps.length ? 0.9 : 1;
-  return Math.round(
-    100 * missing * (0.35 * height + 0.25 * (a.pics || b.pics ? pics : 1) + 0.4 * colour),
-  );
+// ---- Step 4: the sheets. Per pair: the site, what new --from made, and after the tries.
+async function shot(pg, selector, viewport) {
+  await pg.setViewportSize(viewport);
+  const box = await pg
+    .locator(selector)
+    .first()
+    .boundingBox()
+    .catch(() => null);
+  if (!box || box.height < 8) return null;
+  const y = box.y + (await pg.evaluate(() => scrollY));
+  return pg.screenshot({
+    fullPage: true,
+    clip: { x: 0, y, width: viewport.width, height: Math.min(box.height, 2400) },
+  });
 }
+const shots = { site: {}, after: {} };
+for (const [w, viewport] of [
+  ["desk", DESK],
+  ["phone", PHONE],
+]) {
+  await source.setViewportSize(viewport);
+  await scrollThrough(source);
+  await ours.setViewportSize(viewport);
+  await scrollThrough(ours);
+  for (const p of pairs) {
+    shots.site[w] ??= [];
+    shots.after[w] ??= [];
+    shots.site[w].push(await shot(source, `[data-rebuild="${p.site.block}"]`, viewport));
+    shots.after[w].push(await shot(ours, sel(p.ours), viewport));
+  }
+}
+stop();
+
 const sheet = await context.newPage();
 await sheet.setViewportSize({ width: 1600, height: 900 });
-const img = (shot) =>
-  shot
-    ? `<img src="data:image/png;base64,${shot.png.toString("base64")}">`
+const img = (png) =>
+  png
+    ? `<img src="data:image/png;base64,${png.toString("base64")}">`
     : `<div class="none">not shown</div>`;
 const rows = [];
-for (const [i, m] of sections.entries()) {
-  const [sd, od] = [pairs.desk[0][i], pairs.desk[1][i]];
-  const [sp, ph] = [pairs.phone[0][i], pairs.phone[1][i]];
-  const s = score(sd, od, m);
-  const file = `${String(i + 1).padStart(2, "0")}-${m.section}.jpg`;
+for (const [i, p] of pairs.entries()) {
+  const file = `${String(i + 1).padStart(2, "0")}-${p.ours.name}.jpg`;
   rows.push({
     n: i + 1,
-    section: m.section,
-    kind: m.kind,
-    looks: m.looks,
-    gaps: m.gaps,
-    score: s,
+    block: p.site.block,
+    siteKind: p.site.kind,
+    section: p.ours.name,
+    kind: p.ours.kind,
+    before: p.before,
+    after: p.after,
+    kept: p.kept,
     file,
   });
   await sheet.setContent(`<!doctype html><style>
@@ -604,54 +734,112 @@ for (const [i, m] of sections.entries()) {
     img{width:100%;display:block;border:1px solid #d4d4d8} .phone img{width:390px}
     .none{padding:40px;border:1px dashed #a1a1aa;color:#71717a;text-align:center}
   </style>
-  <h1>${i + 1}. ${m.section} (${m.kind}) · score ${s}</h1>
-  <p>${
-    Object.entries(m.looks)
-      .map(([k, v]) => `${k} ${v}`)
-      .join(", ") || "no look set"
-  }${m.gaps.length ? ` · not mapped: ${m.gaps.join(", ")}` : ""}</p>
-  <div class="row"><div><h2>Site, desk</h2>${img(sd)}</div><div><h2>Rebuilt, desk</h2>${img(od)}</div></div>
-  <div class="phone"><div><h2>Site, phone</h2>${img(sp)}</div><div><h2>Rebuilt, phone</h2>${img(ph)}</div></div>`);
+  <h1>${i + 1}. site block ${p.site.block} (${p.site.kind}) · our ${p.ours.name} (${p.ours.kind}) · score ${p.before} → ${p.after}</h1>
+  <p>${p.kept.length ? `kept: ${p.kept.join(", ")}` : "no try gained 3 points"}</p>
+  <div class="row"><div><h2>Site, desk</h2>${img(shots.site.desk[i])}</div><div><h2>Rebuilt, desk</h2>${img(shots.after.desk[i])}</div></div>
+  <div class="phone"><div><h2>Site, phone</h2>${img(shots.site.phone[i])}</div><div><h2>Rebuilt, phone</h2>${img(shots.after.phone[i])}</div></div>`);
   await sheet.waitForLoadState("load");
   await sheet.screenshot({ path: join(opts.out, file), fullPage: true, type: "jpeg", quality: 82 });
 }
-stop();
 await browser.close();
 
-// ---- The report: per section its score and what could not be mapped; the page-wide gaps.
-const pageGaps = [];
-if (extraFonts.length) pageGaps.push(`${extraFonts.length} more font face(s) than the theme's one`);
-if (header?.gaps.length) pageGaps.push(...header.gaps);
+// ---- Step 5: the report. (a) what new --from got wrong or left out; (b) what no try reached.
+const paired = new Set(pairs.map((p) => p.site.block));
+const pairedOurs = new Set(pairs.map((p) => p.ours.name));
+const fromList = [];
+for (const m of site)
+  if (!paired.has(m.block))
+    fromList.push(
+      `site block ${m.block} (${m.kind}, ${read.blocks[m.block].height} px high${m.pictures ? `, ${m.pictures} picture(s)` : ""}) has no section`,
+    );
+for (const s of before.list)
+  if (!pairedOurs.has(s.name))
+    fromList.push(`our ${s.name} (${s.kind}) has no block on the site's home page`);
+for (const p of pairs) {
+  const made = before.list.find((s) => s.name === p.ours.name) ?? p.ours;
+  if (p.site.kind !== made.kind && p.site.kind !== "text")
+    fromList.push(
+      `site block ${p.site.block} reads as ${p.site.kind}; new --from made ${made.name} a ${made.kind}`,
+    );
+  for (const [k, v] of Object.entries(p.site.looks)) {
+    const now = made.looks?.[k];
+    if (p.site.kind === made.kind && String(now ?? "") !== String(v))
+      fromList.push(`${made.name}: the site's look is ${k} ${v}; new --from set ${now ?? "none"}`);
+  }
+  const sp = sourceMeasure[p.site.block].desk?.pics ?? 0;
+  const op0 = p.first.desk?.pics ?? 0;
+  if (sp >= 1 && op0 === 0)
+    fromList.push(`${made.name}: the site shows ${sp} picture(s) here; ours none`);
+  if (sp === 0 && op0 >= 1)
+    fromList.push(`${made.name}: ours shows ${op0} picture(s); the site none`);
+  if (p.kept.length)
+    fromList.push(
+      `${made.name}: the tries found ${p.kept.join(", ")} nearer (${p.before} → ${p.after})`,
+    );
+}
+const gapList = [];
+for (const p of pairs) {
+  for (const g of p.site.gaps) gapList.push(`${p.ours.name}: ${g}`);
+  if (p.after < 70) gapList.push(`${p.ours.name}: best ${p.after}/100 after the tries`);
+}
+const extraFonts = read.fonts.filter((f, i, all) => all.indexOf(f) === i).slice(1);
+if (extraFonts.length)
+  gapList.push(`page: ${extraFonts.length} more font face(s) than the theme's one`);
+if (header?.gaps.length) gapList.push(...header.gaps.map((g) => `header: ${g}`));
+const runLog =
+  opts["new-log"] && existsSync(opts["new-log"]) ? readFileSync(opts["new-log"], "utf8") : "";
+const spend = runLog
+  .split("\n")
+  .filter((l) => /tokens|^model:|elapsed|Read \d+ pages|Starting from/.test(l));
 const report = {
   url: url.href,
   app: dir,
-  width,
-  contentWidth: read.contentWidth,
-  fonts: read.fonts,
+  run: spend,
   blocks: read.blocks,
-  sections: rows,
-  pageGaps,
+  pairs: rows,
+  tries,
+  fromList,
+  gapList,
 };
 writeFileSync(join(opts.out, "report.json"), `${JSON.stringify(report, null, 2)}\n`);
+writeFileSync(join(opts.out, "operations.log"), `${opLog.join("\n")}\n`);
+const mean = (k) => Math.round(rows.reduce((s, r) => s + r[k], 0) / Math.max(rows.length, 1));
 const md = [
-  "# Site rebuild: sections",
+  "# Site rebuild from new --from",
   "",
-  `Width ${width} (content about ${Math.round(read.contentWidth)} px). Page-wide: ${pageGaps.join("; ") || "nothing unmapped"}.`,
+  `The new --from run: ${spend.join(" · ") || "no log given"}.`,
   "",
-  "| # | Section | Kind | Looks | Score | Not mapped |",
+  `Mean score ${mean("before")} as made, ${mean("after")} after the tries (${tries.filter((t) => !t.kept).length} tries).`,
+  "",
+  "| # | Site block | Our section | Score made | After | Kept |",
   "| - | - | - | - | - | - |",
   ...rows.map(
     (r) =>
-      `| ${r.n} | ${r.section} | ${r.kind} | ${Object.entries(r.looks)
-        .map(([k, v]) => `${k} ${v}`)
-        .join(", ")} | ${r.score} | ${r.gaps.join(", ")} |`,
+      `| ${r.n} | ${r.block} ${r.siteKind} | ${r.section} ${r.kind} | ${r.before} | ${r.after} | ${r.kept.join(", ")} |`,
+  ),
+  "",
+  "## (a) What new --from got wrong or left out (candidate changes, not patched here)",
+  "",
+  ...(fromList.length ? fromList.map((l) => `- ${l}`) : ["- nothing found"]),
+  "",
+  "## (b) What no candidate in the kit reached",
+  "",
+  ...(gapList.length ? gapList.map((l) => `- ${l}`) : ["- nothing"]),
+  "",
+  "## Tries",
+  "",
+  "| Round | Section | Try | Score | From | Kept |",
+  "| - | - | - | - | - | - |",
+  ...tries.map(
+    (t) =>
+      `| ${t.round} | ${t.section} | ${t.try} | ${t.score} | ${t.from} | ${t.kept ? "yes" : ""} |`,
   ),
   "",
 ];
 writeFileSync(join(opts.out, "report.md"), md.join("\n"));
 const captions = rows.map(
   (r) =>
-    `${r.file}: ${r.n}. ${r.section} (${r.kind}), score ${r.score}${r.gaps.length ? `; not mapped: ${r.gaps.join(", ")}` : ""}`,
+    `${r.file}: ${r.n}. site block ${r.block} (${r.siteKind}) beside our ${r.section} (${r.kind}), score ${r.before} as made, ${r.after} after${r.kept.length ? ` (${r.kept.join(", ")})` : ""}`,
 );
 writeFileSync(join(opts.out, "captions.txt"), `${captions.join("\n")}\n`);
 if (opts.copy) {
@@ -659,5 +847,5 @@ if (opts.copy) {
   for (const f of [...rows.map((r) => r.file), "captions.txt"])
     copyFileSync(join(opts.out, f), join(opts.copy, f));
 }
-console.log(md.join("\n"));
-console.log(`Sheets and report in ${opts.out}; the app is in ${dir}.`);
+console.log(md.slice(0, 12 + rows.length).join("\n"));
+console.log(`Sheets and report in ${opts.out}; the app (with the kept tries) is ${dir}.`);
