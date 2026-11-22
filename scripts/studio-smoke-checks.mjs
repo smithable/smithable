@@ -9,6 +9,7 @@ import {
   openStudioGuide,
   toolbarAction,
 } from "./studio-form-checks.mjs";
+import { checkStudioGuideSpeech } from "./studio-guide-speech-checks.mjs";
 import { checkStudioHistory } from "./studio-history-checks.mjs";
 
 async function checkBuilder(page, phone) {
@@ -225,5 +226,6 @@ export async function checkStudioSmoke(browser, base, evidence, asMade) {
       await context.close();
     }
   }
+  await checkStudioGuideSpeech(browser, base);
   console.log("  ✓ Studio smoke: first run and returning, wide and phone, with preview and undo");
 }

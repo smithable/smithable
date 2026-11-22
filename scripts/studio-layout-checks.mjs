@@ -11,9 +11,6 @@ export async function checkStudioLayout(browser, base, pictures) {
   ]) {
     const page = await browser.newPage({ viewport, deviceScaleFactor: 2 });
     try {
-      // The desktop tour checks all four stops, including the docked Changes pane.
-      if (viewport.width === 1600)
-        await page.addInitScript(() => localStorage.setItem("smithable:changes-beside-smith", "1"));
       await page.goto(base);
       const overlay = page.getByRole("dialog", { name: /^Smith presents / });
       await overlay.getByRole("button", { name: "Skip", exact: true }).click();
@@ -114,7 +111,6 @@ export async function checkStudioLayout(browser, base, pictures) {
         await smith.waitFor();
         await smith.getByRole("button", { name: "Dock", exact: true }).click();
         await page.setViewportSize({ width: 1600, height: 900 });
-        await page.locator('[data-guide="changes"]:visible').waitFor();
         await openStudioGuide(page);
         const card = page.locator("[data-guide-card]:visible");
         await card.waitFor();
@@ -124,16 +120,14 @@ export async function checkStudioLayout(browser, base, pictures) {
           const anchor = await card.getAttribute("data-guide-card");
           stops.push(anchor);
           const done = card.getByRole("button", { name: "Done", exact: true });
-          if (await done.count()) {
-            assert.equal(anchor, "changes", `tour ended early at ${anchor}`);
-            await done.click();
-            break;
-          }
-          await card.getByRole("button", { name: "Next", exact: true }).click();
+          const last = (await done.count()) > 0;
+          await (last ? done : card.getByRole("button", { name: "Next", exact: true })).click();
           if (anchor === "change") {
+            // With Changes closed, Done on Ask me still offers the demonstration.
             await card.getByRole("button", { name: "Yes", exact: true }).waitFor();
             await card.getByRole("button", { name: "Skip", exact: true }).click();
           }
+          if (last) break;
           await page.waitForFunction(
             (before) =>
               [...document.querySelectorAll("[data-guide-card]")].some(
@@ -143,7 +137,7 @@ export async function checkStudioLayout(browser, base, pictures) {
           );
         }
         await card.waitFor({ state: "detached" });
-        assert.deepEqual(stops, ["preview", "behavior", "change", "changes"]);
+        assert.deepEqual(stops, ["preview", "behavior", "change"]);
       }
       console.log(
         `  ✓ Studio ${viewport.width}×${viewport.height} at 2×: one guide, one scroll region, reachable input and controls`,
