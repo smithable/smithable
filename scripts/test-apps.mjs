@@ -4030,7 +4030,7 @@ async function foodTruckFlow(dir, base) {
       headers: { "x-dev-door": DOOR_SECRET, "Content-Type": "application/json" },
       body: JSON.stringify({ at }),
     });
-    if (!moved.ok) throw new Error(`the stop's test clock: ${moved.status}`);
+    if (!moved.ok) throw new Error(`the stop's test clock: ${moved.status} ${await moved.text()}`);
     await open(page, base);
   };
   try {
@@ -4041,8 +4041,10 @@ async function foodTruckFlow(dir, base) {
         ('Saturday market', ${Date.parse("2026-11-21T09:00Z")}, ${Date.parse("2026-11-21T13:00Z")}, 'https://example.com/map', 'Smoky bean flatbread €10', 'confirmed', unixepoch() * 1000, unixepoch() * 1000),
         ('Private draft', ${Date.parse("2026-11-23T09:00Z")}, ${Date.parse("2026-11-23T13:00Z")}, NULL, NULL, 'draft', unixepoch() * 1000, unixepoch() * 1000)`,
     );
-    const venues = page.locator("#stops").getByRole("heading", { level: 3 });
-    await showAt("2026-11-21T12:55:00Z");
+    const venues = page
+      .getByRole("region", { name: "Find the truck" })
+      .getByRole("heading", { level: 3 });
+    await showAt("2026-11-21T12:55:00.000Z");
     await venues.first().waitFor();
     if ((await venues.allTextContents()).join(",") !== "Saturday market,Sunday square")
       throw new Error("confirmed stops are missing or in the wrong order");
@@ -4052,7 +4054,7 @@ async function foodTruckFlow(dir, base) {
     if ((await map.getAttribute("href")) !== "https://example.com/map")
       throw new Error("the stop's map link is missing");
 
-    await showAt("2026-11-21T13:00:00Z");
+    await showAt("2026-11-21T13:00:00.000Z");
     await page.getByRole("heading", { name: "Sunday square" }).waitFor();
     if ((await venues.allTextContents()).join(",") !== "Sunday square")
       throw new Error("Saturday's stop is still on the schedule after closing");
@@ -4061,7 +4063,7 @@ async function foodTruckFlow(dir, base) {
     if (await page.locator('[data-part="placeholder"]').count())
       throw new Error("the text-only menu shows an empty picture slot");
 
-    await showAt("2026-11-22T13:00:00Z");
+    await showAt("2026-11-22T13:00:00.000Z");
     await page.getByText("No stop planned.", { exact: true }).waitFor();
     await page.getByRole("link", { name: "Ask about catering" }).click();
     await page.getByRole("textbox", { name: "Name *" }).fill("Catering Test");
@@ -4079,7 +4081,7 @@ async function foodTruckFlow(dir, base) {
     );
   } catch (error) {
     console.log(
-      `  ✗ food truck: ${error.message.split("\n")[0]}\n    at ${page.url()}, see ${await screenshot(page)}`,
+      `  ✗ food truck: ${error.message}\n    at ${page.url()}, see ${await screenshot(page)}`,
     );
     failures.push("food truck flow");
   } finally {
