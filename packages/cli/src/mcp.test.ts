@@ -37,6 +37,29 @@ test("the instructions say what the result's states mean", async () => {
   expect(Object.keys(verify?.inputSchema.properties ?? {}).sort()).toEqual(["depth", "record"]);
 });
 
+test("an operation's tool takes only the operation's arguments (T1247)", async () => {
+  const { mcp } = await connected();
+  const { tools } = await mcp.listTools();
+  const move = tools.find((t) => t.name === "smithable_move_section");
+  expect(move?.inputSchema.additionalProperties).toBe(false);
+  expect(Object.keys(move?.inputSchema.properties ?? {}).sort()).toEqual([
+    "after",
+    "before",
+    "confirm",
+    "page",
+    "section",
+  ]);
+  const operations = tools.filter((t) => t.inputSchema.properties?.confirm);
+  expect(operations.length).toBeGreaterThan(50);
+  expect(operations.filter((t) => t.inputSchema.additionalProperties !== false)).toEqual([]);
+  const below = await mcp.callTool({
+    name: "smithable_move_section",
+    arguments: { page: "items", section: "a", below: "b" },
+  });
+  expect(below.isError).toBe(true);
+  expect((below.content as { text: string }[])[0]?.text).toContain('Unknown argument "below"');
+});
+
 test("an operation's result carries its verification as structured content", async () => {
   const { mcp } = await connected();
   const refused = await mcp.callTool({

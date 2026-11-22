@@ -241,7 +241,8 @@ export function pickPictures(
   // in the description says), then what the app says among those. A model whose words no
   // picture shares gets one only by the app's name ("Harbour Café" for its Items) or what the
   // description means without saying it (a marketplace's second-hand things), else none.
-  const samples = index.filter((e) => e.kind === "sample");
+  // The hero's picture is not a record's too: one photo would show twice in the app.
+  const samples = index.filter((e) => e.kind === "sample" && e.id !== hero?.id);
   const named = new Set(words(options.ir?.app.name ?? ""));
   for (const word of said.keys()) for (const t of SYNONYMS[word] ?? []) named.add(t);
   const models: Record<string, PictureEntry[]> = {};
