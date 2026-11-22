@@ -16,6 +16,7 @@ import {
   type SpecIR,
   type StandardActionIR,
   USER_MODEL,
+  uniqueScope,
 } from "@smithable/core";
 import { askedKeys } from "./actions.js";
 import { systemKeys } from "./data.js";
@@ -28,6 +29,7 @@ import {
   dataKey,
   lists as listFields,
   literal,
+  ownerKey,
   references,
 } from "./shared.js";
 
@@ -71,7 +73,13 @@ function keepLocked(model: ModelIR, values: string, record: string): string {
     : values;
 }
 
-function testValue(field: FieldIR, model: ModelIR, ir: SpecIR, owner = "owner"): string {
+function testValue(
+  field: FieldIR,
+  model: ModelIR,
+  ir: SpecIR,
+  owner = "owner",
+  vary = false,
+): string {
   if (field.type.kind === "choice") return JSON.stringify(field.type.values[0]);
   // A booking of someone's time (appointments.md §4) at a time it fits, for a length that fits.
   const start = model.occupies?.starts === field.name ? testStart(model, ir) : undefined;
@@ -91,16 +99,21 @@ function testValue(field: FieldIR, model: ModelIR, ir: SpecIR, owner = "owner"):
         ? String(field.min ?? field.max)
         : "n";
     case "decimal":
-      return "1.5";
+      return vary ? String(field.min ?? field.max ?? "1.5 + n") : "1.5";
     case "money":
-      return "1000";
+      if (!vary) return "1000";
+      return field.min === undefined && field.max === undefined
+        ? "1000 + n"
+        : String(Math.round((field.min ?? field.max ?? 0) * 100));
     case "bool":
       return "true";
     // Ahead of today, so a booking that closes at its session's start is still open.
     case "date":
-      return '"2099-01-15"';
+      return vary
+        ? "new Date(Date.UTC(2099, 0, 15 + n)).toISOString().slice(0, 10)"
+        : '"2099-01-15"';
     case "datetime":
-      return 'new Date("2099-01-15T10:00:00Z")';
+      return vary ? "new Date(Date.UTC(2099, 0, 15 + n, 10))" : 'new Date("2099-01-15T10:00:00Z")';
     case "email":
       return `\`${camel(model.name)}\${n}@example.com\``;
     case "phone":
@@ -121,6 +134,28 @@ function testValue(field: FieldIR, model: ModelIR, ir: SpecIR, owner = "owner"):
     default:
       return `\`${model.name} ${field.name} \${n}\``;
   }
+}
+
+/** Alternatives for a compound-key fixture when its ordinary value is already taken. */
+function fixtureAlternatives(field: FieldIR): string | undefined {
+  if (field.type.kind === "choice") return literal(field.type.values);
+  if (field.type.kind !== "scalar") return undefined;
+  if (field.type.name === "bool") return "[true, false]";
+  if (!["int", "decimal", "money"].includes(field.type.name)) return undefined;
+  if (field.min === undefined && field.max === undefined) return undefined;
+  const money = field.type.name === "money";
+  const stored = (value: number) => (money ? Math.round(value * 100) : value);
+  const first = stored(field.min ?? field.max ?? 0);
+  const direction = field.min === undefined ? -1 : 1;
+  if (field.min !== undefined && field.max !== undefined) {
+    const last = stored(field.max);
+    if (first === last) return literal([first]);
+    if (field.type.name === "decimal") {
+      return `Array.from({ length: existing.length + 1 }, (_, i) => ${first} + (${last} - ${first}) * i / Math.max(1, existing.length))`;
+    }
+    return `Array.from({ length: Math.min(existing.length + 1, ${last} - ${first} + 1) }, (_, i) => ${first} + i)`;
+  }
+  return `Array.from({ length: existing.length + 1 }, (_, i) => ${first} + i * ${direction})`;
 }
 
 /**
@@ -147,11 +182,21 @@ export function accessTestSource(
   const settleOwned =
     settings !== undefined && signedIn && creatorOwned(settings) && !addressOwned(settings);
   const roles: (string | null)[] = [...(signedIn ? auth.roles.map((r) => r.name) : []), null];
+  const hasCompound = ir.models.some((model) => model.unique?.length);
   const helpers = ir.models.map((model) => {
     // Every stored field: required and unique ones get a value, the rest are left empty.
     const fields = model.fields.filter(
       (f) => !f.formula && !(f.type.kind === "relation" && f.type.many),
     );
+    const groups = (model.unique ?? []).map(({ fields, scope }) => [
+      ...new Set([
+        ...(uniqueScope(scope, model, auth) === "owner" ? [ownerKey(model)] : []),
+        ...fields.map((name) =>
+          dataKey(model.fields.find((field) => field.name === name) as FieldIR),
+        ),
+      ]),
+    ]);
+    const groupedFields = new Set(groups.flat());
     const entries = fields.map((f) => {
       const key = f.type.kind === "relation" ? `${f.name}Id` : f.name;
       // A required owner still needs a user when the test acts as a visitor (owner null).
@@ -166,24 +211,48 @@ export function accessTestSource(
               ? "owner ?? stranger.id"
               : "owner"
           : f.required || f.unique
-            ? testValue(f, model, ir)
+            ? testValue(f, model, ir, "owner", groupedFields.has(key))
             : "null";
       return `${key}: ${value}`;
     });
     const usesOwner = entries.some((e) => /\bowner\b/.test(e));
     const usesN = entries.some((e) => /\bn\b/.test(e));
     const ownerColumn = signedIn && creatorOwned(model) ? ", ownerId: owner" : "";
+    const table = `schema.${camel(plural(model.name))}`;
+    const baseValues = `{ ...${camel(model.name)}Values(owner), ...values${ownerColumn} }`;
+    const alternatives = fields.flatMap((field) => {
+      const key = dataKey(field);
+      if (!groupedFields.has(key) || field.name === model.ownedBy) return [];
+      const choices = fixtureAlternatives(field);
+      return choices === undefined ? [] : [`${key}: ${choices}`];
+    });
+    const fixture = groups.length
+      ? `
+  const existing = db.select().from(${table}).all()${model.trash ? ".filter((row) => row.deletedAt === null)" : ""};
+  const fixture = distinctFixture(${baseValues}, values, existing, ${literal(groups)}, { ${alternatives.join(", ")} });
+  if (!fixture) return undefined;`
+      : "";
+    const make = groups.length ? `tryInsert${model.name}` : `insert${model.name}`;
+    const requireFixture = groups.length
+      ? `
+
+function insert${model.name}(owner: string | null, values: Record<string, unknown> = {}) {
+  const row = ${make}(owner, values);
+  if (!row) throw new Error(${JSON.stringify(`No unused compound fixture for ${model.name}.`)});
+  return row;
+}`
+      : "";
     return `function ${camel(model.name)}Values(${usesOwner ? "owner" : "_owner"}: string | null${sendsFiles(model) ? ", by?: string | null" : ""}) {
 ${usesN ? "  const n = next();\n" : ""}  return { ${entries.join(", ")} } as const;
 }
 
-function insert${model.name}(owner: string | null, values: Record<string, unknown> = {}) {${settled.includes(model.name) ? "\n  settle(owner);" : ""}
+function ${make}(owner: string | null, values: Record<string, unknown> = {}) {${settled.includes(model.name) ? "\n  settle(owner);" : ""}${fixture}
   return db
-    .insert(schema.${camel(plural(model.name))})
-    .values({ ...${camel(model.name)}Values(owner), ...values${ownerColumn} })
+    .insert(${table})
+    .values(${groups.length ? "fixture" : baseValues})
     .returning()
     .get();
-}`;
+}${requireFixture}`;
   });
   let updates = false;
   // The models whose visitors' records are counted in the audit log (an address owns them).
@@ -205,6 +274,35 @@ function insert${model.name}(owner: string | null, values: Record<string, unknow
       const title = role === null ? "a visitor who has not signed in" : role;
       const own = role !== null;
       const by = sendsFiles(model) ? `, ${role === null ? "null" : "viewer.id"}` : "";
+      const expectedRows = Object.entries(expected(access, role))
+        .map(([k, v]) => `      ${k}: ${v},`)
+        .join("\n");
+      if (model.unique?.length) {
+        // Only one record may fit a compound key. Test the owners and creation on separate rows.
+        const check = (owner: string) => `await isolatedFixture(async () => {
+      const row = insert${model.name}(${owner}${fits});
+      return {
+        read: await reads(${data}, viewer, row.id),
+        change: await can(() => ${data}.update(viewer, row.id, ${keepLocked(model, `${values}(${owner}${by})`, "row")})),
+        remove: await can(() => ${data}.remove(viewer, row.id)),
+      };
+    })`;
+        return `  test(${JSON.stringify(title)}, async () => {
+    const viewer = ${viewer};
+    const others = ${check(signedIn ? "stranger.id" : "null")};
+    ${own ? `const own = ${check("viewer.id")};\n    ` : ""}expect({
+      readOthers: others.read,
+      readOwn: ${own ? "own.read" : "false"},
+      create: await isolatedFixture(() => can(() => ${data}.create(viewer, ${values}(${own ? "viewer.id" : "null"}${by})))),
+      changeOthers: others.change,
+      changeOwn: ${own ? "own.change" : "false"},
+      deleteOthers: others.remove,
+      deleteOwn: ${own ? "own.remove" : "false"},
+    }).toEqual({
+${expectedRows}
+    });
+  });`;
+      }
       // Changing a stranger's record keeps it the stranger's: with the owner in a field
       // (ownedBy), setting it to the viewer would make "delete others" a delete of their own.
       return `  test(${JSON.stringify(title)}, async () => {
@@ -219,9 +317,7 @@ ${own ? `    const own = insert${model.name}(viewer.id${fits});\n` : ""}    expe
       deleteOthers: await can(() => ${data}.remove(viewer, others.id)),
       deleteOwn: ${own ? `await can(() => ${data}.remove(viewer, own.id))` : "false"},
     }).toEqual({
-${Object.entries(expected(access, role))
-  .map(([k, v]) => `      ${k}: ${v},`)
-  .join("\n")}
+${expectedRows}
     });
   });`;
     });
@@ -468,6 +564,7 @@ ${tests.join("\n\n")}
         ),
     );
   const overMany = new Set<string>();
+  let singletonMergeChecks = false;
   for (const action of standard) {
     const model = ir.models.find((m) => m.name === action.on) as ModelIR;
     const access = modelAccess(model, auth);
@@ -496,18 +593,26 @@ ${tests.join("\n\n")}
           ]),
         ),
       );
+      const compound = Boolean(model.unique?.length);
+      singletonMergeChecks ||=
+        compound && roles.some((role) => role !== null && allowed.roles.includes(role));
       const pairOf = (owner: string) =>
-        `    const one = insert${model.name}(${owner}, ${values});\n    const two = insert${model.name}(${owner}, ${values});\n`;
+        `    const one = insert${model.name}(${owner}, ${values});\n    const two = ${compound ? "tryInsert" : "insert"}${model.name}(${owner}, ${values});\n`;
       describes.push(`describe(${JSON.stringify(`the ${action.name} action`)}, () => {
 ${roles
-  .map(
-    (
-      role,
-    ) => `  test(${JSON.stringify(role === null ? "a visitor who has not signed in" : role)}, async () => {
+  .map((role) => {
+    const mayMerge = role !== null && allowed.roles.includes(role);
+    const oneRow = compound
+      ? `    if (!two) {
+      await expect(${run}(viewer, [one.id], ${choices})).rejects.toBeInstanceOf(${mayMerge ? "Conflict" : "AccessDenied"});
+      return;
+    }\n`
+      : "";
+    return `  test(${JSON.stringify(role === null ? "a visitor who has not signed in" : role)}, async () => {
     const viewer = ${role === null ? "null" : `signedIn(${JSON.stringify(role)})`};
-${pairOf(role === null ? (signedIn ? "stranger.id" : "null") : "viewer.id")}    expect(await can(() => ${run}(viewer, [one.id, two.id], ${choices}))).toBe(${role !== null && allowed.roles.includes(role)});
-  });`,
-  )
+${pairOf(role === null ? (signedIn ? "stranger.id" : "null") : "viewer.id")}${oneRow}    expect(await can(() => ${run}(viewer, [one.id, two.id], ${choices}))).toBe(${mayMerge});
+  });`;
+  })
   .join("\n\n")}
 });`);
       continue;
@@ -613,6 +718,7 @@ ${tests.join("\n\n")}
     : undefined;
   // What the test file imports from Drizzle: the audit lines' and the cap's queries.
   const orm = [
+    ...(hasCompound ? ["sql"] : []),
     ...new Set([
       ...(audited ? ["and", "eq"] : standard.length || updates ? ["eq"] : []),
       ...(flooded.length ? ["and", "count", "eq", "gt", "inArray"] : []),
@@ -706,15 +812,68 @@ ${roles.some((r) => r !== null && r !== "admin") ? `    expect(() => forgetInLog
   ];
   return `${HEADER}// For every model and role: which records a user can read, create, change and delete.
 // "Own" records are owned by the user; "others" by someone else.
-${orm.length ? `import { ${orm.join(", ")} } from "drizzle-orm";\n` : ""}import { describe, expect, test } from "vitest";
+${orm.length ? `import { ${orm.join(", ")} } from "drizzle-orm";\n` : ""}import { ${hasCompound ? "afterEach, beforeEach, " : ""}describe, expect, test } from "vitest";
 import { db } from "#/db";
 ${signedIn || audited ? `import { ${[...(signedIn ? ["user"] : []), ...(audited ? ["auditLog"] : [])].sort().join(", ")} } from "#/db/schema";\n` : ""}import * as schema from "#/db/schema";
-import { AccessDenied${signedIn ? ", type Viewer" : ""} } from "#/kit/access";
+import { AccessDenied${singletonMergeChecks ? ", Conflict" : ""}${signedIn ? ", type Viewer" : ""} } from "#/kit/access";
 ${audited ? 'import { forgetInLog, pruneAudit } from "#/kit/audit.server";\n' : ""}${occupiers.length ? 'import { instantOf } from "#/kit/zoned";\nimport { app } from "./app";\n' : ""}${ir.models.some(sendsFiles) ? 'import { mkdirSync, writeFileSync } from "node:fs";\nimport { join } from "node:path";\nimport { dataDir } from "#/kit/visitor";\nimport { receiptFor } from "#/kit/receipts.server";\n' : ""}${imports.join("\n")}
 
 let counter = 0;
 const next = () => ++counter;
 ${
+  hasCompound
+    ? `
+// A finite compound key's choices are available again for the next access case.
+const openFixture = () => { db.run(sql\`savepoint smithable_access_fixture\`); };
+const closeFixture = () => {
+  db.run(sql\`rollback to smithable_access_fixture\`);
+  db.run(sql\`release smithable_access_fixture\`);
+};
+beforeEach(openFixture);
+afterEach(closeFixture);
+
+async function isolatedFixture<T>(testCase: () => Promise<T>): Promise<T> {
+  openFixture();
+  try {
+    return await testCase();
+  } finally {
+    closeFixture();
+  }
+}
+
+function distinctFixture<T extends Record<string, unknown>>(
+  values: T,
+  fixed: Record<string, unknown>,
+  existing: Record<string, unknown>[],
+  groups: string[][],
+  alternatives: Record<string, readonly unknown[]>,
+): T | undefined {
+  const candidate: Record<string, unknown> = { ...values };
+  const choices = Object.entries(alternatives).filter(([key]) => !(key in fixed));
+  const scalar = (value: unknown) => value instanceof Date ? value.getTime() : value;
+  const used = () => groups.some((keys) =>
+    keys.every((key) => candidate[key] != null) &&
+    existing.some((row) => keys.every((key) => scalar(row[key]) === scalar(candidate[key]))),
+  );
+  function choose(at: number): boolean {
+    if (!used()) return true;
+    const choice = choices[at];
+    if (!choice) return false;
+    const [key, candidates] = choice;
+    const first = candidate[key];
+    for (const value of [first, ...candidates.filter((value) => value !== first)]) {
+      candidate[key] = value;
+      if (choose(at + 1)) return true;
+    }
+    candidate[key] = first;
+    return false;
+  }
+  return choose(0) ? candidate as T : undefined;
+}
+
+`
+    : ""
+}${
   signedIn
     ? `
 /** A new signed-in user with the role. */
