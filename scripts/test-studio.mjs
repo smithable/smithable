@@ -2067,7 +2067,14 @@ try {
           );
         }
       });
-      await edge("Show settings").waitFor();
+      await page.evaluate(
+        () =>
+          new Promise((resolve) =>
+            requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+          ),
+      );
+      if (!(await edge("Show settings").isVisible()) || !(await edge("Show Smith").isVisible()))
+        throw new Error("a swipe inside the app switched Studio away from its preview");
       await swipe("[data-preview-page]", 400);
       await edge("Show the app").waitFor();
       await page.getByRole("tab", { name: "Changes", exact: true }).click();

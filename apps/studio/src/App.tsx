@@ -531,7 +531,7 @@ export function App() {
   const mountedSlots: (0 | 1 | 2)[] = !narrow && !floating && !leftVisible ? [0, ...shown] : shown;
   // The first-look picker leaves the other panes mounted and shows only the preview.
   const lookAlone = Boolean(pickingLook);
-  const phoneIndex = Math.max(0, phoneList.indexOf(phoneWindow));
+  const phoneIndex = Math.max(0, phoneList.indexOf(lookAlone ? "preview" : phoneWindow));
   /**
    * The slot a window is drawn in among those shown (the first that names it), or none. No code
    * and Code are in the view's slot when it shows them.
@@ -1523,6 +1523,7 @@ export function App() {
     <ToolbarButton
       label="All settings"
       pressed={slotOf(manual) !== undefined}
+      disabled={lookAlone}
       onClick={openSettings}
       text={narrow}
     >
@@ -1681,6 +1682,7 @@ export function App() {
                     aria-label={questionWaiting ? "Smith, a question is waiting" : "Smith"}
                     aria-describedby={audioHidden ? "smith-hidden-audio" : undefined}
                     aria-pressed={smithVisible}
+                    disabled={lookAlone}
                     title={smithVisible ? "Hide Smith" : "Show Smith"}
                     onClick={toggleSmith}
                     className={cx(
