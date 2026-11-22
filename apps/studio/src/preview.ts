@@ -24,6 +24,7 @@ export type PreviewMessage =
       anchor?: { left: number; right: number; top: number; bottom: number };
     }
   | { type: "selection-cleared" }
+  | { type: "shift"; on: boolean }
   /** The selected part moved on the screen (the page scrolled or changed size). */
   | {
       type: "selection-moved";

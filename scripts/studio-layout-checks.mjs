@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { join } from "node:path";
-import { openStudioGuide, toolbarAction } from "./studio-form-checks.mjs";
+import { openPreviewAddress, openStudioGuide, toolbarAction } from "./studio-form-checks.mjs";
 
 // Use CSS pixels: desktop display scaling reduces the available layout size.
 export async function checkStudioLayout(browser, base, pictures) {
@@ -138,6 +138,28 @@ export async function checkStudioLayout(browser, base, pictures) {
         }
         await card.waitFor({ state: "detached" });
         assert.deepEqual(stops, ["preview", "behavior", "change"]);
+        // Docked Smith keeps its width whether All settings is shown or hidden (T1237).
+        const smithWidth = async () => {
+          await page.waitForTimeout(300);
+          return page
+            .locator('[data-window="smith"], [data-window="smith+changes"]')
+            .locator("visible=true")
+            .first()
+            .evaluate((el) => el.getBoundingClientRect().width);
+        };
+        const settings = await toolbarAction(page, "All settings");
+        if ((await settings.getAttribute("aria-pressed")) !== "true") await settings.click();
+        const beside = await smithWidth();
+        await (await toolbarAction(page, "All settings")).click();
+        assert.equal(
+          await (await toolbarAction(page, "All settings")).getAttribute("aria-pressed"),
+          "false",
+        );
+        const alone = await smithWidth();
+        assert.ok(
+          Math.abs(alone - beside) <= 1 && alone <= 420,
+          `docked Smith is ${beside}px beside All settings and ${alone}px without`,
+        );
       }
       console.log(
         `  ✓ Studio ${viewport.width}×${viewport.height} at 2×: one guide, one scroll region, reachable input and controls`,
@@ -212,6 +234,95 @@ export async function checkCompactLook(browser, base, pictures) {
     if (pictures)
       await page.screenshot({ path: join(pictures, "failure-edit-look.png") }).catch(() => {});
     throw error;
+  } finally {
+    await page.close();
+  }
+}
+
+// The Select button shows Shift held for selection, in Studio or in the page, and goes off when it
+// is let go or the window loses the focus (T1238). The page picker lists every page when opened,
+// whatever page is shown, and filters by the start of the address once typed (T1240).
+export async function checkSelectAndPages(browser, base) {
+  const page = await browser.newPage({ viewport: { width: 1600, height: 900 } });
+  try {
+    await page.goto(`${base}/?guide=off`);
+    const select = await toolbarAction(page, "Select");
+    const pressed = () => select.getAttribute("aria-pressed");
+    const waitPressed = async (value, when) => {
+      for (let i = 0; i < 30 && (await pressed()) !== value; i++) await page.waitForTimeout(100);
+      if ((await pressed()) === value) return;
+      const focus = await page.evaluate(() => {
+        const frame = document.querySelector('iframe[title="App preview"]');
+        const inner = frame?.contentDocument?.activeElement;
+        return `studio: ${document.activeElement?.tagName}, page: ${inner?.tagName ?? "none"}`;
+      });
+      assert.fail(`Select pressed ${await pressed()}, not ${value}, ${when} (focus ${focus})`);
+    };
+    assert.equal(await pressed(), "false");
+    await page.evaluate(() => document.activeElement?.blur());
+    await page.keyboard.down("Shift");
+    await waitPressed("true", "Shift down in Studio");
+    await page.keyboard.up("Shift");
+    await waitPressed("false", "Shift up in Studio");
+    await page.keyboard.down("Shift");
+    await waitPressed("true", "Shift down again in Studio");
+    await page.evaluate(() => window.dispatchEvent(new Event("blur")));
+    await waitPressed("false", "after a blur");
+    await page.keyboard.up("Shift");
+    // Held in the page itself: the page's own handler selects, and Studio's button shows it.
+    const frame = page.frameLocator('iframe[title="App preview"]');
+    const html = frame.locator("html");
+    await frame.locator("a[href], button").first().focus();
+    // The page's editor loads after the page shows (a cold dev server): Shift is pressed again
+    // until it answers, as a person would.
+    for (let i = 0; i < 20; i++) {
+      await page.keyboard.down("Shift");
+      for (let j = 0; j < 10 && (await pressed()) !== "true"; j++) await page.waitForTimeout(100);
+      if ((await pressed()) === "true") break;
+      await page.keyboard.up("Shift");
+      await page.waitForTimeout(500);
+    }
+    await waitPressed("true", "Shift down in the page");
+    assert.equal(await html.getAttribute("data-sm-selecting"), "");
+    await page.keyboard.up("Shift");
+    await waitPressed("false", "Shift up in the page");
+    assert.equal(await html.getAttribute("data-sm-selecting"), null);
+
+    await openPreviewAddress(page);
+    const list = page.getByRole("listbox", { name: "Pages", exact: true });
+    await list.waitFor();
+    const routes = await list.getByRole("option").allInnerTexts();
+    assert.ok(routes.length > 1, `pages listed at home: ${routes.join(" | ")}`);
+    // Another page, then the picker again: still every page.
+    await list.getByRole("option").nth(1).click();
+    await page.waitForTimeout(300);
+    const again = await openPreviewAddress(page);
+    await list.waitFor();
+    assert.notEqual(await again.inputValue(), "/");
+    assert.equal(
+      await list.getByRole("option").count(),
+      routes.length,
+      "every page away from home",
+    );
+    // Typing filters by the start of the address.
+    const path = (text) => text.split(/\s+/).find((word) => word.startsWith("/"));
+    const target = path(routes[1]);
+    const prefix = target.slice(0, 2);
+    await again.fill(prefix);
+    const shown = await list.getByRole("option").allInnerTexts();
+    assert.ok(
+      shown.length > 0 && shown.every((text) => path(text)?.startsWith(prefix)),
+      `typed ${prefix}: ${shown.join(" | ")}`,
+    );
+    await again.fill("");
+    assert.equal(
+      await list.getByRole("option").count(),
+      routes.length,
+      "a cleared field lists all",
+    );
+    console.log(
+      "  ✓ Select shows Shift held and lets go on blur; the page picker lists all until typed",
+    );
   } finally {
     await page.close();
   }

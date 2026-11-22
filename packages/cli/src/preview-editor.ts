@@ -172,8 +172,14 @@ if (typeof window !== "undefined" && window.parent !== window) {
   };
   window.addEventListener("scroll", followSelection, true);
   window.addEventListener("resize", followSelection);
+  // Studio shows its Select button on while Shift is held in the page (T1238), and off again.
+  let shiftTold = false;
   const paintSelect = () => {
     const active = Boolean(armed());
+    if (temporary !== shiftTold) {
+      shiftTold = temporary;
+      post({ type: "shift", on: temporary });
+    }
     document.documentElement.toggleAttribute("data-sm-selecting", active);
     clear("data-sm-hover");
     hovered = null;
@@ -556,6 +562,7 @@ if (typeof window !== "undefined" && window.parent !== window) {
   };
   document.addEventListener("keyup", (event) => { if (event.key === "Shift") releaseShift(); }, true);
   window.addEventListener("blur", releaseShift);
+  document.addEventListener("visibilitychange", () => { if (document.hidden) releaseShift(); });
   // A sideways swipe over the page where nothing under the finger scrolls sideways itself: on a
   // phone, Studio's row goes on to the next window (A 174). Vertical panning stays the page's.
   let touch = null;

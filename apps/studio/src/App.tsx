@@ -335,14 +335,18 @@ export function App() {
     const keyup = (event: KeyboardEvent) => {
       if (event.key === "Shift") setShiftSelect(false);
     };
+    // A Shift let go outside the window, or the window hidden, never leaves selecting on (T1238).
     const blur = () => setShiftSelect(false);
+    const hidden = () => document.hidden && setShiftSelect(false);
     window.addEventListener("keydown", keydown);
     window.addEventListener("keyup", keyup);
     window.addEventListener("blur", blur);
+    document.addEventListener("visibilitychange", hidden);
     return () => {
       window.removeEventListener("keydown", keydown);
       window.removeEventListener("keyup", keyup);
       window.removeEventListener("blur", blur);
+      document.removeEventListener("visibilitychange", hidden);
     };
   }, [clearSelection, selectedPart, selecting]);
   const [place, setPlace] = useState<Place>(() => {
@@ -714,6 +718,10 @@ export function App() {
     const receiveSelection = (event: MessageEvent) => {
       if (!isPreviewMessage(event)) return;
       if (event.data.type === "selection-cleared") clearSelection();
+      // Shift held in the page selects for as long as it is held: the Select button shows it (T1238).
+      if (event.data.type === "shift") setShiftSelect(event.data.on === true);
+      // A page loaded again while Shift was held never says it was let go.
+      if (event.data.type === "ready") setShiftSelect(false);
       // A page loading again ends a selection, except a section's: its look changed, and its form stays.
       if (event.data.type === "ready")
         setSelectedPart((part) => {
@@ -1692,7 +1700,7 @@ export function App() {
               <div className="ml-auto flex shrink-0 items-center gap-0.5 sm:gap-1">
                 <ToolbarButton
                   label="Select"
-                  pressed={selecting}
+                  pressed={selecting || shiftSelect}
                   onClick={() => {
                     openPreviewWindow();
                     if (selecting) clearSelection();

@@ -40,7 +40,11 @@ import {
   toolbarAction,
 } from "./studio-form-checks.mjs";
 import { checkStudioGuideSpeech } from "./studio-guide-speech-checks.mjs";
-import { checkCompactLook, checkStudioLayout } from "./studio-layout-checks.mjs";
+import {
+  checkCompactLook,
+  checkSelectAndPages,
+  checkStudioLayout,
+} from "./studio-layout-checks.mjs";
 import {
   checkStudioLook,
   checkStudioLookGallery,
@@ -484,6 +488,7 @@ try {
   // changes and undoes them, so the initial empty-history assertion must also come first.
   await checkStudioOverlays(lookSeen, base);
   await checkStudioLayout(lookSeen, base);
+  await checkSelectAndPages(lookSeen, base);
   await checkCompactLook(lookSeen, base);
   await checkStudioLookNavigation(lookSeen, base);
   await checkStudioSpeech(lookSeen, base);

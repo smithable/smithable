@@ -93,14 +93,15 @@ export function useChangesBesideSmith(): [boolean, (open: boolean) => void] {
 
 export function gridOf(slots: (0 | 1 | 2)[], contents: SlotContent[]): React.CSSProperties {
   const area = (s: number) => "abc"[s];
-  // Three side by side: Smith (or Changes) is a column of its own width, the preview and No code
-  // or Code share the rest.
+  // Smith (or Changes) is a column of its own width whether No code or Code is beside it or not
+  // (T1237): the preview takes what the settings leave, never Smith. Three side by side, the
+  // preview and No code or Code share the rest.
   const narrow = (s: number) => {
     const c = contents[s];
     return c === "smith" || c === "changes" || c === "smith+changes";
   };
   const widths = slots.map((s) =>
-    slots.length === 3 && narrow(s)
+    narrow(s)
       ? "24rem"
       : slots.length === 3
         ? contents[s] === "preview"
