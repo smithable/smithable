@@ -208,6 +208,6 @@ Ember & Wheel gives visitors a schedule, a regular menu and a catering enquiry f
 smithable new my-truck --starter food-truck
 ```
 
-The schedule starts empty. Once a confirmed stop closes, the next one moves to the top. When nothing else is scheduled, visitors see **No stop planned** and can still ask about catering. The crew sees requests and follow-up dates in **Catering enquiries**.
+The public schedule starts empty. There is a pictured draft stop in the crew's **Stops** list. Once a confirmed stop closes, the next one moves to the top. When nothing else is scheduled, visitors see **No stop planned** and can still ask about catering. The crew sees requests and follow-up dates in **Catering enquiries**.
 
 Edit the dishes and prices in **Menu items**. You can add a photo to each dish and add your own truck and griddle photos to the home gallery when you have them.

@@ -158,20 +158,15 @@ const SHOTS = {
         const tomorrow = Date.now() + 86_400_000;
         const starts = new Date(tomorrow).setUTCHours(10, 0, 0, 0);
         db.prepare(
-          "INSERT INTO stops (place, address, starts_at, ends_at, directions_url, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, 'confirmed', unixepoch() * 1000, unixepoch() * 1000)",
-        ).run(
-          "Harbour market",
-          "Market Square",
-          starts,
-          starts + 10_800_000,
-          "https://example.com/map",
-        );
+          "UPDATE stops SET starts_at = ?, ends_at = ?, directions_url = ?, status = 'confirmed' WHERE place = 'Harbour market'",
+        ).run(starts, starts + 10_800_000, "https://example.com/map");
         db.close();
         await page.reload();
         await page.getByRole("heading", { name: "Harbour market" }).waitFor();
       },
     ],
     ["catering", "list", "visitor", true],
+    ["where", "list", "visitor", true],
   ],
   api: [
     ["admin", "tasks", "admin"],

@@ -55594,6 +55594,7 @@ export const stops = sqliteTable(
     startsAt: integer({ mode: "timestamp_ms" }).notNull(),
     endsAt: integer({ mode: "timestamp_ms" }).notNull(),
     directionsUrl: text(),
+    photo: text({ mode: "json" }).$type<Picture>(),
     menuOverride: text(),
     status: text({ enum: ["draft", "confirmed", "cancelled"] }).notNull().default("draft"),
     ownerId: text().references(() => user.id, { onDelete: "set null" }),
@@ -55658,14 +55659,14 @@ import { samplePicture } from "#/kit/uploads";
 if (db.select().from(schema.stops).limit(1).all().length === 0) {
   db.insert(schema.stops)
     .values([
-    { place: "place 1", address: "address 1", startsAt: new Date("2026-09-01T08:00:00.000Z"), endsAt: new Date("2026-09-01T08:00:00.000Z"), directionsUrl: "https://example.com/stop/1", menuOverride: "A short description of place 1.", status: "draft" },
-    { place: "place 2", address: "address 2", startsAt: new Date("2026-09-02T10:00:00.000Z"), endsAt: new Date("2026-09-02T10:00:00.000Z"), directionsUrl: "https://example.com/stop/2", menuOverride: "A short description of place 2.", status: "confirmed" },
-    { place: "place 3", address: "address 3", startsAt: new Date("2026-09-03T12:00:00.000Z"), endsAt: new Date("2026-09-03T12:00:00.000Z"), directionsUrl: "https://example.com/stop/3", menuOverride: "A short description of place 3.", status: "cancelled" },
-    { place: "place 4", address: "address 4", startsAt: new Date("2026-09-04T08:00:00.000Z"), endsAt: new Date("2026-09-04T08:00:00.000Z"), directionsUrl: "https://example.com/stop/4", menuOverride: "A short description of place 4.", status: "draft" },
-    { place: "place 5", address: "address 5", startsAt: new Date("2026-09-05T10:00:00.000Z"), endsAt: new Date("2026-09-05T10:00:00.000Z"), directionsUrl: "https://example.com/stop/5", menuOverride: "A short description of place 5.", status: "confirmed" },
-    { place: "place 6", address: "address 6", startsAt: new Date("2026-09-06T12:00:00.000Z"), endsAt: new Date("2026-09-06T12:00:00.000Z"), directionsUrl: "https://example.com/stop/6", menuOverride: "A short description of place 6.", status: "cancelled" },
-    { place: "place 7", address: "address 7", startsAt: new Date("2026-09-07T08:00:00.000Z"), endsAt: new Date("2026-09-07T08:00:00.000Z"), directionsUrl: "https://example.com/stop/7", menuOverride: "A short description of place 7.", status: "draft" },
-    { place: "place 8", address: "address 8", startsAt: new Date("2026-09-08T10:00:00.000Z"), endsAt: new Date("2026-09-08T10:00:00.000Z"), directionsUrl: "https://example.com/stop/8", menuOverride: "A short description of place 8.", status: "confirmed" },
+    { place: "place 1", address: "address 1", startsAt: new Date("2026-09-01T08:00:00.000Z"), endsAt: new Date("2026-09-01T08:00:00.000Z"), directionsUrl: "https://example.com/stop/1", photo: samplePicture("stop", 0, "A picture of place 1"), menuOverride: "A short description of place 1.", status: "draft" },
+    { place: "place 2", address: "address 2", startsAt: new Date("2026-09-02T10:00:00.000Z"), endsAt: new Date("2026-09-02T10:00:00.000Z"), directionsUrl: "https://example.com/stop/2", photo: samplePicture("stop", 1, "A picture of place 2"), menuOverride: "A short description of place 2.", status: "confirmed" },
+    { place: "place 3", address: "address 3", startsAt: new Date("2026-09-03T12:00:00.000Z"), endsAt: new Date("2026-09-03T12:00:00.000Z"), directionsUrl: "https://example.com/stop/3", photo: samplePicture("stop", 2, "A picture of place 3"), menuOverride: "A short description of place 3.", status: "cancelled" },
+    { place: "place 4", address: "address 4", startsAt: new Date("2026-09-04T08:00:00.000Z"), endsAt: new Date("2026-09-04T08:00:00.000Z"), directionsUrl: "https://example.com/stop/4", photo: samplePicture("stop", 0, "A picture of place 4"), menuOverride: "A short description of place 4.", status: "draft" },
+    { place: "place 5", address: "address 5", startsAt: new Date("2026-09-05T10:00:00.000Z"), endsAt: new Date("2026-09-05T10:00:00.000Z"), directionsUrl: "https://example.com/stop/5", photo: samplePicture("stop", 1, "A picture of place 5"), menuOverride: "A short description of place 5.", status: "confirmed" },
+    { place: "place 6", address: "address 6", startsAt: new Date("2026-09-06T12:00:00.000Z"), endsAt: new Date("2026-09-06T12:00:00.000Z"), directionsUrl: "https://example.com/stop/6", photo: samplePicture("stop", 2, "A picture of place 6"), menuOverride: "A short description of place 6.", status: "cancelled" },
+    { place: "place 7", address: "address 7", startsAt: new Date("2026-09-07T08:00:00.000Z"), endsAt: new Date("2026-09-07T08:00:00.000Z"), directionsUrl: "https://example.com/stop/7", photo: samplePicture("stop", 0, "A picture of place 7"), menuOverride: "A short description of place 7.", status: "draft" },
+    { place: "place 8", address: "address 8", startsAt: new Date("2026-09-08T10:00:00.000Z"), endsAt: new Date("2026-09-08T10:00:00.000Z"), directionsUrl: "https://example.com/stop/8", photo: samplePicture("stop", 1, "A picture of place 8"), menuOverride: "A short description of place 8.", status: "confirmed" },
     ])
     .run();
 }
@@ -55764,7 +55765,7 @@ async function reads(
 
 function stopValues(_owner: string | null) {
   const n = next();
-  return { place: \`Stop place \${n}\`, address: null, startsAt: new Date("2099-01-15T10:00:00Z"), endsAt: new Date("2099-01-15T10:00:00Z"), directionsUrl: null, menuOverride: null, status: "draft" } as const;
+  return { place: \`Stop place \${n}\`, address: null, startsAt: new Date("2099-01-15T10:00:00Z"), endsAt: new Date("2099-01-15T10:00:00Z"), directionsUrl: null, photo: null, menuOverride: null, status: "draft" } as const;
 }
 
 function insertStop(owner: string | null, values: Record<string, unknown> = {}) {
@@ -57273,6 +57274,7 @@ const MOVES: Record<string, DoorMove[]> = {
   admin: [
     { id: "open:home", kind: "open", page: "home", route: "/" },
     { id: "open:menu", kind: "open", page: "menu", route: "/menu" },
+    { id: "open:where", kind: "open", page: "where", route: "/where" },
     { id: "open:catering", kind: "open", page: "catering", route: "/catering" },
     { id: "open:stops", kind: "open", page: "stops", route: "/stops" },
     {
@@ -57408,6 +57410,7 @@ const MOVES: Record<string, DoorMove[]> = {
   crew: [
     { id: "open:home", kind: "open", page: "home", route: "/" },
     { id: "open:menu", kind: "open", page: "menu", route: "/menu" },
+    { id: "open:where", kind: "open", page: "where", route: "/where" },
     { id: "open:catering", kind: "open", page: "catering", route: "/catering" },
     { id: "open:stops", kind: "open", page: "stops", route: "/stops" },
     {
@@ -57542,6 +57545,7 @@ const MOVES: Record<string, DoorMove[]> = {
   visitor: [
     { id: "open:home", kind: "open", page: "home", route: "/" },
     { id: "open:menu", kind: "open", page: "menu", route: "/menu" },
+    { id: "open:where", kind: "open", page: "where", route: "/where" },
     { id: "open:catering", kind: "open", page: "catering", route: "/catering" },
     {
       id: "add:CateringEnquiry",
@@ -57576,6 +57580,7 @@ function ready(move: OpenMove): OpenMove | undefined {
 const OPEN: Record<string, (viewer: Viewer | null, move: DoorMove) => Promise<OpenMove | undefined>> = {
   "open:home": async (viewer, move) => (allows(pageAccess["home"], viewer) ? move : undefined),
   "open:menu": async (viewer, move) => (allows(pageAccess["menu"], viewer) ? move : undefined),
+  "open:where": async (viewer, move) => (allows(pageAccess["where"], viewer) ? move : undefined),
   "open:catering": async (viewer, move) => (allows(pageAccess["catering"], viewer) ? move : undefined),
   "open:stops": async (viewer, move) => (allows(pageAccess["stops"], viewer) ? move : undefined),
   "open:menu-items": async (viewer, move) => (allows(pageAccess["menu-items"], viewer) ? move : undefined),
@@ -57648,6 +57653,10 @@ const ACTS: Record<string, (viewer: Viewer | null, move: DoorMove, body: DoorBod
     if (!allows(pageAccess["menu"], viewer)) throw new AccessDenied(viewer !== null);
     return { route: "/menu" };
   },
+  "open:where": async (viewer) => {
+    if (!allows(pageAccess["where"], viewer)) throw new AccessDenied(viewer !== null);
+    return { route: "/where" };
+  },
   "open:catering": async (viewer) => {
     if (!allows(pageAccess["catering"], viewer)) throw new AccessDenied(viewer !== null);
     return { route: "/catering" };
@@ -57674,6 +57683,7 @@ const ACTS: Record<string, (viewer: Viewer | null, move: DoorMove, body: DoorBod
   startsAt: "startsAt",
   endsAt: "endsAt",
   directionsUrl: "directionsUrl",
+  photo: "photo",
   menuOverride: "menuOverride",
   status: "status",
 }))),
@@ -57683,6 +57693,7 @@ const ACTS: Record<string, (viewer: Viewer | null, move: DoorMove, body: DoorBod
   startsAt: "startsAt",
   endsAt: "endsAt",
   directionsUrl: "directionsUrl",
+  photo: "photo",
   menuOverride: "menuOverride",
   status: "status",
 }))),
@@ -58397,6 +58408,7 @@ import { app } from "#/generated/app";
 export const pageAccess = {
   home: { public: true, roles: ["admin", "crew"], owner: false },
   menu: { public: true, roles: ["admin", "crew"], owner: false },
+  where: { public: true, roles: ["admin", "crew"], owner: false },
   catering: { public: true, roles: ["admin", "crew"], owner: false },
   stops: { public: false, roles: ["admin", "crew"], owner: false },
   "menu-items": { public: false, roles: ["admin", "crew"], owner: false },
@@ -58417,6 +58429,7 @@ export const pageUi = {
     description: "A food truck's stops, street-food menu and catering enquiries.",
   },
   menu: { title: "Menu" },
+  where: { title: "Where" },
   catering: { title: "Catering" },
   stops: { title: "Stops" },
   "menu-items": { title: "Menu items" },
@@ -58451,10 +58464,7 @@ import type { LandingSite } from "#/kit/Landing";
 /** The public site's frame: the pages visitors may open, and how to reach the business. */
 export const site: LandingSite = {
   home: "/",
-  menu: [
-    { to: "/menu", label: pageUi["menu"].title, page: "menu" },
-    { to: "/catering", label: pageUi["catering"].title, page: "catering" },
-  ],
+  menu: [{ to: "/menu", label: pageUi["menu"].title, page: "menu" }],
 };
 "
 `;
@@ -58566,6 +58576,7 @@ export const stopSettable = createInsertSchema(schema.stops, {
   place: (s) => s.trim().min(1, w.required).max(200, w.atMostCharacters(200)),
   address: (s) => s.max(200, w.atMostCharacters(200)),
   directionsUrl: z.url({ protocol: /^https?$/, error: w.enterValidUrl }).nullish(),
+  photo: z.object({ file: z.string().regex(/^stop\\/[a-f0-9]{24}\\.webp$/), alt: z.string().trim().max(200), width: z.int().positive(), height: z.int().positive(), generated: z.literal(true).optional(), kind: z.enum(["ai-realistic", "ai-drawn", "photograph"]).optional(), smaller: z.array(z.object({ file: z.string().regex(/^stop\\/[a-f0-9]{24}\\.webp$/), width: z.union([z.literal(480), z.literal(960)]), height: z.int().positive() })).max(2).optional(), receipt: z.string().max(64).optional() }).nullish(),
   menuOverride: (s) => s.max(10000, w.atMostCharacters(10000)),
 }).omit({ id: true, ownerId: true, createdAt: true, updatedAt: true });
 /** What a stop's form sends, checked. */
@@ -58584,6 +58595,8 @@ import * as schema from "#/db/schema";
 import { AccessDenied, allows, check, Conflict, type ModelAccess, personOf, readScope, type Viewer } from "#/kit/access";
 import { audit, changedFields } from "#/kit/audit.server";
 import { refusal } from "#/kit/log.server";
+import { deletePicture, dropCopies } from "#/kit/uploads";
+import { acceptFiles, cleanUploads, keepsUpload } from "#/kit/receipts.server";
 import { afterChange, afterDelete } from "./hooks";
 import { type StopSettable } from "./stop";
 
@@ -58611,6 +58624,14 @@ function shownTo<R extends { ownerId: string | null }>(viewer: Viewer | null, ro
 
 
 
+/** Each picture or document new to the record must come with the receipt its upload gave the viewer (src/kit/receipts.server.ts); the receipts are not kept. */
+function checkFiles<V extends Partial<StopSettable>>(viewer: Viewer | null, values: V, before?: Record<string, unknown>): V {
+  return {
+    ...values,
+    ...("photo" in values ? { photo: acceptFiles(viewer, "stop", "photo", values.photo, before?.photo) } : {}),
+  };
+}
+
 export const stopData = {
   shownTo,
   /** The rows with each reference to a record the viewer may not read set to nothing: a related record's title is shown only to who may read it (only its id stays). */
@@ -58618,12 +58639,18 @@ export const stopData = {
     return rows;
   },
 
+  /** Whether a stored picture or document is on any record (the trash too): a file no record has may go. */
+  uses(file: string): boolean {
+    return keepsUpload(file) || !!db.select({ id: schema.stops.id }).from(schema.stops).where(sql\`\${schema.stops.photo} like \${\`%"file":"\${file}"%\`}\`).get();
+  },
+
   /**
    * What a new stop must pass, in the transaction that adds it (A 153): its files and
    * references, its rules, its capacity and time. create() and an action that adds one call it.
    */
-  checkCreate(_tx: Tx, _viewer: Viewer | null, given: StopSettable): StopSettable {
-    const values = given;
+  checkCreate(_tx: Tx, viewer: Viewer | null, given: StopSettable): StopSettable {
+    let values = given;
+    values = checkFiles(viewer, values);
 
     return values;
   },
@@ -58633,8 +58660,8 @@ export const stopData = {
    * its files and references, holds, capacity, the record's rules and its time. update() and an
    * action that changes it in a transaction of its own call it; access stays with the caller.
    */
-  checkUpdate(_tx: Tx, _viewer: Viewer | null, _id: number, given: Partial<StopSettable>, _before: typeof schema.stops.$inferSelect): Partial<StopSettable> {
-    const updated = given;
+  checkUpdate(_tx: Tx, viewer: Viewer | null, _id: number, given: Partial<StopSettable>, before: typeof schema.stops.$inferSelect): Partial<StopSettable> {
+    const updated = checkFiles(viewer, given, before);
 
     return updated;
   },
@@ -58743,7 +58770,7 @@ export const stopData = {
   /** Changes the fields given; what names the action ("changed" for a form), frees the fields it may change although locked (its own set). */
   async update(viewer: Viewer | null, id: number, values: Partial<StopSettable>, what = "changed", _frees: readonly string[] = []) {
     const row = db
-      .select({ ownerId: schema.stops.ownerId })
+      .select({ ownerId: schema.stops.ownerId, photo: schema.stops.photo })
       .from(schema.stops)
       .where(and(eq(schema.stops.id, id), stopData.readable(viewer)))
       .get();
@@ -58774,6 +58801,10 @@ export const stopData = {
     } catch (error) {
       throw refusal(error);
     }
+    cleanUploads(() => {
+    if (row.photo && row.photo.file !== changed.photo?.file) deletePicture(row.photo, keepsUpload(row.photo.file) || !!db.select({ id: schema.stops.id }).from(schema.stops).where(sql\`\${schema.stops.photo} like \${\`%"file":"\${row.photo.file}"%\`}\`).get(), (file) => keepsUpload(file) || !!db.select({ id: schema.stops.id }).from(schema.stops).where(sql\`\${schema.stops.photo} like \${\`%"file":"\${file}"%\`}\`).get());
+    dropCopies(row.photo, changed.photo, (file) => keepsUpload(file) || !!db.select({ id: schema.stops.id }).from(schema.stops).where(sql\`\${schema.stops.photo} like \${\`%"file":"\${file}"%\`}\`).get());
+    });
     await afterChange("afterUpdate", "Stop", changed, viewer);
     return changed;
   },
@@ -58781,7 +58812,7 @@ export const stopData = {
   /** Deletes the record; \`together\` takes the records that point to it along to the trash (delete-together.md). */
   async remove(viewer: Viewer | null, id: number, _together = false): Promise<void> {
     const row = db
-      .select({ ownerId: schema.stops.ownerId })
+      .select({ ownerId: schema.stops.ownerId, photo: schema.stops.photo })
       .from(schema.stops)
       .where(and(eq(schema.stops.id, id), stopData.readable(viewer)))
       .get();
@@ -58801,6 +58832,9 @@ export const stopData = {
     } catch (error) {
       throw refusal(error);
     }
+    cleanUploads(() => {
+    if (row.photo && row.photo.file !== undefined) deletePicture(row.photo, keepsUpload(row.photo.file) || !!db.select({ id: schema.stops.id }).from(schema.stops).where(sql\`\${schema.stops.photo} like \${\`%"file":"\${row.photo.file}"%\`}\`).get(), (file) => keepsUpload(file) || !!db.select({ id: schema.stops.id }).from(schema.stops).where(sql\`\${schema.stops.photo} like \${\`%"file":"\${file}"%\`}\`).get());
+    });
     await afterDelete("Stop", id, viewer);
   },
 
@@ -58810,7 +58844,7 @@ export const stopData = {
    */
   async removeMany(viewer: Viewer | null, ids: number[], _together = false): Promise<{ deleted: number; skipped: number }> {
     const rows = db
-      .select({ id: schema.stops.id, ownerId: schema.stops.ownerId })
+      .select({ id: schema.stops.id, ownerId: schema.stops.ownerId, photo: schema.stops.photo })
       .from(schema.stops)
       .where(and(inArray(schema.stops.id, ids), stopData.readable(viewer)))
       .all()
@@ -58833,6 +58867,9 @@ export const stopData = {
         }
     });
     for (const row of rows) {
+      cleanUploads(() => {
+      if (row.photo && row.photo.file !== undefined) deletePicture(row.photo, keepsUpload(row.photo.file) || !!db.select({ id: schema.stops.id }).from(schema.stops).where(sql\`\${schema.stops.photo} like \${\`%"file":"\${row.photo.file}"%\`}\`).get(), (file) => keepsUpload(file) || !!db.select({ id: schema.stops.id }).from(schema.stops).where(sql\`\${schema.stops.photo} like \${\`%"file":"\${file}"%\`}\`).get());
+      });
       await afterDelete("Stop", row.id, viewer);
     }
     return { deleted: rows.length, skipped: new Set(ids).size - rows.length };
@@ -58849,6 +58886,7 @@ import { z } from "zod";
 import type * as schema from "#/db/schema";
 import { allows, type Rule } from "#/kit/access";
 import type { RecordUi } from "#/kit/model";
+import { bindPicture } from "#/kit/PictureInput";
 import { stopAccess, stopData } from "./stop.server";
 import { writeAllowed } from "#/kit/limit";
 import { currentViewer } from "#/lib/viewer.server";
@@ -58871,7 +58909,7 @@ export const stopUi: RecordUi<StopRow> = {
   label: "Stop",
   pluralLabel: "Stops",
   titleField: "place",
-  columns: ["place", "startsAt", "endsAt", "status", "address"],
+  columns: ["place", "photo", "startsAt", "endsAt", "status"],
   fields: [
     {
       name: "place",
@@ -58907,6 +58945,14 @@ export const stopUi: RecordUi<StopRow> = {
       kind: "url",
       required: false,
       get: (row) => row.directionsUrl,
+    },
+    {
+      name: "photo",
+      label: "Photo",
+      kind: "picture",
+      required: false,
+      input: bindPicture("stop", "photo"),
+      get: (row) => row.photo,
     },
     {
       name: "menuOverride",
@@ -58977,6 +59023,7 @@ exports[`../../../examples/food-truck/smithable.yml > file list and generated co
 "// Generated by Smithable from smithable.yml. Do not edit: this file is overwritten on every change.
 // The records' pictures and documents: which data function and access each one goes through (src/routes/files/).
 import type { ModelAccess, Viewer } from "#/kit/access";
+import { stopAccess, stopData } from "./stop.server";
 import { menuItemAccess, menuItemData } from "./menu-item.server";
 
 export interface UploadField {
@@ -58988,6 +59035,9 @@ export interface UploadField {
 }
 
 export const UPLOADS: Record<string, Record<string, UploadField>> = {
+  "stop": {
+    "photo": { kind: "picture", data: stopData, access: stopAccess, key: "photo" },
+  },
   "menu-item": {
     "photo": { kind: "picture", data: menuItemData, access: menuItemAccess, key: "photo" },
   },
@@ -59429,6 +59479,7 @@ export const CARDS: Record<string, CardFacts> = {
             { name: "startsAt", label: "Starts at", kind: "datetime", required: true },
             { name: "endsAt", label: "Ends at", kind: "datetime", required: true },
             { name: "directionsUrl", label: "Directions url", kind: "url", required: false },
+            { name: "photo", label: "Photo", kind: "picture", required: false },
             { name: "menuOverride", label: "Menu override", kind: "text", required: false },
             {
               name: "status",
@@ -59484,7 +59535,8 @@ export const CARDS: Record<string, CardFacts> = {
       pages: [
         { id: "home", title: "Home", kind: "landing", route: "/" },
         { id: "menu", title: "Menu", kind: "sections", route: "/menu" },
-        { id: "catering", title: "Catering", kind: "sections", route: "/catering" },
+        { id: "where", title: "Where", kind: "landing", route: "/where" },
+        { id: "catering", title: "Catering", kind: "landing", route: "/catering" },
         { id: "stops", title: "Stops", kind: "crud", route: "/stops", model: "Stops" },
         {
           id: "menu-items",
@@ -59540,7 +59592,7 @@ export const CARDS: Record<string, CardFacts> = {
           owner: false,
         },
       ],
-      uploads: ["Menu items"],
+      uploads: ["Stops", "Menu items"],
       sensitive: [],
     },
     access: {
@@ -59570,7 +59622,16 @@ export const CARDS: Record<string, CardFacts> = {
               delete: { all: true, own: false },
             },
           ],
-          pages: ["home", "menu", "catering", "stops", "menu-items", "enquiries", "team"],
+          pages: [
+            "home",
+            "menu",
+            "where",
+            "catering",
+            "stops",
+            "menu-items",
+            "enquiries",
+            "team",
+          ],
           actions: [
             { action: "contacted", all: true, own: false, while: "status is new" },
             { action: "booked", all: true, own: false, while: "status is contacted" },
@@ -59608,7 +59669,7 @@ export const CARDS: Record<string, CardFacts> = {
               delete: { all: false, own: true },
             },
           ],
-          pages: ["home", "menu", "catering", "stops", "menu-items", "enquiries"],
+          pages: ["home", "menu", "where", "catering", "stops", "menu-items", "enquiries"],
           actions: [
             { action: "contacted", all: true, own: false, while: "status is new" },
             { action: "booked", all: true, own: false, while: "status is contacted" },
@@ -59645,7 +59706,7 @@ export const CARDS: Record<string, CardFacts> = {
               delete: { all: false, own: false },
             },
           ],
-          pages: ["home", "menu", "catering"],
+          pages: ["home", "menu", "where", "catering"],
           actions: [],
           reviews: [],
         },
@@ -59663,7 +59724,10 @@ export const CARDS: Record<string, CardFacts> = {
     built: {
       customActions: [],
       customPages: [],
-      customSections: [{ page: "home", section: "stops", component: "UpcomingStops" }],
+      customSections: [
+        { page: "home", section: "stops", component: "UpcomingStops" },
+        { page: "where", section: "stops", component: "UpcomingStops" },
+      ],
       customQueries: [],
       customIncoming: [],
       plugins: [],
@@ -60081,7 +60145,7 @@ exports[`../../../examples/food-truck/smithable.yml > file list and generated co
 import { createRootRoute, HeadContent, Scripts, ScriptOnce, useRouter, useRouterState } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
-import { History, List, Package, Users } from "lucide-react";
+import { History, House, List, Package, Users } from "lucide-react";
 import { app } from "#/generated/app";
 import { pageAccess, pageUi } from "#/generated/pages";
 import { currentViewer } from "#/lib/viewer.server";
@@ -60112,9 +60176,16 @@ const menus: MenuUi[] = [
         page: "menu",
       },
       {
+        to: "/where",
+        label: pageUi["where"].title,
+        icon: House,
+        access: pageAccess["where"],
+        page: "where",
+      },
+      {
         to: "/catering",
         label: pageUi["catering"].title,
-        icon: List,
+        icon: House,
         access: pageAccess["catering"],
         page: "catering",
       },
@@ -60162,9 +60233,9 @@ const menus: MenuUi[] = [
   },
 ];
 
-const landingRoutes = ["/"];
+const landingRoutes = ["/", "/where", "/catering"];
 /** Public pages that visitors see in the site's frame (signed in, the app's). */
-const visitorRoutes = ["/menu", "/catering", "/sign-in"];
+const visitorRoutes = ["/menu", "/sign-in"];
 
 /** Each page's route and name, longest route first. */
 const pageRoutes: [string, string][] = [
@@ -60172,6 +60243,7 @@ const pageRoutes: [string, string][] = [
   ["/enquiries", "enquiries"],
   ["/catering", "catering"],
   ["/stops", "stops"],
+  ["/where", "where"],
   ["/menu", "menu"],
   ["/team", "team"],
   ["/", "home"],
@@ -60303,15 +60375,18 @@ export const Route = createFileRoute("/app-card")({
 
 exports[`../../../examples/food-truck/smithable.yml > file list and generated code > src/routes/catering/index.tsx 1`] = `
 "// Generated by Smithable from smithable.yml. Do not edit: this file is overwritten on every change.
-import { createFileRoute } from "@tanstack/react-router";
-import { pageAccess, pageUi, pageHead } from "#/generated/pages";
+import { createFileRoute, useRouter } from "@tanstack/react-router";
+import { pageAccess, pageHead } from "#/generated/pages";
 import { guardPage } from "#/kit/page-guard";
-import { Contact } from "#/kit/Landing";
+import { authClient } from "#/lib/auth-client";
+import { rememberPerson } from "#/kit/time-text";
+import { LandingLayout, Hero, Contact } from "#/kit/Landing";
+import { w } from "#/kit/words";
+import { site } from "#/generated/site";
 import { createCateringEnquiry, cateringEnquiryUi } from "#/generated/catering-enquiry";
 import { cateringEnquirySchema } from "#/generated/catering-enquiry.schema";
 import { app } from "#/generated/app";
 import { ModelForm } from "#/kit/ModelForm";
-import { PageHeader } from "#/kit/AppShell";
 
 export const Route = createFileRoute("/catering/")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["catering"], context.viewer, location.href),
@@ -60320,9 +60395,22 @@ export const Route = createFileRoute("/catering/")({
 });
 
 function CateringPage() {
+  const { viewer } = Route.useRouteContext();
+  const router = useRouter();
+  const signOut = async () => {
+    await authClient.signOut();
+    rememberPerson();
+    await router.invalidate();
+  };
   return (
-    <div data-kit="sections">
-      <PageHeader page="catering" title={pageUi["catering"].title} />
+    <LandingLayout appName={app.name} page="catering" link={viewer ? { to: "/menu", label: w.openApp(app.name) } : { to: "/sign-in", label: w.signIn }} site={site} viewer={viewer} onSignOut={viewer ? signOut : undefined}>
+      <Hero
+          texts="pages.catering.hero"
+          title="Ember & Wheel"
+          subtitle="A food truck's stops, street-food menu and catering enquiries."
+          link={{ to: "/menu", label: "Get started" }}
+          more
+        />
       <Contact
           texts="pages.catering.contact"
           form={(sent, human) => (
@@ -60339,7 +60427,7 @@ function CateringPage() {
             />
           )}
         />
-    </div>
+    </LandingLayout>
   );
 }
 "
@@ -61102,7 +61190,7 @@ exports[`../../../examples/food-truck/smithable.yml > file list and generated co
 import { createFileRoute } from "@tanstack/react-router";
 import { originOf } from "#/kit/origin";
 
-const ROBOTS = "User-agent: *\\nAllow: /$\\nAllow: /menu\\nAllow: /catering\\nAllow: /assets/\\nAllow: /images/\\nAllow: /files/\\nDisallow: /\\n";
+const ROBOTS = "User-agent: *\\nAllow: /$\\nAllow: /menu\\nAllow: /where\\nAllow: /catering\\nAllow: /assets/\\nAllow: /images/\\nAllow: /files/\\nDisallow: /\\n";
 
 export const Route = createFileRoute("/robots.txt")({
   server: {
@@ -61259,7 +61347,7 @@ exports[`../../../examples/food-truck/smithable.yml > file list and generated co
 import { createFileRoute } from "@tanstack/react-router";
 import { originOf } from "#/kit/origin";
 
-const PAGES = ["/","/menu","/catering"];
+const PAGES = ["/","/menu","/where","/catering"];
 
 const escape = (s: string) =>
   s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
@@ -61417,6 +61505,7 @@ import { w } from "#/kit/words";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelTable } from "#/kit/ModelTable";
 import { Filters } from "#/kit/Filters";
+import { List } from "lucide-react";
 
 /** The stops matching the search and the filters, among those the viewer may read. */
 const searchStops = createServerFn()
@@ -61516,6 +61605,7 @@ function StopsPage() {
         exportRows={async () => (await searchStops({ data: { q, sort, f: values, all: true } }))} exportName="stops"
         rows={rows}
         sorting={{ keys: { startsAt: "startsAt" }, value: sort, onChange: (next) => navigate({ to: "/stops", search: (prev) => ({ ...prev, sort: next, page: undefined }), replace: true, resetScroll: false }) }}
+        icon={List}
         selection={selectable ? { ids: selected, onChange: setSelected } : undefined}
         emptyMessage={q || Object.values(values).some(Boolean) ? "No stops match the search and filters." : undefined}
         emptyAction={newButton || undefined}
@@ -61811,6 +61901,52 @@ function TeamPage() {
 "
 `;
 
+exports[`../../../examples/food-truck/smithable.yml > file list and generated code > src/routes/where/index.tsx 1`] = `
+"// Generated by Smithable from smithable.yml. Do not edit: this file is overwritten on every change.
+import { createFileRoute, useRouter } from "@tanstack/react-router";
+import { pageAccess, pageHead } from "#/generated/pages";
+import { guardPage } from "#/kit/page-guard";
+import { authClient } from "#/lib/auth-client";
+import { rememberPerson } from "#/kit/time-text";
+import { LandingLayout, Hero } from "#/kit/Landing";
+import { w } from "#/kit/words";
+import { site } from "#/generated/site";
+import { UpcomingStops } from "#/custom/sections/UpcomingStops";
+import { app } from "#/generated/app";
+
+export const Route = createFileRoute("/where/")({
+  beforeLoad: ({ context, location }) => guardPage(pageAccess["where"], context.viewer, location.href),
+  head: () => pageHead("where"),
+  component: WherePage,
+});
+
+function WherePage() {
+  const { viewer } = Route.useRouteContext();
+  const router = useRouter();
+  const signOut = async () => {
+    await authClient.signOut();
+    rememberPerson();
+    await router.invalidate();
+  };
+  return (
+    <LandingLayout appName={app.name} page="where" link={viewer ? { to: "/menu", label: w.openApp(app.name) } : { to: "/sign-in", label: w.signIn }} site={site} viewer={viewer} onSignOut={viewer ? signOut : undefined}>
+      <Hero
+          texts="pages.where.hero"
+          title="Ember & Wheel"
+          subtitle="A food truck's stops, street-food menu and catering enquiries."
+          link={{ to: "/menu", label: "Get started" }}
+          more
+        />
+      <UpcomingStops
+          name="stops"
+          texts="pages.where.stops"
+        />
+    </LandingLayout>
+  );
+}
+"
+`;
+
 exports[`../../../examples/food-truck/smithable.yml > file list and generated code > src/theme.css 1`] = `
 "/* Generated by Smithable from smithable.ux.yml. Do not edit: this file is overwritten on every change. */
 @import "@fontsource-variable/inter";
@@ -62011,7 +62147,7 @@ test.beforeAll(async ({ browser }) => {
     for (const route of routes) await open(route);
     await context.close();
   };
-  await warm(undefined, ["/", "/menu", "/catering"]);
+  await warm(undefined, ["/", "/menu", "/where", "/catering"]);
   await warm("admin", ["/stops", "/menu-items", "/enquiries", "/team"]);
   if (slow.length) throw new Error(\`Pages that did not open while warming up: \${slow.join(", ")}\`);
 });
@@ -62021,6 +62157,9 @@ test("Home opens for a visitor", async ({ page }) => {
 });
 test("Menu opens for a visitor", async ({ page }) => {
   await visit(page, "/menu");
+});
+test("Where opens for a visitor", async ({ page }) => {
+  await visit(page, "/where");
 });
 test("Catering opens for a visitor", async ({ page }) => {
   await visit(page, "/catering");
@@ -62133,6 +62272,7 @@ exports[`../../../examples/food-truck/smithable.yml > file list and generated co
   "kit: src/components/ui/input.tsx",
   "kit: src/components/ui/table.tsx",
   "custom: src/custom/hooks.ts",
+  "custom: src/custom/sections/UpcomingStops.tsx",
   "custom: src/custom/sections/UpcomingStops.tsx",
   "custom: src/custom/styles.css",
   "kit: src/db/index.ts",
@@ -62273,6 +62413,7 @@ exports[`../../../examples/food-truck/smithable.yml > file list and generated co
   "generated: src/routes/stops/new.tsx",
   "generated: src/routes/team/activity.tsx",
   "generated: src/routes/team/index.tsx",
+  "generated: src/routes/where/index.tsx",
   "kit: src/start.ts",
   "kit: src/styles.css",
   "generated: src/theme.css",
@@ -62313,9 +62454,9 @@ exports[`../../../examples/food-truck/smithable.yml > the generated files are as
   "src/custom/sections/UpcomingStops.tsx": "bb6bf194 custom",
   "src/custom/styles.css": "87d7c518 custom",
   "src/db/index.ts": "ba378d34 kit",
-  "src/db/schema.ts": "b1e96bf8 generated",
-  "src/db/seed.ts": "33583bfc generated",
-  "src/generated/access.test.ts": "9406033b generated",
+  "src/db/schema.ts": "e1b214ba generated",
+  "src/db/seed.ts": "5147e0ed generated",
+  "src/generated/access.test.ts": "87c0619e generated",
   "src/generated/actions/booked.server.ts": "1dfec7b8 generated",
   "src/generated/actions/booked.ts": "56b73060 generated",
   "src/generated/actions/closed.server.ts": "14fa92cc generated",
@@ -62331,7 +62472,7 @@ exports[`../../../examples/food-truck/smithable.yml > the generated files are as
   "src/generated/catering-enquiry.server.ts": "cf9f68cf generated",
   "src/generated/catering-enquiry.ts": "f42fe4ed generated",
   "src/generated/custom.ts": "5801b2b0 generated",
-  "src/generated/dev-door.server.ts": "919a3d65 generated",
+  "src/generated/dev-door.server.ts": "96b5f894 generated",
   "src/generated/hooks.ts": "7c59609b generated",
   "src/generated/menu-item.import.server.ts": "efe6d55d generated",
   "src/generated/menu-item.import.ts": "623c8323 generated",
@@ -62339,15 +62480,15 @@ exports[`../../../examples/food-truck/smithable.yml > the generated files are as
   "src/generated/menu-item.server.ts": "2c166751 generated",
   "src/generated/menu-item.ts": "d9bb91b5 generated",
   "src/generated/my-time.ts": "c315432b generated",
-  "src/generated/pages.ts": "37ed2be7 generated",
+  "src/generated/pages.ts": "904401fa generated",
   "src/generated/roles.ts": "2040923c generated",
-  "src/generated/site.ts": "c7aafea3 generated",
+  "src/generated/site.ts": "997347ac generated",
   "src/generated/stop.import.server.ts": "5aca6a4a generated",
   "src/generated/stop.import.ts": "1d2a5d38 generated",
-  "src/generated/stop.schema.ts": "83468546 generated",
-  "src/generated/stop.server.ts": "e1c42488 generated",
-  "src/generated/stop.ts": "3122c70f generated",
-  "src/generated/uploads.ts": "90e4c260 generated",
+  "src/generated/stop.schema.ts": "5a7ccc63 generated",
+  "src/generated/stop.server.ts": "7e8313ce generated",
+  "src/generated/stop.ts": "f8b4b942 generated",
+  "src/generated/uploads.ts": "b8149f19 generated",
   "src/generated/users.server.ts": "ffd2d3f7 generated",
   "src/generated/users.test.ts": "8000264e generated",
   "src/kit/ActionButton.tsx": "6a3b0c0a kit",
@@ -62416,7 +62557,7 @@ exports[`../../../examples/food-truck/smithable.yml > the generated files are as
   "src/kit/words.ts": "dd75b285 kit",
   "src/kit/words/en.ts": "a509a677 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
-  "src/lib/app-card.server.ts": "9188d876 generated",
+  "src/lib/app-card.server.ts": "a4898189 generated",
   "src/lib/app-card.ts": "93f0b476 generated",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "638a20ef generated",
@@ -62426,10 +62567,10 @@ exports[`../../../examples/food-truck/smithable.yml > the generated files are as
   "src/routes/[_dev]/act.ts": "c57e01e2 generated",
   "src/routes/[_dev]/clock.ts": "a1ccbe93 generated",
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
-  "src/routes/__root.tsx": "0e0471db generated",
+  "src/routes/__root.tsx": "f8655fb2 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/app-card.tsx": "a74639e0 generated",
-  "src/routes/catering/index.tsx": "d1b61ee2 generated",
+  "src/routes/catering/index.tsx": "fdbb7931 generated",
   "src/routes/enquiries/$id.tsx": "aa658206 generated",
   "src/routes/enquiries/index.tsx": "3b73d9ea generated",
   "src/routes/enquiries/new.tsx": "20d6dfa3 generated",
@@ -62442,18 +62583,19 @@ exports[`../../../examples/food-truck/smithable.yml > the generated files are as
   "src/routes/menu-items/index.tsx": "d0ff6046 generated",
   "src/routes/menu-items/new.tsx": "dac20cf7 generated",
   "src/routes/menu/index.tsx": "c49116bb generated",
-  "src/routes/robots[.]txt.ts": "16a3f54e generated",
+  "src/routes/robots[.]txt.ts": "48c5f34d generated",
   "src/routes/sign-in.tsx": "fc26205e generated",
-  "src/routes/sitemap[.]xml.ts": "a9b3d652 generated",
+  "src/routes/sitemap[.]xml.ts": "8043560e generated",
   "src/routes/stops/$id.tsx": "7d3c395b generated",
-  "src/routes/stops/index.tsx": "27b6e968 generated",
+  "src/routes/stops/index.tsx": "5641736c generated",
   "src/routes/stops/new.tsx": "0033752d generated",
   "src/routes/team/activity.tsx": "200307a5 generated",
   "src/routes/team/index.tsx": "b480dbbe generated",
+  "src/routes/where/index.tsx": "a3a356b3 generated",
   "src/start.ts": "6b874d2d kit",
   "src/styles.css": "706d757b kit",
   "src/theme.css": "1fd40aa1 generated",
-  "tests/smoke.spec.ts": "ebf39c13 generated",
+  "tests/smoke.spec.ts": "39765be4 generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "3ee61b99 kit",
   "vite.config.ts": "9350497c kit",

@@ -7,6 +7,7 @@ models:
       startsAt: { label: Service starts }
       endsAt: { label: Service ends }
       directionsUrl: { label: Map link }
+      photo: { label: Stop photo }
       menuOverride:
         label: Menu for this stop
         help: Add dishes and prices for this venue. Leave blank to use the regular menu.
@@ -32,6 +33,9 @@ pages:
       title: Hot off the griddle
       subtitle: Crisp-edged flatbreads and seasonal sides from a travelling kitchen.
       button: See the menu
+      image:
+        src: images/samples/food-truck-evening.webp
+        alt: People at tables under string lights by a food truck on a summer evening
     stops:
       title: Find the truck
     gallery:
@@ -44,6 +48,7 @@ pages:
       text: Ember & Wheel
       items:
         - { label: Menu, link: /menu }
+        - { label: Stops, link: /where }
         - { label: Catering, link: /catering }
   menu:
     title: Menu
@@ -52,10 +57,26 @@ pages:
       text: Our regular menu. Look for the menu on a confirmed stop for any changes at that venue.
   catering:
     title: Catering
+    hero:
+      title: Food truck catering
+      subtitle: Flatbreads and seasonal sides cooked on site for your guests.
+      image:
+        src: images/samples/food-truck-evening.webp
+        alt: Guests eating outdoors by a food truck under string lights
     contact:
       title: Bring the truck to your event
       text: Tell us where and when you are gathering, and how many you are feeding. We’ll get back to you about the menu and availability.
       button: Send catering enquiry
       thanks: Thanks for your enquiry. We’ll get back to you about your event.
+  where:
+    title: Stops
+    hero:
+      title: Food truck stops
+      subtitle: Find the next venue, service hours and directions.
+      image:
+        src: images/samples/food-truck-evening.webp
+        alt: A food truck serving guests outdoors in the evening
+    stops:
+      title: Upcoming stops
   enquiries:
     title: Catering enquiries

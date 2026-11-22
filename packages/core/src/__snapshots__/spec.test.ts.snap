@@ -3227,6 +3227,15 @@ exports[`valid specs > ../../../examples/food-truck/smithable.yml 1`] = `
           "unique": false,
         },
         {
+          "name": "photo",
+          "required": false,
+          "type": {
+            "kind": "scalar",
+            "name": "picture",
+          },
+          "unique": false,
+        },
+        {
           "name": "menuOverride",
           "required": false,
           "type": {
@@ -3396,6 +3405,7 @@ exports[`valid specs > ../../../examples/food-truck/smithable.yml 1`] = `
       "name": "main",
       "pages": [
         "menu",
+        "where",
         "catering",
         "stops",
         "menu-items",
@@ -3471,12 +3481,56 @@ exports[`valid specs > ../../../examples/food-truck/smithable.yml 1`] = `
       ],
     },
     {
+      "id": "where",
+      "pattern": {
+        "kind": "landing",
+        "sections": [
+          {
+            "kind": "hero",
+            "name": "hero",
+          },
+          {
+            "component": "UpcomingStops",
+            "kind": "custom",
+            "name": "stops",
+          },
+        ],
+      },
+      "route": "/where",
+      "sections": [
+        {
+          "kind": "hero",
+          "name": "hero",
+        },
+        {
+          "component": "UpcomingStops",
+          "kind": "custom",
+          "name": "stops",
+        },
+      ],
+    },
+    {
       "id": "catering",
       "pattern": {
-        "kind": "sections",
+        "kind": "landing",
+        "sections": [
+          {
+            "kind": "hero",
+            "name": "hero",
+          },
+          {
+            "form": "CateringEnquiry",
+            "kind": "contact",
+            "name": "contact",
+          },
+        ],
       },
       "route": "/catering",
       "sections": [
+        {
+          "kind": "hero",
+          "name": "hero",
+        },
         {
           "form": "CateringEnquiry",
           "kind": "contact",
