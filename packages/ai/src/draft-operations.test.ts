@@ -977,6 +977,7 @@ test("full website copy keeps its language and takes priority over the English d
   expect(messages[0]).toContain("each source entry");
   expect(messages[0]).not.toContain("three to six");
   expect(messages[0]).not.toContain("never its sentences");
-  expect(messages[1]).toContain("The app's texts are in Swedish");
+  expect(messages[1]).toContain("Use Swedish for new labels and app controls");
+  expect(messages[1]).toContain("Keep each supplied passage in its original language");
   expect(draft.kind === "draft" && draft.files["smithable.content.yml"]).toContain("language: sv");
 });

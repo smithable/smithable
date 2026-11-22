@@ -299,8 +299,9 @@ test("explicit full-content input preserves the source language and requested co
     ).toBe(1);
     expect(state.descriptions).toHaveLength(calls);
     vi.stubEnv("SMITHABLE_HOSTED_LEVEL", "");
+    const report: string[] = [];
     expect(
-      await create(dir, quiet, "barbers", {
+      await create(dir, { ...quiet, out: (message) => report.push(message) }, "barbers", {
         websiteInput: source,
         yes: true,
         unattended: true,
@@ -309,6 +310,7 @@ test("explicit full-content input preserves the source language and requested co
       }),
     ).toBe(0);
     expect(state.draftLanguage).toBe("sv");
+    expect(report.join("")).toContain("Website draft language: Swedish (page language tag).");
     expect(state.descriptions.at(-1)).toContain(text);
     expect(state.descriptions.at(-1)).toContain("actual items as inline content");
     expect(state.descriptions.at(-1)).not.toContain("write new prose");

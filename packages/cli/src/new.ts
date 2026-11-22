@@ -13,6 +13,7 @@ import {
   draftProjectByOperations,
   draftSamples,
   type Edit,
+  LANGUAGE_NAMES,
   nameFrom,
   type Question,
   readDescription,
@@ -61,6 +62,7 @@ import {
   websitePrivateProviders,
 } from "./website-generation.js";
 import { digest, parseWebsiteInput, type WebsiteGenerationInput } from "./website-input.js";
+import { sourceLayout } from "./website-layout.js";
 
 /**
  * The starter a description is, or is a small edit of, where that can be read without a model
@@ -167,6 +169,7 @@ export async function create(
   let library: LibraryVersion | string | undefined;
   let fromPage = false;
   let draftedSamples: DraftedSamples = {};
+  let layout: ReturnType<typeof sourceLayout> = [];
   if (options.from) {
     if (options.withPictures) {
       const consent = await confirm(
@@ -178,6 +181,7 @@ export async function create(
     }
     try {
       const site = await readSite(options.from, { allowAssets: options.withPictures === true });
+      if (options.contentMode === "full") layout = sourceLayout(site.bundle.pages);
       if (site.reading.tooLittle && options.contentMode !== "full")
         throw new PageError(
           "The site gave too little factual information. Describe what the app should do.",
@@ -339,8 +343,13 @@ export async function create(
       (message) => options.onDiagnostic?.(message),
       options.instructions,
       options.websiteOwnerDescription === true,
+      layout,
     );
     description = website.description;
+    if (website.language && website.languageReason)
+      io.out(
+        `Website draft language: ${LANGUAGE_NAMES[website.language]} (${website.languageReason}).\n`,
+      );
     options.onWebsite?.({
       contentMode: website.contentMode,
       personal: website.personal,
@@ -449,6 +458,7 @@ export async function create(
             starter: files,
             providers,
             language: website?.language,
+            preserveSourceCopy: website?.contentMode === "full",
           })
         : await draftProjectByOperations({
             description,

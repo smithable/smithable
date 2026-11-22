@@ -818,7 +818,8 @@ export async function draftProjectByOperations(options: {
     const language = options.language ?? textLanguage(options.description);
     if (language && language !== "en")
       files = applyAll(files, done, [{ op: "setLanguage", args: { language } }]).files;
-    let prompt = `${options.attempt ? `(${options.attempt}.) ` : ""}Description: ${options.description}${languageNote(options.description, language)}${done.length ? `\n\nApplied so far (do not repeat them):\n${JSON.stringify(done)}` : ""}${shape}`;
+    const wording = languageNote(options.description, language, options.preserveSourceCopy);
+    let prompt = `${options.attempt ? `(${options.attempt}.) ` : ""}Description: ${options.description}${wording}${done.length ? `\n\nApplied so far (do not repeat them):\n${JSON.stringify(done)}` : ""}${shape}`;
     let round = 0;
     let assumptions: Assumption[] = [];
     let refused: { step: Step; message: string }[] = [];
@@ -915,14 +916,14 @@ export async function draftProjectByOperations(options: {
               .filter(([, text]) => text.trim())
               .map(([name, text]) => `${name}:\n\`\`\`yaml\n${text.trim()}\n\`\`\``)
               .join("\n");
-            prompt = `Description: ${options.description}${languageNote(options.description)}\n\nApplied so far (do not repeat them):\n${JSON.stringify(done)}\n\nThe app they made:\n${spec}\n\nThe checks find: ${flaws.length ? `\n${flaws.map((f) => `- ${f}`).join("\n")}` : "nothing wrong."}\n\nRead the app against the description: answer with only the operations that mend what is missing or wrong, or with no operations if it is right.`;
+            prompt = `Description: ${options.description}${wording}\n\nApplied so far (do not repeat them):\n${JSON.stringify(done)}\n\nThe app they made:\n${spec}\n\nThe checks find: ${flaws.length ? `\n${flaws.map((f) => `- ${f}`).join("\n")}` : "nothing wrong."}\n\nRead the app against the description: answer with only the operations that mend what is missing or wrong, or with no operations if it is right.`;
             continue;
           }
           if (!flaws.some((f) => !told.has(f))) return draftOf(dropped);
           for (const f of flaws) told.add(f);
           droppedBefore = dropped;
           refused = [];
-          prompt = `Description: ${options.description}${languageNote(options.description)}\n\nApplied so far (do not repeat them):\n${JSON.stringify(done)}\n\nThe app is valid, but a visitor would find it broken or too open:\n${flaws.map((f) => `- ${f}`).join("\n")}\n\nAnswer with only the operations that put this right for what the description wants (usually setPublic with the whole list; removeSection for a landing section that shows what visitors may not read), or with no operations if it is as intended.`;
+          prompt = `Description: ${options.description}${wording}\n\nApplied so far (do not repeat them):\n${JSON.stringify(done)}\n\nThe app is valid, but a visitor would find it broken or too open:\n${flaws.map((f) => `- ${f}`).join("\n")}\n\nAnswer with only the operations that put this right for what the description wants (usually setPublic with the whole list; removeSection for a landing section that shows what visitors may not read), or with no operations if it is as intended.`;
           continue;
         }
         problem =
@@ -934,7 +935,7 @@ export async function draftProjectByOperations(options: {
         problem = essential.map((r) => `${r.step.op}: ${r.message}`).join("\n");
         break;
       }
-      prompt = `Description: ${options.description}${languageNote(options.description)}\n\nApplied so far (do not repeat them):\n${JSON.stringify(done)}\n\nThese operations were refused:\n${refused.map((r) => `${JSON.stringify(r.step)}\n  Reason: ${r.message}`).join("\n")}\n\nAnswer with corrected versions of the refused operations only (leave out any that are not needed), in order.`;
+      prompt = `Description: ${options.description}${wording}\n\nApplied so far (do not repeat them):\n${JSON.stringify(done)}\n\nThese operations were refused:\n${refused.map((r) => `${JSON.stringify(r.step)}\n  Reason: ${r.message}`).join("\n")}\n\nAnswer with corrected versions of the refused operations only (leave out any that are not needed), in order.`;
     }
   }
   return { kind: "failed", message: `No model drafted a valid project.\n${problem}`, usage };
