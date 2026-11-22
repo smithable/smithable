@@ -711,6 +711,13 @@ for (const [w, viewport] of [
     shots.site[w].push(await shot(source, `[data-rebuild="${p.site.block}"]`, viewport));
     shots.after[w].push(await shot(ours, sel(p.ours), viewport));
   }
+  // A site block with no section of ours: its crop goes beside the sheets, for the kit-gap list.
+  if (w === "desk")
+    for (const m of site)
+      if (!pairs.some((p) => p.site.block === m.block)) {
+        const png = await shot(source, `[data-rebuild="${m.block}"]`, viewport);
+        if (png) writeFileSync(join(opts.out, `unmatched-block-${m.block}.png`), png);
+      }
 }
 stop();
 
@@ -791,6 +798,11 @@ for (const p of pairs) {
     );
 }
 const gapList = [];
+for (const m of site)
+  if (!paired.has(m.block))
+    gapList.push(
+      `site block ${m.block} (${m.kind}) has no section of ours: crop unmatched-block-${m.block}.png`,
+    );
 for (const p of pairs) {
   for (const g of p.site.gaps) gapList.push(`${p.ours.name}: ${g}`);
   if (p.after < 70) gapList.push(`${p.ours.name}: best ${p.after}/100 after the tries`);
@@ -857,8 +869,11 @@ const captions = rows.map(
 writeFileSync(join(opts.out, "captions.txt"), `${captions.join("\n")}\n`);
 if (opts.copy) {
   mkdirSync(opts.copy, { recursive: true });
-  for (const f of [...rows.map((r) => r.file), "captions.txt"])
-    copyFileSync(join(opts.out, f), join(opts.copy, f));
+  const crops = site
+    .filter((m) => !paired.has(m.block))
+    .map((m) => `unmatched-block-${m.block}.png`);
+  for (const f of [...rows.map((r) => r.file), ...crops, "captions.txt"])
+    if (existsSync(join(opts.out, f))) copyFileSync(join(opts.out, f), join(opts.copy, f));
 }
 console.log(md.slice(0, 12 + rows.length).join("\n"));
 console.log(`Sheets and report in ${opts.out}; the app (with the kept tries) is ${dir}.`);
