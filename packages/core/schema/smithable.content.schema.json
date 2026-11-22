@@ -365,7 +365,7 @@
                   "properties": {
                     "src": {
                       "type": "string",
-                      "pattern": "^images/.+\\.mp4$"
+                      "pattern": "^images/([\\w-][\\w.-]*/)*[\\w-][\\w.-]*\\.mp4$"
                     },
                     "generated": {
                       "type": "boolean",

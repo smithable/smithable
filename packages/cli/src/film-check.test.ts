@@ -40,6 +40,10 @@ interface Shape {
   turned?: boolean;
   data?: number;
   version1?: boolean;
+  noData?: boolean;
+  shortHeader?: boolean;
+  secondCodec?: string;
+  noTkhd?: boolean;
 }
 
 function mp4({
@@ -53,11 +57,17 @@ function mp4({
   turned = false,
   data = 1000,
   version1 = false,
+  noData = false,
+  shortHeader = false,
+  secondCodec,
+  noTkhd = false,
 }: Shape = {}) {
   const scale = 1000;
-  const mvhd = version1
-    ? box("mvhd", u32(1 << 24), zeros(16), u32(scale), zeros(4), u32(seconds * scale), zeros(80))
-    : box("mvhd", u32(0), zeros(8), u32(scale), u32(seconds * scale), zeros(80));
+  const mvhd = shortHeader
+    ? box("mvhd", u32(0), zeros(8))
+    : version1
+      ? box("mvhd", u32(1 << 24), zeros(16), u32(scale), zeros(4), u32(seconds * scale), zeros(80))
+      : box("mvhd", u32(0), zeros(8), u32(scale), u32(seconds * scale), zeros(80));
   const one = 0x10000;
   const matrix = turned
     ? [0, one, 0, -one, 0, 0, 0, 0, 0x40000000]
@@ -72,11 +82,17 @@ function mp4({
   );
   const hdlr = (kind: string) => box("hdlr", u32(0), zeros(4), ascii(kind), zeros(13));
   const stsd = box("stsd", u32(0), u32(1), box(codec, zeros(78)));
-  const video = box("trak", tkhd, box("mdia", hdlr("vide"), box("minf", box("stbl", stsd))));
+  const track = (stsd: Uint8Array, head = true) =>
+    box("trak", ...(head ? [tkhd] : []), box("mdia", hdlr("vide"), box("minf", box("stbl", stsd))));
+  const video = track(stsd, !noTkhd);
+  const second = secondCodec
+    ? [track(box("stsd", u32(0), u32(1), box(secondCodec, zeros(78))))]
+    : [];
   const audio = box("trak", box("mdia", hdlr("soun")));
-  const moov = box("moov", mvhd, video, ...(sound ? [audio] : []));
+  const moov = box("moov", mvhd, video, ...second, ...(sound ? [audio] : []));
   const ftyp = box("ftyp", ascii(brand), u32(0), ascii(brand));
   const mdat = box("mdat", zeros(data));
+  if (noData) return join8(ftyp, moov);
   return indexLast ? join8(ftyp, mdat, moov) : join8(ftyp, moov, mdat);
 }
 
@@ -111,6 +127,13 @@ test("each rule broken is named (section-film.md §2)", () => {
   expect(first({ seconds: 3, data: 2_000_000 })).toEqual([
     "File size: it spends 5.3 Mbit/s; a film spends at most 5 Mbit/s on average.",
   ]);
+  expect(first({ noData: true })).toEqual(["Format: it has no film data (mdat) after its index."]);
+  expect(first({ secondCodec: "hvc1" })).toEqual([
+    expect.stringMatching(/^Format: its picture is hvc1/),
+  ]);
+  expect(first({ noTkhd: true })).toEqual(["Picture size: its shown size could not be read."]);
+  // A header too short for its fields is unreadable, never read past its end.
+  expect(first({ shortHeader: true })).toEqual(["Length: its length could not be read."]);
   // Several at once, each named.
   expect(first({ sound: true, seconds: 20 })).toHaveLength(2);
 });

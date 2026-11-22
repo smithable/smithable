@@ -762,7 +762,7 @@ function HeroView({
       picture
     );
   // The mark is the wrapper's last child (AiMark.tsx).
-  const markGives = film && "[&:has(video[data-playing])>:last-child]:hidden";
+  const markGives = film && "not-print:[&:has(video[data-playing])>:last-child]:hidden";
   const across = film?.(false);
   // The second button: an outline one, in the hero's own text color on a picture or a wash.
   const second = secondLink && (

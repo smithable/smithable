@@ -700,7 +700,8 @@ const section: JsonSchema = {
           additionalProperties: false,
           required: ["src"],
           properties: {
-            src: { type: "string", pattern: "^images/.+\\.mp4$" },
+            // FILM_SRC in content.ts: no empty or dot-led part, so no way out of images/.
+            src: { type: "string", pattern: "^images/([\\w-][\\w.-]*/)*[\\w-][\\w.-]*\\.mp4$" },
             generated: {
               type: "boolean",
               description: "Made by an AI: its own origin, not the picture's.",
