@@ -121,19 +121,16 @@ export async function generate(dir: string, io: Io, flags: GenerateFlags): Promi
   const previous = readRecord(dir);
 
   // Never overwrite or delete a Smithable-owned file that was edited by hand. A file that is
-  // already what is written now loses nothing. A model Card and the app card once both wrote
-  // src/generated/card.ts (T1236), and the record could name either: the app card's exact old
-  // file on disk, or the record naming it where a model Card writes now, is that clash.
+  // already what is written now loses nothing, nor the app card's exact old file where a model
+  // Card's now goes (T1236: both once wrote src/generated/card.ts, and the record could name
+  // either). A record naming the old card over the model's file goes on with the next change
+  // that leaves Card as it is; a change to Card waits for it, so no edit is lost unseen.
   const writing = new Map(files.map((f) => [f.path, f.content]));
   const edited = Object.entries(previous.files)
     .filter(([path, hash]) => existsSync(join(dir, path)) && hashFile(join(dir, path)) !== hash)
-    .filter(([path, recorded]) => {
+    .filter(([path]) => {
       const text = readFileSync(join(dir, path), "utf8");
-      if (text === writing.get(path)) return false;
-      return !(
-        path === OLD_CARD_PATH &&
-        (text === OLD_CARD || (writing.has(path) && recorded === hash(OLD_CARD)))
-      );
+      return text !== writing.get(path) && !(path === OLD_CARD_PATH && text === OLD_CARD);
     })
     .map(([path]) => path)
     .filter((path) => !flags.overwrite?.includes(path));

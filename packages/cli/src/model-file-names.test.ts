@@ -90,6 +90,12 @@ test("an app the old clash left stuck goes on, and a real edit by hand is still 
   writeFileSync(join(dir, "src/generated/card.ts"), model2);
   writeFileSync(join(dir, ".smithable/files.json"), `${JSON.stringify(record, null, 2)}\n`);
   commit(dir);
+  // A change to Card first would replace a file the record cannot vouch for: it waits.
+  const first = captureIo();
+  expect(await run(["op", "addField", "Card", "note", "text", "--dir", dir], first)).not.toBe(0);
+  expect(first.stderr + first.stdout).toContain("edited by hand");
+  // Any other change goes on and puts the record right; then Card can change.
+  await smithable(["op", "setText", "Hi", "pages", "home", "hero", "title", "--dir", dir]);
   await smithable(["op", "addField", "Card", "note", "text", "--dir", dir]);
   expect(readFileSync(join(dir, "src/generated/card.ts"), "utf8")).toContain("note");
   const model = readFileSync(join(dir, "src/generated/card.ts"), "utf8");
