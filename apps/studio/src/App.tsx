@@ -36,7 +36,7 @@ import { type CodeJump, SHOW_CODE } from "./code-jump";
 import { type Spec, useSpec } from "./engine";
 import { FeedbackDialog } from "./Feedback";
 import { FirstLook } from "./FirstLook";
-import { lookSeenKey, seenLook } from "./first-look";
+import { type LookSession, lookSeenKey, seenLook } from "./first-look";
 import { doneKey, guideOff, presentedKey, TOURS } from "./guide";
 import { entryText, grouped, line } from "./history";
 import { LookPanel } from "./LookPanel";
@@ -244,6 +244,8 @@ export function App() {
     project: Project;
     path: string;
     target?: string;
+    /** Opened by Look's Customize: a draft of this theme, Look's changes still undoable. */
+    fromLook?: { theme?: string; session: LookSession };
   }>();
   const [pickingLook, setPickingLook] = useState<{
     project: Project;
@@ -2453,7 +2455,7 @@ export function App() {
               else reveal("look-kept");
             }
             if (error) setMessage({ ok: false, text: error });
-            if (customize) setEditingLook({ project, path: keptPage() });
+            if (customize) setEditingLook({ project, path: keptPage(), fromLook: customize });
           }}
         />
       )}
@@ -2467,7 +2469,12 @@ export function App() {
             liveBusy={busy}
             initialTarget={editingLook.target}
             path={editingLook.path}
-            onClose={() => setEditingLook(undefined)}
+            {...(editingLook.fromLook ? { fromLook: editingLook.fromLook } : {})}
+            onClose={(result) => {
+              setEditingLook(undefined);
+              if (result?.undone) void refreshLook();
+              if (result?.error) setMessage({ ok: false, text: result.error });
+            }}
           />
         </Suspense>
       )}

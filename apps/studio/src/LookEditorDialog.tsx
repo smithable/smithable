@@ -1,11 +1,12 @@
 import { LookEditor, type LookEditorHost, type Start } from "@smithable/look-editor";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { api, type Project } from "./api";
+import { api, type Project, type Result } from "./api";
 import type { Run } from "./builder/ChangeForms";
 import { ThemeSettings } from "./builder/Look";
 import { PendingEdits, usePendingEdits } from "./builder/pending-edit";
 import { UxSource } from "./builder/UxSource";
 import type { Spec } from "./engine";
+import type { LookSession } from "./first-look";
 import { Tabs } from "./ui";
 import "@smithable/look-editor/styles.css";
 
@@ -17,6 +18,7 @@ export default function LookEditorDialog({
   liveBusy,
   initialTarget,
   path,
+  fromLook,
   onClose,
 }: {
   project: Project;
@@ -26,15 +28,35 @@ export default function LookEditorDialog({
   liveBusy: boolean;
   initialTarget?: string | null;
   path: string;
-  onClose: () => void;
+  /**
+   * Opened by Look's Customize (T1195): a draft of the theme tried on there, when one was, and
+   * Look's changes still undoable, so Cancel here undoes them and the lab's own Apply together.
+   */
+  fromLook?: { theme?: string; session: LookSession };
+  onClose: (result?: { error?: string; undone?: boolean }) => void;
 }) {
   const [project, setProject] = useState(initialProject);
   const [instance, setInstance] = useState(0);
   const [settingsInstance, setSettingsInstance] = useState(0);
-  const [tab, setTab] = useState<"settings" | "customise">("settings");
+  const [tab, setTab] = useState<"settings" | "customize">(
+    fromLook?.theme ? "customize" : "settings",
+  );
   const [target, setTarget] = useState<string | null>(initialTarget ?? null);
-  const [draft, setDraft] = useState<{ theme?: string; target: string | null; path: string }>();
-  const draftTarget = useRef<string | null>(null);
+  const draftPath = (page: string | null) =>
+    page ? (spec.ir?.pages.find((p) => p.id === page)?.route ?? path) : path;
+  const [draft, setDraft] = useState<
+    { theme?: string; target: string | null; path: string } | undefined
+  >(() =>
+    fromLook?.theme
+      ? {
+          theme: fromLook.theme,
+          target: initialTarget ?? null,
+          path: draftPath(initialTarget ?? null),
+        }
+      : undefined,
+  );
+  const draftTarget = useRef<string | null>(fromLook?.theme ? (initialTarget ?? null) : null);
+  const labApplies = useRef(0);
   const edits = usePendingEdits();
   const dialog = useRef<HTMLDialogElement>(null);
   const dirty = useRef(false);
@@ -71,6 +93,20 @@ export default function LookEditorDialog({
     dialog.current?.close();
     onClose();
   };
+  const cancel = async () => {
+    // Cancel says what it does: the draft and Look's changes go, without asking again.
+    if (!fromLook || busy.current || liveBusy || livePending.current) return;
+    busy.current = true;
+    setBusy(true);
+    let error: string | undefined;
+    try {
+      await fromLook.session.finish(false);
+    } catch (reason) {
+      error = `Cancel could not restore the opening look: ${(reason as Error).message} Review the changes in Changes.`;
+    }
+    dialog.current?.close();
+    onClose({ ...(error ? { error } : {}), undone: true });
+  };
   const startDraft = (theme?: string) => {
     if (busy.current || liveBusy || livePending.current) return;
     if (
@@ -84,10 +120,10 @@ export default function LookEditorDialog({
     setDraft({
       ...(theme ? { theme } : {}),
       target,
-      path: target ? (spec.ir?.pages.find((page) => page.id === target)?.route ?? path) : path,
+      path: draftPath(target),
     });
     setInstance((value) => value + 1);
-    setTab("customise");
+    setTab("customize");
   };
   const host = useMemo<LookEditorHost>(
     () => ({
@@ -181,12 +217,21 @@ export default function LookEditorDialog({
           const { expectedRevision, requestId, ...args } = JSON.parse(
             String(init?.body ?? "{}"),
           ) as Record<string, unknown>;
+          // From Look, the precondition is the revision Look's session left, so Cancel can undo it.
+          const applyNow = (revision?: string) =>
+            api.applyLook("applyTheme", args, project.lookProject ?? "", {
+              ...(revision
+                ? { expectedRevision: revision }
+                : typeof expectedRevision === "string"
+                  ? { expectedRevision }
+                  : {}),
+              ...(typeof requestId === "string" ? { requestId } : {}),
+            });
           const result =
             route === "/api/apply"
-              ? await api.applyLook("applyTheme", args, project.lookProject ?? "", {
-                  ...(typeof expectedRevision === "string" ? { expectedRevision } : {}),
-                  ...(typeof requestId === "string" ? { requestId } : {}),
-                })
+              ? fromLook
+                ? await asLookChange(fromLook.session, `lab-${++labApplies.current}`, applyNow)
+                : await applyNow(undefined)
               : await api.applyLook("addTheme", args, project.lookProject ?? "");
           if (!result.ok)
             return Response.json(
@@ -209,7 +254,7 @@ export default function LookEditorDialog({
         );
       },
     }),
-    [path, draft?.path, project.lookProject, edits.pending],
+    [path, draft?.path, project.lookProject, edits.pending, fromLook],
   );
   return (
     <dialog
@@ -225,14 +270,26 @@ export default function LookEditorDialog({
         <span className="min-w-0 text-sm font-medium wrap-break-word">
           Look · {tab === "settings" ? liveProject.name : project.name}
         </span>
-        <button
-          type="button"
-          disabled={isBusy || liveBusy || liveRunning}
-          onClick={close}
-          className="shrink-0 rounded border border-line px-3 py-1 text-sm disabled:opacity-50"
-        >
-          Close look editor
-        </button>
+        <span className="flex shrink-0 items-center gap-2">
+          {fromLook && (
+            <button
+              type="button"
+              disabled={isBusy || liveBusy || liveRunning}
+              onClick={() => void cancel()}
+              className="rounded px-3 py-1 text-sm disabled:opacity-50"
+            >
+              Cancel
+            </button>
+          )}
+          <button
+            type="button"
+            disabled={isBusy || liveBusy || liveRunning}
+            onClick={close}
+            className="rounded border border-line px-3 py-1 text-sm disabled:opacity-50"
+          >
+            Close look editor
+          </button>
+        </span>
       </div>
       <fieldset
         disabled={isBusy || liveBusy || liveRunning}
@@ -241,12 +298,12 @@ export default function LookEditorDialog({
         <Tabs
           tabs={[
             ["settings", "Theme and settings"],
-            ["customise", "Customise"],
+            ["customize", "Customize"],
           ]}
           value={tab}
           onChange={(next) => {
             if (isBusy || liveBusy || livePending.current) return;
-            if (next === "customise" && !draft) startDraft();
+            if (next === "customize" && !draft) startDraft();
             else setTab(next);
           }}
         />
@@ -263,12 +320,12 @@ export default function LookEditorDialog({
                 ownThemes={liveProject.ownThemes}
                 target={target}
                 onTarget={setTarget}
-                onCustomise={startDraft}
+                onCustomize={startDraft}
               />
             </UxSource>
           </fieldset>
         </div>
-        <div hidden={tab !== "customise"} className="min-h-0 flex-1">
+        <div hidden={tab !== "customize"} className="min-h-0 flex-1">
           {draft && (
             <LookEditor
               key={instance}
@@ -285,4 +342,28 @@ export default function LookEditorDialog({
       </PendingEdits.Provider>
     </dialog>
   );
+}
+
+/** The lab's Apply as one of Look's changes, so Cancel undoes it with them (T1195). */
+async function asLookChange(
+  session: LookSession,
+  key: string,
+  apply: (revision: string) => Promise<Result>,
+): Promise<Result> {
+  let result: Result | undefined;
+  try {
+    await session.set(key, "applied", async (revision) => {
+      result = await apply(revision);
+      return result;
+    });
+  } catch (reason) {
+    if (!result) return { ok: false, output: (reason as Error).message };
+    // Applied, but Look's session could not record it: say so rather than report a clean Apply.
+    if (result.ok)
+      return {
+        ...result,
+        output: `${result.output} Cancel can no longer undo Look's changes: review them in Changes.`,
+      };
+  }
+  return result ?? { ok: false, output: "Look is closing: open the look editor again." };
 }
