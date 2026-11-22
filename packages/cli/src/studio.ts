@@ -1316,7 +1316,7 @@ export async function studio(
         const held = inkWash.read(dir, lookProject, url.searchParams.get("id") ?? "");
         const index = url.searchParams.get("index");
         const file =
-          index && /^[0-3]$/.test(index) ? held?.placement.files[Number(index)] : undefined;
+          index && /^(0|[1-9]\d*)$/.test(index) ? held?.placement.files[Number(index)] : undefined;
         if (!file) return json({}, 404);
         res.writeHead(200, {
           "Content-Type": "image/webp",
@@ -1477,7 +1477,6 @@ export async function studio(
             : undefined;
         if (inkWashOffer !== undefined) {
           const choice = (args ?? {}) as Record<string, unknown>;
-          const version = preparedInkWash && (await libraryVersion(fetch));
           if (
             name !== "setPictureStyle" ||
             choice.style !== "ink-wash" ||
@@ -1485,12 +1484,24 @@ export async function studio(
             pictureOffer !== undefined ||
             !preparedInkWash ||
             expectedLookProject !== lookProject ||
-            expectedRevision !== preparedInkWash.revision ||
-            !version ||
-            typeof version === "string" ||
+            expectedRevision !== preparedInkWash.revision
+          ) {
+            return json(
+              { ok: false, output: "These pictures are no longer ready. Reopen the offer." },
+              409,
+            );
+          }
+          const version = await libraryVersion(fetch);
+          if (typeof version === "string")
+            return json(
+              { ok: false, output: "The picture library could not be checked. Try again." },
+              503,
+            );
+          if (
+            expectedLookProject !== lookProject ||
             version.version !== preparedInkWash.version.version
           ) {
-            inkWash.clear();
+            if (typeof inkWashOffer === "string") inkWash.clear(inkWashOffer);
             return json(
               { ok: false, output: "These pictures are no longer ready. Reopen the offer." },
               409,

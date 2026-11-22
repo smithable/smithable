@@ -16,9 +16,12 @@ test("Studio prepares its offer outside the project and invalidates it after a p
   const digest = sha256(drawing);
   const dir = tempDir("ink-wash-offer-");
   const images = join(dir, "public", "images");
-  mkdirSync(images, { recursive: true });
+  mkdirSync(join(images, "samples"), { recursive: true });
   const hero = join(images, "hero.webp");
   writeFileSync(hero, drawing);
+  const originalSample = Buffer.from("a drawing the decoder could not read");
+  const sampleDigest = sha256(originalSample);
+  writeFileSync(join(images, "samples", "0.webp"), originalSample);
   writeFileSync(
     join(dir, "smithable.yml"),
     "smithable: 0.1\napp: { name: Notes }\nmodels: { Note: { fields: { text: string } } }\n",
@@ -28,14 +31,17 @@ test("Studio prepares its offer outside the project and invalidates it after a p
     join(dir, "smithable.ux.yml"),
     "smithableUx: 0.1\npictures: { style: ink-wash }\ntheme: { preset: sage-garden }\n",
   );
+  let libraryVersion = "v1";
   const server = createServer((req, res) => {
     res.setHeader("Content-Type", "application/json");
     if (req.url === "/images/latest.json")
-      return res.end(JSON.stringify({ version: "v1", index: "versions/v1.json" }));
-    if (req.url === "/images/versions/v1.json")
+      return res.end(
+        JSON.stringify({ version: libraryVersion, index: `versions/${libraryVersion}.json` }),
+      );
+    if (req.url === `/images/versions/${libraryVersion}.json`)
       return res.end(
         JSON.stringify({
-          version: "v1",
+          version: libraryVersion,
           styles: [{ id: "ink-wash", generated: true, words: {}, washHue: 300 }],
           entries: [
             {
@@ -47,6 +53,16 @@ test("Studio prepares its offer outside the project and invalidates it after a p
               alt: "Drawing",
               sha256: digest,
               url: `https://docs.smithable.ai/images/files/${digest}.webp`,
+            },
+            {
+              id: "ink-sample",
+              subject: "sample",
+              kind: "sample",
+              generated: true,
+              style: "ink-wash",
+              alt: "Drawing as drawn",
+              sha256: sampleDigest,
+              url: `https://docs.smithable.ai/images/files/${sampleDigest}.webp`,
             },
           ],
         }),
@@ -60,24 +76,35 @@ test("Studio prepares its offer outside the project and invalidates it after a p
   const offers = new StudioInkWash();
   try {
     const revision = projectRevision(dir);
+    const ready = () =>
+      vi.waitFor(
+        () => {
+          const answer = offers.get(dir, "project", revision).offer;
+          if (!answer) throw new Error("The worker has not prepared the drawing yet");
+          return answer;
+        },
+        { timeout: 8000 },
+      );
     expect(offers.get(dir, "project", revision)).toEqual({ pending: true });
-    const offer = await vi.waitFor(
-      () => {
-        const answer = offers.get(dir, "project", revision).offer;
-        if (!answer) throw new Error("The worker has not prepared the drawing yet");
-        return answer;
-      },
-      { timeout: 8000 },
-    );
+    const offer = await ready();
     const staged = offers.read(dir, "project", offer.id);
     expect(staged?.placement.files).toHaveLength(1);
     expect(staged?.placement.files[0]?.path).toBe("public/images/hero.webp");
+    expect(offer.samples.map((sample) => sample.asDrawn)).toEqual([false, true]);
+    expect(offer.samples[1]?.after).toBe(offer.samples[1]?.before);
     expect(sha256(readFileSync(hero))).toBe(digest);
     expect(offers.read(dir, "other-project", offer.id)).toBeUndefined();
-    writeFileSync(hero, "The owner's new drawing");
+    libraryVersion = "v2";
+    vi.setSystemTime(Date.now() + 61_000);
+    expect(offers.get(dir, "project", revision)).toEqual({ pending: true });
+    const updated = await ready();
+    expect(updated.binding).not.toBe(offer.binding);
     expect(offers.read(dir, "project", offer.id)).toBeUndefined();
+    writeFileSync(hero, "The owner's new drawing");
+    expect(offers.read(dir, "project", updated.id)).toBeUndefined();
   } finally {
     offers.clear();
+    vi.useRealTimers();
     vi.unstubAllEnvs();
     server.closeAllConnections();
     await new Promise<void>((done) => server.close(() => done()));

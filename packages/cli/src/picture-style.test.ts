@@ -159,11 +159,20 @@ test("explicit Ink wash placement records the tint, reuses the same treatment an
   expect(record?.sha256).toBe(sha256(readFileSync(join(images, "hero.webp"))));
   expect(record?.sha256).not.toBe(source);
   expect(await placeStyle(dir, "ink-wash", offline, indexed, colours)).toMatchObject({ files: [] });
-  expect(
-    await placeStyle(dir, "ink-wash", fetcher, indexed, { ...colours, primary: "#292524" }),
-  ).toMatchObject({
+  const grey = { ...colours, primary: "#292524" };
+  const restored = await placeStyle(dir, "ink-wash", fetcher, indexed, grey);
+  if (typeof restored === "string") throw new Error(restored);
+  expect(restored).toMatchObject({
     asDrawn: expect.stringContaining("greyscale"),
     files: [{ path: "public/images/hero.webp", bytes: new Uint8Array(original) }],
+  });
+  const restoredRecords = restored.texts.find(
+    (file) => file.path === "public/images/pictures.json",
+  );
+  expect(JSON.parse(restoredRecords?.text ?? "{}")["hero.webp"]).toMatchObject({
+    source,
+    colours: grey,
+    rule: "none",
   });
   expect(await placeStyle(dir, "pastel", offline, indexed, colours)).toContain(
     "no Ink wash tint rule",

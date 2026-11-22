@@ -1,18 +1,32 @@
 import { useEffect, useRef, useState } from "react";
-import { api, type InkWashOffer } from "./api";
+import { api, type InkWashOffer, StudioRequestError } from "./api";
 import { Button } from "./ui";
 
 const keepKey = (offer: InkWashOffer) => `smithable:ink-wash-kept:${offer.binding}`;
 
-export function InkWashNotice({
-  project,
-  revision,
-  onApplied,
-}: {
+interface InkWashNoticeProps {
   project: string;
   revision: string;
   onApplied: () => void;
-}) {
+}
+
+export function InkWashNotice(props: InkWashNoticeProps) {
+  const [attempt, setAttempt] = useState(0);
+  return (
+    <InkWashComparison
+      {...props}
+      key={`${props.project}:${props.revision}:${attempt}`}
+      onExpired={() => setAttempt((value) => value + 1)}
+    />
+  );
+}
+
+function InkWashComparison({
+  project,
+  revision,
+  onApplied,
+  onExpired,
+}: InkWashNoticeProps & { onExpired: () => void }) {
   const [offer, setOffer] = useState<InkWashOffer>();
   const [applying, setApplying] = useState(false);
   const [error, setError] = useState<string>();
@@ -61,7 +75,11 @@ export function InkWashNotice({
       setOffer(undefined);
       onApplied();
     } catch (error) {
-      setError(error instanceof Error ? error.message : "These pictures could not be applied.");
+      if (error instanceof StudioRequestError && error.status === 409) {
+        onExpired();
+      } else {
+        setError(error instanceof Error ? error.message : "These pictures could not be applied.");
+      }
     } finally {
       setApplying(false);
     }

@@ -6,8 +6,8 @@ trial of 2026-11-20/21, two rounds of sheets on contrasting themes, where Johan 
 the record in `pictures.json`, and the host's `place-pictures` effect.
 
 **Changed 2026-11-22 after the comparison sheets: a theme change keeps the current pictures. Coloured
-themes qualify for a light tint and greyscale themes use the original drawings. §10 supersedes the
-earlier design where they differ.**
+themes qualify for a light tint blended 90% back toward the original. Greyscale themes use the
+original drawings. §10 supersedes the earlier design where they differ.**
 
 ## 1 What changes for the user
 

@@ -40,7 +40,7 @@ async function pictureLibrary() {
     const path = new URL(req.url, "http://fixture").pathname;
     if (path === "/images/latest.json")
       return void res.end(JSON.stringify({ version: latest, index: `versions/${latest}.json` }));
-    const version = path.match(/^\/images\/versions\/(v[12])\.json$/)?.[1];
+    const version = path.match(/^\/images\/versions\/(v[123])\.json$/)?.[1];
     if (version) return void res.end(JSON.stringify(versions[version]));
     if (path === "/images/index.json")
       return void res.end(JSON.stringify(versions[latest].entries));
@@ -57,6 +57,7 @@ async function pictureLibrary() {
   for (const [v, offset] of [
     ["v1", 0],
     ["v2", 2],
+    ["v3", 2],
   ]) {
     const entries = [];
     for (const [index, subject] of ["cafe", "bicycle", "lamp"].entries()) {
@@ -101,8 +102,8 @@ async function pictureLibrary() {
     base,
     versions,
     files,
-    advance: () => {
-      latest = "v2";
+    advance: (version = "v2") => {
+      latest = version;
     },
     offline: (value) => {
       offline = value;
@@ -363,6 +364,17 @@ export async function checkPicturePicker(port = 5840) {
     assert.equal(hash(readFileSync(heroPath)), ink.sha256);
     await keptOffer.context.close();
     const chosen = await offerPage();
+    library.advance("v3");
+    const withdrawn = page.waitForResponse(
+      (response) => new URL(response.url()).pathname === "/api/op",
+    );
+    await chosen.dialog.getByRole("button", { name: "Use these", exact: true }).click();
+    assert.equal((await withdrawn).status(), 409);
+    await chosen.dialog.waitFor({ state: "hidden" });
+    assert.equal(hash(readFileSync(heroPath)), ink.sha256);
+    await chosen.compare.waitFor({ timeout: 60_000 });
+    await chosen.compare.click();
+    await chosen.dialog.waitFor();
     const applied = page.waitForResponse(
       (response) => new URL(response.url()).pathname === "/api/op",
     );
@@ -372,6 +384,7 @@ export async function checkPicturePicker(port = 5840) {
     const record = JSON.parse(readFileSync(join(images, "pictures.json"), "utf8"))["hero.webp"];
     assert.equal(record.source, ink.sha256);
     assert.equal(record.rule, "ink-wash-b90");
+    assert.equal(record.version, "v3");
     const tinted = readFileSync(heroPath);
     assert.notEqual(hash(tinted), ink.sha256);
     assert.ok(tinted.includes("trainedAlgorithmicMedia"));
@@ -381,7 +394,7 @@ export async function checkPicturePicker(port = 5840) {
     );
     await chosen.context.close();
     console.log(
-      "  ✓ Ink wash offer: staged preview, remembered Keep mine, and one explicit apply with provenance",
+      "  ✓ Ink wash offer: staged preview, remembered Keep mine, refreshed stale offer, one explicit apply with provenance",
     );
   } catch (error) {
     console.error(`Picture picker failed; fixture: ${root}`);

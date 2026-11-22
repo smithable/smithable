@@ -288,6 +288,7 @@ export function planStyle(
       continue;
     }
     if (tint) {
+      // The same theme or picture limitation is settled. A codec failure can be retried.
       if (
         record.version === version.version &&
         record.source === entry.sha256 &&
@@ -366,6 +367,7 @@ export interface PlacedStyle {
   kept: string[];
   /** Each sample picture replaced: its old bytes and new, for the records seeded with it. */
   swaps: { from: Uint8Array; to: Uint8Array; generated: boolean }[];
+  recolour?: { style: string; colours: InkWashColours };
   asDrawn?: string;
 }
 
@@ -422,16 +424,18 @@ export async function placeStyle(
         : await fetchChecked(write.entry, fetchFn);
     if (typeof bytes === "string") failed.push(bytes);
     else {
+      if (recolour) {
+        write.record.source = write.entry.sha256;
+        write.record.colours = recolour;
+        write.record.rule = "none";
+      }
       if (tint && render && washHue !== undefined) {
         const result = await render(Buffer.from(bytes), tint, washHue);
-        write.record.source = write.entry.sha256;
-        write.record.colours = tint;
         if ("bytes" in result) {
           bytes = result.bytes;
           write.record.sha256 = sha256(bytes);
           write.record.rule = "ink-wash-b90";
         } else {
-          write.record.rule = "none";
           write.record.fallback = result.reason;
         }
       }
@@ -467,6 +471,7 @@ export async function placeStyle(
     kept: plan.kept,
     planned,
     swaps,
+    ...(recolour ? { recolour: { style, colours: recolour } } : {}),
     ...(recolour && !tint
       ? { asDrawn: "The theme is greyscale, so it uses the original drawings." }
       : {}),

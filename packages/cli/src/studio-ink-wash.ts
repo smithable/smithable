@@ -13,7 +13,6 @@ import {
   type PlacedStyle,
   sha256,
 } from "./picture-style.js";
-import type { Fetch } from "./pictures.js";
 import { projectRevision } from "./project-revision.js";
 import { pictureHashes } from "./studio-picture-styles.js";
 import { loadSpec } from "./validate.js";
@@ -36,13 +35,14 @@ interface Preparation {
   version?: LibraryVersion;
   offer?: InkWashOffer;
   pending?: true;
+  checkAfter?: number;
 }
+
+const libraryRefreshMs = 60_000;
 
 /** One pending or ready offer per Studio host. All rendered files live outside the project. */
 export class StudioInkWash {
   private current: Preparation | undefined;
-
-  constructor(private readonly fetchFn: Fetch = fetch) {}
 
   get(dir: string, project: string, revision: string): { offer?: InkWashOffer; pending?: true } {
     const hashes = pictureHashes(dir);
@@ -55,10 +55,13 @@ export class StudioInkWash {
       const work: Preparation = { project, revision, hashes, pending: true };
       this.current = work;
       void this.prepare(dir, work);
+    } else if (!this.current.pending && Date.now() >= (this.current.checkAfter ?? Infinity)) {
+      this.current.pending = true;
+      void this.prepare(dir, this.current);
     }
     const work = this.current;
     if (!work) return {};
-    return work.offer ? { offer: work.offer } : work.pending ? { pending: true } : {};
+    return work.pending ? { pending: true } : work.offer ? { offer: work.offer } : {};
   }
 
   read(dir: string, project: string, id: string) {
@@ -79,8 +82,9 @@ export class StudioInkWash {
     };
   }
 
-  clear() {
+  clear(id?: string) {
     const work = this.current;
+    if (id !== undefined && work?.offer?.id !== id) return;
     this.current = undefined;
     if (work?.worker) {
       void work.worker
@@ -98,17 +102,22 @@ export class StudioInkWash {
     try {
       const { ux, themes } = loadSpec(dir, { out: () => {}, err: () => {} });
       if (ux?.pictures?.style !== "ink-wash") return;
-      const version = await libraryVersion(this.fetchFn);
+      const version = await libraryVersion(fetch);
+      work.checkAfter = Date.now() + libraryRefreshMs;
       if (typeof version === "string" || this.current !== work) return;
+      if (work.version?.version === version.version) return;
+      this.remove(work);
+      delete work.offer;
+      work.version = version;
       const style = version.styles.find((entry) => entry.id === "ink-wash");
       if (!style || style.washHue === undefined) return;
       const { primary, foreground, background } = resolveLook(ux, themes).tokens.light;
       const colours = { primary, foreground, background };
       work.folder = mkdtempSync(join(tmpdir(), "smithable-ink-wash-"));
       work.destination = join(work.folder, "offer.bin");
-      work.version = version;
       const workerData: InkWashWork = { dir, destination: work.destination, colours, version };
       const mirror = process.env.SMITHABLE_IMAGE_LIBRARY;
+      // Run the built CLI worker in both the installed CLI and source-level tests.
       const worker = new Worker(new URL("../dist/ink-wash-worker.js", import.meta.url), {
         workerData,
         env: mirror === undefined ? {} : { SMITHABLE_IMAGE_LIBRARY: mirror },
@@ -140,14 +149,36 @@ export class StudioInkWash {
       const id = randomUUID();
       const record = placed.texts.find(({ path }) => path === "public/images/pictures.json");
       const records = JSON.parse(record?.text ?? "{}") as PictureRecords;
-      const samples = placed.files.slice(0, 4).map(({ path }, index) => {
-        const file = path.slice("public/images/".length);
-        return {
-          before: `/api/images/${file}`,
-          after: `/api/ink-wash/preview?${new URLSearchParams({ id, index: String(index) })}`,
-          asDrawn: records[file]?.rule !== "ink-wash-b90",
-        };
+      const changed = new Map(
+        placed.files.map(({ path }, index) => [path.slice("public/images/".length), index]),
+      );
+      const candidates = Object.keys(placed.planned).filter((file) => {
+        const record = records[file];
+        return (
+          changed.has(file) ||
+          (record?.version === version.version &&
+            record.style === "ink-wash" &&
+            record.fallback !== undefined &&
+            record.sha256 === placed.planned[file] &&
+            record.colours?.primary === primary &&
+            record.colours.foreground === foreground &&
+            record.colours.background === background)
+        );
       });
+      const samples = [...new Set([...candidates.slice(0, 1), ...changed.keys(), ...candidates])]
+        .slice(0, 4)
+        .map((file) => {
+          const index = changed.get(file);
+          const before = `/api/images/${file}?sha=${placed.planned[file]}`;
+          return {
+            before,
+            after:
+              index === undefined
+                ? before
+                : `/api/ink-wash/preview?${new URLSearchParams({ id, index: String(index) })}`,
+            asDrawn: records[file]?.rule !== "ink-wash-b90",
+          };
+        });
       work.offer = { id, binding, project: work.project, revision: work.revision, samples };
     } catch {
       // The original pictures remain in place whenever preparation is unavailable.

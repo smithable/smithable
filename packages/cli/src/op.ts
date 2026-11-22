@@ -583,15 +583,27 @@ async function applyAndCheckpoint(
   const placing = result.effects.find((e) => e.kind === "place-pictures");
   const recolourRevision = placing?.recolour ? projectRevision(dir) : undefined;
   let recolour: InkWashColours | undefined;
-  if (placing?.recolour && result.files.ux) {
+  if (placing?.recolour) {
+    const themeSource = result.files.ux ?? files.ux;
     const themes = files.themes ?? [];
-    const ux = validateUx({ path: UX, text: result.files.ux }, after, themes).ux;
+    const ux = themeSource && validateUx({ path: UX, text: themeSource }, after, themes).ux;
     if (!ux) {
       io.err("The current theme could not be read for recolouring.\n");
       return 1;
     }
     const { primary, foreground, background } = resolveLook(ux, themes).tokens.light;
     recolour = { primary, foreground, background };
+    const prepared = flags.preparedPictures?.recolour;
+    if (
+      flags.preparedPictures &&
+      (prepared?.style !== placing.style ||
+        prepared.colours.primary !== primary ||
+        prepared.colours.foreground !== foreground ||
+        prepared.colours.background !== background)
+    ) {
+      io.err("The prepared pictures no longer match this theme. Nothing was changed.\n");
+      return 1;
+    }
   }
   const placed =
     placing &&

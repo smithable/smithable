@@ -323,6 +323,15 @@ export const waking = {
  * Studio's own API. An answer that is not OK (a refusal, the workspace restarting, a proxy's
  * plain-text error) throws an Error with a readable message; callers show it.
  */
+export class StudioRequestError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+  ) {
+    super(message);
+  }
+}
+
 async function call<T>(path: string, body?: unknown): Promise<T> {
   const send = () =>
     fetch(path, {
@@ -363,7 +372,10 @@ async function call<T>(path: string, body?: unknown): Promise<T> {
   }
   if (!response.ok) {
     const answer = parsed as { output?: string; message?: string };
-    throw new Error(answer.output ?? answer.message ?? `Studio answered ${response.status}.`);
+    throw new StudioRequestError(
+      answer.output ?? answer.message ?? `Studio answered ${response.status}.`,
+      response.status,
+    );
   }
   return parsed as T;
 }
