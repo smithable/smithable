@@ -870,10 +870,10 @@ function distinctFixture<T extends Record<string, unknown>>(
   }
   return choose(0) ? candidate as T : undefined;
 }
+
 `
     : ""
-}
-${
+}${
   signedIn
     ? `
 /** A new signed-in user with the role. */
