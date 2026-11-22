@@ -875,6 +875,7 @@ const setSectionLook: Operation<{ page: string; section: string; key: string; va
     "smithable.ux.yml:pages.*.sections.*.image",
     "smithable.ux.yml:pages.*.sections.*.band",
     "smithable.ux.yml:pages.*.sections.*.overlay",
+    "smithable.ux.yml:pages.*.sections.*.mark",
     "smithable.ux.yml:pages.*.sections.*.eyebrow",
     "smithable.ux.yml:pages.*.sections.*.facts",
     "smithable.ux.yml:pages.*.sections.*.stage",
@@ -898,7 +899,7 @@ const setSectionLook: Operation<{ page: string; section: string; key: string; va
       key: {
         type: "string",
         description:
-          "layout, image, columns, highlight or band, as the section takes (a hero also overlay, eyebrow and facts); position for the header.",
+          "layout, image, columns, highlight or band, as the section takes (a hero also overlay, mark, eyebrow and facts); position for the header.",
       },
       value: {
         type: "string",

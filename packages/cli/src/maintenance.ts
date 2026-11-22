@@ -1,12 +1,14 @@
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { kitSources, STACK_PROFILE } from "@smithable/adapter-tanstack";
+import { baselineKitSources, STACK_PROFILE } from "@smithable/adapter-tanstack";
 import { git } from "./git.js";
 import { VERSION } from "./version.js";
 export const templateKitRevision = createHash("sha256")
   .update(
-    JSON.stringify(Object.entries(kitSources).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))),
+    JSON.stringify(
+      Object.entries(baselineKitSources).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)),
+    ),
   )
   .digest("hex");
 function json(dir: string, file: string): Record<string, unknown> | undefined {

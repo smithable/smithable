@@ -539,6 +539,13 @@
                       ],
                       "description": "A cover or photo hero's wash: brand or dark; unsaid, the layout's own."
                     },
+                    "mark": {
+                      "enum": [
+                        "title",
+                        "logo"
+                      ],
+                      "description": "One of title, logo; the first is the default."
+                    },
                     "eyebrow": {
                       "enum": [
                         "address",

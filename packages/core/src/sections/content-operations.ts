@@ -479,7 +479,7 @@ const setSectionPicture: Operation<{
   name: "setSectionPicture",
   sets: ["smithable.content.yml:pages.*.*.image", "smithable.content.yml:pages.*.*.items"],
   summary:
-    "Set a landing section's picture (a hero or media-and-text section, or a gallery's item by its place) to a file under public/images/, with what it shows; no src removes it (a gallery's whole item).",
+    "Set a landing section's picture (a hero, media-and-text, text, call to action or features section, or a gallery or features item by its place) to a file under public/images/, with what it shows; no src removes it (only a gallery loses the whole item).",
   schema: {
     type: "object",
     required: ["page", "section"],
@@ -501,7 +501,7 @@ const setSectionPicture: Operation<{
       item: {
         type: "integer",
         minimum: 0,
-        description: "A gallery's picture by its place, from 0.",
+        description: "A gallery or features picture by its place, from 0.",
       },
       was: {
         type: "string",
@@ -530,14 +530,14 @@ const setSectionPicture: Operation<{
     const languages = (content.get(["languages"]) as string[] | undefined) ?? [];
     const items = ["pages", page, section, "items"];
     if (item !== undefined) {
-      if (found.kind !== "gallery")
+      if (found.kind !== "gallery" && found.kind !== "features")
         throw new OperationError(
-          `Only a gallery's pictures are given by their place; ${section} is a ${found.kind} section.`,
+          `Only a gallery or features section's pictures are given by their place; ${section} is a ${found.kind} section.`,
         );
       const list = content.get(items);
       if (!Array.isArray(list) || item >= list.length)
         throw new OperationError(`The ${section} section has no picture ${item + 1}.`);
-      if (src === undefined) {
+      if (src === undefined && found.kind === "gallery") {
         // The item goes, its caption with it, in every language file that has it.
         content.removeItem(items, item);
         if (list.length === 1) content.removeAndPrune(items, 0);
