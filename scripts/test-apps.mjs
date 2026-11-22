@@ -3994,7 +3994,7 @@ async function marketplaceFlow(dir, base) {
  * The painter's jobs without photos (T1119): the jobs page's cards and the landing's latest jobs
  * are text cards, with no empty picture slot, since no job shown has a picture yet.
  */
-async function painterFlow(base) {
+async function painterFlow(dir, base) {
   const browser = await chromium.launch();
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
   try {
@@ -4011,6 +4011,17 @@ async function painterFlow(base) {
       if (slots) throw new Error(`${path} shows ${slots} empty picture slots`);
     }
     console.log("  ✓ painter: jobs without photos show as text cards, with no empty picture slot");
+    await signInAs(page, base, "admin");
+    await open(page, `${base}/enquiries/1`);
+    await page.getByRole("button", { name: "Mark contacted", exact: true }).click();
+    const action = page.getByRole("dialog", { name: "Mark contacted", exact: true });
+    await action.getByLabel("Follow up on", { exact: true }).fill("2026-12-11");
+    await action.getByRole("button", { name: "Mark contacted", exact: true }).click();
+    await action.waitFor({ state: "hidden" });
+    const [enquiry] = query(dir, "SELECT follow_up_on, status FROM enquiries WHERE id = 1");
+    if (enquiry?.follow_up_on !== "2026-12-11" || enquiry.status !== "contacted")
+      throw new Error("Mark contacted did not save the status and the date asked in the action");
+    console.log("  ✓ painter: the follow-up action asks for and saves an app-filled date");
   } catch (error) {
     console.log(
       `  ✗ painter: ${error.message.split("\n")[0]}\n    at ${page.url()}, see ${await screenshot(page)}`,
@@ -10120,7 +10131,7 @@ test("the session cookie's name and attributes", async () => {
       }
       if (example === "barbers") await barbersFlow(dir, base);
       if (example === "restaurant") await restaurantFlow(base);
-      if (example === "painter") await painterFlow(base);
+      if (example === "painter") await painterFlow(dir, base);
       if (example === "food-truck") await foodTruckFlow(dir, base);
       if (example === "crm") await importFlow(dir, base);
       if (example === "status") await statusFlow(base);

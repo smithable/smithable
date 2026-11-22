@@ -143,6 +143,34 @@ test("a form's change needs write on the record; an action checked its own acces
   expect(data).toContain('if (what === "changed") check(taskAccess.write, viewer, row.ownerId);');
 });
 
+test("a standard action asks for app-filled values with the same field validators", () => {
+  const file = generate(
+    "followUp",
+    "{ on: Task, set: { dueOn: , status: , amount: , memo: , assignee: , title: } }",
+    undefined,
+    `dueOn: { type: date!, by: app }
+      status: { type: open | done, by: app }
+      amount: { type: int, min: 1, max: 9, by: app }
+      memo: { type: text, min: 2, max: 10, by: app }
+      assignee: { type: User, by: app }`,
+  );
+  const action = file("src/generated/actions/follow-up.ts");
+  expect(action).toContain('import { taskSettable, taskSchema } from "#/generated/task.schema"');
+  expect(action).toContain('"dueOn": taskSettable.shape.dueOn.nonoptional(),');
+  expect(action).toContain('"status": taskSettable.shape.status.nonoptional(),');
+  for (const field of ["amount", "memo", "assigneeId"]) {
+    expect(action).toContain(`"${field}": taskSettable.shape.${field},`);
+  }
+  expect(action).toContain('"title": taskSchema.shape.title,');
+  expect(action).toContain('byApp: false, text: "models.Task.fields.assignee.label"');
+  expect(action).toContain('"assigneeId": await userOptions()');
+  const schema = file("src/generated/task.schema.ts");
+  expect(schema).toContain("amount: (s) => s.min(1).max(9),");
+  expect(schema).toContain(
+    ".omit({ dueOn: true, status: true, amount: true, memo: true, assigneeId: true })",
+  );
+});
+
 test("an action's condition on a reference reads the stored key and the viewer: not ME() is anyone's but theirs, or nobody's", () => {
   const take = generate(
     "assignToMe",

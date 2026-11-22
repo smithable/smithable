@@ -36,7 +36,7 @@ actions:
   contacted:
     on: Enquiry
     when: { status: new }
-    set: { status: contacted, followUpOn: 'DATEADD(TODAY(), 3, "day")' }
+    set: { status: contacted, followUpOn: }
   visited:
     on: Enquiry
     when: { status: contacted }
