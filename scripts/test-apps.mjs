@@ -4036,10 +4036,10 @@ async function foodTruckFlow(dir, base) {
   try {
     write(
       dir,
-      `INSERT INTO stops (place, starts_at, ends_at, directions_url, menu_override, status) VALUES
-        ('Sunday square', ${Date.parse("2026-11-22T09:00Z")}, ${Date.parse("2026-11-22T13:00Z")}, NULL, NULL, 'confirmed'),
-        ('Saturday market', ${Date.parse("2026-11-21T09:00Z")}, ${Date.parse("2026-11-21T13:00Z")}, 'https://example.com/map', 'Smoky bean flatbread €10', 'confirmed'),
-        ('Private draft', ${Date.parse("2026-11-23T09:00Z")}, ${Date.parse("2026-11-23T13:00Z")}, NULL, NULL, 'draft')`,
+      `INSERT INTO stops (place, starts_at, ends_at, directions_url, menu_override, status, created_at, updated_at) VALUES
+        ('Sunday square', ${Date.parse("2026-11-22T09:00Z")}, ${Date.parse("2026-11-22T13:00Z")}, NULL, NULL, 'confirmed', unixepoch() * 1000, unixepoch() * 1000),
+        ('Saturday market', ${Date.parse("2026-11-21T09:00Z")}, ${Date.parse("2026-11-21T13:00Z")}, 'https://example.com/map', 'Smoky bean flatbread €10', 'confirmed', unixepoch() * 1000, unixepoch() * 1000),
+        ('Private draft', ${Date.parse("2026-11-23T09:00Z")}, ${Date.parse("2026-11-23T13:00Z")}, NULL, NULL, 'draft', unixepoch() * 1000, unixepoch() * 1000)`,
     );
     const venues = page.locator("#stops").getByRole("heading", { level: 3 });
     await showAt("2026-11-21T12:55:00Z");

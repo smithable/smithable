@@ -158,7 +158,7 @@ const SHOTS = {
         const tomorrow = Date.now() + 86_400_000;
         const starts = new Date(tomorrow).setUTCHours(10, 0, 0, 0);
         db.prepare(
-          "INSERT INTO stops (place, address, starts_at, ends_at, directions_url, status) VALUES (?, ?, ?, ?, ?, 'confirmed')",
+          "INSERT INTO stops (place, address, starts_at, ends_at, directions_url, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, 'confirmed', unixepoch() * 1000, unixepoch() * 1000)",
         ).run(
           "Harbour market",
           "Market Square",
