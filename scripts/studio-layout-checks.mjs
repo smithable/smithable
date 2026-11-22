@@ -120,15 +120,14 @@ export async function checkStudioLayout(browser, base, pictures) {
           const anchor = await card.getAttribute("data-guide-card");
           stops.push(anchor);
           const done = card.getByRole("button", { name: "Done", exact: true });
-          if (await done.count()) {
-            await done.click();
-            break;
-          }
-          await card.getByRole("button", { name: "Next", exact: true }).click();
+          const last = (await done.count()) > 0;
+          await (last ? done : card.getByRole("button", { name: "Next", exact: true })).click();
           if (anchor === "change") {
+            // With Changes closed, Done on Ask me still offers the demonstration.
             await card.getByRole("button", { name: "Yes", exact: true }).waitFor();
             await card.getByRole("button", { name: "Skip", exact: true }).click();
           }
+          if (last) break;
           await page.waitForFunction(
             (before) =>
               [...document.querySelectorAll("[data-guide-card]")].some(
@@ -138,7 +137,7 @@ export async function checkStudioLayout(browser, base, pictures) {
           );
         }
         await card.waitFor({ state: "detached" });
-        assert.deepEqual(stops, ["preview", "behavior", "change", "changes"]);
+        assert.deepEqual(stops, ["preview", "behavior", "change"]);
       }
       console.log(
         `  ✓ Studio ${viewport.width}×${viewport.height} at 2×: one guide, one scroll region, reachable input and controls`,
