@@ -6,6 +6,8 @@ export async function checkStudioGuideSpeech(browser, base) {
   let notice = false;
   try {
     await page.addInitScript(() => {
+      // This check needs a stop after Ask me to observe the tour after the demonstration.
+      localStorage.setItem("smithable:changes-beside-smith", "1");
       localStorage.setItem(
         "smithable:speech",
         JSON.stringify({
@@ -146,7 +148,7 @@ export async function checkStudioGuideSpeech(browser, base) {
       for (let i = 0; i < 10; i++) {
         await visibleCard.waitFor();
         const anchor = await visibleCard.getAttribute("data-guide-card");
-        await visibleCard.getByRole("button", { name: "Next", exact: true }).click();
+        await card(anchor).getByRole("button", { name: "Next", exact: true }).click();
         if (anchor === "change") break;
         await page.waitForFunction(
           (before) =>
