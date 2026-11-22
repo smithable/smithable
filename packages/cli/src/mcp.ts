@@ -63,9 +63,11 @@ function tools(dir: string): Tool[] {
     .map((op) => ({
       name: toolName(op.name),
       description: `${op.summary} ${OPERATION_NOTE}`,
-      // Without Smithable's own annotations (x-smithable), which strict clients may refuse.
+      // Without Smithable's own annotations (x-smithable), which strict clients may refuse. Closed:
+      // the operation refuses an argument it does not take, so the schema says so first.
       inputSchema: {
         ...(plainSchema(op.schema) as JsonSchema),
+        additionalProperties: false,
         properties: {
           ...(plainSchema(op.schema.properties) as JsonSchema),
           confirm: {
@@ -243,6 +245,7 @@ function tools(dir: string): Tool[] {
           },
         },
         required: ["change"],
+        additionalProperties: false,
       },
       run: ({ change, check, confirm, plan }, io) =>
         restore(dir, io, String(change), {
