@@ -54,13 +54,18 @@ pages:
 
 ### The five questions (ARCHITECTURE §2.4)
 
-1. *Is it about what the app is, not how it is built?* Yes: "this picture moves" is presentation
-   content, in the file that already holds the picture.
-2. *Can it be said without a technology's name?* Yes: a file and nothing else. No player, no codec key.
-3. *Does it have one meaning in every adapter?* Yes: show the picture, play the loop over it where
-   motion is welcome.
-4. *Is it off unless written?* Yes. Every starter and every app made before is byte-identical.
-5. *Can it be undone?* Yes: the operation without a file removes it; the picture never left.
+1. *Common across many applications?* Yes: a moving hero is usual on the sites of the businesses
+   the starters are for (food, travel, studios, trades), and any landing page can have one.
+2. *Deterministic?* Yes: a file name in, one element out. No model takes part.
+3. *Does formalizing it reduce AI use or ambiguity?* Yes: without the key a film is custom code in
+   every app that wants one, written by a model each time, and the poster, reduced-motion and
+   pause rules are then written (or forgotten) each time.
+4. *Technology-neutral?* Yes: a file and nothing else. No player, no codec key.
+5. *Materially better than free text plus custom code?* Yes: the section keeps its crop, wash, badge
+   and publish review, which custom code would have to copy.
+
+It is off unless written, so every starter and every app made before stays byte-identical, and the
+operation without a file undoes it.
 
 ## 4 What the generated app does
 
