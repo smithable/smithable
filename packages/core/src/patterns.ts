@@ -56,9 +56,11 @@ import {
   dataOperations,
   landingOperations,
   legalOperations,
+  onboardingOperations,
   orderOperations,
   reviewOperations,
   sectionsOperations,
+  settingsOperations,
   usersOperations,
 } from "./sections/page-operations.js";
 import { didYouMean } from "./suggest.js";
@@ -524,6 +526,7 @@ const settings: PagePattern<"settings"> = {
   models: (p) => [p.model],
   icon: "settings",
   inMenu: true,
+  operations: settingsOperations,
 };
 
 const onboarding: PagePattern<"onboarding"> = {
@@ -550,6 +553,7 @@ const onboarding: PagePattern<"onboarding"> = {
   models: (p) => [p.model],
   icon: "home",
   inMenu: false,
+  operations: onboardingOperations,
   parts: (p) => Object.fromEntries(p.steps.map((step) => [step.name, "step"])),
   follow(spec, page, effect) {
     // A step follows a renamed field and loses a removed one; an emptied step goes.

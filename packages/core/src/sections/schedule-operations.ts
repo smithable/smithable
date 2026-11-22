@@ -5,7 +5,9 @@ import type { YamlValue } from "../edit.js";
 import { type Operation, OperationError, refTo } from "../operation.js";
 
 /** Hours given as text, "mon-fri 09:00-17:00, sat 10:00-14:00 17:00-20:00", as the spec writes them. */
-function hoursArg(hours: string | Record<string, string | string[]>): Record<string, YamlValue> {
+export function hoursArg(
+  hours: string | Record<string, string | string[]>,
+): Record<string, YamlValue> {
   if (typeof hours !== "string") return hours;
   const result: Record<string, YamlValue> = {};
   for (const part of hours.split(",")) {

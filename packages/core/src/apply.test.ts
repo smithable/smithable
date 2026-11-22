@@ -192,7 +192,9 @@ describe("operations", () => {
         color: "red",
       }),
     ).toMatchObject({
-      message: 'addField: Unknown argument "color".',
+      message: expect.stringMatching(
+        /^addField: Unknown argument "color": it takes model, field, /,
+      ),
     });
     // Types come from the shared JSON Schema check, in words.
     expect(

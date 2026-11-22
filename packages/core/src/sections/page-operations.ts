@@ -1,9 +1,10 @@
 import { conditionArgs, conditionText } from "../condition.js";
+import { sectionTextKeys } from "../content.js";
 import type { YamlEditor, YamlValue } from "../edit.js";
 import type { DocumentIR, PageIR } from "../ir.js";
 import { SECTION_KINDS } from "../ir.js";
 import { type AnyOperation, type Operation, OperationError, refTo } from "../operation.js";
-import { isOwnSection, pageModel, partSections } from "../patterns.js";
+import { isOwnSection, LANDING_SECTIONS, pageModel, partSections } from "../patterns.js";
 
 /** Where a page's sections are written: a landing page's under "landing", any other's under "sections". */
 function sectionsPath(page: PageIR): string[] {
@@ -14,6 +15,7 @@ import { DOCUMENT_BLOCKS, documentSchema } from "./document.js";
 import { filterThrough, filterValueProblem } from "./list-keys.js";
 import { checkFieldArg, FIELD_ARG, type FieldArg } from "./model-operations.js";
 import { COMPONENT_PATTERN, FIELD_NAME_PATTERN, NAME_PATTERN, nameRule } from "./names.js";
+import { hoursArg } from "./schedule-operations.js";
 
 const addPage: Operation<{ page: string; model: string; route?: string }> = {
   name: "addPage",
@@ -496,16 +498,18 @@ const setPeriod: Operation<{
 const addTile: Operation<{
   page: string;
   tile: string;
-  measure: "count" | "sum" | "average" | "list" | "query";
+  measure: "count" | "sum" | "average" | "list" | "query" | "activity";
   of: string;
   where?: Record<string, string | boolean | string[]>;
   by?: string;
   period?: string;
   limit?: number;
+  when?: string;
+  within?: string;
 }> = {
   name: "addTile",
   summary:
-    "Add a tile to a dashboard page (created, and added to the main menu, when it does not exist): a count, sum or average of records, a list of the latest ones, or a custom query's records.",
+    "Add a tile to a dashboard page (created, and added to the main menu, when it does not exist): a count, sum or average of records, a list of the latest ones or of what is due (when, within), a custom query's records, or the app's latest changes (activity of changes).",
   sets: [
     "smithable.yml:pages.*.dashboard",
     "smithable.yml:pages.*.dashboard.*",
@@ -518,6 +522,9 @@ const addTile: Operation<{
     "smithable.yml:pages.*.dashboard.*.by",
     "smithable.yml:pages.*.dashboard.*.period",
     "smithable.yml:pages.*.dashboard.*.limit",
+    "smithable.yml:pages.*.dashboard.*.activity",
+    "smithable.yml:pages.*.dashboard.*.when",
+    "smithable.yml:pages.*.dashboard.*.within",
   ],
   schema: {
     type: "object",
@@ -533,11 +540,11 @@ const addTile: Operation<{
         pattern: FIELD_NAME_PATTERN.source,
         description: "The tile's name, camelCase, e.g. outstanding.",
       },
-      measure: { type: "string", enum: ["count", "sum", "average", "list", "query"] },
+      measure: { type: "string", enum: ["count", "sum", "average", "list", "query", "activity"] },
       of: {
         type: "string",
         description:
-          'A model for count and list ("Invoice"), a number field for sum and average ("Invoice.total"), a query name for query.',
+          'A model for count and list ("Invoice"), a number field for sum and average ("Invoice.total"), a query name for query, changes for activity.',
       },
       where: {
         type: "object",
@@ -554,14 +561,34 @@ const addTile: Operation<{
         enum: ["week", "month", "quarter", "year"],
         description: "For a date by: the span of each bar; month unless said.",
       },
-      limit: { type: "integer", minimum: 1, description: "For a list or query: how many records." },
+      limit: {
+        type: "integer",
+        minimum: 1,
+        description: "For a list, query or activity: how many records.",
+      },
+      when: {
+        type: "string",
+        description:
+          "For a list: a date or date-time field; the list holds what falls due before the end of within, the overdue first.",
+      },
+      within: {
+        type: "string",
+        pattern: "^[1-9]\\d* (days?|weeks?)$",
+        description: "With when: how far ahead, e.g. 2 weeks; 7 days unsaid.",
+      },
     },
   },
   positional: ["page", "tile", "measure", "of"],
   describe: ({ page, tile, measure, of }) =>
     `Add tile ${tile} (${measure} of ${of}) to ${page === "dashboard" ? "the dashboard" : `the ${page} dashboard`}`,
   destructive: () => false,
-  apply({ spec }, { page, tile, measure, of, where, by, period, limit }, ir) {
+  apply({ spec }, { page, tile, measure, of, where, by, period, limit, when, within }, ir) {
+    if (measure === "activity" && of !== "changes")
+      throw new OperationError('An activity tile shows the app\'s changes: "activity changes".');
+    if (measure === "activity" && ((where && Object.keys(where).length) || by || when))
+      throw new OperationError("An activity tile takes no where, by or when.");
+    if (when && measure !== "list") throw new OperationError('"--when" goes with a list.');
+    if (within && !when) throw new OperationError('"--within" goes with "--when".');
     if (period && !by) throw new OperationError('"--period" goes with "--by" a date field.');
     if (period && by) {
       const model = ir.models.find((m) => m.name === of.split(".")[0]);
@@ -575,6 +602,8 @@ const addTile: Operation<{
       ...(by ? { by } : {}),
       ...(period ? { period } : {}),
       ...(limit ? { limit } : {}),
+      ...(when ? { when } : {}),
+      ...(within ? { within } : {}),
     };
     if (!FIELD_NAME_PATTERN.test(tile)) throw new OperationError(nameRule("tile", tile));
     const existing = ir.pages.find((p) => p.id === page);
@@ -1094,9 +1123,12 @@ const addSection: Operation<{
   custom?: string;
   text?: boolean;
   kind?: string;
+  calculator?: Record<string, FieldArg>;
+  before?: string;
+  after?: string;
 }> = {
   name: "addSection",
-  summary: `Add a section to a page, below its others (above its footer): one named after its kind (${KINDS.join(", ")}), or any name with records (a model's records as cards, a table or a calendar), text (a heading and paragraphs) or custom. Its texts go in smithable.content.yml.`,
+  summary: `Add a section to a page, below its others (above its footer) or where before or after says: one named after its kind (${KINDS.join(", ")}), or any name with records (a model's records as cards, a table or a calendar), text (a heading and paragraphs), calculator (its fields) or custom. Its texts go in smithable.content.yml.`,
   sets: [
     "smithable.yml:pages.*.landing.*",
     "smithable.yml:pages.*.sections.*",
@@ -1118,6 +1150,10 @@ const addSection: Operation<{
     "smithable.yml:pages.*.landing.*.gallery",
     "smithable.yml:pages.*.landing.*.footer",
     "smithable.yml:pages.*.landing.*.mediaText",
+    "smithable.yml:pages.*.landing.*.calculator",
+    "smithable.yml:pages.*.landing.*.calculator.fields",
+    "smithable.yml:pages.*.sections.*.calculator",
+    "smithable.yml:pages.*.sections.*.calculator.fields",
     "smithable.yml:pages.*.sections.*.records",
     "smithable.yml:pages.*.sections.*.view",
     "smithable.yml:pages.*.sections.*.starts",
@@ -1188,6 +1224,20 @@ const addSection: Operation<{
         description:
           "A section of your own, any name: its component in src/custom/sections/, e.g. RepaymentChart.",
       },
+      calculator: {
+        type: "object",
+        additionalProperties: FIELD_ARG,
+        description:
+          'A calculator, any name: its fields as a model\'s, the entered ones its inputs and the formula fields its results, e.g. { "price": "money = 300000", "monthly": { "type": "money", "formula": "price / 12" } }.',
+      },
+      before: refTo(
+        { ref: "section", page: "page", label: "Above" },
+        { description: "The section it goes above; not with after." },
+      ),
+      after: refTo(
+        { ref: "section", page: "page", label: "Below" },
+        { description: "The section it goes below; not with before." },
+      ),
     },
   },
   positional: ["page", "section"],
@@ -1195,7 +1245,22 @@ const addSection: Operation<{
   destructive: () => false,
   apply(
     { spec },
-    { page, section, records, view, starts, where, form, button, custom, text, kind },
+    {
+      page,
+      section,
+      records,
+      view,
+      starts,
+      where,
+      form,
+      button,
+      custom,
+      text,
+      kind,
+      calculator,
+      before,
+      after,
+    },
     ir,
   ) {
     const existing = ir.pages.find((p) => p.id === page);
@@ -1203,12 +1268,19 @@ const addSection: Operation<{
     if (existing.sections.some((s) => s.name === section))
       throw new OperationError(`The ${page} page already has a section named "${section}".`);
     if (custom) componentName(custom);
-    if ([records, custom, text, kind].filter(Boolean).length > 1)
+    if ([records, custom, text, kind, calculator].filter(Boolean).length > 1)
       throw new OperationError(
-        "A section shows records, or is text, or is custom, or of a kind: one of them.",
+        "A section shows records, or is text, a calculator or custom, or of a kind: one of them.",
       );
+    if (before && after)
+      throw new OperationError("A section goes above one (before) or below one (after), not both.");
+    if (calculator) {
+      if (!Object.keys(calculator).length)
+        throw new OperationError("A calculator needs at least one field, e.g. price=money.");
+      for (const [f, value] of Object.entries(calculator)) checkFieldArg(f, value);
+    }
     const named = kind ?? ((KINDS as readonly string[]).includes(section) ? section : undefined);
-    if (!records && !custom && !text && !named)
+    if (!records && !custom && !text && !calculator && !named)
       throw new OperationError(
         `There is no section kind "${section}". Kinds: ${KINDS.join(", ")}; or give it records, text or custom.`,
       );
@@ -1232,11 +1304,23 @@ const addSection: Operation<{
       ...(custom ? { custom } : {}),
       ...(text ? { text: null } : {}),
       ...(kind ? { [kind]: null } : {}),
+      ...(calculator ? { calculator: { fields: calculator as Record<string, YamlValue> } } : {}),
     };
     const path = sectionsPath(existing);
     if (spec.has(path) && spec.get(path) != null) spec.add(path, section, options);
     else if (spec.has(path)) spec.set(path, { [section]: options });
     else spec.add(["pages", page], path[2] as string, { [section]: options });
+    const other = before ?? after;
+    if (other) {
+      // Placed where it was asked: among the sections as written.
+      const names = Object.keys((spec.get(path) ?? {}) as object);
+      if (!names.includes(other) || other === section)
+        throw new OperationError(
+          `The ${page} page has no section named "${other}" among its sections as written${existing.sections.some((s) => s.name === other) ? " (a page kind's own part is placed with moveSection first)" : ""}.`,
+        );
+      spec.move(path, section, before ? { before } : { after: other });
+      return [];
+    }
     // The footer stays the page's last part: a new section goes above it.
     const footer = existing.sections.find((s) => s.kind === "footer" && !s.own);
     if (footer && named !== "footer" && spec.has([...path, footer.name]))
@@ -1520,7 +1604,7 @@ const setHeroButtons: Operation<{ page: string; button?: string; secondButton?: 
 const moveSection: Operation<{ page: string; section: string; before?: string; after?: string }> = {
   name: "moveSection",
   summary:
-    "Move a page's section above or below another of its sections: they show in the order written. A page kind's own part moves once its name is among the sections.",
+    "Move a page's section above another (before: that section) or below one (after: that section), one of the two: sections show in the order written. A page kind's own part moves once its name is among the sections.",
   schema: {
     type: "object",
     required: ["page", "section"],
@@ -1603,6 +1687,544 @@ const addSectionsPage: Operation<{ page: string; route?: string }> = {
   },
 };
 
+/** Writes a key's value, or removes it when the value is undefined; a new key is added to its parent. */
+function put(spec: YamlEditor, path: string[], value: YamlValue | undefined): void {
+  if (value === undefined) {
+    if (spec.has(path)) spec.remove(path);
+  } else if (spec.has(path)) spec.set(path, value);
+  else spec.add(path.slice(0, -1), path[path.length - 1] as string, value);
+}
+
+/**
+ * Changes the parts of a page kind written as a model alone or in its long form (calendar,
+ * articles, order): each part given is written, an undefined one removed; a long form left with
+ * its model alone goes back to the short one when `short` says it has one.
+ */
+function setParts(
+  spec: YamlEditor,
+  page: PageIR,
+  key: string,
+  parts: Record<string, YamlValue | undefined>,
+  short: boolean,
+): void {
+  const path = ["pages", page.id, key];
+  const written = spec.get(path);
+  const long: Record<string, YamlValue> =
+    typeof written === "string"
+      ? { model: written }
+      : { ...((written ?? {}) as Record<string, YamlValue>) };
+  for (const [part, value] of Object.entries(parts)) {
+    if (value === undefined) delete long[part];
+    else long[part] = value;
+  }
+  const keys = Object.keys(long);
+  if (short && keys.length === 1 && keys[0] === "model") spec.set(path, long.model as YamlValue);
+  else if (typeof written === "string" || written == null) spec.set(path, long);
+  else for (const [part, value] of Object.entries(parts)) put(spec, [...path, part], value);
+}
+
+/** The page of this kind, or a refusal naming the kind. */
+function pageOfKind(ir: { pages: PageIR[] }, page: string, kind: string, what: string): PageIR {
+  const found = ir.pages.find((p) => p.id === page);
+  if (!found) throw new OperationError(`There is no page named "${page}".`);
+  if (found.pattern.kind !== kind)
+    throw new OperationError(`${page} is a ${found.pattern.kind} page, not ${what}.`);
+  return found;
+}
+
+/** "" or "none" given for a part that may be removed: undefined (removed), else the value. */
+const orRemoved = (value: string | undefined, removes: string[]) =>
+  value === undefined ? null : removes.includes(value) ? undefined : value;
+
+/** The parts given (null is "not given"), without those not given. */
+function given(parts: Record<string, YamlValue | undefined | null>) {
+  return Object.fromEntries(Object.entries(parts).filter(([, v]) => v !== null)) as Record<
+    string,
+    YamlValue | undefined
+  >;
+}
+
+const setCalendar: Operation<{
+  page: string;
+  starts?: string;
+  ends?: string;
+  duration?: string;
+  title?: string;
+}> = {
+  name: "setCalendar",
+  summary:
+    "Change what a calendar page reads from its records: the field that places them (starts), the one that ends them (ends) or their length in minutes (duration), and what a block says (title). none removes one, so it is inferred again.",
+  sets: [
+    "smithable.yml:pages.*.calendar",
+    "smithable.yml:pages.*.calendar.model",
+    "smithable.yml:pages.*.calendar.starts",
+    "smithable.yml:pages.*.calendar.ends",
+    "smithable.yml:pages.*.calendar.duration",
+    "smithable.yml:pages.*.calendar.title",
+  ],
+  schema: {
+    type: "object",
+    required: ["page"],
+    additionalProperties: false,
+    properties: {
+      page: refTo({ ref: "page", label: "Calendar page" }),
+      starts: { type: "string", description: "The date or date-time field that places a record." },
+      ends: {
+        type: "string",
+        description: "A field of the same kind where a record ends; not with duration.",
+      },
+      duration: {
+        type: "string",
+        description:
+          "A whole-number field of minutes, or one reference away, e.g. classType.durationMinutes; not with ends.",
+      },
+      title: {
+        type: "string",
+        description: "What a block says: a field, or a reference (its record's title).",
+      },
+    },
+  },
+  positional: ["page"],
+  describe: ({ page }) => `Change what the ${page} calendar reads`,
+  destructive: () => false,
+  apply({ spec }, { page, starts, ends, duration, title }, ir) {
+    const found = pageOfKind(ir, page, "calendar", "a calendar");
+    const parts = given({
+      starts: orRemoved(starts, ["none", ""]),
+      ends: orRemoved(ends, ["none", ""]),
+      duration: orRemoved(duration, ["none", ""]),
+      title: orRemoved(title, ["none", ""]),
+    });
+    if (!Object.keys(parts).length)
+      throw new OperationError("Say what to change: --starts, --ends, --duration or --title.");
+    if (parts.ends && parts.duration)
+      throw new OperationError("A record's length is its end or its duration: one of them.");
+    // The other way of giving a length goes when one is given.
+    if (parts.ends) parts.duration = undefined;
+    if (parts.duration) parts.ends = undefined;
+    setParts(spec, found, "calendar", parts, true);
+    return [];
+  },
+};
+
+const ARTICLE_PARTS = ["title", "body", "picture", "date", "address", "summary", "author"] as const;
+
+const setArticles: Operation<
+  { page: string } & Partial<Record<(typeof ARTICLE_PARTS)[number], string>>
+> = {
+  name: "setArticles",
+  summary:
+    "Name the fields an articles page reads, when the inferred ones are not the right ones: title, body, picture, date, address, summary, author. none removes one, so it is inferred again.",
+  sets: [
+    "smithable.yml:pages.*.articles",
+    "smithable.yml:pages.*.articles.model",
+    ...ARTICLE_PARTS.map((p) => `smithable.yml:pages.*.articles.${p}`),
+  ],
+  schema: {
+    type: "object",
+    required: ["page"],
+    additionalProperties: false,
+    properties: {
+      page: refTo({ ref: "page", label: "Articles page" }),
+      title: { type: "string", description: "A string field, the article's heading." },
+      body: { type: "string", description: "A markdown field, the article itself." },
+      picture: { type: "string", description: "A picture field." },
+      date: { type: "string", description: "A date or date-time field: newest first." },
+      address: {
+        type: "string",
+        description: "A unique string field, the article's address (/blog/<address>).",
+      },
+      summary: { type: "string", description: "A text or string field, shown in the list." },
+      author: { type: "string", description: "A field that refers to a User." },
+    },
+  },
+  positional: ["page"],
+  describe: ({ page }) => `Change what the ${page} articles read`,
+  destructive: () => false,
+  apply({ spec }, args, ir) {
+    const found = pageOfKind(ir, args.page, "articles", "an articles page");
+    const parts = given(
+      Object.fromEntries(ARTICLE_PARTS.map((p) => [p, orRemoved(args[p], ["none", ""])])),
+    );
+    if (!Object.keys(parts).length)
+      throw new OperationError(
+        `Say what to change: ${ARTICLE_PARTS.map((p) => `--${p}`).join(", ")}.`,
+      );
+    setParts(spec, found, "articles", parts, true);
+    return [];
+  },
+};
+
+const setOrder: Operation<{
+  page: string;
+  price?: string;
+  available?: string;
+  quantity?: string;
+  hours?: string | Record<string, string | string[]>;
+  lead?: number;
+}> = {
+  name: "setOrder",
+  summary:
+    "Change an order page: which field of what is chosen is its price and which says it can be ordered (available), which field of a line is how many (quantity), when orders are taken (hours), and the minutes from now to the earliest wanted time (lead).",
+  sets: [
+    "smithable.yml:pages.*.order.price",
+    "smithable.yml:pages.*.order.available",
+    "smithable.yml:pages.*.order.quantity",
+    "smithable.yml:pages.*.order.hours",
+    "smithable.yml:pages.*.order.hours.*",
+    "smithable.yml:pages.*.order.hours.*.*",
+    "smithable.yml:pages.*.order.lead",
+  ],
+  schema: {
+    type: "object",
+    required: ["page"],
+    additionalProperties: false,
+    properties: {
+      page: refTo({ ref: "page", label: "Order page" }),
+      price: {
+        type: "string",
+        description: 'The money field of what is chosen that is its price; "" infers it again.',
+      },
+      available: {
+        type: "string",
+        description:
+          'The yes/no field of what is chosen that says it can be ordered; none for always, "" infers it again.',
+      },
+      quantity: {
+        type: "string",
+        description:
+          'The whole-number field of a line that is how many; none for one of each, "" infers it again.',
+      },
+      hours: {
+        type: ["string", "object"],
+        additionalProperties: { type: ["string", "array"], items: { type: "string" } },
+        description:
+          'When orders are taken, in the app\'s time zone, e.g. "mon-thu 11:00-20:00, fri-sat 11:00-22:00"; a day not named is closed; none takes orders always.',
+      },
+      lead: {
+        type: "integer",
+        minimum: 0,
+        maximum: 1440,
+        description: "Minutes from now to the earliest wanted time; 0 removes it.",
+      },
+    },
+  },
+  positional: ["page"],
+  describe: ({ page }) => `Change the ${page} order page`,
+  destructive: () => false,
+  apply({ spec }, { page, price, available, quantity, hours, lead }, ir) {
+    const found = pageOfKind(ir, page, "order", "an order page");
+    const parts = given({
+      price: orRemoved(price, [""]),
+      available: orRemoved(available, [""]),
+      quantity: orRemoved(quantity, [""]),
+      hours: hours === undefined ? null : hours === "none" ? undefined : hoursArg(hours),
+      lead: lead === undefined ? null : lead || undefined,
+    });
+    if (!Object.keys(parts).length)
+      throw new OperationError(
+        "Say what to change: --price, --available, --quantity, --hours or --lead.",
+      );
+    setParts(spec, found, "order", parts, false);
+    return [];
+  },
+};
+
+const addSettingsPage: Operation<{ page: string; model: string }> = {
+  name: "addSettingsPage",
+  summary:
+    "Add a page that edits one record of a model: the viewer's own when its records are private, the app's when they are shared. It goes in the main menu.",
+  sets: ["smithable.yml:pages.*", "smithable.yml:pages.*.settings"],
+  schema: {
+    type: "object",
+    required: ["page", "model"],
+    additionalProperties: false,
+    properties: {
+      page: { type: "string", description: "Page name, e.g. settings." },
+      model: refTo({ ref: "model", label: "Record of" }),
+    },
+  },
+  positional: ["page", "model"],
+  describe: ({ page, model }) => `Add settings page ${page} for ${model}`,
+  destructive: () => false,
+  apply({ spec }, { page, model }, ir) {
+    newPage(ir, page, model);
+    spec.add(["pages"], page, { settings: model });
+    addToMainMenu(spec, page);
+    return [];
+  },
+};
+
+const addOnboardingPage: Operation<{
+  page: string;
+  model: string;
+  steps: Record<string, string[] | string>;
+}> = {
+  name: "addOnboardingPage",
+  summary:
+    "Add an onboarding: a model's settings record filled in steps the first time someone signs in, each step asking for some of its fields. The steps must ask for every required field without a default. Its titles and texts go in smithable.content.yml.",
+  sets: [
+    "smithable.yml:pages.*",
+    "smithable.yml:pages.*.onboarding",
+    "smithable.yml:pages.*.onboarding.model",
+    "smithable.yml:pages.*.onboarding.steps",
+    "smithable.yml:pages.*.onboarding.steps.*",
+    "smithable.yml:pages.*.onboarding.steps.*.*",
+  ],
+  schema: {
+    type: "object",
+    required: ["page", "model", "steps"],
+    additionalProperties: false,
+    properties: {
+      page: { type: "string", description: "Page name, e.g. welcome." },
+      model: refTo({ ref: "model", label: "Record of" }),
+      steps: {
+        type: "object",
+        additionalProperties: { type: ["array", "string"], items: { type: "string" } },
+        description:
+          'The steps in order, each with the fields it asks for, e.g. { "business": ["businessName", "vatNumber"], "payment": ["iban"] }.',
+      },
+    },
+  },
+  positional: ["page", "model"],
+  describe: ({ page, model }) => `Add onboarding page ${page} for ${model}`,
+  destructive: () => false,
+  apply({ spec }, { page, model, steps }, ir) {
+    newPage(ir, page, model);
+    const written = Object.fromEntries(
+      Object.entries(steps).map(([step, fields]) => [
+        step,
+        Array.isArray(fields) ? fields : fields.split(/[\s,]+/).filter(Boolean),
+      ]),
+    );
+    if (!Object.keys(written).length)
+      throw new OperationError(
+        'An onboarding needs a step, e.g. { "business": ["businessName"] }.',
+      );
+    for (const [step, fields] of Object.entries(written)) {
+      if (!FIELD_NAME_PATTERN.test(step))
+        throw new OperationError(
+          `A step is named like business: a small letter, then letters and digits; not "${step}".`,
+        );
+      if (!fields.length) throw new OperationError(`The ${step} step asks for no field.`);
+    }
+    spec.add(["pages"], page, { onboarding: { model, steps: written } });
+    return [];
+  },
+};
+
+/** Refuses a name a new page cannot have, or a model there is not. */
+function newPage(ir: { pages: PageIR[]; models: { name: string }[] }, page: string, model: string) {
+  if (!NAME_PATTERN.test(page)) throw new OperationError(nameRule("page", page));
+  if (ir.pages.some((p) => p.id === page))
+    throw new OperationError(`Page "${page}" already exists.`);
+  if (!ir.models.some((m) => m.name === model))
+    throw new OperationError(`There is no model named "${model}".`);
+}
+
+const setSectionList: Operation<{
+  page: string;
+  section: string;
+  search?: boolean;
+  filters?: string[];
+  limit?: number;
+}> = {
+  name: "setSectionList",
+  summary:
+    "Change a records section's door to its model's list: a search box (search), chips of its fields (filters, as a crud page's; none removes them) and how many records it shows (limit; 0 removes it).",
+  sets: [
+    "smithable.yml:pages.*.landing.*.search",
+    "smithable.yml:pages.*.landing.*.filters",
+    "smithable.yml:pages.*.landing.*.filters.*",
+    "smithable.yml:pages.*.landing.*.limit",
+    "smithable.yml:pages.*.sections.*.search",
+    "smithable.yml:pages.*.sections.*.filters",
+    "smithable.yml:pages.*.sections.*.filters.*",
+    "smithable.yml:pages.*.sections.*.limit",
+  ],
+  schema: {
+    type: "object",
+    required: ["page", "section"],
+    additionalProperties: false,
+    properties: {
+      page: refTo({ ref: "page", label: "Page" }),
+      section: refTo({ ref: "section", page: "page", label: "Section" }),
+      search: { type: "boolean", description: "true shows a search box; false removes it." },
+      filters: {
+        type: "array",
+        items: { type: "string" },
+        description:
+          'Fields of the section\'s model whose chips it shows; [] or ["none"] removes them.',
+      },
+      limit: {
+        type: "integer",
+        minimum: 0,
+        description: "How many records it shows; 0 removes the limit.",
+      },
+    },
+  },
+  positional: ["page", "section"],
+  describe: ({ page, section }) => `Change the ${section} section's list on ${page}`,
+  destructive: () => false,
+  apply({ spec }, { page, section, search, filters, limit }, ir) {
+    const existing = ir.pages.find((p) => p.id === page);
+    const found = existing?.sections.find((s) => s.name === section);
+    if (!existing || !found)
+      throw new OperationError(`The ${page} page has no section named "${section}".`);
+    if (found.kind !== "records" || isOwnSection(found))
+      throw new OperationError(`The ${section} section shows no model's records of its own.`);
+    if (search === undefined && filters === undefined && limit === undefined)
+      throw new OperationError("Say what to change: --search, --filters or --limit.");
+    const at = [...sectionsPath(existing), section];
+    if (search !== undefined) put(spec, [...at, "search"], search || undefined);
+    if (filters !== undefined) {
+      const kept = filters.filter((f) => f !== "none");
+      put(spec, [...at, "filters"], kept.length ? kept : undefined);
+    }
+    if (limit !== undefined) put(spec, [...at, "limit"], limit || undefined);
+    return [];
+  },
+};
+
+/** The options only a records section takes. */
+const RECORDS_OPTIONS = ["view", "starts", "search", "filters", "where", "limit"];
+/** The options that say what a section is; a change of kind writes its own. */
+const KIND_OPTIONS = ["records", "calculator", "custom", "text", ...KINDS];
+
+const changeSectionKind: Operation<{
+  page: string;
+  section: string;
+  kind: string;
+  records?: string;
+  custom?: string;
+  calculator?: Record<string, FieldArg>;
+}> = {
+  name: "changeSectionKind",
+  summary:
+    "Make a section another kind, keeping its name, its place and what the new kind also has (its options and texts); the rest goes, and the result says what. records needs --records <Model>, custom --custom <Component>, calculator its fields.",
+  sets: ["smithable.yml:pages.*.landing.*", "smithable.yml:pages.*.sections.*"],
+  schema: {
+    type: "object",
+    required: ["page", "section", "kind"],
+    additionalProperties: false,
+    properties: {
+      page: refTo({ ref: "page", label: "Page" }),
+      section: refTo({ ref: "section", page: "page", label: "Section" }),
+      kind: {
+        type: "string",
+        enum: [...KINDS, "records", "text", "custom", "calculator"],
+        description: "The new kind.",
+      },
+      records: refTo(
+        { ref: "model", label: "Records of" },
+        { description: "For records: the model whose records it shows." },
+      ),
+      custom: { type: "string", description: "For custom: its component, e.g. RepaymentChart." },
+      calculator: {
+        type: "object",
+        additionalProperties: FIELD_ARG,
+        description:
+          'For calculator: its fields, e.g. { "price": "money = 300000", "monthly": { "type": "money", "formula": "price / 12" } }.',
+      },
+    },
+  },
+  positional: ["page", "section", "kind"],
+  describe: ({ page, section, kind }) => `Make the ${section} section of ${page} a ${kind} section`,
+  // What the new kind does not have goes: its options, texts or items.
+  destructive: () => true,
+  apply({ spec, content }, { page, section, kind, records, custom, calculator }, ir) {
+    const existing = ir.pages.find((p) => p.id === page);
+    const found = existing?.sections.find((s) => s.name === section);
+    if (!existing || !found)
+      throw new OperationError(`The ${page} page has no section named "${section}".`);
+    if (isOwnSection(found))
+      throw new OperationError(
+        `The ${section} section is the ${page} page's own, as a ${existing.pattern.kind} page; it has no other kind.`,
+      );
+    const at = [...sectionsPath(existing), section];
+    const options = (spec.get(at) ?? {}) as Record<string, YamlValue>;
+    const was = found.kind;
+    if (was === kind)
+      throw new OperationError(`The ${section} section is a ${kind} section already.`);
+    if ((kind === "records") !== (records !== undefined))
+      throw new OperationError("--records goes with the records kind, and it needs it.");
+    if ((kind === "custom") !== (custom !== undefined))
+      throw new OperationError("--custom goes with the custom kind, and it needs it.");
+    if ((kind === "calculator") !== (calculator !== undefined))
+      throw new OperationError("--calculator goes with the calculator kind, and it needs it.");
+    if (custom) componentName(custom);
+    if (calculator) for (const [f, value] of Object.entries(calculator)) checkFieldArg(f, value);
+    if (
+      (KINDS as readonly string[]).includes(section) &&
+      !(KINDS as readonly string[]).includes(kind)
+    )
+      throw new OperationError(
+        `A section named ${section} is of that kind by its name; a ${kind} section needs another name.`,
+      );
+    const allows = Object.keys(LANDING_SECTIONS[kind as keyof typeof LANDING_SECTIONS] ?? {});
+    const takes = kind === "records" ? [...allows, ...RECORDS_OPTIONS] : allows;
+    const dropped: string[] = [];
+    const kept: Record<string, YamlValue> = {};
+    for (const [key, value] of Object.entries(options)) {
+      if (KIND_OPTIONS.includes(key)) {
+        // The old kind's own part goes with it: say so when it held something.
+        if (key === "calculator") dropped.push("its calculator fields");
+        else if (key === "records") dropped.push(`its records of ${value}`);
+        else if (key === "custom") dropped.push(`its component ${value}`);
+        continue;
+      }
+      if (takes.includes(key)) kept[key] = value;
+      else dropped.push(key);
+    }
+    const defining: Record<string, YamlValue> =
+      kind === "records"
+        ? { records: records as string }
+        : kind === "custom"
+          ? { custom: custom as string }
+          : kind === "calculator"
+            ? { calculator: { fields: calculator as Record<string, YamlValue> } }
+            : kind === "text"
+              ? { text: null }
+              : kind === section
+                ? {}
+                : { [kind]: null };
+    const written = { ...defining, ...kept };
+    spec.set(at, Object.keys(written).length ? written : null);
+    // Its texts: those the new kind also has stay.
+    const textsAt = ["pages", page, section];
+    const texts = content.has(textsAt) ? content.get(textsAt) : undefined;
+    if (texts && typeof texts === "object") {
+      const after = sectionTextKeys(kind);
+      // Items stay when every one of them has only texts the new kind's items have.
+      const items = (texts as Record<string, YamlValue>).items;
+      const itemsFit =
+        after?.items !== undefined &&
+        Array.isArray(items) &&
+        items.every(
+          (item) =>
+            item !== null &&
+            typeof item === "object" &&
+            Object.keys(item).every((k) => after.items?.includes(k)),
+        );
+      for (const key of Object.keys(texts as object)) {
+        const keeps =
+          after?.texts.includes(key) ||
+          (key === "items" && itemsFit) ||
+          (key === "image" && after?.image) ||
+          (key === "fields" && after?.fields) ||
+          (key === "tiles" && kind === "hero");
+        if (!keeps) {
+          content.remove([...textsAt, key]);
+          dropped.push(key === "items" ? "its items" : `its ${key} text`);
+        }
+      }
+      if (!Object.keys((content.get(textsAt) ?? {}) as object).length)
+        content.removeAndPrune(textsAt, 1);
+    }
+    return dropped.length ? [{ note: `it no longer has ${dropped.join(", ")}` }] : [];
+  },
+};
+
 /** Operations of a page of sections. */
 export const sectionsOperations: AnyOperation[] = [addSectionsPage];
 
@@ -1615,14 +2237,18 @@ export const landingOperations: AnyOperation[] = [
   setSectionPictures,
   setShortcuts,
   setHeroButtons,
+  setSectionList,
+  changeSectionKind,
 ];
 /** Operations of the dashboard pattern. */
 export const dashboardOperations: AnyOperation[] = [addTile, setPeriod];
 /** Operations of the calendar pattern. */
-export const calendarOperations: AnyOperation[] = [addCalendarPage];
-export const articlesOperations: AnyOperation[] = [addArticlesPage];
+export const calendarOperations: AnyOperation[] = [addCalendarPage, setCalendar];
+export const articlesOperations: AnyOperation[] = [addArticlesPage, setArticles];
 /** Operations of the order pattern (docs/design/orders.md §3). */
-export const orderOperations: AnyOperation[] = [addOrderPage];
+export const orderOperations: AnyOperation[] = [addOrderPage, setOrder];
+export const settingsOperations: AnyOperation[] = [addSettingsPage];
+export const onboardingOperations: AnyOperation[] = [addOnboardingPage];
 /** Operations of the data pattern. */
 export const dataOperations: AnyOperation[] = [addDataPage];
 export const reviewOperations: AnyOperation[] = [addReviewPage];

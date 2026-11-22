@@ -1105,6 +1105,38 @@ const setFormColumns: Operation<{ page: string; columns: number }> = {
   },
 };
 
+const setResults: Operation<{ page: string; results: "beside" | "below" }> = {
+  name: "setResults",
+  sets: [
+    "smithable.ux.yml:pages",
+    "smithable.ux.yml:pages.*",
+    "smithable.ux.yml:pages.*.form",
+    "smithable.ux.yml:pages.*.form.results",
+  ],
+  summary:
+    "Show a calculator page's results beside its inputs on wide screens (the default) or below them; a phone shows them below.",
+  schema: {
+    type: "object",
+    required: ["page", "results"],
+    additionalProperties: false,
+    properties: {
+      page: refTo({ ref: "page", label: "Calculator page" }),
+      results: { type: "string", enum: ["beside", "below"] },
+    },
+  },
+  positional: ["page", "results"],
+  describe: ({ page, results }) =>
+    `The ${page} calculator's results ${results === "below" ? "below" : "beside"} its inputs`,
+  destructive: () => false,
+  apply(editors, { page, results }, ir) {
+    pageNamed(ir, page);
+    if (ir.pages.find((p) => p.id === page)?.pattern.kind !== "calculator")
+      throw new OperationError(`${page} is not a calculator page.`);
+    put(editors.ux, ["pages", page, "form", "results"], results === "below" ? "below" : undefined);
+    return [];
+  },
+};
+
 const setView: Operation<{ page: string; view: "table" | "cards" }> = {
   name: "setView",
   sets: ["smithable.ux.yml:pages.*.table.view"],
@@ -1673,6 +1705,7 @@ export const uxOperations: AnyOperation[] = [
   setControl,
   setFormSections,
   setFormColumns,
+  setResults,
   setView,
   setAiBadge,
   setPictureStyle,
