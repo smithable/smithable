@@ -1,5 +1,4 @@
 // Part of the TanStack adapter's generator (generate.ts), split out by concern (C7).
-
 import {
   type AnalyticsSetting,
   type AuthIR,
