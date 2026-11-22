@@ -187,6 +187,7 @@ export function FirstLook({
               <ThemeCards
                 themes={project.themes}
                 preset={selected}
+                inUse={preset}
                 onChoose={(theme) => {
                   void choose(theme);
                 }}

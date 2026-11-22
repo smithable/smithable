@@ -125,6 +125,16 @@ export async function checkFirstLook(browser, base) {
     await panel.getByRole("button", { name, pressed: true }).waitFor();
     await tried.waitFor({ state: "attached" });
     assert.equal((await project()).files.ux, before, "a tried Look card wrote something");
+    // The tried card says so; "In use" stays with the app's theme until Apply.
+    await panel.getByText("· Trying on", { exact: true }).waitFor();
+    assert.equal(await panel.getByText("· In use", { exact: true }).count(), 1);
+    const apply = panel.getByRole("button", { name: "Apply theme", exact: true });
+    // Its Apply is in view above the panel's foot, on a phone's short sheet too.
+    const [row, foot] = await apply.evaluate((button) => [
+      button.getBoundingClientRect().bottom,
+      button.closest(".look-panel").querySelector(".overflow-auto").getBoundingClientRect().bottom,
+    ]);
+    assert.ok(row <= foot + 1, `Apply theme is hidden under the panel's foot (${row} > ${foot})`);
     return waitChoice(
       panel.getByRole("button", { name: "Apply theme", exact: true }),
       ".look-panel",

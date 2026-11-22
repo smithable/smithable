@@ -127,6 +127,11 @@ export function LookPanel({
   const [tried, setTried] = useState<string>();
   const triedNow = useRef<string>(undefined);
   const applying = useRef(false);
+  // On a phone the sheet is short: a theme tried on brings its Apply row into view.
+  const applyRow = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (tried) applyRow.current?.scrollIntoView({ block: "nearest", behavior: "instant" });
+  }, [tried]);
   useEffect(() => {
     if (tried === undefined) return;
     let active = true;
@@ -252,12 +257,19 @@ export function LookPanel({
             Theme <span className="font-normal text-muted">· {humanize(preset)}</span>
           </legend>
           <div className="max-h-[17rem] overflow-auto rounded-md">
-            <ThemeCards themes={project.themes} preset={tried ?? preset} onChoose={choose} />
+            <ThemeCards
+              themes={project.themes}
+              preset={tried ?? preset}
+              inUse={preset}
+              onChoose={choose}
+            />
           </div>
           {tried && (
-            <div className="flex items-center justify-between gap-3 text-sm">
+            <div ref={applyRow} className="flex items-center justify-between gap-3 text-sm">
               <span className="text-muted">Only the preview shows {humanize(tried)}.</span>
-              <Button onClick={() => void applyTried()}>Apply theme</Button>
+              <Button className="shrink-0 whitespace-nowrap" onClick={() => void applyTried()}>
+                Apply theme
+              </Button>
             </div>
           )}
         </fieldset>
