@@ -311,14 +311,17 @@ function* hallmark(checkout) {
     const tracking = upper && tracking0 === "tight" ? "normal" : tracking0;
     const material = `${head.material ?? ""} ${text.match(/## Surfaces\n([\s\S]*?)\n## /)?.[1] ?? ""}`;
     const photo = (head.photo ?? "natural").split(" ")[0];
+    // No picked theme recolours photographs with strong colour (fact decisions.picture-recolour-scope,
+    // T1165): a duotone or tint under a calm primary is softened to muted, otherwise left natural.
+    const toned = oklch(accent).C < 0.12 ? "muted" : "natural";
     const treatment =
       {
         natural: "natural",
         warm: "warm",
         muted: "muted",
         mono: "mono",
-        duotone: "duotone",
-        tint: "duotone",
+        duotone: toned,
+        tint: toned,
       }[photo] ?? "natural";
     const texture = /\b(?:grain|noise)\b/i.test(material)
       ? "grain"
