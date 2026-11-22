@@ -29,7 +29,12 @@ export async function checkStudioSelection(browser, base) {
     const { page, frame, hero, link, select, smith, form } = wide;
     const originalHref = await link.getAttribute("href");
     assert.equal(originalHref, "/schedule");
-    if ((await smith.getAttribute("aria-pressed")) === "true") await smith.click();
+    if ((await smith.getAttribute("aria-pressed")) === "true") {
+      await smith.click();
+      await page
+        .getByRole("button", { name: "Click Smith to bring him back.", exact: true })
+        .click();
+    }
     await select.click();
     await frame.locator("html[data-sm-selecting]").waitFor();
     await link.click();
@@ -41,8 +46,18 @@ export async function checkStudioSelection(browser, base) {
         name: "All settings shows more for what you selected.",
         exact: true,
       });
+    await hint.waitFor();
+    const settings = page.getByRole("button", { name: "All settings", exact: true });
+    await settings.click();
+    const settingsHint = page.getByRole("button", {
+      name: "No code changes the app. Code shows its files.",
+      exact: true,
+    });
+    assert.equal(await settingsHint.count(), 0, "the next hint waits for the one already showing");
     await hint.click();
     await hint.waitFor({ state: "detached" });
+    await settingsHint.click();
+    await settings.click();
     assert.equal(await form.evaluate((element) => element.closest("[data-guide=change]")), null);
     await hero.locator("a[data-sm-selected]").waitFor();
     const overlay = page.locator('[data-studio-overlay="selection"]');

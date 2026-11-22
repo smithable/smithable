@@ -442,7 +442,7 @@ export function Ask({
         clearRequest(revision);
         setJustApplied(true);
         onDone?.();
-        if (done.length) onChangeApplied?.();
+        if (done.length && !guiding) onChangeApplied?.();
       }
     } catch (error) {
       setOutput((error as Error).message);

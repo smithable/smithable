@@ -15,23 +15,44 @@ const key = (hint: Hint) => `smithable:seen-hint:${hint}`;
 
 export function useStudioHint() {
   const seen = useRef(new Set<Hint>());
+  const queue = useRef<Hint[]>([]);
   const [active, setActive] = useState<Hint>();
-  const dismiss = useCallback(() => setActive(undefined), []);
-  const reveal = useCallback((hint: Hint) => {
-    if (seen.current.has(hint)) return;
-    seen.current.add(hint);
-    try {
-      if (localStorage.getItem(key(hint))) return;
-      localStorage.setItem(key(hint), "1");
-    } catch {}
-    setActive(hint);
+  const showNext = useCallback(() => {
+    const next = queue.current[0];
+    if (next) {
+      seen.current.add(next);
+      try {
+        localStorage.setItem(key(next), "1");
+      } catch {}
+    }
+    setActive(next);
   }, []);
+  const dismiss = useCallback(
+    (target = queue.current[0]) => {
+      const current = queue.current[0];
+      queue.current = queue.current.filter((hint) => hint !== target);
+      if (current !== queue.current[0]) showNext();
+    },
+    [showNext],
+  );
+  const reveal = useCallback(
+    (hint: Hint) => {
+      if (seen.current.has(hint) || queue.current.includes(hint)) return;
+      try {
+        if (localStorage.getItem(key(hint))) return;
+      } catch {}
+      queue.current.push(hint);
+      if (queue.current.length === 1) showNext();
+    },
+    [showNext],
+  );
   const reset = () => {
     seen.current.clear();
     try {
       for (const hint of Object.keys(words) as Hint[]) localStorage.removeItem(key(hint));
     } catch {}
-    dismiss();
+    queue.current = [];
+    showNext();
   };
   return { active, reveal, dismiss, reset };
 }

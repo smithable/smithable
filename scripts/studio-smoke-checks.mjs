@@ -162,12 +162,12 @@ export async function checkStudioSmoke(browser, base, evidence, asMade) {
         name: "Look opens this again when you want another theme.",
         exact: true,
       });
-      if (choice === "Keep this look") await lookHint.click();
-      else assert.equal(await lookHint.count(), 0);
       // On a cold runner the guide waits for the preview or its own 20-second fallback.
       await page.locator("[data-guide-card]").waitFor({ timeout: 45000 });
       await page.getByRole("button", { name: "Skip guide", exact: true }).click();
       await page.locator("[data-guide-card]").waitFor({ state: "detached" });
+      if (choice === "Keep this look") await lookHint.click();
+      else assert.equal(await lookHint.count(), 0);
       // Skipping the guide after its fallback can still precede a cold preview's startup.
       await page.locator('iframe[title="App preview"]').waitFor({ timeout: 60000 });
 

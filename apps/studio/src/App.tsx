@@ -136,7 +136,7 @@ export function App() {
   const publishCheck = useRef(0);
   const release = useReleaseReview(project, Boolean(project && !project.making));
   const closeRelease = () => {
-    if (hint.active === "publish-opened") hint.dismiss();
+    hint.dismiss("publish-opened");
     publishCheck.current++;
     setCheckingPublish(false);
     setReleaseView(undefined);
@@ -410,6 +410,7 @@ export function App() {
         : "preview";
   const [phoneSmithSheet, setPhoneSmithSheet] = useState(false);
   const showWindow = (window: WindowId | PhoneWindow) => {
+    if (narrow && window !== "manual" && !isManualView(window)) hint.dismiss("settings-opened");
     setPhoneSmithSheet(false);
     if (window === "changes" && !phone.changesUnderSmith) {
       setChangesView("details");
@@ -569,6 +570,7 @@ export function App() {
       hint.reveal("smith-hidden");
     }
     showWindow(window);
+    if (window === "manual" && phoneWindow !== "manual") reveal("settings-opened");
   };
   const rowPan = usePan({
     enabled: narrow && !project?.making && !lookAlone,
@@ -1188,11 +1190,27 @@ export function App() {
   const show = usePresentation(parts, assumptions, layer === "overlay");
   const [presented, setPresented] = useState(false);
   useEffect(() => {
-    if (!lookWasKept || pickingLook || editingLook || overlaid || (firstVisit && !presented))
+    if (
+      !lookWasKept ||
+      pickingLook ||
+      editingLook ||
+      overlaid ||
+      (firstVisit && (!presented || guiding || !guideStarted))
+    )
       return;
     setLookWasKept(false);
     reveal("look-kept");
-  }, [lookWasKept, pickingLook, editingLook, overlaid, firstVisit, presented, reveal]);
+  }, [
+    lookWasKept,
+    pickingLook,
+    editingLook,
+    overlaid,
+    firstVisit,
+    presented,
+    guiding,
+    guideStarted,
+    reveal,
+  ]);
   const decided = useRef(false);
   // biome-ignore lint/correctness/useExhaustiveDependencies: once, when the app is read
   useEffect(() => {
@@ -1395,7 +1413,7 @@ export function App() {
       hideSmith();
       return;
     }
-    hint.dismiss();
+    hint.dismiss("smith-hidden");
     if (floating) {
       setPanelOpen(true);
     } else if (narrow) {
@@ -1491,7 +1509,7 @@ export function App() {
       disabled={!lookOpen && (busy || Boolean(pickingLook) || !spec.plugins)}
       onClick={() => {
         if (lookOpen) return setLookOpen(false);
-        if (hint.active === "look-kept") hint.dismiss();
+        hint.dismiss("look-kept");
         pauseGuide();
         showWindow("preview");
         if (spec.ux) setLookOpen(true);
@@ -1516,7 +1534,7 @@ export function App() {
   const openPreviewWindow = () => (narrow ? showWindow("preview") : workIn("preview"));
   const openSettings = () => {
     if (narrow ? phoneWindow === "manual" : settingsOpen) {
-      if (hint.active === "settings-opened") hint.dismiss();
+      hint.dismiss("settings-opened");
       if (narrow) showWindow("preview");
       else setSettingsOpen(false);
       return;
@@ -1531,7 +1549,10 @@ export function App() {
       <ToolbarButton
         label="Undo"
         hint={!narrow ? hintAt("change-applied") : undefined}
-        onClick={() => void undo()}
+        onClick={() => {
+          hint.dismiss("change-applied");
+          void undo();
+        }}
         disabled={
           busy || Boolean(project.making) || !project.trace.some((t) => !t.undone && !t.isUndo)
         }
@@ -1808,7 +1829,7 @@ export function App() {
                             onClick={() => {
                               if (onCall) audio.endCall();
                               else audio.stopListening();
-                              if (hint.active === "smith-hidden") hint.dismiss();
+                              hint.dismiss("smith-hidden");
                               smithFace.current?.focus();
                             }}
                           >
@@ -2150,7 +2171,7 @@ export function App() {
                     }}
                     right={{
                       hidden: !settingsOpen,
-                      toggle: () => setSettingsOpen(!settingsOpen),
+                      toggle: openSettings,
                     }}
                   />
                 )}
