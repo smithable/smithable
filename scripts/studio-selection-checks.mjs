@@ -153,11 +153,11 @@ export async function checkStudioSelection(browser, base) {
       (await sectionForm.locator("[data-sketch]").count()) >= 3,
       "a section's choices are drawn",
     );
-    await choose("Text only");
-    await frame.locator('[data-hero][data-layout="plain"]').waitFor();
+    await choose("Text over picture");
+    await frame.locator('[data-hero][data-layout="centered"]').waitFor();
     await sectionForm.getByRole("button", { name: "Cancel", exact: true }).click();
     await sectionForm.waitFor({ state: "hidden" });
-    await frame.locator('[data-hero][data-layout="plain"]').waitFor({ state: "hidden" });
+    await frame.locator('[data-hero][data-layout="centered"]').waitFor({ state: "hidden" });
     await frame.locator("[data-hero]").first().waitFor();
     await select.click();
     await hero.click({ position: { x: 4, y: 4 } });
