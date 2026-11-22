@@ -22,7 +22,7 @@ export function ThemeCards({
     <ul aria-label="Themes" className="grid grid-cols-2 gap-2">
       {themes.map((t) => {
         const current = t.name === preset;
-        const said = current && (t.name === inUse ? "In use" : "Trying on");
+        const said = t.name === inUse ? "In use" : current ? "Trying on" : undefined;
         return (
           <li key={t.name}>
             <button

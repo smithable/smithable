@@ -127,6 +127,7 @@ export async function checkFirstLook(browser, base) {
     assert.equal((await project()).files.ux, before, "a tried Look card wrote something");
     // The tried card says so; "In use" stays with the app's theme until Apply.
     await panel.getByText("· Trying on", { exact: true }).waitFor();
+    assert.equal(await panel.getByText("· In use", { exact: true }).count(), 1);
     const apply = panel.getByRole("button", { name: "Apply theme", exact: true });
     // Its Apply is in view above the panel's foot, on a phone's short sheet too.
     const [row, foot] = await apply.evaluate((button) => [

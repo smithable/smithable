@@ -130,7 +130,7 @@ export function LookPanel({
   // On a phone the sheet is short: a theme tried on brings its Apply row into view.
   const applyRow = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    if (tried) applyRow.current?.scrollIntoView({ block: "nearest" });
+    if (tried) applyRow.current?.scrollIntoView({ block: "nearest", behavior: "instant" });
   }, [tried]);
   useEffect(() => {
     if (tried === undefined) return;
