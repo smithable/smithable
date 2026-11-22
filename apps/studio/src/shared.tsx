@@ -315,9 +315,10 @@ export function Preview({
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
   }, []);
-  // The address's list of the app's pages: while the field has the focus, those whose address
-  // or title has what is typed (all of them for an empty field or "/"), eight at most. Our own
-  // list, not a datalist, which an iPhone does not show.
+  // The address's list of the app's pages while the field has the focus: every page until the
+  // person types (the current address is in the field, not a filter: T1240), then those whose
+  // address starts with what is typed (/a: /about), or, typed without a /, whose title has it.
+  // Our own list, not a datalist, which an iPhone does not show; it scrolls past a screenful.
   const listId = useId();
   const [listing, setListing] = useState(false);
   const [addressOpen, setAddressOpen] = useState(false);
@@ -326,13 +327,13 @@ export function Preview({
   const addressButton = useRef<HTMLButtonElement>(null);
   const addressInput = useRef<HTMLInputElement>(null);
   const [active, setActive] = useState(-1);
-  const wanted = typed.replace(/^\//, "").toLowerCase();
-  const matches = pages
-    .filter(
-      ([route, title]) =>
-        !route.includes("$") && `${route} ${title}`.toLowerCase().includes(wanted),
-    )
-    .slice(0, 8);
+  const wanted = (draftAddress ?? "").trim().toLowerCase();
+  const matches = pages.filter(
+    ([route, title]) =>
+      !route.includes("$") &&
+      (route.toLowerCase().startsWith(wanted.startsWith("/") ? wanted : `/${wanted}`) ||
+        (!wanted.startsWith("/") && title.toLowerCase().includes(wanted))),
+  );
   const open = (path: string) => {
     current.current = path.startsWith("/") ? path : `/${path}`;
     // A Go report repeats this same path, so the navigation listener has nothing to update.
