@@ -689,7 +689,13 @@ async function applyAndCheckpoint(
   // From the first write to the commit: rollback only while no newer editor files would be lost.
   let committed = false;
   try {
-    const changes: TreeChange[] = [{ path: join(dir, SPEC), data: result.files.spec }];
+    // A fresh file the change brings goes first: one that is there by now stops it before any other write.
+    const changes: TreeChange[] = (flags.files ?? []).map((file) => ({
+      path: join(dir, file.path),
+      data: file.bytes,
+      fresh: file.fresh,
+    }));
+    changes.push({ path: join(dir, SPEC), data: result.files.spec });
     const write = (path: string, data: string | Uint8Array | undefined) => {
       if (data !== undefined) changes.push({ path, data });
     };
@@ -702,9 +708,6 @@ async function applyAndCheckpoint(
       write(join(dir, translationPath(language)), text);
     for (const path of result.removed) changes.push({ path: join(dir, path), data: null });
     for (const file of result.added) write(join(dir, file.path), file.text);
-    // A file the change brings; a fresh one is never written over one that is there.
-    for (const file of flags.files ?? [])
-      changes.push({ path: join(dir, file.path), data: file.bytes, fresh: file.fresh });
     for (const file of placed?.files ?? []) write(join(dir, file.path), file.bytes);
     for (const file of placed?.texts ?? [])
       changes.push({ path: join(dir, file.path), data: file.text || null });
