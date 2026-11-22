@@ -17,7 +17,7 @@ export type PreviewMessage =
       type: "select";
       concept: string;
       /** A value is a record's or a formula's: it opens its field, never as text to change. */
-      part: "field" | "column" | "value" | null;
+      part: "field" | "column" | "value" | "menu-item" | null;
       page: string | null;
       columns: string[] | null;
       label?: string;

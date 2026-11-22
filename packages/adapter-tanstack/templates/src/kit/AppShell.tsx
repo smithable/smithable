@@ -11,7 +11,7 @@ import { AppLink } from "./AppLink";
 import { allows, type Rule, type Viewer } from "./access";
 import { ConsentSettings } from "./Consent";
 import { formatValue } from "./format";
-import { type AppUi, textMarker } from "./model";
+import { type AppUi, menuItemMarker, navigationMarker, textMarker } from "./model";
 import { type Person, personNow } from "./time-text";
 import { tx, w } from "./words";
 
@@ -19,7 +19,7 @@ export interface MenuUi {
   name: string;
   label?: string;
   /** Only pages the viewer may open are shown. */
-  items: { to: LinkProps["to"]; label: string; icon?: LucideIcon; access: Rule }[];
+  items: { to: LinkProps["to"]; label: string; page?: string; icon?: LucideIcon; access: Rule }[];
 }
 
 interface ShellProps {
@@ -78,7 +78,10 @@ export function AppShell({ children, ...shell }: ShellProps & { children: React.
     <div data-kit="app-shell" className={top ? "min-h-screen" : "min-h-screen lg:flex"}>
       {/* Desktop: a sidebar, unless the menu sits in the bar across the top. */}
       {!top && (
-        <aside className="hidden border-r bg-sidebar text-sidebar-foreground lg:sticky lg:top-0 lg:flex lg:h-screen lg:w-56 lg:shrink-0 lg:flex-col">
+        <aside
+          {...navigationMarker()}
+          className="hidden border-r bg-sidebar text-sidebar-foreground lg:sticky lg:top-0 lg:flex lg:h-screen lg:w-56 lg:shrink-0 lg:flex-col"
+        >
           <p className="px-6 pt-7 pb-6 text-2xl font-bold [overflow-wrap:anywhere]">
             <AppName {...shell} wrap />
           </p>
@@ -90,6 +93,7 @@ export function AppShell({ children, ...shell }: ShellProps & { children: React.
           top, the same header on a wide screen too, its links in a row and the rest (the person,
           the appearance) behind the menu button at its end. */}
       <header
+        {...navigationMarker()}
         data-part="header"
         data-navigation={top ? shell.navigation : "sidebar"}
         className={`sticky top-0 z-30 flex h-18 items-center gap-2 border-b bg-sidebar px-2 text-sidebar-foreground ${top ? `lg:gap-6 lg:px-6 ${centered ? "lg:grid lg:grid-cols-[1fr_auto_1fr]" : ""}` : "lg:hidden"}`}
@@ -186,7 +190,11 @@ function TopLinks({
             inactiveProps={{ className: "font-medium" }}
             activeProps={{ className: ACTIVE[active ?? "underline"].bar }}
           >
-            {tx(item.label)}
+            {import.meta.env.DEV && item.page ? (
+              <span {...menuItemMarker(item.page)}>{tx(item.label)}</span>
+            ) : (
+              tx(item.label)
+            )}
             {(counts?.[String(item.to)] ?? 0) > 0 && (
               <span
                 data-part="count"
@@ -305,7 +313,11 @@ function Navigation({
                   activeProps={{ className: ACTIVE[active ?? "filled"].side }}
                 >
                   {item.icon && <item.icon aria-hidden className="size-5 shrink-0" />}
-                  {tx(item.label)}
+                  {import.meta.env.DEV && item.page ? (
+                    <span {...menuItemMarker(item.page)}>{tx(item.label)}</span>
+                  ) : (
+                    tx(item.label)
+                  )}
                   {(counts?.[String(item.to)] ?? 0) > 0 && (
                     <span
                       data-part="count"

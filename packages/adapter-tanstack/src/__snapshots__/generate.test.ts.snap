@@ -11432,6 +11432,7 @@ const menus: MenuUi[] = [
         label: pageUi["admin"].title,
         icon: Layers,
         access: pageAccess["admin"],
+        page: "admin",
       },
     ],
   },
@@ -11444,6 +11445,7 @@ const menus: MenuUi[] = [
         label: pageUi["team"].title,
         icon: Users,
         access: pageAccess["team"],
+        page: "team",
       },
       {
         to: "/team/activity",
@@ -14125,7 +14127,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/AiMark.tsx": "f9eb07a2 kit",
   "src/kit/AppCard.tsx": "76e8455d kit",
   "src/kit/AppLink.tsx": "841a9af0 kit",
-  "src/kit/AppShell.tsx": "fda2cf43 kit",
+  "src/kit/AppShell.tsx": "7cdeb539 kit",
   "src/kit/AppearancePicker.tsx": "0cd564d2 kit",
   "src/kit/Ask.tsx": "e5277427 kit",
   "src/kit/Combobox.tsx": "c3a18c75 kit",
@@ -14173,7 +14175,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/log.server.ts": "4d493425 kit",
   "src/kit/mail.ts": "d005acf1 kit",
   "src/kit/mcp.server.ts": "2e063918 kit",
-  "src/kit/model.ts": "a10b6641 kit",
+  "src/kit/model.ts": "4f517d82 kit",
   "src/kit/now.ts": "5ea87828 kit",
   "src/kit/origin.ts": "f7090ee4 kit",
   "src/kit/page-guard.ts": "d8974971 kit",
@@ -14205,7 +14207,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/routes/[_dev]/ask.ts": "bf4a5d88 generated",
   "src/routes/[_dev]/clock.ts": "a1ccbe93 generated",
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
-  "src/routes/__root.tsx": "72e51f25 generated",
+  "src/routes/__root.tsx": "fe141789 generated",
   "src/routes/admin/activity.tsx": "225b605d generated",
   "src/routes/admin/ask.tsx": "0430add2 generated",
   "src/routes/admin/index.tsx": "e9f3b1b5 generated",
@@ -19671,30 +19673,35 @@ const menus: MenuUi[] = [
         label: pageUi["appointments"].title,
         icon: Calendar,
         access: pageAccess["appointments"],
+        page: "appointments",
       },
       {
         to: "/day",
         label: pageUi["day"].title,
         icon: Calendar,
         access: pageAccess["day"],
+        page: "day",
       },
       {
         to: "/services",
         label: pageUi["services"].title,
         icon: List,
         access: pageAccess["services"],
+        page: "services",
       },
       {
         to: "/barbers",
         label: pageUi["barbers"].title,
         icon: List,
         access: pageAccess["barbers"],
+        page: "barbers",
       },
       {
         to: "/time-off",
         label: pageUi["time-off"].title,
         icon: List,
         access: pageAccess["time-off"],
+        page: "time-off",
       },
     ],
   },
@@ -20634,7 +20641,7 @@ function HomePage() {
     await router.invalidate();
   };
   return (
-    <LandingLayout appName={app.name} link={viewer ? { to: "/appointments", label: w.openApp(app.name) } : { to: "/sign-in", label: w.signIn }} footer={{ links: [], texts: "pages.home.footer" }} site={site} viewer={viewer} onSignOut={viewer ? signOut : undefined}>
+    <LandingLayout appName={app.name} page="home" link={viewer ? { to: "/appointments", label: w.openApp(app.name) } : { to: "/sign-in", label: w.signIn }} footer={{ links: [], texts: "pages.home.footer" }} site={site} viewer={viewer} onSignOut={viewer ? signOut : undefined}>
       <Hero
           texts="pages.home.hero"
           title="Harbour Cuts"
@@ -21934,7 +21941,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/AiMark.tsx": "f9eb07a2 kit",
   "src/kit/AppCard.tsx": "76e8455d kit",
   "src/kit/AppLink.tsx": "841a9af0 kit",
-  "src/kit/AppShell.tsx": "fda2cf43 kit",
+  "src/kit/AppShell.tsx": "7cdeb539 kit",
   "src/kit/AppearancePicker.tsx": "0cd564d2 kit",
   "src/kit/Calendar.tsx": "5f787e2e kit",
   "src/kit/Combobox.tsx": "c3a18c75 kit",
@@ -21944,7 +21951,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/Filters.tsx": "0f5bfdfd kit",
   "src/kit/ImportDialog.tsx": "d65da47a kit",
   "src/kit/InlineRows.tsx": "5a097006 kit",
-  "src/kit/Landing.tsx": "2bcf13ff kit",
+  "src/kit/Landing.tsx": "e745a146 kit",
   "src/kit/LegalPage.tsx": "f9a9df1e kit",
   "src/kit/Live.tsx": "fbaa47cd kit",
   "src/kit/ModelForm.tsx": "f90ea7e8 kit",
@@ -21981,7 +21988,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/live.server.ts": "474834ab kit",
   "src/kit/log.server.ts": "4d493425 kit",
   "src/kit/mail.ts": "d005acf1 kit",
-  "src/kit/model.ts": "a10b6641 kit",
+  "src/kit/model.ts": "4f517d82 kit",
   "src/kit/now.ts": "5ea87828 kit",
   "src/kit/origin.ts": "f7090ee4 kit",
   "src/kit/outgoing.server.ts": "284a585a kit",
@@ -22012,7 +22019,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/routes/[_dev]/act.ts": "c57e01e2 generated",
   "src/routes/[_dev]/clock.ts": "a1ccbe93 generated",
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
-  "src/routes/__root.tsx": "f40e387f generated",
+  "src/routes/__root.tsx": "8d600986 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/app-card.tsx": "48827720 generated",
   "src/routes/appointments/$id.tsx": "05b6e945 generated",
@@ -22027,7 +22034,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/routes/files/$model.$id.$field.$n.ts": "5288014d kit",
   "src/routes/files/$model.$id.$field.ts": "93378bd7 kit",
   "src/routes/health.ts": "362c9904 kit",
-  "src/routes/index.tsx": "20a37bae generated",
+  "src/routes/index.tsx": "0a5077c9 generated",
   "src/routes/privacy/index.tsx": "9fcb262e generated",
   "src/routes/robots[.]txt.ts": "a6b36402 generated",
   "src/routes/services/$id.tsx": "bddd0cd6 generated",
@@ -31469,9 +31476,9 @@ import type { LandingSite } from "#/kit/Landing";
 export const site: LandingSite = {
   home: "/",
   menu: [
-    { to: "/schedule", label: pageUi["schedule"].title },
-    { to: "/blog", label: pageUi["blog"].title },
-    { to: "/about", label: pageUi["about"].title },
+    { to: "/schedule", label: pageUi["schedule"].title, page: "schedule" },
+    { to: "/blog", label: pageUi["blog"].title, page: "blog" },
+    { to: "/about", label: pageUi["about"].title, page: "about" },
   ],
   legal: [{ to: "/privacy", label: pageUi["privacy"].title }],
 };
@@ -32195,24 +32202,28 @@ const menus: MenuUi[] = [
         label: pageUi["schedule"].title,
         icon: Calendar,
         access: pageAccess["schedule"],
+        page: "schedule",
       },
       {
         to: "/my-bookings",
         label: pageUi["my-bookings"].title,
         icon: Calendar,
         access: pageAccess["my-bookings"],
+        page: "my-bookings",
       },
       {
         to: "/sessions",
         label: pageUi["sessions"].title,
         icon: Calendar,
         access: pageAccess["sessions"],
+        page: "sessions",
       },
       {
         to: "/bookings",
         label: pageUi["bookings"].title,
         icon: Calendar,
         access: pageAccess["bookings"],
+        page: "bookings",
       },
     ],
   },
@@ -32224,6 +32235,7 @@ const menus: MenuUi[] = [
         label: pageUi["messages"].title,
         icon: Mail,
         access: pageAccess["messages"],
+        page: "messages",
       },
     ],
   },
@@ -32235,12 +32247,14 @@ const menus: MenuUi[] = [
         label: pageUi["class-types"].title,
         icon: Layers,
         access: pageAccess["class-types"],
+        page: "class-types",
       },
       {
         to: "/instructors",
         label: pageUi["instructors"].title,
         icon: Users,
         access: pageAccess["instructors"],
+        page: "instructors",
       },
     ],
   },
@@ -32252,24 +32266,28 @@ const menus: MenuUi[] = [
         label: pageUi["blog"].title,
         icon: BookOpen,
         access: pageAccess["blog"],
+        page: "blog",
       },
       {
         to: "/about",
         label: pageUi["about"].title,
         icon: List,
         access: pageAccess["about"],
+        page: "about",
       },
       {
         to: "/posts",
         label: pageUi["posts"].title,
         icon: BookOpen,
         access: pageAccess["posts"],
+        page: "posts",
       },
       {
         to: "/",
         label: pageUi["home"].title,
         icon: House,
         access: pageAccess["home"],
+        page: "home",
       },
     ],
   },
@@ -32281,6 +32299,7 @@ const menus: MenuUi[] = [
         label: pageUi["admin"].title,
         icon: Layers,
         access: pageAccess["admin"],
+        page: "admin",
       },
     ],
   },
@@ -34764,7 +34783,7 @@ function HomePage() {
     await router.invalidate();
   };
   return (
-    <LandingLayout appName={app.name} link={viewer ? { to: "/schedule", label: w.openApp(app.name) } : { to: "/sign-in", label: w.signIn }} footer={{ links: [], texts: "pages.home.footer" }} site={site} viewer={viewer} onSignOut={viewer ? signOut : undefined}>
+    <LandingLayout appName={app.name} page="home" link={viewer ? { to: "/schedule", label: w.openApp(app.name) } : { to: "/sign-in", label: w.signIn }} footer={{ links: [], texts: "pages.home.footer" }} site={site} viewer={viewer} onSignOut={viewer ? signOut : undefined}>
       <Hero
           texts="pages.home.hero"
           title="Stillwater Yoga"
@@ -37267,7 +37286,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/session.schema.ts": "ea859e10 generated",
   "src/generated/session.server.ts": "6b5298f7 generated",
   "src/generated/session.ts": "e2a3ab62 generated",
-  "src/generated/site.ts": "994514da generated",
+  "src/generated/site.ts": "8c9e5581 generated",
   "src/generated/timers.server.ts": "9e37548f generated",
   "src/generated/uploads.ts": "11494e99 generated",
   "src/generated/user-choices.server.ts": "d953aad5 generated",
@@ -37277,7 +37296,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/AiMark.tsx": "f9eb07a2 kit",
   "src/kit/AppCard.tsx": "76e8455d kit",
   "src/kit/AppLink.tsx": "841a9af0 kit",
-  "src/kit/AppShell.tsx": "fda2cf43 kit",
+  "src/kit/AppShell.tsx": "7cdeb539 kit",
   "src/kit/AppearancePicker.tsx": "0cd564d2 kit",
   "src/kit/Articles.tsx": "f3fb4114 kit",
   "src/kit/Ask.tsx": "e5277427 kit",
@@ -37291,7 +37310,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/ImportDialog.tsx": "d65da47a kit",
   "src/kit/InlineRows.tsx": "5a097006 kit",
   "src/kit/Inspector.tsx": "2425cac5 kit",
-  "src/kit/Landing.tsx": "2bcf13ff kit",
+  "src/kit/Landing.tsx": "e745a146 kit",
   "src/kit/LegalPage.tsx": "f9a9df1e kit",
   "src/kit/Live.tsx": "fbaa47cd kit",
   "src/kit/Markdown.tsx": "24e2fcd2 kit",
@@ -37336,7 +37355,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/live.server.ts": "474834ab kit",
   "src/kit/log.server.ts": "4d493425 kit",
   "src/kit/mail.ts": "d005acf1 kit",
-  "src/kit/model.ts": "a10b6641 kit",
+  "src/kit/model.ts": "4f517d82 kit",
   "src/kit/now.ts": "5ea87828 kit",
   "src/kit/origin.ts": "f7090ee4 kit",
   "src/kit/outgoing.server.ts": "284a585a kit",
@@ -37371,7 +37390,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/[_dev]/ask.ts": "66ce855e generated",
   "src/routes/[_dev]/clock.ts": "72446040 generated",
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
-  "src/routes/__root.tsx": "9d801633 generated",
+  "src/routes/__root.tsx": "07a47e68 generated",
   "src/routes/about/index.tsx": "43aa18d2 generated",
   "src/routes/admin/activity.tsx": "dc7f9a31 generated",
   "src/routes/admin/bookings/$id.tsx": "3343f459 generated",
@@ -37408,7 +37427,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/files/$model.$id.$field.$n.ts": "5288014d kit",
   "src/routes/files/$model.$id.$field.ts": "93378bd7 kit",
   "src/routes/health.ts": "362c9904 kit",
-  "src/routes/index.tsx": "d2646c1f generated",
+  "src/routes/index.tsx": "8141551e generated",
   "src/routes/instructors/$id.tsx": "edc5cce4 generated",
   "src/routes/instructors/index.tsx": "856face6 generated",
   "src/routes/instructors/new.tsx": "8bd30440 generated",
@@ -41972,7 +41991,7 @@ import type { LandingSite } from "#/kit/Landing";
 /** The public site's frame: the pages visitors may open, and how to reach the business. */
 export const site: LandingSite = {
   home: "/",
-  menu: [{ to: "/projects", label: pageUi["projects"].title }],
+  menu: [{ to: "/projects", label: pageUi["projects"].title, page: "projects" }],
   legal: [{ to: "/privacy", label: pageUi["privacy"].title }],
 };
 "
@@ -42814,24 +42833,28 @@ const menus: MenuUi[] = [
         label: pageUi["start"].title,
         icon: ChartColumn,
         access: pageAccess["start"],
+        page: "start",
       },
       {
         to: "/enquiries",
         label: pageUi["enquiries"].title,
         icon: List,
         access: pageAccess["enquiries"],
+        page: "enquiries",
       },
       {
         to: "/projects",
         label: pageUi["projects"].title,
         icon: Briefcase,
         access: pageAccess["projects"],
+        page: "projects",
       },
       {
         to: "/services",
         label: pageUi["services"].title,
         icon: List,
         access: pageAccess["services"],
+        page: "services",
       },
     ],
   },
@@ -42844,6 +42867,7 @@ const menus: MenuUi[] = [
         label: pageUi["team"].title,
         icon: Users,
         access: pageAccess["team"],
+        page: "team",
       },
       {
         to: "/team/activity",
@@ -43480,7 +43504,7 @@ function HomePage() {
     await router.invalidate();
   };
   return (
-    <LandingLayout appName={app.name} link={viewer ? { to: "/start", label: w.openApp(app.name) } : { to: "/sign-in", label: w.signIn }} footer={{ links: [], texts: "pages.home.footer" }} site={site} viewer={viewer} onSignOut={viewer ? signOut : undefined}>
+    <LandingLayout appName={app.name} page="home" link={viewer ? { to: "/start", label: w.openApp(app.name) } : { to: "/sign-in", label: w.signIn }} footer={{ links: [], texts: "pages.home.footer" }} site={site} viewer={viewer} onSignOut={viewer ? signOut : undefined}>
       <Hero
           texts="pages.home.hero"
           title="Northshore Joinery"
@@ -45211,7 +45235,7 @@ exports[`../../../examples/builder/smithable.yml > the generated files are as re
   "src/generated/service.schema.ts": "73f0d11e generated",
   "src/generated/service.server.ts": "a8c848a2 generated",
   "src/generated/service.ts": "d5f70f14 generated",
-  "src/generated/site.ts": "aa2a42e8 generated",
+  "src/generated/site.ts": "6c048661 generated",
   "src/generated/uploads.ts": "d2883bc8 generated",
   "src/generated/users.server.ts": "502caa5a generated",
   "src/generated/users.test.ts": "76509344 generated",
@@ -45220,7 +45244,7 @@ exports[`../../../examples/builder/smithable.yml > the generated files are as re
   "src/kit/AiMark.tsx": "f9eb07a2 kit",
   "src/kit/AppCard.tsx": "76e8455d kit",
   "src/kit/AppLink.tsx": "841a9af0 kit",
-  "src/kit/AppShell.tsx": "fda2cf43 kit",
+  "src/kit/AppShell.tsx": "7cdeb539 kit",
   "src/kit/AppearancePicker.tsx": "0cd564d2 kit",
   "src/kit/Combobox.tsx": "c3a18c75 kit",
   "src/kit/Consent.tsx": "c5ee7e50 kit",
@@ -45231,7 +45255,7 @@ exports[`../../../examples/builder/smithable.yml > the generated files are as re
   "src/kit/Filters.tsx": "0f5bfdfd kit",
   "src/kit/ImportDialog.tsx": "d65da47a kit",
   "src/kit/InlineRows.tsx": "5a097006 kit",
-  "src/kit/Landing.tsx": "2bcf13ff kit",
+  "src/kit/Landing.tsx": "e745a146 kit",
   "src/kit/LegalPage.tsx": "f9a9df1e kit",
   "src/kit/ModelForm.tsx": "f90ea7e8 kit",
   "src/kit/ModelTable.tsx": "5252e1d6 kit",
@@ -45266,7 +45290,7 @@ exports[`../../../examples/builder/smithable.yml > the generated files are as re
   "src/kit/limit.ts": "dafa01cd kit",
   "src/kit/log.server.ts": "4d493425 kit",
   "src/kit/mail.ts": "d005acf1 kit",
-  "src/kit/model.ts": "a10b6641 kit",
+  "src/kit/model.ts": "4f517d82 kit",
   "src/kit/now.ts": "5ea87828 kit",
   "src/kit/origin.ts": "f7090ee4 kit",
   "src/kit/page-guard.ts": "d8974971 kit",
@@ -45293,7 +45317,7 @@ exports[`../../../examples/builder/smithable.yml > the generated files are as re
   "src/routes/[_dev]/act.ts": "c57e01e2 generated",
   "src/routes/[_dev]/clock.ts": "a1ccbe93 generated",
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
-  "src/routes/__root.tsx": "32afe8ed generated",
+  "src/routes/__root.tsx": "4968221e generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/app-card.tsx": "48827720 generated",
   "src/routes/enquiries/$id.tsx": "9f8f421d generated",
@@ -45303,7 +45327,7 @@ exports[`../../../examples/builder/smithable.yml > the generated files are as re
   "src/routes/files/$model.$id.$field.$n.ts": "5288014d kit",
   "src/routes/files/$model.$id.$field.ts": "93378bd7 kit",
   "src/routes/health.ts": "362c9904 kit",
-  "src/routes/index.tsx": "29750d80 generated",
+  "src/routes/index.tsx": "14cf364f generated",
   "src/routes/privacy/index.tsx": "66a357d1 generated",
   "src/routes/projects/$id.tsx": "b413344a generated",
   "src/routes/projects/index.tsx": "07e25658 generated",
@@ -52580,24 +52604,28 @@ const menus: MenuUi[] = [
         label: pageUi["start"].title,
         icon: ChartColumn,
         access: pageAccess["start"],
+        page: "start",
       },
       {
         to: "/customers",
         label: pageUi["customers"].title,
         icon: Users,
         access: pageAccess["customers"],
+        page: "customers",
       },
       {
         to: "/orders",
         label: pageUi["orders"].title,
         icon: ShoppingCart,
         access: pageAccess["orders"],
+        page: "orders",
       },
       {
         to: "/follow-ups",
         label: pageUi["followUps"].title,
         icon: List,
         access: pageAccess["followUps"],
+        page: "followUps",
       },
     ],
   },
@@ -52610,6 +52638,7 @@ const menus: MenuUi[] = [
         label: pageUi["team"].title,
         icon: Users,
         access: pageAccess["team"],
+        page: "team",
       },
       {
         to: "/team/trash",
@@ -55132,7 +55161,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/AiMark.tsx": "f9eb07a2 kit",
   "src/kit/AppCard.tsx": "76e8455d kit",
   "src/kit/AppLink.tsx": "841a9af0 kit",
-  "src/kit/AppShell.tsx": "fda2cf43 kit",
+  "src/kit/AppShell.tsx": "7cdeb539 kit",
   "src/kit/AppearancePicker.tsx": "0cd564d2 kit",
   "src/kit/Ask.tsx": "e5277427 kit",
   "src/kit/Combobox.tsx": "c3a18c75 kit",
@@ -55143,7 +55172,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/ImportDialog.tsx": "d65da47a kit",
   "src/kit/InlineRows.tsx": "5a097006 kit",
   "src/kit/Inspector.tsx": "2425cac5 kit",
-  "src/kit/Landing.tsx": "2bcf13ff kit",
+  "src/kit/Landing.tsx": "e745a146 kit",
   "src/kit/MergeDialog.tsx": "9794e745 kit",
   "src/kit/ModelForm.tsx": "f90ea7e8 kit",
   "src/kit/ModelTable.tsx": "5252e1d6 kit",
@@ -55183,7 +55212,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/limit.ts": "dafa01cd kit",
   "src/kit/log.server.ts": "4d493425 kit",
   "src/kit/mail.ts": "d005acf1 kit",
-  "src/kit/model.ts": "a10b6641 kit",
+  "src/kit/model.ts": "4f517d82 kit",
   "src/kit/now.ts": "5ea87828 kit",
   "src/kit/origin.ts": "f7090ee4 kit",
   "src/kit/page-guard.ts": "d8974971 kit",
@@ -55214,7 +55243,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/routes/[_dev]/ask.ts": "3e066e2e generated",
   "src/routes/[_dev]/clock.ts": "a1ccbe93 generated",
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
-  "src/routes/__root.tsx": "3a1f8636 generated",
+  "src/routes/__root.tsx": "52aba507 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/app-card.tsx": "48827720 generated",
   "src/routes/customers/$id.tsx": "6a23d1ec generated",
@@ -63254,24 +63283,28 @@ const menus: MenuUi[] = [
         label: pageUi["overview"].title,
         icon: ChartColumn,
         access: pageAccess["overview"],
+        page: "overview",
       },
       {
         to: "/invoices",
         label: pageUi["invoices"].title,
         icon: FileText,
         access: pageAccess["invoices"],
+        page: "invoices",
       },
       {
         to: "/clients",
         label: pageUi["clients"].title,
         icon: Users,
         access: pageAccess["clients"],
+        page: "clients",
       },
       {
         to: "/settings",
         label: pageUi["settings"].title,
         icon: Settings,
         access: pageAccess["settings"],
+        page: "settings",
       },
     ],
   },
@@ -63798,7 +63831,7 @@ function HomePage() {
     await router.invalidate();
   };
   return (
-    <LandingLayout appName={app.name} link={viewer ? { to: "/overview", label: w.openApp(app.name) } : { to: "/sign-in", label: w.signIn }} footer={{ links: [], texts: "pages.home.footer" }} site={site} viewer={viewer} onSignOut={viewer ? signOut : undefined}>
+    <LandingLayout appName={app.name} page="home" link={viewer ? { to: "/overview", label: w.openApp(app.name) } : { to: "/sign-in", label: w.signIn }} footer={{ links: [], texts: "pages.home.footer" }} site={site} viewer={viewer} onSignOut={viewer ? signOut : undefined}>
       <Hero
           texts="pages.home.hero"
           title="Invoicely"
@@ -65360,7 +65393,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/AiMark.tsx": "f9eb07a2 kit",
   "src/kit/AppCard.tsx": "76e8455d kit",
   "src/kit/AppLink.tsx": "841a9af0 kit",
-  "src/kit/AppShell.tsx": "fda2cf43 kit",
+  "src/kit/AppShell.tsx": "7cdeb539 kit",
   "src/kit/AppearancePicker.tsx": "0cd564d2 kit",
   "src/kit/Ask.tsx": "e5277427 kit",
   "src/kit/Combobox.tsx": "c3a18c75 kit",
@@ -65373,7 +65406,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/ImportDialog.tsx": "d65da47a kit",
   "src/kit/InlineRows.tsx": "5a097006 kit",
   "src/kit/Inspector.tsx": "2425cac5 kit",
-  "src/kit/Landing.tsx": "2bcf13ff kit",
+  "src/kit/Landing.tsx": "e745a146 kit",
   "src/kit/LegalPage.tsx": "f9a9df1e kit",
   "src/kit/Live.tsx": "fbaa47cd kit",
   "src/kit/ModelForm.tsx": "f90ea7e8 kit",
@@ -65417,7 +65450,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/live.server.ts": "474834ab kit",
   "src/kit/log.server.ts": "4d493425 kit",
   "src/kit/mail.ts": "d005acf1 kit",
-  "src/kit/model.ts": "a10b6641 kit",
+  "src/kit/model.ts": "4f517d82 kit",
   "src/kit/now.ts": "5ea87828 kit",
   "src/kit/origin.ts": "f7090ee4 kit",
   "src/kit/outgoing.server.ts": "284a585a kit",
@@ -65452,7 +65485,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/routes/[_dev]/ask.ts": "7678e5fc generated",
   "src/routes/[_dev]/clock.ts": "72446040 generated",
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
-  "src/routes/__root.tsx": "48718742 generated",
+  "src/routes/__root.tsx": "547c186a generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/app-card.tsx": "48827720 generated",
   "src/routes/clients/$id.tsx": "e36f8b7f generated",
@@ -65463,7 +65496,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/routes/files/$model.$id.$field.$n.ts": "5288014d kit",
   "src/routes/files/$model.$id.$field.ts": "93378bd7 kit",
   "src/routes/health.ts": "362c9904 kit",
-  "src/routes/index.tsx": "268208f5 generated",
+  "src/routes/index.tsx": "c2dc8302 generated",
   "src/routes/invoices/$id.tsx": "8eb4e8fc generated",
   "src/routes/invoices/$id_.document.tsx": "3a477458 generated",
   "src/routes/invoices/index.tsx": "0e4af827 generated",
@@ -70991,8 +71024,8 @@ import type { LandingSite } from "#/kit/Landing";
 export const site: LandingSite = {
   home: "/where",
   menu: [
-    { to: "/", label: pageUi["menu"].title },
-    { to: "/stops", label: pageUi["stops"].title },
+    { to: "/", label: pageUi["menu"].title, page: "menu" },
+    { to: "/stops", label: pageUi["stops"].title, page: "stops" },
   ],
 };
 "
@@ -72323,18 +72356,21 @@ const menus: MenuUi[] = [
         label: pageUi["orders"].title,
         icon: ShoppingCart,
         access: pageAccess["orders"],
+        page: "orders",
       },
       {
         to: "/dishes",
         label: pageUi["dishes"].title,
         icon: List,
         access: pageAccess["dishes"],
+        page: "dishes",
       },
       {
         to: "/stops",
         label: pageUi["stops"].title,
         icon: List,
         access: pageAccess["stops"],
+        page: "stops",
       },
     ],
   },
@@ -72347,6 +72383,7 @@ const menus: MenuUi[] = [
         label: pageUi["team"].title,
         icon: Users,
         access: pageAccess["team"],
+        page: "team",
       },
       {
         to: "/team/activity",
@@ -74130,7 +74167,7 @@ function WherePage() {
     await router.invalidate();
   };
   return (
-    <LandingLayout appName={app.name} link={viewer ? { to: "/orders", label: w.openApp(app.name) } : { to: "/sign-in", label: w.signIn }} footer={{ links: [], texts: "pages.where.footer" }} site={site} viewer={viewer} onSignOut={viewer ? signOut : undefined}>
+    <LandingLayout appName={app.name} page="where" link={viewer ? { to: "/orders", label: w.openApp(app.name) } : { to: "/sign-in", label: w.signIn }} footer={{ links: [], texts: "pages.where.footer" }} site={site} viewer={viewer} onSignOut={viewer ? signOut : undefined}>
       <Hero
           texts="pages.where.hero"
           title="Kiosken"
@@ -74716,7 +74753,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/generated/pages.ts": "7d21451f generated",
   "src/generated/push.ts": "22b841d2 generated",
   "src/generated/roles.ts": "6b44c69a generated",
-  "src/generated/site.ts": "590f79d5 generated",
+  "src/generated/site.ts": "d79f67e3 generated",
   "src/generated/stop.import.server.ts": "5aca6a4a generated",
   "src/generated/stop.import.ts": "1d2a5d38 generated",
   "src/generated/stop.schema.ts": "9b1cb273 generated",
@@ -74730,7 +74767,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/AiMark.tsx": "f9eb07a2 kit",
   "src/kit/AppCard.tsx": "76e8455d kit",
   "src/kit/AppLink.tsx": "841a9af0 kit",
-  "src/kit/AppShell.tsx": "fda2cf43 kit",
+  "src/kit/AppShell.tsx": "7cdeb539 kit",
   "src/kit/AppearancePicker.tsx": "0cd564d2 kit",
   "src/kit/Combobox.tsx": "c3a18c75 kit",
   "src/kit/Consent.tsx": "c5ee7e50 kit",
@@ -74739,7 +74776,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/Filters.tsx": "0f5bfdfd kit",
   "src/kit/ImportDialog.tsx": "d65da47a kit",
   "src/kit/InlineRows.tsx": "5a097006 kit",
-  "src/kit/Landing.tsx": "2bcf13ff kit",
+  "src/kit/Landing.tsx": "e745a146 kit",
   "src/kit/Live.tsx": "fbaa47cd kit",
   "src/kit/ModelForm.tsx": "f90ea7e8 kit",
   "src/kit/ModelTable.tsx": "5252e1d6 kit",
@@ -74778,7 +74815,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/live.server.ts": "474834ab kit",
   "src/kit/log.server.ts": "4d493425 kit",
   "src/kit/mail.ts": "d005acf1 kit",
-  "src/kit/model.ts": "a10b6641 kit",
+  "src/kit/model.ts": "4f517d82 kit",
   "src/kit/now.ts": "5ea87828 kit",
   "src/kit/origin.ts": "f7090ee4 kit",
   "src/kit/outgoing.server.ts": "284a585a kit",
@@ -74811,7 +74848,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/routes/[_dev]/act.ts": "c57e01e2 generated",
   "src/routes/[_dev]/clock.ts": "a1ccbe93 generated",
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
-  "src/routes/__root.tsx": "3cfd0626 generated",
+  "src/routes/__root.tsx": "a4d7716d generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/app-card.tsx": "48827720 generated",
   "src/routes/dishes/$id.tsx": "ae74c5c1 generated",
@@ -74834,7 +74871,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/routes/stops/new.tsx": "0033752d generated",
   "src/routes/team/activity.tsx": "2c5e20dd generated",
   "src/routes/team/index.tsx": "d0aa5bca generated",
-  "src/routes/where/index.tsx": "55545172 generated",
+  "src/routes/where/index.tsx": "712d3315 generated",
   "src/start.ts": "6b874d2d kit",
   "src/styles.css": "706d757b kit",
   "src/theme.css": "1fd40aa1 generated",
@@ -77827,7 +77864,10 @@ import { pageUi } from "#/generated/pages";
 import type { LandingSite } from "#/kit/Landing";
 
 /** The public site's frame: the pages visitors may open, and how to reach the business. */
-export const site: LandingSite = { home: "/welcome", menu: [{ to: "/", label: pageUi["catalog"].title }] };
+export const site: LandingSite = {
+  home: "/welcome",
+  menu: [{ to: "/", label: pageUi["catalog"].title, page: "catalog" }],
+};
 "
 `;
 
@@ -78406,24 +78446,28 @@ const menus: MenuUi[] = [
         label: pageUi["catalog"].title,
         icon: Package,
         access: pageAccess["catalog"],
+        page: "catalog",
       },
       {
         to: "/my-items",
         label: pageUi["myItems"].title,
         icon: Package,
         access: pageAccess["myItems"],
+        page: "myItems",
       },
       {
         to: "/saved",
         label: pageUi["saved"].title,
         icon: Package,
         access: pageAccess["saved"],
+        page: "saved",
       },
       {
         to: "/review",
         label: pageUi["review"].title,
         icon: Shield,
         access: pageAccess["review"],
+        page: "review",
       },
     ],
   },
@@ -79615,7 +79659,7 @@ function HomePage() {
     await router.invalidate();
   };
   return (
-    <LandingLayout appName={app.name} link={viewer ? { to: "/", label: w.openApp(app.name) } : { to: "/sign-in", label: w.signIn }} footer={{ links: [], texts: "pages.home.footer" }} site={site} viewer={viewer} onSignOut={viewer ? signOut : undefined}>
+    <LandingLayout appName={app.name} page="home" link={viewer ? { to: "/", label: w.openApp(app.name) } : { to: "/sign-in", label: w.signIn }} footer={{ links: [], texts: "pages.home.footer" }} site={site} viewer={viewer} onSignOut={viewer ? signOut : undefined}>
       <Hero
           texts="pages.home.hero"
           title="Torget"
@@ -80167,14 +80211,14 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/generated/review.server.ts": "41afd3db generated",
   "src/generated/review.ts": "c0f62730 generated",
   "src/generated/roles.ts": "d284ad2a generated",
-  "src/generated/site.ts": "4c4ce201 generated",
+  "src/generated/site.ts": "40202615 generated",
   "src/generated/uploads.ts": "ca55296a generated",
   "src/kit/ActionButton.tsx": "6a3b0c0a kit",
   "src/kit/ActivityLog.tsx": "e53a5289 kit",
   "src/kit/AiMark.tsx": "f9eb07a2 kit",
   "src/kit/AppCard.tsx": "76e8455d kit",
   "src/kit/AppLink.tsx": "841a9af0 kit",
-  "src/kit/AppShell.tsx": "fda2cf43 kit",
+  "src/kit/AppShell.tsx": "7cdeb539 kit",
   "src/kit/AppearancePicker.tsx": "0cd564d2 kit",
   "src/kit/Ask.tsx": "e5277427 kit",
   "src/kit/Combobox.tsx": "c3a18c75 kit",
@@ -80186,7 +80230,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/ImportDialog.tsx": "d65da47a kit",
   "src/kit/InlineRows.tsx": "5a097006 kit",
   "src/kit/Inspector.tsx": "2425cac5 kit",
-  "src/kit/Landing.tsx": "2bcf13ff kit",
+  "src/kit/Landing.tsx": "e745a146 kit",
   "src/kit/ModelForm.tsx": "f90ea7e8 kit",
   "src/kit/ModelTable.tsx": "5252e1d6 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
@@ -80224,7 +80268,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/limit.ts": "dafa01cd kit",
   "src/kit/log.server.ts": "4d493425 kit",
   "src/kit/mail.ts": "d005acf1 kit",
-  "src/kit/model.ts": "a10b6641 kit",
+  "src/kit/model.ts": "4f517d82 kit",
   "src/kit/now.ts": "5ea87828 kit",
   "src/kit/origin.ts": "f7090ee4 kit",
   "src/kit/page-guard.ts": "d8974971 kit",
@@ -80258,7 +80302,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/routes/[_dev]/ask.ts": "7678e5fc generated",
   "src/routes/[_dev]/clock.ts": "a1ccbe93 generated",
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
-  "src/routes/__root.tsx": "0929eb69 generated",
+  "src/routes/__root.tsx": "cfe1516b generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/app-card.tsx": "48827720 generated",
   "src/routes/files/$model.$field.ts": "37c1c781 kit",
@@ -80278,7 +80322,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/routes/saved/new.tsx": "6599de80 generated",
   "src/routes/sign-in.tsx": "563d1820 generated",
   "src/routes/sitemap[.]xml.ts": "abb491ed generated",
-  "src/routes/welcome/index.tsx": "80907333 generated",
+  "src/routes/welcome/index.tsx": "427e81bc generated",
   "src/start.ts": "6b874d2d kit",
   "src/styles.css": "706d757b kit",
   "src/theme.css": "1fd40aa1 generated",
@@ -84036,7 +84080,7 @@ import type { LandingSite } from "#/kit/Landing";
 /** The public site's frame: the pages visitors may open, and how to reach the business. */
 export const site: LandingSite = {
   home: "/",
-  menu: [{ to: "/jobs", label: pageUi["jobs"].title }],
+  menu: [{ to: "/jobs", label: pageUi["jobs"].title, page: "jobs" }],
   legal: [{ to: "/privacy", label: pageUi["privacy"].title }],
 };
 "
@@ -84874,18 +84918,21 @@ const menus: MenuUi[] = [
         label: pageUi["start"].title,
         icon: ChartColumn,
         access: pageAccess["start"],
+        page: "start",
       },
       {
         to: "/enquiries",
         label: pageUi["enquiries"].title,
         icon: List,
         access: pageAccess["enquiries"],
+        page: "enquiries",
       },
       {
         to: "/jobs",
         label: pageUi["jobs"].title,
         icon: List,
         access: pageAccess["jobs"],
+        page: "jobs",
       },
     ],
   },
@@ -84898,6 +84945,7 @@ const menus: MenuUi[] = [
         label: pageUi["team"].title,
         icon: Users,
         access: pageAccess["team"],
+        page: "team",
       },
       {
         to: "/team/activity",
@@ -85531,7 +85579,7 @@ function HomePage() {
     await router.invalidate();
   };
   return (
-    <LandingLayout appName={app.name} link={viewer ? { to: "/start", label: w.openApp(app.name) } : { to: "/sign-in", label: w.signIn }} footer={{ links: [], texts: "pages.home.footer" }} site={site} viewer={viewer} onSignOut={viewer ? signOut : undefined}>
+    <LandingLayout appName={app.name} page="home" link={viewer ? { to: "/start", label: w.openApp(app.name) } : { to: "/sign-in", label: w.signIn }} footer={{ links: [], texts: "pages.home.footer" }} site={site} viewer={viewer} onSignOut={viewer ? signOut : undefined}>
       <Hero
           texts="pages.home.hero"
           title="Fairweather Painters"
@@ -86973,7 +87021,7 @@ exports[`../../../examples/painter/smithable.yml > the generated files are as re
   "src/generated/my-time.ts": "c315432b generated",
   "src/generated/pages.ts": "8c045975 generated",
   "src/generated/roles.ts": "2040923c generated",
-  "src/generated/site.ts": "88f9d974 generated",
+  "src/generated/site.ts": "a270f1db generated",
   "src/generated/uploads.ts": "3af32af5 generated",
   "src/generated/users.server.ts": "f548b85c generated",
   "src/generated/users.test.ts": "ec49197c generated",
@@ -86982,7 +87030,7 @@ exports[`../../../examples/painter/smithable.yml > the generated files are as re
   "src/kit/AiMark.tsx": "f9eb07a2 kit",
   "src/kit/AppCard.tsx": "76e8455d kit",
   "src/kit/AppLink.tsx": "841a9af0 kit",
-  "src/kit/AppShell.tsx": "fda2cf43 kit",
+  "src/kit/AppShell.tsx": "7cdeb539 kit",
   "src/kit/AppearancePicker.tsx": "0cd564d2 kit",
   "src/kit/Combobox.tsx": "c3a18c75 kit",
   "src/kit/Consent.tsx": "c5ee7e50 kit",
@@ -86993,7 +87041,7 @@ exports[`../../../examples/painter/smithable.yml > the generated files are as re
   "src/kit/Filters.tsx": "0f5bfdfd kit",
   "src/kit/ImportDialog.tsx": "d65da47a kit",
   "src/kit/InlineRows.tsx": "5a097006 kit",
-  "src/kit/Landing.tsx": "2bcf13ff kit",
+  "src/kit/Landing.tsx": "e745a146 kit",
   "src/kit/LegalPage.tsx": "f9a9df1e kit",
   "src/kit/ModelForm.tsx": "f90ea7e8 kit",
   "src/kit/ModelTable.tsx": "5252e1d6 kit",
@@ -87028,7 +87076,7 @@ exports[`../../../examples/painter/smithable.yml > the generated files are as re
   "src/kit/limit.ts": "dafa01cd kit",
   "src/kit/log.server.ts": "4d493425 kit",
   "src/kit/mail.ts": "d005acf1 kit",
-  "src/kit/model.ts": "a10b6641 kit",
+  "src/kit/model.ts": "4f517d82 kit",
   "src/kit/now.ts": "5ea87828 kit",
   "src/kit/origin.ts": "f7090ee4 kit",
   "src/kit/page-guard.ts": "d8974971 kit",
@@ -87055,7 +87103,7 @@ exports[`../../../examples/painter/smithable.yml > the generated files are as re
   "src/routes/[_dev]/act.ts": "c57e01e2 generated",
   "src/routes/[_dev]/clock.ts": "a1ccbe93 generated",
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
-  "src/routes/__root.tsx": "dfd07cb3 generated",
+  "src/routes/__root.tsx": "766c76db generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/app-card.tsx": "48827720 generated",
   "src/routes/enquiries/$id.tsx": "63e66b39 generated",
@@ -87065,7 +87113,7 @@ exports[`../../../examples/painter/smithable.yml > the generated files are as re
   "src/routes/files/$model.$id.$field.$n.ts": "5288014d kit",
   "src/routes/files/$model.$id.$field.ts": "93378bd7 kit",
   "src/routes/health.ts": "362c9904 kit",
-  "src/routes/index.tsx": "eebec976 generated",
+  "src/routes/index.tsx": "8cc9e0b7 generated",
   "src/routes/jobs/$id.tsx": "0e5a54dd generated",
   "src/routes/jobs/index.tsx": "631b8020 generated",
   "src/routes/jobs/new.tsx": "65893714 generated",
@@ -89555,7 +89603,10 @@ import { pageUi } from "#/generated/pages";
 import type { LandingSite } from "#/kit/Landing";
 
 /** The public site's frame: the pages visitors may open, and how to reach the business. */
-export const site: LandingSite = { home: "/", menu: [{ to: "/items", label: pageUi["items"].title }] };
+export const site: LandingSite = {
+  home: "/",
+  menu: [{ to: "/items", label: pageUi["items"].title, page: "items" }],
+};
 "
 `;
 
@@ -89957,6 +90008,7 @@ const menus: MenuUi[] = [
         label: pageUi["items"].title,
         icon: Package,
         access: pageAccess["items"],
+        page: "items",
       },
     ],
   },
@@ -90145,7 +90197,7 @@ function HomePage() {
     await router.invalidate();
   };
   return (
-    <LandingLayout appName={app.name} link={viewer ? { to: "/items", label: w.openApp(app.name) } : { to: "/sign-in", label: w.signIn }} footer={{ links: [], texts: "pages.home.footer" }} site={site} viewer={viewer} onSignOut={viewer ? signOut : undefined}>
+    <LandingLayout appName={app.name} page="home" link={viewer ? { to: "/items", label: w.openApp(app.name) } : { to: "/sign-in", label: w.signIn }} footer={{ links: [], texts: "pages.home.footer" }} site={site} viewer={viewer} onSignOut={viewer ? signOut : undefined}>
       <Hero
           texts="pages.home.hero"
           title="Our Collection"
@@ -91071,13 +91123,13 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/generated/my-time.ts": "c315432b generated",
   "src/generated/pages.ts": "e4262913 generated",
   "src/generated/roles.ts": "d284ad2a generated",
-  "src/generated/site.ts": "307674d6 generated",
+  "src/generated/site.ts": "fd46fd2b generated",
   "src/kit/ActionButton.tsx": "6a3b0c0a kit",
   "src/kit/ActivityLog.tsx": "e53a5289 kit",
   "src/kit/AiMark.tsx": "f9eb07a2 kit",
   "src/kit/AppCard.tsx": "76e8455d kit",
   "src/kit/AppLink.tsx": "841a9af0 kit",
-  "src/kit/AppShell.tsx": "fda2cf43 kit",
+  "src/kit/AppShell.tsx": "7cdeb539 kit",
   "src/kit/AppearancePicker.tsx": "0cd564d2 kit",
   "src/kit/Ask.tsx": "e5277427 kit",
   "src/kit/Combobox.tsx": "c3a18c75 kit",
@@ -91087,7 +91139,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/ImportDialog.tsx": "d65da47a kit",
   "src/kit/InlineRows.tsx": "5a097006 kit",
   "src/kit/Inspector.tsx": "2425cac5 kit",
-  "src/kit/Landing.tsx": "2bcf13ff kit",
+  "src/kit/Landing.tsx": "e745a146 kit",
   "src/kit/ModelForm.tsx": "f90ea7e8 kit",
   "src/kit/ModelTable.tsx": "5252e1d6 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
@@ -91123,7 +91175,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/limit.ts": "dafa01cd kit",
   "src/kit/log.server.ts": "4d493425 kit",
   "src/kit/mail.ts": "d005acf1 kit",
-  "src/kit/model.ts": "a10b6641 kit",
+  "src/kit/model.ts": "4f517d82 kit",
   "src/kit/now.ts": "5ea87828 kit",
   "src/kit/origin.ts": "f7090ee4 kit",
   "src/kit/page-guard.ts": "d8974971 kit",
@@ -91153,11 +91205,11 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/routes/[_dev]/ask.ts": "7678e5fc generated",
   "src/routes/[_dev]/clock.ts": "a1ccbe93 generated",
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
-  "src/routes/__root.tsx": "1d2deb00 generated",
+  "src/routes/__root.tsx": "a874eeb5 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/app-card.tsx": "48827720 generated",
   "src/routes/health.ts": "362c9904 kit",
-  "src/routes/index.tsx": "b60b0e6c generated",
+  "src/routes/index.tsx": "781b7593 generated",
   "src/routes/items/$id.tsx": "6a20f2c4 generated",
   "src/routes/items/index.tsx": "dbfe2752 generated",
   "src/routes/items/new.tsx": "6d8d9bc4 generated",
@@ -94924,7 +94976,10 @@ import { pageUi } from "#/generated/pages";
 import type { LandingSite } from "#/kit/Landing";
 
 /** The public site's frame: the pages visitors may open, and how to reach the business. */
-export const site: LandingSite = { home: "/", menu: [{ to: "/menu", label: pageUi["menu"].title }] };
+export const site: LandingSite = {
+  home: "/",
+  menu: [{ to: "/menu", label: pageUi["menu"].title, page: "menu" }],
+};
 "
 `;
 
@@ -96133,30 +96188,35 @@ const menus: MenuUi[] = [
         label: pageUi["menu"].title,
         icon: List,
         access: pageAccess["menu"],
+        page: "menu",
       },
       {
         to: "/menus",
         label: pageUi["menus"].title,
         icon: List,
         access: pageAccess["menus"],
+        page: "menus",
       },
       {
         to: "/dishes",
         label: pageUi["dishes"].title,
         icon: List,
         access: pageAccess["dishes"],
+        page: "dishes",
       },
       {
         to: "/service-hours",
         label: pageUi["service-hours"].title,
         icon: List,
         access: pageAccess["service-hours"],
+        page: "service-hours",
       },
       {
         to: "/venue",
         label: pageUi["venue"].title,
         icon: Settings,
         access: pageAccess["venue"],
+        page: "venue",
       },
     ],
   },
@@ -96169,6 +96229,7 @@ const menus: MenuUi[] = [
         label: pageUi["team"].title,
         icon: Users,
         access: pageAccess["team"],
+        page: "team",
       },
       {
         to: "/team/activity",
@@ -96641,7 +96702,7 @@ function HomePage() {
     await router.invalidate();
   };
   return (
-    <LandingLayout appName={app.name} link={viewer ? { to: "/menu", label: w.openApp(app.name) } : { to: "/sign-in", label: w.signIn }} footer={{ links: [], texts: "pages.home.footer" }} site={site} viewer={viewer} onSignOut={viewer ? signOut : undefined}>
+    <LandingLayout appName={app.name} page="home" link={viewer ? { to: "/menu", label: w.openApp(app.name) } : { to: "/sign-in", label: w.signIn }} footer={{ links: [], texts: "pages.home.footer" }} site={site} viewer={viewer} onSignOut={viewer ? signOut : undefined}>
       <RestaurantHero
           name="hero"
           texts="pages.home.hero"
@@ -98294,7 +98355,7 @@ exports[`../../../examples/restaurant/smithable.yml > the generated files are as
   "src/generated/service-hour.schema.ts": "e504a4c4 generated",
   "src/generated/service-hour.server.ts": "af01c614 generated",
   "src/generated/service-hour.ts": "4a0d076a generated",
-  "src/generated/site.ts": "e883f312 generated",
+  "src/generated/site.ts": "997347ac generated",
   "src/generated/users.server.ts": "f378fedd generated",
   "src/generated/users.test.ts": "5b234f2d generated",
   "src/generated/venue.schema.ts": "14b2684a generated",
@@ -98305,7 +98366,7 @@ exports[`../../../examples/restaurant/smithable.yml > the generated files are as
   "src/kit/AiMark.tsx": "f9eb07a2 kit",
   "src/kit/AppCard.tsx": "76e8455d kit",
   "src/kit/AppLink.tsx": "841a9af0 kit",
-  "src/kit/AppShell.tsx": "fda2cf43 kit",
+  "src/kit/AppShell.tsx": "7cdeb539 kit",
   "src/kit/AppearancePicker.tsx": "0cd564d2 kit",
   "src/kit/Combobox.tsx": "c3a18c75 kit",
   "src/kit/Consent.tsx": "c5ee7e50 kit",
@@ -98313,7 +98374,7 @@ exports[`../../../examples/restaurant/smithable.yml > the generated files are as
   "src/kit/Filters.tsx": "0f5bfdfd kit",
   "src/kit/ImportDialog.tsx": "d65da47a kit",
   "src/kit/InlineRows.tsx": "5a097006 kit",
-  "src/kit/Landing.tsx": "2bcf13ff kit",
+  "src/kit/Landing.tsx": "e745a146 kit",
   "src/kit/ModelForm.tsx": "f90ea7e8 kit",
   "src/kit/ModelTable.tsx": "5252e1d6 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
@@ -98345,7 +98406,7 @@ exports[`../../../examples/restaurant/smithable.yml > the generated files are as
   "src/kit/limit.ts": "dafa01cd kit",
   "src/kit/log.server.ts": "4d493425 kit",
   "src/kit/mail.ts": "d005acf1 kit",
-  "src/kit/model.ts": "a10b6641 kit",
+  "src/kit/model.ts": "4f517d82 kit",
   "src/kit/now.ts": "5ea87828 kit",
   "src/kit/origin.ts": "f7090ee4 kit",
   "src/kit/page-guard.ts": "d8974971 kit",
@@ -98370,14 +98431,14 @@ exports[`../../../examples/restaurant/smithable.yml > the generated files are as
   "src/routes/[_dev]/act.ts": "c57e01e2 generated",
   "src/routes/[_dev]/clock.ts": "a1ccbe93 generated",
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
-  "src/routes/__root.tsx": "f6fc05d9 generated",
+  "src/routes/__root.tsx": "5f0d8671 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/app-card.tsx": "48827720 generated",
   "src/routes/dishes/$id.tsx": "a9415b76 generated",
   "src/routes/dishes/index.tsx": "b6f7a07a generated",
   "src/routes/dishes/new.tsx": "eb5a9a82 generated",
   "src/routes/health.ts": "362c9904 kit",
-  "src/routes/index.tsx": "22e416c5 generated",
+  "src/routes/index.tsx": "4acae87e generated",
   "src/routes/menu/index.tsx": "e68100b9 generated",
   "src/routes/menus/$id.tsx": "4f4ae484 generated",
   "src/routes/menus/index.tsx": "8acbe075 generated",
@@ -108547,7 +108608,10 @@ import { pageUi } from "#/generated/pages";
 import type { LandingSite } from "#/kit/Landing";
 
 /** The public site's frame: the pages visitors may open, and how to reach the business. */
-export const site: LandingSite = { home: "/", menu: [{ to: "/history", label: pageUi["history"].title }] };
+export const site: LandingSite = {
+  home: "/",
+  menu: [{ to: "/history", label: pageUi["history"].title, page: "history" }],
+};
 "
 `;
 
@@ -109433,30 +109497,35 @@ const menus: MenuUi[] = [
         label: pageUi["overview"].title,
         icon: ChartColumn,
         access: pageAccess["overview"],
+        page: "overview",
       },
       {
         to: "/incidents",
         label: pageUi["incidents"].title,
         icon: List,
         access: pageAccess["incidents"],
+        page: "incidents",
       },
       {
         to: "/updates",
         label: pageUi["updates"].title,
         icon: List,
         access: pageAccess["updates"],
+        page: "updates",
       },
       {
         to: "/maintenance",
         label: pageUi["maintenance"].title,
         icon: List,
         access: pageAccess["maintenance"],
+        page: "maintenance",
       },
       {
         to: "/components",
         label: pageUi["components"].title,
         icon: List,
         access: pageAccess["components"],
+        page: "components",
       },
     ],
   },
@@ -109469,6 +109538,7 @@ const menus: MenuUi[] = [
         label: pageUi["team"].title,
         icon: Users,
         access: pageAccess["team"],
+        page: "team",
       },
       {
         to: "/team/activity",
@@ -111061,7 +111131,7 @@ function HomePage() {
     await router.invalidate();
   };
   return (
-    <LandingLayout appName={app.name} link={viewer ? { to: "/overview", label: w.openApp(app.name) } : { to: "/sign-in", label: w.signIn }} footer={{ links: [], texts: "pages.home.footer" }} site={site} viewer={viewer} onSignOut={viewer ? signOut : undefined}>
+    <LandingLayout appName={app.name} page="home" link={viewer ? { to: "/overview", label: w.openApp(app.name) } : { to: "/sign-in", label: w.signIn }} footer={{ links: [], texts: "pages.home.footer" }} site={site} viewer={viewer} onSignOut={viewer ? signOut : undefined}>
       <Hero
           texts="pages.home.hero"
           title="Northwind Status"
@@ -112786,7 +112856,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/generated/my-time.ts": "c315432b generated",
   "src/generated/pages.ts": "bf2f0857 generated",
   "src/generated/roles.ts": "6b44c69a generated",
-  "src/generated/site.ts": "4365ed76 generated",
+  "src/generated/site.ts": "39b04dfb generated",
   "src/generated/users.server.ts": "82848c13 generated",
   "src/generated/users.test.ts": "253c266e generated",
   "src/kit/ActionButton.tsx": "6a3b0c0a kit",
@@ -112794,7 +112864,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/AiMark.tsx": "f9eb07a2 kit",
   "src/kit/AppCard.tsx": "76e8455d kit",
   "src/kit/AppLink.tsx": "841a9af0 kit",
-  "src/kit/AppShell.tsx": "fda2cf43 kit",
+  "src/kit/AppShell.tsx": "7cdeb539 kit",
   "src/kit/AppearancePicker.tsx": "0cd564d2 kit",
   "src/kit/Articles.tsx": "f3fb4114 kit",
   "src/kit/Ask.tsx": "e5277427 kit",
@@ -112807,7 +112877,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/InlineRows.tsx": "5a097006 kit",
   "src/kit/Inspector.tsx": "2425cac5 kit",
   "src/kit/Keys.tsx": "f32c246d kit",
-  "src/kit/Landing.tsx": "2bcf13ff kit",
+  "src/kit/Landing.tsx": "e745a146 kit",
   "src/kit/Markdown.tsx": "24e2fcd2 kit",
   "src/kit/MarkdownFormatted.tsx": "300ef9a1 kit",
   "src/kit/ModelForm.tsx": "f90ea7e8 kit",
@@ -112849,7 +112919,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/log.server.ts": "4d493425 kit",
   "src/kit/mail.ts": "d005acf1 kit",
   "src/kit/mcp.server.ts": "2e063918 kit",
-  "src/kit/model.ts": "a10b6641 kit",
+  "src/kit/model.ts": "4f517d82 kit",
   "src/kit/now.ts": "5ea87828 kit",
   "src/kit/origin.ts": "f7090ee4 kit",
   "src/kit/page-guard.ts": "d8974971 kit",
@@ -112879,7 +112949,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/routes/[_dev]/ask.ts": "df6443c8 generated",
   "src/routes/[_dev]/clock.ts": "a1ccbe93 generated",
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
-  "src/routes/__root.tsx": "c0360f5c generated",
+  "src/routes/__root.tsx": "82aef05c generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/api/v1/components/$id.ts": "cc2ea80b generated",
   "src/routes/api/v1/components/imports.$id.ts": "3f0d0d7b generated",
@@ -112902,7 +112972,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/routes/incidents/index.tsx": "7c4beb6e generated",
   "src/routes/incidents/new.tsx": "a9f07576 generated",
   "src/routes/incoming/chatCommand.ts": "9b12c3b5 generated",
-  "src/routes/index.tsx": "a2933aa8 generated",
+  "src/routes/index.tsx": "82ce7233 generated",
   "src/routes/maintenance/$id.tsx": "0ad33c2b generated",
   "src/routes/maintenance/index.tsx": "cf3eb42f generated",
   "src/routes/maintenance/new.tsx": "569f7977 generated",
@@ -119000,6 +119070,7 @@ const menus: MenuUi[] = [
         label: pageUi["cases"].title,
         icon: List,
         access: pageAccess["cases"],
+        page: "cases",
       },
     ],
   },
@@ -119012,6 +119083,7 @@ const menus: MenuUi[] = [
         label: pageUi["team"].title,
         icon: Users,
         access: pageAccess["team"],
+        page: "team",
       },
       {
         to: "/team/activity",
@@ -120881,7 +120953,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/AiMark.tsx": "f9eb07a2 kit",
   "src/kit/AppCard.tsx": "76e8455d kit",
   "src/kit/AppLink.tsx": "841a9af0 kit",
-  "src/kit/AppShell.tsx": "fda2cf43 kit",
+  "src/kit/AppShell.tsx": "7cdeb539 kit",
   "src/kit/AppearancePicker.tsx": "0cd564d2 kit",
   "src/kit/Ask.tsx": "e5277427 kit",
   "src/kit/Combobox.tsx": "c3a18c75 kit",
@@ -120932,7 +121004,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/live.server.ts": "474834ab kit",
   "src/kit/log.server.ts": "4d493425 kit",
   "src/kit/mail.ts": "d005acf1 kit",
-  "src/kit/model.ts": "a10b6641 kit",
+  "src/kit/model.ts": "4f517d82 kit",
   "src/kit/now.ts": "5ea87828 kit",
   "src/kit/origin.ts": "f7090ee4 kit",
   "src/kit/outgoing.server.ts": "284a585a kit",
@@ -120967,7 +121039,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/routes/[_dev]/ask.ts": "f3d7d06d generated",
   "src/routes/[_dev]/clock.ts": "a1ccbe93 generated",
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
-  "src/routes/__root.tsx": "05dab5c3 generated",
+  "src/routes/__root.tsx": "8627bc15 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/app-card.tsx": "48827720 generated",
   "src/routes/cases/$id.tsx": "69d4f745 generated",
