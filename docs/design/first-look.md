@@ -154,6 +154,9 @@ matches and is not touched. A deployed app's data is never touched by a style ch
 
 ## 5 The AI mark
 
+Replaced 2026-11-22 by picture-kinds.md (the three kinds of pictures, the badge's default by kind, no
+badge in Studio's preview). What follows is the first version as built.
+
 The first version keeps today's behaviour: one switch per app, the mark on every picture an
 image model made, the same in Studio and when published. Photographs carry no mark and keep
 their credit. A style's card says only what is true whatever the switch: "Made by an image
