@@ -1897,6 +1897,7 @@ const setOrder: Operation<{
       },
       hours: {
         type: ["string", "object"],
+        additionalProperties: { type: ["string", "array"], items: { type: "string" } },
         description:
           'When orders are taken, in the app\'s time zone, e.g. "mon-thu 11:00-20:00, fri-sat 11:00-22:00"; a day not named is closed; none takes orders always.',
       },
@@ -2052,7 +2053,8 @@ const setSectionList: Operation<{
       filters: {
         type: "array",
         items: { type: "string" },
-        description: "Fields of the section's model whose chips it shows; none removes them.",
+        description:
+          'Fields of the section\'s model whose chips it shows; [] or ["none"] removes them.',
       },
       limit: {
         type: "integer",
@@ -2128,7 +2130,8 @@ const changeSectionKind: Operation<{
   },
   positional: ["page", "section", "kind"],
   describe: ({ page, section, kind }) => `Make the ${section} section of ${page} a ${kind} section`,
-  destructive: () => false,
+  // What the new kind does not have goes: its options, texts or items.
+  destructive: () => true,
   apply({ spec, content }, { page, section, kind, records, custom, calculator }, ir) {
     const existing = ir.pages.find((p) => p.id === page);
     const found = existing?.sections.find((s) => s.name === section);
@@ -2163,7 +2166,13 @@ const changeSectionKind: Operation<{
     const dropped: string[] = [];
     const kept: Record<string, YamlValue> = {};
     for (const [key, value] of Object.entries(options)) {
-      if (KIND_OPTIONS.includes(key)) continue;
+      if (KIND_OPTIONS.includes(key)) {
+        // The old kind's own part goes with it: say so when it held something.
+        if (key === "calculator") dropped.push("its calculator fields");
+        else if (key === "records") dropped.push(`its records of ${value}`);
+        else if (key === "custom") dropped.push(`its component ${value}`);
+        continue;
+      }
       if (takes.includes(key)) kept[key] = value;
       else dropped.push(key);
     }
@@ -2185,16 +2194,22 @@ const changeSectionKind: Operation<{
     const textsAt = ["pages", page, section];
     const texts = content.has(textsAt) ? content.get(textsAt) : undefined;
     if (texts && typeof texts === "object") {
-      const before = sectionTextKeys(was);
       const after = sectionTextKeys(kind);
-      const sameItems =
-        before?.items !== undefined &&
+      // Items stay when every one of them has only texts the new kind's items have.
+      const items = (texts as Record<string, YamlValue>).items;
+      const itemsFit =
         after?.items !== undefined &&
-        before.items.join() === after.items.join();
+        Array.isArray(items) &&
+        items.every(
+          (item) =>
+            item !== null &&
+            typeof item === "object" &&
+            Object.keys(item).every((k) => after.items?.includes(k)),
+        );
       for (const key of Object.keys(texts as object)) {
         const keeps =
           after?.texts.includes(key) ||
-          (key === "items" && sameItems) ||
+          (key === "items" && itemsFit) ||
           (key === "image" && after?.image) ||
           (key === "fields" && after?.fields) ||
           (key === "tiles" && kind === "hero");

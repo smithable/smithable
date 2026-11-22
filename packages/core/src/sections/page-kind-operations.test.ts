@@ -247,7 +247,7 @@ pages:
   // A call to action has a title and a text, and no eyebrow.
   expect(changed.files.content).toContain("title: Our dishes");
   expect(changed.files.content).not.toContain("eyebrow");
-  expect(changed.description).toContain("it no longer has its eyebrow text");
+  expect(changed.description).toContain("it no longer has its records of Dish, its eyebrow text");
   const back = ok(
     "changeSectionKind",
     { page: "home", section: "dishes", kind: "records", records: "Dish" },
@@ -275,5 +275,73 @@ pages:
 test("an unknown argument is refused with the ones the operation takes", () => {
   expect(refused("moveSection", { page: "home", section: "faq", below: "hero" })).toBe(
     'moveSection: Unknown argument "below": it takes page, section, before, after.',
+  );
+});
+
+test("setResults puts a calculator page's results below its inputs, and beside them again", () => {
+  const calc = `smithable: 0.1
+app: { name: Loans }
+pages:
+  mortgage:
+    calculator:
+      fields:
+        price: money = 300000
+        monthly: { type: money, formula: price / 12 }
+`;
+  const below = ok("setResults", { page: "mortgage", results: "below" }, { spec: calc });
+  expect(parse(below.files.ux ?? "").pages.mortgage.form.results).toBe("below");
+  const beside = ok("setResults", { page: "mortgage", results: "beside" }, below.files);
+  expect(parse(beside.files.ux ?? "")?.pages?.mortgage?.form?.results).toBeUndefined();
+  expect(refused("setResults", { page: "home", results: "below" })).toMatch(
+    /not a calculator page/,
+  );
+});
+
+test("changeSectionKind keeps the items that fit the new kind, and names a calculator's fields as gone", () => {
+  const withItems = spec.split("      faq:\n").join("      faq:\n      plans: { features: }\n");
+  const content = (items: string) => `smithableContent: 0.1
+pages:
+  home:
+    plans:
+      title: Plans
+      items:
+${items}`;
+  const fits = ok(
+    "changeSectionKind",
+    { page: "home", section: "plans", kind: "pricing" },
+    { spec: withItems, content: content("        - text: Monthly\n        - text: Yearly\n") },
+  );
+  expect(parse(fits.files.content ?? "").pages.home.plans.items).toEqual([
+    { text: "Monthly" },
+    { text: "Yearly" },
+  ]);
+  const notFit = ok(
+    "changeSectionKind",
+    { page: "home", section: "plans", kind: "pricing" },
+    {
+      spec: withItems,
+      content: content("        - title: Monthly\n          text: Paid each month\n"),
+    },
+  );
+  expect(parse(notFit.files.content ?? "").pages.home.plans.items).toBeUndefined();
+  expect(notFit.description).toContain("its items");
+  const calculated = ok("addSection", {
+    page: "home",
+    section: "costs",
+    calculator: { guests: "int = 4" },
+  });
+  const toText = ok(
+    "changeSectionKind",
+    { page: "home", section: "costs", kind: "text" },
+    calculated.files,
+  );
+  expect(page(toText.files.spec, "home").landing.costs).toEqual({ text: null });
+  expect(toText.description).toContain("its calculator fields");
+  expect(toText.destructive).toBe(true);
+});
+
+test("an argument named like an object's own property is still unknown", () => {
+  expect(refused("setResults", { page: "home", results: "below", constructor: "x" })).toMatch(
+    /Unknown argument "constructor"/,
   );
 });
