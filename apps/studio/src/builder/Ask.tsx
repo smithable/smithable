@@ -44,7 +44,7 @@ interface Said {
 
 export type AudioActivity = Pick<
   Speech,
-  "auto" | "call" | "listening" | "speaking" | "endCall" | "stopListening"
+  "call" | "listening" | "speaking" | "endCall" | "stopListening"
 >;
 
 export function Ask({
@@ -75,7 +75,13 @@ export function Ask({
   onFeedback,
   speech: speechProviders = [],
   onAudioActivity,
+  helpRequest,
+  onApplyingChange,
 }: {
+  /** Initial words for Smith inside the reference creation dialog. Uses its own draft. */
+  helpRequest?: string;
+  /** Reports a confirmed change in flight to the dialog owning the help view. */
+  onApplyingChange?: (applying: boolean) => void;
   /** Where Smith may hear and speak, from the host's policy layer (smith-speech.md §3). */
   speech?: { name: "browser" | "service"; onDeviceOnly?: true }[];
   onAudioActivity?: (activity: AudioActivity | undefined) => void;
@@ -134,6 +140,7 @@ export function Ask({
   // A request half written stays when the person looks elsewhere (another tab, a mode) and
   // comes back: kept for the browser tab's session.
   const [request, setRequestState] = useState(() => {
+    if (helpRequest !== undefined) return helpRequest;
     try {
       return sessionStorage.getItem(DRAFT) ?? "";
     } catch {
@@ -144,6 +151,7 @@ export function Ask({
   const setRequest = (text: string) => {
     draftRevision.current++;
     setRequestState(text);
+    if (helpRequest !== undefined) return;
     try {
       if (text) sessionStorage.setItem(DRAFT, text);
       else sessionStorage.removeItem(DRAFT);
@@ -165,13 +173,15 @@ export function Ask({
   const last = useRef<{ text: string; at: number; question: boolean }>(undefined);
   const [said, setSaid] = useState<Said[]>([]);
   useEffect(() => {
+    if (helpRequest !== undefined) return;
     void api.said().then(
       (kept) => setSaid(kept.said),
       () => undefined,
     );
-  }, []);
+  }, [helpRequest]);
   const say = (request: string, reply: string) => {
     setSaid((list) => [...list, { at: new Date().toISOString(), request, reply }]);
+    if (helpRequest !== undefined) return;
     void api.said({ request, reply }).then(
       (kept) => setSaid(kept.said),
       () => undefined,
@@ -203,8 +213,16 @@ export function Ask({
   // Words handed over by the creation wizard's "Ask Smith for help": said now, or kept until
   // this panel is on screen to take them.
   const proposeRef = useRef<(text: string) => void>(() => {});
+  const helpTaken = useRef(false);
   // biome-ignore lint/correctness/useExhaustiveDependencies: once, and when the making ends
   useEffect(() => {
+    if (helpRequest !== undefined) {
+      if (!helpTaken.current) {
+        helpTaken.current = true;
+        proposeRef.current(helpRequest);
+      }
+      return;
+    }
     const take = () => {
       // While the app is made the words wait for this panel's next turn.
       if (making) return;
@@ -220,7 +238,7 @@ export function Ask({
     take();
     window.addEventListener(ASK_SMITH, take);
     return () => window.removeEventListener(ASK_SMITH, take);
-  }, [making]);
+  }, [helpRequest, making]);
   const propose = async (text: string, revision = draftRevision.current) => {
     // The sample users are the preview's, not the spec's: "let them run" and "stop" are said
     // to Smith and done at once, with no change to confirm (sample-users.md §5).
@@ -279,6 +297,7 @@ export function Ask({
     }
     try {
       const next = await api.ask(text, {
+        scope: helpRequest !== undefined ? "reference-help" : undefined,
         conversation: [
           ...(trace
             ? threadLines(trace, said, words)
@@ -332,7 +351,7 @@ export function Ask({
   // Right after a request's changes applied, "Undo that" is offered until the next thing is sent.
   const [justApplied, setJustApplied] = useState(false);
   // Speech (smith-speech.md, step 1): what is heard goes into the box, and is sent a moment
-  // after listening ends unless the box is touched meanwhile.
+  // after listening ends during a call unless the box is touched meanwhile.
   const sendLater = useRef<ReturnType<typeof setTimeout>>(undefined);
   const requestNow = useRef(request);
   requestNow.current = request;
@@ -350,33 +369,33 @@ export function Ask({
       setRequest(next);
     },
     (heard) => {
-      if (!heard || guidingNow.current || !speechNow.current.auto) return;
+      if (!heard || guidingNow.current || speechNow.current.call !== "active") return;
       clearTimeout(sendLater.current);
       sendLater.current = setTimeout(() => {
-        if (speechNow.current.auto) sendNow.current();
+        if (speechNow.current.call === "active") sendNow.current();
       }, 1500);
     },
     guiding,
   );
   useEffect(() => {
-    if (!speech.auto) clearTimeout(sendLater.current);
-  }, [speech.auto]);
+    if (speech.call !== "active") clearTimeout(sendLater.current);
+  }, [speech.call]);
   const speechNow = useRef(speech);
   speechNow.current = speech;
-  const { auto, call, listening, speaking } = speech;
+  const { call, listening, speaking } = speech;
   useEffect(() => {
     onAudioActivity?.({
-      auto,
       call,
       listening,
       speaking,
       endCall: () => speechNow.current.endCall(),
       stopListening: () => speechNow.current.stopListening(),
     });
-  }, [onAudioActivity, auto, call, listening, speaking]);
+  }, [onAudioActivity, call, listening, speaking]);
   useEffect(() => () => onAudioActivity?.(undefined), [onAudioActivity]);
   // Ctrl+Shift+Space toggles the mic from anywhere in Studio.
   useEffect(() => {
+    if (helpRequest !== undefined) return;
     const down = (e: KeyboardEvent) => {
       if (!(e.ctrlKey && e.shiftKey && e.code === "Space")) return;
       e.preventDefault();
@@ -384,14 +403,18 @@ export function Ask({
     };
     window.addEventListener("keydown", down);
     return () => window.removeEventListener("keydown", down);
-  }, []);
+  }, [helpRequest]);
   const apply = async () => {
     if (!proposal) return;
     const revision = proposalRevision.current;
     onBeginChange?.();
+    onApplyingChange?.(true);
     setBusy(true);
     try {
-      const result = await api.applyProposal(proposal.id);
+      const result = await api.applyProposal(
+        proposal.id,
+        helpRequest !== undefined ? "reference-help" : undefined,
+      );
       // The app moved since it was proposed: the same proposal, with what it does now, asked again.
       if (result.stale && proposal.kind === "change") {
         // What it did before is not what it does now: without a new answer, none is shown.
@@ -422,6 +445,7 @@ export function Ask({
       setOutput((error as Error).message);
     } finally {
       setBusy(false);
+      onApplyingChange?.(false);
     }
   };
 
@@ -851,7 +875,7 @@ export function Ask({
             {making ? "Make it once the app is there" : busy && !proposal ? "Working…" : "Send"}
           </Button>
         </div>
-        {speechProviders.length > 0 || speech.why ? (
+        {helpRequest === undefined && (speechProviders.length > 0 || speech.why) ? (
           <SpeechControls speech={speech} inputDisabled={guiding} />
         ) : null}
         {overlay || presenting

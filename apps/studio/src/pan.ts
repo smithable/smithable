@@ -7,7 +7,12 @@ import { useRef, useState } from "react";
 /** Whether the element, or one between it and `root`, scrolls sideways itself or takes the pan. */
 export function ownsSideways(start: Element | null, root: Element | null): boolean {
   for (let e = start; e && e !== root; e = e.parentElement) {
-    if (e instanceof HTMLInputElement && e.type === "range") return true;
+    if (
+      e instanceof HTMLInputElement ||
+      e instanceof HTMLTextAreaElement ||
+      (e instanceof HTMLElement && e.isContentEditable)
+    )
+      return true;
     const style = getComputedStyle(e);
     if (style.touchAction === "none" || style.touchAction.includes("pan-x")) return true;
     if (e.scrollWidth > e.clientWidth + 1 && /auto|scroll/.test(style.overflowX)) return true;

@@ -197,13 +197,19 @@ if (typeof window !== "undefined" && window.parent !== window) {
   });
 
   // A theme tried on without a regeneration (docs/design/theme-lab.md §3): the theme lab or
-  // Studio sends the CSS themeCss writes, and it replaces the app's own until the page reloads.
+  // Studio sends the CSS themeCss writes, and it replaces the app's own until the page reloads
+  // or an empty one takes it off (the first-look picker's Cancel).
   // Only from the page this preview is in, and only from this machine. The fonts' bare imports
   // become the paths Vite serves them at (every app has all seven).
   window.addEventListener("message", (event) => {
     if (designOnly() || event.source !== window.parent || event.data?.type !== "smithable:theme-css") return;
     if (!trusted(event.origin)) return;
     if (typeof event.data.css !== "string") return;
+    // An empty one takes a tried theme off again: the app's own theme.css shows.
+    if (!event.data.css) {
+      document.getElementById("sm-theme")?.remove();
+      return;
+    }
     let sheet = document.getElementById("sm-theme");
     if (!sheet) {
       sheet = document.createElement("style");

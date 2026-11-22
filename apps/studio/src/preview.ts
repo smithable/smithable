@@ -58,6 +58,31 @@ export function setPreview(window: Window | null, url: string) {
 }
 export const previewTarget = () => previewOrigin || "*";
 
+/**
+ * A theme tried on in the preview (the first-look picker, T1164): its CSS replaces the app's own
+ * in the page and is sent again to each page that loads, until it is let go. Nothing is written.
+ */
+let triedTheme: string | undefined;
+export function tryThemeInPreview(css: string) {
+  triedTheme = css;
+  previewWindow?.postMessage({ type: "smithable:theme-css", css }, previewTarget());
+}
+/**
+ * Cancel takes the tried theme off this page. Keep only lets it go: the change makes a new
+ * page with the real theme, and this one keeps the same look on screen until it is there.
+ */
+export function letGoTriedTheme(takeOff: boolean) {
+  triedTheme = undefined;
+  if (takeOff)
+    previewWindow?.postMessage({ type: "smithable:theme-css", css: "" }, previewTarget());
+}
+if (typeof window !== "undefined")
+  window.addEventListener("message", (e) => {
+    if (triedTheme === undefined || e.source !== previewWindow || !isPreviewMessage(e)) return;
+    if (e.data.type === "ready")
+      previewWindow?.postMessage({ type: "smithable:theme-css", css: triedTheme }, previewTarget());
+  });
+
 export function clearPreviewSelection() {
   previewWindow?.postMessage({ type: "smithable:clear-selection" }, previewTarget());
 }

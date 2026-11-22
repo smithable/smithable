@@ -2,35 +2,29 @@ import assert from "node:assert/strict";
 import { join } from "node:path";
 import { stubPictureCatalogue } from "./first-look-checks.mjs";
 import {
+  checkAppOwnsPhoneSwipe,
   openFormEntry,
   openPreviewAddress,
-  showWorkspaceControls,
+  openSettings,
+  openStudioGuide,
   toolbarAction,
 } from "./studio-form-checks.mjs";
 import { checkStudioHistory } from "./studio-history-checks.mjs";
 
 async function checkBuilder(page, phone) {
   const tab = (name) => page.getByRole("tab", { name, exact: true });
-  const look = page.getByRole("dialog", { name: "Choose a look", exact: true });
+  const look = page.getByRole("complementary", { name: "Look", exact: true });
   await (await toolbarAction(page, "Look")).click();
-  await look.getByRole("button", { name: "Keep this look", exact: true }).click();
+  await look.getByRole("button", { name: "Close Look", exact: true }).click();
   await look.waitFor({ state: "detached" });
 
   const showPreview = async () => {
     if (phone) {
-      await showWorkspaceControls(page);
-      await page.getByRole("radio", { name: "Preview", exact: true }).check({ force: true });
+      const edge = page.getByRole("button", { name: "Show the app", exact: true });
+      if (await edge.isVisible()) await edge.click();
     }
   };
-  const showEditor = async () => {
-    if (phone) {
-      await showWorkspaceControls(page);
-      await page.getByRole("radio", { name: /^(No code|Code)$/ }).check({ force: true });
-    } else {
-      const open = page.getByRole("button", { name: "Show the window on the right" });
-      if (await open.isVisible()) await open.click();
-    }
-  };
+  const showEditor = () => openSettings(page);
   const preview = async (name) => {
     await showPreview();
     await page
@@ -112,11 +106,13 @@ async function checkPreviewRange(page) {
   assert.ok(passedArrow, "Shift+Arrow is available to the app outside explicit Select mode");
 }
 
-export async function checkStudioSmoke(browser, base, evidence) {
+export async function checkStudioSmoke(browser, base, evidence, asMade) {
   for (const [phone, choice] of [
     [false, "Keep this look"],
-    [true, "Skip"],
+    [true, "Cancel"],
   ]) {
+    // The wide run's Keep changed the app, so the phone run needs it as made again.
+    if (phone) asMade();
     const context = await browser.newContext({
       viewport: phone ? { width: 390, height: 844 } : { width: 1440, height: 900 },
     });
@@ -138,15 +134,13 @@ export async function checkStudioSmoke(browser, base, evidence) {
       assert.ok(theme, "The alternate theme needs an accessible name");
       await alternative.click();
       await look.getByRole("button", { name: theme, exact: true, pressed: true }).waitFor();
-      const chosenUx = await readUx();
-      assert.notEqual(chosenUx, openingUx, "The selected theme did not reach the project");
+      // A tried theme is only in the preview (T1164): Keep saves it, Cancel leaves the app as it was.
+      assert.equal(await readUx(), openingUx, "A tried theme reached the project");
       await look.getByRole("button", { name: choice, exact: true }).click();
       await look.waitFor({ state: "detached" });
-      assert.equal(
-        await readUx(),
-        choice === "Skip" ? openingUx : chosenUx,
-        `${choice} left the wrong theme saved`,
-      );
+      const savedUx = await readUx();
+      if (choice === "Cancel") assert.equal(savedUx, openingUx, "Cancel saved a theme");
+      else assert.notEqual(savedUx, openingUx, "Keep did not save the chosen theme");
       await presentation.getByRole("button", { name: "Skip", exact: true }).click();
       await presentation.waitFor({ state: "detached" });
       // On a cold runner the guide waits for the preview or its own 20-second fallback.
@@ -163,7 +157,27 @@ export async function checkStudioSmoke(browser, base, evidence) {
       assert.equal(await look.count(), 0);
       assert.equal(await presentation.count(), 0);
       await checkStudioHistory(page, phone, evidence);
-      if (!phone) await checkPreviewRange(page);
+      if (phone) await checkAppOwnsPhoneSwipe(page);
+      else {
+        await openSettings(page);
+        await page.getByRole("tab", { name: "Code", exact: true }).click();
+        await page.getByRole("region", { name: "Code", exact: true }).waitFor();
+        await openStudioGuide(page);
+        const guide = page.locator('[data-guide-card="files"]');
+        await guide.waitFor();
+        await page.evaluate(() => document.activeElement?.blur());
+        await page.keyboard.press("Escape");
+        await guide.waitFor({ state: "detached" });
+        // Range selection lives in the preview's table layout, which needs the full width.
+        for (const side of ["left", "right"]) {
+          const hide = page.getByRole("button", {
+            name: `Hide the window on the ${side}`,
+            exact: true,
+          });
+          if (await hide.isVisible()) await hide.click();
+        }
+        await checkPreviewRange(page);
+      }
     } catch (error) {
       await page
         .screenshot({ path: join(evidence, `${layout}.png`), timeout: 3000 })

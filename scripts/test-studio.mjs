@@ -22,7 +22,7 @@ import { chromium } from "playwright";
 import { Client } from "../packages/cli/node_modules/@modelcontextprotocol/sdk/dist/esm/client/index.js";
 import { StreamableHTTPClientTransport } from "../packages/cli/node_modules/@modelcontextprotocol/sdk/dist/esm/client/streamableHttp.js";
 import { startFakeModel } from "./fake-model.mjs";
-import { checkFirstLook } from "./first-look-checks.mjs";
+import { asNewApp, checkFirstLook } from "./first-look-checks.mjs";
 import { P } from "./patience.mjs";
 import { checkPicturePicker } from "./picture-picker-browser.mjs";
 import { checkPorts } from "./ports.mjs";
@@ -31,10 +31,12 @@ import { checkProjectLookApply } from "./project-look-checks.mjs";
 import { checkStaticStates } from "./static-state-checks.mjs";
 import { checkStudioDraft } from "./studio-draft-checks.mjs";
 import {
+  checkAppOwnsPhoneSwipe,
   openFormEntry,
   openPreviewAddress,
+  openSettings,
   openSmith,
-  showWorkspaceControls,
+  openStudioGuide,
   toolbarAction,
 } from "./studio-form-checks.mjs";
 import { checkStudioGuideSpeech } from "./studio-guide-speech-checks.mjs";
@@ -192,8 +194,8 @@ const page = await browser.newPage({ viewport: { width: 1920, height: 1000 } });
  * (it shows once per browser, kept in localStorage, first-look.ts), as a returning person's do.
  * The picker's own checks (checkFirstLook, the guide's first visit) use `browser` itself.
  */
-const seenContext = async (options) => {
-  const context = await browser.newContext(options);
+const seenContext = async (options, source = browser) => {
+  const context = await source.newContext(options);
   await context.addInitScript(() => {
     const get = Storage.prototype.getItem;
     Storage.prototype.getItem = function (key) {
@@ -281,9 +283,9 @@ try {
     return found;
   };
   const entry = (scope, name) => openFormEntry(page, scope, name);
-  // The window in the first place: No code or Code (the gear's dialog).
-  // No code or Code: the sub-tab of the view that holds both (smith-first.md §6).
+  // No code and Code are the two views in All settings.
   const firstWindow = async (value) => {
+    await openSettings(page);
     await page
       .getByRole("tab", { name: value === "code" ? "Code" : "No code", exact: true })
       .click();
@@ -324,47 +326,59 @@ try {
 
   console.log("No code");
   await step(
-    "Studio opens on the preview; Smith’s face opens him, the first hide shows a hint, and Dock opens his window",
+    "Studio docks Smith by default and preserves his thread, hint timing and the settings toggle",
     async () => {
       await page.goto(`${base}/?guide=off`);
-      const panel = page.getByRole("complementary", { name: "Smith" });
-      await page.locator("iframe[title='App preview']").waitFor();
-      await panel.waitFor({ state: "hidden" });
-      const face = await openSmith(page);
-      await panel.getByLabel("Describe a change").waitFor();
-      if (await page.getByRole("heading", { name: "Ask Smith", exact: true }).count())
-        throw new Error("Smith is docked by default");
-      if (await page.getByText("No changes yet.").count())
-        throw new Error("the window Smith left is on screen beside the preview");
-      const hint = page.getByText("Click Smith to show him again.", { exact: true });
-      await face.click();
-      await panel.waitFor({ state: "hidden" });
-      await hint.waitFor();
-      await face.click();
-      await panel.getByLabel("Describe a change").waitFor();
-      await hint.waitFor({ state: "hidden" });
-      await panel.getByRole("button", { name: "Dock" }).click();
       const docked = page.getByRole("heading", { name: "Ask Smith", exact: true });
+      const panel = page.getByRole("complementary", { name: "Smith", exact: true });
       await docked.waitFor();
-      await page.getByRole("button", { name: "Undock", exact: true }).waitFor();
+      await page.locator("iframe[title='App preview']").waitFor();
+      const face = await openSmith(page);
+      const hint = page.getByRole("button", {
+        name: "Click Smith to bring him back.",
+        exact: true,
+      });
       await openSuggestedTopics(page);
       await face.click();
       await docked.waitFor({ state: "hidden" });
-      if (await hint.isVisible()) throw new Error("the first-hide hint was shown twice");
-      await page.locator("iframe[title='App preview']").waitFor();
-      if ((await face.getAttribute("aria-pressed")) !== "false")
-        throw new Error("the hidden docked Smith is still pressed");
+      await hint.waitFor();
+      await hint.hover();
+      await page.waitForTimeout(6200);
+      if (!(await hint.isVisible())) throw new Error("the hint faded while hovered");
+      await hint.click();
+      await hint.waitFor({ state: "detached" });
+      if (!(await face.evaluate((button) => document.activeElement === button)))
+        throw new Error("dismissing the hint lost focus");
       await face.click();
       await docked.waitFor();
       if (!(await page.getByRole("group", { name: "Ready prompts" }).isVisible()))
         throw new Error("hiding docked Smith reset his thread controls");
+      await face.click();
+      await docked.waitFor({ state: "hidden" });
+      if (await hint.isVisible()) throw new Error("the first-hide hint was shown twice");
+
+      await (await toolbarAction(page, "Help")).click();
+      await page.getByRole("button", { name: "Show hints again", exact: true }).click();
+      await face.click();
+      await docked.waitFor();
+      await page.getByRole("button", { name: "Close Smith", exact: true }).click();
+      await hint.waitFor();
+      await hint.waitFor({ state: "detached", timeout: 12000 });
+      await face.click();
+      await docked.waitFor();
       await page.getByText("Suggested topics", { exact: true }).click();
-      // Nothing to choose between No code and Code in the header (smith-first.md §6).
-      if (await page.getByRole("tab", { name: "Behavior" }).count())
-        throw new Error("No code shows before the arrow opens it");
-      await page.getByRole("button", { name: "Show the window on the right" }).click();
+      const undock = page.getByRole("button", { name: "Undock Smith", exact: true });
+      await undock.click();
+      await panel.waitFor();
+      await panel.getByRole("button", { name: "Dock", exact: true }).click();
+      await docked.waitFor();
+      if (await page.locator("[data-workspace-controls]").count())
+        throw new Error("the removed second toolbar row is present");
+      if (await page.getByRole("tab", { name: "Behavior", exact: true }).count())
+        throw new Error("No code shows before All settings opens it");
+      await openSettings(page);
       await page.getByRole("tab", { name: "Behavior", selected: true }).waitFor();
-      await page.getByRole("tab", { name: "No code", selected: true }).waitFor();
+      await page.getByRole("tab", { name: "No code", exact: true, selected: true }).waitFor();
       // The areas of the spec are closed at first.
       const models = page.locator('details[data-key="models"]');
       if ((await models.getAttribute("open")) !== null) throw new Error("the models area is open");
@@ -596,28 +610,16 @@ try {
     },
   );
   await step(
-    "the gear says which window goes where: Changes in the third place, then No code and Code again; Code is the view's other sub-tab",
+    "All settings opens and closes the right pane, with Code and No code inside",
     async () => {
-      await page.getByRole("button", { name: "Which window goes where" }).click();
-      const dialog = page.getByRole("dialog", { name: "Which window goes where" });
-      await dialog.getByLabel("The third window").selectOption("changes");
-      await dialog.getByRole("button", { name: "Done" }).click();
-      await page.getByRole("tab", { name: "Behavior" }).waitFor({ state: "detached" });
-      await page.getByRole("button", { name: "Which window goes where" }).click();
-      await dialog.getByLabel("The third window").selectOption("manual");
-      await dialog.getByRole("button", { name: "Done" }).click();
-      await page.getByRole("tab", { name: "Behavior" }).waitFor();
+      await openSettings(page);
       await firstWindow("code");
-      await page
-        .getByRole("region", { name: "Code" })
-        .getByLabel("File", { exact: true })
-        .waitFor();
-      // The header's tab for the view is named by the sub-tab open.
-      await page
-        .getByRole("checkbox", { name: "Code", exact: true })
-        .waitFor({ state: "attached" });
-      await firstWindow("nocode");
-      await page.getByRole("tab", { name: "Behavior" }).waitFor();
+      const code = page.getByRole("region", { name: "Code", exact: true });
+      await code.getByLabel("File", { exact: true }).waitFor();
+      await (await toolbarAction(page, "All settings")).click();
+      await code.waitFor({ state: "detached" });
+      await openSettings(page);
+      await page.getByRole("tab", { name: "Behavior", exact: true }).waitFor();
     },
   );
   await step(
@@ -718,10 +720,12 @@ try {
       // On a page of its own: every other step runs with ?guide=off.
       const fresh = await browser.newPage({ viewport: { width: 1440, height: 900 } });
       try {
+        await fresh.addInitScript(() => localStorage.setItem("smithable:smith", "floating"));
+        await asNewApp(fresh);
         await fresh.goto(base);
         await fresh
           .getByRole("dialog", { name: "Choose a look", exact: true })
-          .getByRole("button", { name: "Skip", exact: true })
+          .getByRole("button", { name: "Cancel", exact: true })
           .click();
         // A new project: Smith presents it on the overlay, Studio behind it (smith-first.md
         // §12.1); Enter brings the next part, Skip closes it into his floating panel, then the
@@ -834,14 +838,10 @@ try {
         // Floating, the tour gives back the screen it found: the preview alone (§12.3).
         await fresh.getByRole("tab", { name: "Code", exact: true }).waitFor({ state: "detached" });
         // With Code open, Guide is Code's own tour.
-        await showWorkspaceControls(fresh);
-        await fresh.getByRole("checkbox", { name: "No code", exact: true }).check({ force: true });
+        await openSettings(fresh);
         await fresh.getByRole("tab", { name: "Code", exact: true }).click();
         await fresh.getByRole("region", { name: "Code" }).waitFor();
-        const tour = async () => {
-          await fresh.locator("header").getByRole("button", { name: "Guide" }).click();
-          await fresh.getByRole("menuitem", { name: "Tour Studio" }).click();
-        };
+        const tour = () => openStudioGuide(fresh);
         await tour();
         const code = [];
         for (let i = 0; i < 2; i++) {
@@ -867,7 +867,8 @@ try {
         await card.waitFor();
         if ((await card.getAttribute("data-guide-card")) !== "files")
           throw new Error("Guide with Code open did not start Code's tour");
-        // Esc ends it, as on a card.
+        // Esc ends it when focus is outside a control. Help returns focus to its button.
+        await fresh.evaluate(() => document.activeElement?.blur());
         await fresh.keyboard.press("Escape");
         await card.waitFor({ state: "detached" });
         await fresh.reload();
@@ -893,17 +894,14 @@ try {
         await owner.getByRole("button", { name: "Make them the administrator" }).click();
         await owner.waitFor({ state: "detached", timeout: 15000 * P });
         await fresh.reload();
-        await fresh.locator("header").getByRole("button", { name: "Guide" }).waitFor();
+        await (await toolbarAction(fresh, "Help")).waitFor();
         await fresh.waitForTimeout(1000);
         if (await zone.count()) throw new Error("the time zone was asked about again");
         if (await owner.count()) throw new Error("who runs the app was asked about again");
         // Present the app again: in Smith's thread, without the overlay (smith-first.md §12.6).
-        await fresh.locator("header").getByRole("button", { name: "Guide" }).click();
-        await fresh.getByRole("menuitem", { name: "Present the app again" }).click();
-        await fresh
-          .getByRole("complementary", { name: "Smith" })
-          .locator('[data-part="app"]')
-          .waitFor();
+        await (await toolbarAction(fresh, "Help")).click();
+        await fresh.getByRole("button", { name: "Present the app again", exact: true }).click();
+        await fresh.locator('[data-part="app"]:visible').waitFor();
         if (await fresh.getByRole("dialog", { name: /^Smith presents / }).count())
           throw new Error("Present the app again opened the overlay");
       } catch (error) {
@@ -1215,14 +1213,6 @@ try {
       await why.getByLabel("Who", { exact: true }).selectOption("sales");
       await why.getByLabel("What", { exact: true }).selectOption("model:Customer");
       await why.getByLabel("Do what", { exact: true }).selectOption("create");
-      // Where each window is, to put them back after Code is shown for a reason.
-      const arrange = async () => {
-        await page.getByRole("button", { name: "Which window goes where" }).click();
-        return page.getByRole("dialog", { name: "Which window goes where" });
-      };
-      let dialog = await arrange();
-      const before = await dialog.locator("select").evaluateAll((s) => s.map((x) => x.value));
-      await dialog.getByRole("button", { name: "Done" }).click();
       // Sales may add orders only (the step before): adding a customer is no, and says why.
       await why.locator('[data-verdict="denied"]').waitFor({ timeout: 10000 * P });
       await why
@@ -1235,12 +1225,6 @@ try {
         await new Promise((r) => setTimeout(r, 250));
       if ((await file.inputValue()) !== "smithable.auth.yml")
         throw new Error(`Code shows ${await file.inputValue()}, not the auth file`);
-      dialog = await arrange();
-      const selects = dialog.locator("select");
-      for (let i = 0; i < before.length; i++)
-        if ((await selects.nth(i).inputValue()) !== before[i])
-          await selects.nth(i).selectOption(before[i]);
-      await dialog.getByRole("button", { name: "Done" }).click();
       // Code was shown in the view for the reason: back to No code.
       await firstWindow("nocode");
       await sub("Behavior");
@@ -1687,7 +1671,7 @@ try {
     "look and feel: a theme, density and motion are chosen without touching code",
     async () => {
       await page.getByRole("button", { name: "Look", exact: true }).click();
-      await page.getByRole("button", { name: "More look settings", exact: true }).click();
+      await page.getByRole("button", { name: "Customise", exact: true }).click();
       const theme = page.getByRole("region", {
         name: "App-wide font, density and motion",
         exact: true,
@@ -1756,7 +1740,7 @@ try {
       if (!existsSync(join(dir, "node_modules", name))) throw new Error(`${name} is not installed`);
   });
   await step(
-    "a page that comes without its stylesheet starts the preview again, once for each change (finding 3)",
+    "a page that comes without its stylesheet is loaded again, then starts the preview again, once for each change (finding 3, T1164)",
     async () => {
       const unstyled = async () =>
         (await (await fetch(`${base}/api/logs`)).json()).filter((l) =>
@@ -1777,6 +1761,23 @@ try {
       // about:blank, whose messages carry Studio's own origin and are rightly not the preview's.
       await page.getByText("Updating…").waitFor({ state: "hidden", timeout: 120000 * P });
       await preview.locator("body[data-hydrated]").waitFor({ timeout: 120000 * P });
+      // The first time the page is only loaded again: the server may have been rebuilding.
+      await preview.locator("body").evaluate(() => {
+        window.smOldPage = true;
+      });
+      await say();
+      for (const deadline = Date.now() + 120000 * P; ; ) {
+        const fresh = await preview
+          .locator("body")
+          .evaluate((body) => !window.smOldPage && body.dataset.hydrated === "true", undefined, {
+            timeout: 2000,
+          })
+          .catch(() => false);
+        if (fresh) break;
+        if (Date.now() > deadline) throw new Error("the unstyled page was not loaded again");
+        await new Promise((r) => setTimeout(r, 500));
+      }
+      if ((await unstyled()) !== before) throw new Error("the first unstyled page restarted");
       await say();
       for (const deadline = Date.now() + 30000 * P; (await unstyled()) === before; ) {
         if (Date.now() > deadline) throw new Error("the preview was not started again");
@@ -1784,6 +1785,7 @@ try {
       }
       // It comes back; said again without a change in between, it is not started again.
       await preview.locator("body[data-hydrated]").waitFor({ timeout: 120000 * P });
+      await say();
       await say();
       await new Promise((r) => setTimeout(r, 2000));
       if ((await unstyled()) !== before + 1) throw new Error("the preview was started again twice");
@@ -1793,7 +1795,7 @@ try {
     "a theme pasted in the Look tab is checked, added as a file and used; undo removes it",
     async () => {
       await page.getByRole("button", { name: "Look", exact: true }).click();
-      await page.getByRole("button", { name: "More look settings", exact: true }).click();
+      await page.getByRole("button", { name: "Customise", exact: true }).click();
       const look = page.getByRole("dialog", { name: "Look", exact: true });
       await look.getByText("Add a theme").click();
       await look
@@ -2005,46 +2007,26 @@ try {
     },
   );
   await step(
-    "a narrow window shows one window at a time, chosen in the header: the preview the window's width, Code too",
+    "phone edge arrows and Studio swipes move between Smith, the app and settings",
     async () => {
       await page.setViewportSize({ width: 800, height: 900 });
-      await showWorkspaceControls(page);
-      const pick = (name) => page.getByRole("radio", { name, exact: true }).check({ force: true });
-      await pick("Preview");
-      await page.waitForFunction(
-        () => {
-          const r = document.querySelector('iframe[title="App preview"]')?.getBoundingClientRect();
-          return r && Math.abs(r.left) < 2 && r.width > 700;
-        },
-        null,
-        { timeout: 5000 * P },
-      );
-      // The other windows wait beside it in the row the finger moves (A 173), out of view.
-      const beside = await page.evaluate(() =>
-        [...document.querySelectorAll('[role="tab"]')]
-          .filter((t) => t.textContent?.trim() === "Behavior")
-          .some((t) => {
-            const r = t.getBoundingClientRect();
-            return r.width > 0 && r.right > 0 && r.left < window.innerWidth;
-          }),
-      );
-      if (beside) throw new Error("No code shows beside the preview");
-      // Every part is in a phone's header from the start: No code and Code are one window, Code
-      // its sub-tab (A 161, smith-first.md §6).
-      await pick("No code");
+      const edge = (name) => page.getByRole("button", { name, exact: true });
+      if (await edge("Show the app").isVisible()) await edge("Show the app").click();
+      await page.waitForFunction(() => {
+        const frame = document
+          .querySelector('iframe[title="App preview"]')
+          ?.getBoundingClientRect();
+        return frame && Math.abs(frame.left) < 2 && frame.width > 700;
+      });
+      await edge("Show settings").click();
       await page.getByRole("tab", { name: "Code", exact: true }).click();
-      await page.waitForFunction(
-        () => {
-          const code = document.querySelector('section[aria-label="Code"]');
-          return code && code.getBoundingClientRect().width > 760;
-        },
-        null,
-        { timeout: 10000 * P },
-      );
-      await pick("Smith");
+      await page.waitForFunction(() => {
+        const code = document.querySelector('section[aria-label="Code"]')?.getBoundingClientRect();
+        return code && code.left >= 0 && code.right <= innerWidth + 1 && code.width > 760;
+      });
+      await edge("Show Smith").click();
+      await page.getByRole("tab", { name: "Smith", exact: true }).click();
       await page.getByLabel("Describe a change").waitFor();
-      // A swipe anywhere in a window moves the row (A 173–174): Smith's thread to the preview,
-      // and back from the preview's toolbar; a finger, not a mouse.
       const swipe = async (selector, by) =>
         page.evaluate(
           ({ selector, by }) => {
@@ -2068,26 +2050,17 @@ try {
           },
           { selector, by },
         );
-      await page.getByRole("tab", { name: "Smith", exact: true }).click();
-      // Smith's window has Smith and Changes: a swipe in it goes to Changes first, then on.
       await swipe('[data-guide="change"]', -400);
-      await page.getByRole("tab", { name: "Changes", exact: true, selected: true }).waitFor();
-      await swipe('[data-guide="changes"]', -400);
-      await page
-        .getByRole("radio", { name: "Preview", exact: true, checked: true })
-        .waitFor({ state: "attached" });
+      await edge("Show Smith").waitFor();
+      await checkAppOwnsPhoneSwipe(page);
       await swipe("[data-preview-page]", 400);
-      await page
-        .getByRole("radio", { name: "Smith", exact: true, checked: true })
-        .waitFor({ state: "attached" });
-      await page.getByRole("tab", { name: "Smith", exact: true }).click();
-      // Changes is under Smith on a phone: its tab beside his.
+      await edge("Show the app").waitFor();
       await page.getByRole("tab", { name: "Changes", exact: true }).click();
       await page.getByRole("list", { name: "Change trace" }).waitFor();
       await page.getByRole("tab", { name: "Smith", exact: true }).click();
-      await pick("Code");
+      await edge("Show settings").click();
       await page.getByRole("tab", { name: "No code", exact: true }).click();
-      await page.getByRole("tab", { name: "Behavior" }).waitFor();
+      await page.getByRole("tab", { name: "Behavior", exact: true }).waitFor();
       await page.setViewportSize({ width: 1920, height: 1000 });
     },
   );
@@ -2110,52 +2083,44 @@ try {
       await page.setViewportSize({ width: 1920, height: 1000 });
     },
   );
-  await step(
-    "one preview whatever moves: the address follows it, and putting Code first keeps its page",
-    async () => {
-      await openPreview("/orders");
-      await preview.getByRole("heading", { name: "Orders" }).waitFor({ timeout: 60000 * P });
-      // Navigating inside the app (opening an order) shows in the address.
-      // A click before the reloaded page is ready does nothing: try again, a few times.
-      for (let attempt = 1; ; attempt++) {
-        // The table's title or a card's: whichever is visible (both exist; one is hidden by width).
-        await preview
-          .getByRole("button", { name: "ORD-1008" })
-          .filter({ visible: true })
-          .first()
-          .click();
-        try {
-          await page.waitForFunction(
-            () =>
-              /^\/orders\/\d+$/.test(
-                document.querySelector('input[aria-label="Preview address"]')?.value ?? "",
-              ),
-            null,
-            { timeout: 5000 * P },
-          );
-          break;
-        } catch (error) {
-          if (attempt === 3) throw error;
-        }
+  await step("the preview keeps its address when settings open or close", async () => {
+    await openPreview("/orders");
+    await preview.getByRole("heading", { name: "Orders" }).waitFor({ timeout: 60000 * P });
+    // Navigating inside the app (opening an order) shows in the address.
+    // A click before the reloaded page is ready does nothing: try again, a few times.
+    for (let attempt = 1; ; attempt++) {
+      // The table's title or a card's: whichever is visible (both exist; one is hidden by width).
+      await preview
+        .getByRole("button", { name: "ORD-1008" })
+        .filter({ visible: true })
+        .first()
+        .click();
+      try {
+        await page.waitForFunction(
+          () =>
+            /^\/orders\/\d+$/.test(
+              document.querySelector('input[aria-label="Preview address"]')?.value ?? "",
+            ),
+          null,
+          { timeout: 5000 * P },
+        );
+        break;
+      } catch (error) {
+        if (attempt === 3) throw error;
       }
-      const opened = await page.getByLabel("Preview address").inputValue();
-      await firstWindow("code");
-      await page.getByRole("region", { name: "Code" }).waitFor();
-      if ((await page.getByLabel("Preview address").inputValue()) !== opened)
-        throw new Error("the preview lost its page when Code came first");
-      await preview.getByRole("heading", { name: "ORD-1008" }).waitFor({ timeout: 5000 * P });
-      await page.getByRole("radio", { name: "One window" }).check({ force: true });
-      // One window: each window is a tab, the view with No code and Code named by its open one.
-      await page.getByRole("checkbox", { name: "Smith", exact: true }).check({ force: true });
-      await page.getByLabel("Describe a change").waitFor();
-      await page.getByRole("checkbox", { name: "Code", exact: true }).check({ force: true });
-      await page.getByRole("region", { name: "Code" }).waitFor();
-      await page.getByRole("radio", { name: "Three windows side by side" }).check({ force: true });
-      await preview.getByRole("heading", { name: "ORD-1008" }).waitFor({ timeout: 5000 * P });
-      await firstWindow("nocode");
-      await preview.getByRole("heading", { name: "ORD-1008" }).waitFor({ timeout: 5000 * P });
-    },
-  );
+    }
+    const opened = await page.getByLabel("Preview address").inputValue();
+    await firstWindow("code");
+    await page.getByRole("region", { name: "Code" }).waitFor();
+    if ((await page.getByLabel("Preview address").inputValue()) !== opened)
+      throw new Error("the preview lost its page when Code came first");
+    await preview.getByRole("heading", { name: "ORD-1008" }).waitFor({ timeout: 5000 * P });
+    await (await toolbarAction(page, "All settings")).click();
+    await page.getByRole("region", { name: "Code", exact: true }).waitFor({ state: "detached" });
+    await preview.getByRole("heading", { name: "ORD-1008" }).waitFor({ timeout: 5000 * P });
+    await firstWindow("nocode");
+    await preview.getByRole("heading", { name: "ORD-1008" }).waitFor({ timeout: 5000 * P });
+  });
   await step(
     "a field picked in the preview opens Behavior at it; Code keeps its file, cursor and unsaved edit across a window change and a reload",
     async () => {
@@ -2464,21 +2429,23 @@ try {
         .waitFor({ timeout: 30000 * P });
       if (!(await page.locator("[data-speech]").count())) return;
       await page.getByRole("button", { name: /^Mic: / }).waitFor();
-      const sound = page.getByRole("button", { name: /^Sound: (?:on|off)$/ });
-      if (!(await sound.isEnabled())) return;
-      const before = await sound.getAttribute("aria-label");
-      await sound.click();
-      const after = await sound.getAttribute("aria-label");
-      if (after === before) throw new Error(`the sound button stays "${before}"`);
+      const turnOn = page.getByRole("button", { name: "Turn Smith's voice on", exact: true });
+      const turnOff = page.getByRole("button", { name: "Turn Smith's voice off", exact: true });
+      const wasOn = await turnOff.isVisible();
+      const before = wasOn ? turnOff : turnOn;
+      const after = wasOn ? turnOn : turnOff;
+      if (!(await before.isEnabled())) return;
+      await before.click();
+      await after.waitFor();
       // The choice is the browser's, kept for the next visit.
       const kept = await page.evaluate(() => localStorage.getItem("smithable:speech"));
-      if (!kept?.includes(`"sound":${after === "Sound: on"}`))
+      if (!kept || JSON.parse(kept).sound !== !wasOn)
         throw new Error(`the sound choice is not kept: ${kept}`);
-      await sound.click();
+      await after.click();
     },
   );
   await step(
-    "automatic mode loads Silero from the docs site's files, checked by their hashes (A 235 step 2)",
+    "a Smith call loads Silero from the docs site's files, checked by their hashes (A 235 step 2)",
     async () => {
       // Its own browser, with a stand-in microphone; docs.smithable.ai answered from the site
       // just built (pnpm site), as the published one will.
@@ -2486,27 +2453,40 @@ try {
         args: ["--use-fake-device-for-media-stream", "--use-fake-ui-for-media-stream"],
       });
       try {
-        const listener = await ears.newPage();
+        const context = await seenContext({}, ears);
+        const listener = await context.newPage();
+        // Headless Chromium may have no system voices. Stub playback and keep real capture and detection.
+        await listener.addInitScript(() => {
+          window.speechSynthesis.getVoices = () => [
+            { name: "Fixture voice", lang: "en-US", localService: true },
+          ];
+          window.speechSynthesis.speak = (utterance) => queueMicrotask(() => utterance.onend?.());
+          window.SpeechSynthesisUtterance = class {
+            constructor(text) {
+              this.text = text;
+            }
+          };
+        });
         await listener.route("https://docs.smithable.ai/vad/**", (route) => {
           const path = new URL(route.request().url()).pathname;
-          route.fulfill({
+          return route.fulfill({
             body: readFileSync(join(repo, "site", path)),
             headers: { "access-control-allow-origin": "*" },
           });
         });
-        await listener.goto(`http://localhost:${port}/`);
-        await listener
-          .locator("[data-speech], [data-speech-off]")
-          .first()
-          .waitFor({ timeout: 30000 * P });
-        const auto = listener.getByRole("button", { name: "Automatic" });
-        if (!(await auto.count())) return; // no recognition in this browser
-        await auto.click();
-        await listener.getByText("Listening while Smith is silent").waitFor({ timeout: 30000 * P });
-        if (await listener.getByText("A simpler voice detector is in use.").count())
+        await listener.goto(`${base}/?guide=off`);
+        await openSmith(listener);
+        const speech = listener.locator("[data-speech]");
+        const start = speech.getByRole("button", { name: "Start call", exact: true });
+        const end = speech.getByRole("button", { name: "End call", exact: true });
+        await start.click();
+        await speech.getByRole("button", { name: "Mic: on", exact: true }).waitFor({
+          timeout: 30000 * P,
+        });
+        if (await speech.getByText("A simpler voice detector is in use.", { exact: true }).count())
           throw new Error("Silero's files did not load: the simple detector runs");
-        await auto.click();
-        await listener.getByText("Listening while Smith is silent").waitFor({ state: "detached" });
+        await end.click();
+        await start.waitFor();
       } finally {
         await ears.close();
       }
@@ -2575,7 +2555,7 @@ try {
       .getByText("Add a logo")
       .waitFor({ timeout: 60000 * P });
     await page.getByRole("button", { name: "Look", exact: true }).click();
-    await page.getByRole("button", { name: "More look settings", exact: true }).click();
+    await page.getByRole("button", { name: "Customise", exact: true }).click();
     await look("App-wide font, density and motion")
       .getByRole("button", { name: "Comfortable" })
       .click();
@@ -2632,7 +2612,7 @@ try {
     // Native selected-page controls have visible labels and keyboard focus. They use the same
     // project history as chat: one Undo restores the original authored source.
     await page.getByRole("button", { name: "Look", exact: true }).click();
-    await page.getByRole("button", { name: "More look settings", exact: true }).click();
+    await page.getByRole("button", { name: "Customise", exact: true }).click();
     const menu = page
       .getByRole("dialog", { name: "Look", exact: true })
       .getByLabel("Menu layout", { exact: true });
@@ -2775,7 +2755,7 @@ try {
         .waitFor({ timeout: 60000 * P });
       // Its own theme, from the Look tab (look.md §1.5).
       await page.getByRole("button", { name: "Look", exact: true }).click();
-      await page.getByRole("button", { name: "More look settings", exact: true }).click();
+      await page.getByRole("button", { name: "Customise", exact: true }).click();
       const lookDialog = page.getByRole("dialog", { name: "Look", exact: true });
       await lookDialog.getByLabel("Theme selection target", { exact: true }).selectOption("home");
       await lookDialog.getByRole("button", { name: "Use Playful theme", exact: true }).click();

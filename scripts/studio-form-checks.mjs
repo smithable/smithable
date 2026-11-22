@@ -24,9 +24,56 @@ export async function toolbarAction(page, name) {
   return action;
 }
 
-export async function showWorkspaceControls(page) {
-  if (!(await page.locator("[data-workspace-controls]").isVisible()))
-    await (await toolbarAction(page, "Workspace layout")).click();
+export async function openSettings(page) {
+  const settings = await toolbarAction(page, "All settings");
+  if ((await settings.getAttribute("aria-pressed")) !== "true") await settings.click();
+}
+
+export async function openStudioGuide(page) {
+  await (await toolbarAction(page, "Help")).click();
+  await page.getByRole("button", { name: "Tour Studio", exact: true }).click();
+}
+
+export async function checkAppOwnsPhoneSwipe(page) {
+  const frame = 'iframe[title="App preview"]';
+  const arrow = (name) => page.getByRole("button", { name, exact: true });
+  const showApp = arrow("Show the app");
+  if (await showApp.isVisible()) await showApp.click();
+  await page.waitForFunction((selector) => {
+    const box = document.querySelector(selector)?.getBoundingClientRect();
+    return box && Math.abs(box.left) < 2;
+  }, frame);
+  await page.evaluate((selector) => {
+    const previewWindow = document.querySelector(selector)?.contentWindow;
+    delete document.documentElement.dataset.previewSwipeFixture;
+    const receive = (event) => {
+      if (event.source !== previewWindow || event.data?.type !== "swipe") return;
+      document.documentElement.dataset.previewSwipeFixture = "seen";
+      window.removeEventListener("message", receive);
+    };
+    window.addEventListener("message", receive);
+  }, frame);
+  // Deliver the app's legacy swipe message from the frame without relying on its editor state.
+  const studioOrigin = new URL(page.url()).origin;
+  await page
+    .frameLocator(frame)
+    .locator("body")
+    .evaluate((_, origin) => {
+      parent.postMessage({ source: "smithable-preview", type: "swipe", direction: 1 }, origin);
+    }, studioOrigin);
+  await page.locator('html[data-preview-swipe-fixture="seen"]').waitFor({ state: "attached" });
+  await page.locator("main").evaluate(async (row) => {
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    await Promise.all(row.getAnimations().map((animation) => animation.finished.catch(() => {})));
+  });
+  const appBounds = await page.locator(frame).boundingBox();
+  if (
+    !appBounds ||
+    Math.abs(appBounds.x) > 2 ||
+    !(await arrow("Show settings").isVisible()) ||
+    !(await arrow("Show Smith").isVisible())
+  )
+    throw new Error("a swipe inside the app switched Studio away from its preview");
 }
 
 export async function openSmith(page) {

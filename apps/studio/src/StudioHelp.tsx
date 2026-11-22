@@ -26,11 +26,15 @@ export function StudioHelp({
   narrow,
   onClose,
   onGuide,
+  onPresent,
+  onResetHints,
   onFeedback,
 }: {
   narrow: boolean;
   onClose: () => void;
   onGuide?: () => void;
+  onPresent?: () => void;
+  onResetHints: () => void;
   onFeedback: () => void;
 }) {
   const [quick, showQuick] = useState(false);
@@ -93,6 +97,14 @@ export function StudioHelp({
               </Button>
             )}
           </div>
+        )}
+        <button type="button" className={actionClass} onClick={onResetHints}>
+          Show hints again
+        </button>
+        {onPresent && (
+          <button type="button" className={actionClass} onClick={onPresent}>
+            Present the app again
+          </button>
         )}
         {onGuide && (
           <button type="button" className={actionClass} onClick={onGuide}>

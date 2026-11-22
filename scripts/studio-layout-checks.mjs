@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { join } from "node:path";
-import { showWorkspaceControls, toolbarAction } from "./studio-form-checks.mjs";
+import { openStudioGuide, toolbarAction } from "./studio-form-checks.mjs";
 
 // Use CSS pixels: desktop display scaling reduces the available layout size.
 export async function checkStudioLayout(browser, base, pictures) {
@@ -25,8 +25,8 @@ export async function checkStudioLayout(browser, base, pictures) {
       if (pictures)
         await page.screenshot({ path: join(pictures, `after-${viewport.width}-guide.png`) });
       if (viewport.width < 1024) {
-        await showWorkspaceControls(page);
-        await page.getByRole("radio", { name: "Smith", exact: true }).check({ force: true });
+        const arrow = page.getByRole("button", { name: "Show Smith", exact: true });
+        if (await arrow.isVisible()) await arrow.click();
       }
       const input = page
         .getByRole("textbox", { name: "Describe a change, or ask a question" })
@@ -106,14 +106,12 @@ export async function checkStudioLayout(browser, base, pictures) {
           .getByRole("textbox", { name: "Describe a change, or ask a question" })
           .locator("visible=true")
           .waitFor();
+        await page.getByRole("button", { name: "Undock Smith", exact: true }).click();
+        const smith = page.getByRole("complementary", { name: "Smith", exact: true });
+        await smith.waitFor();
+        await smith.getByRole("button", { name: "Dock", exact: true }).click();
         await page.setViewportSize({ width: 1600, height: 900 });
-        await page.getByRole("complementary", { name: "Smith" }).waitFor();
-        await page.locator('[data-window="changes"]').waitFor({ state: "detached" });
-        await page
-          .locator("[data-studio-header]")
-          .getByRole("button", { name: "Guide", exact: true })
-          .click();
-        await page.getByRole("menuitem", { name: "Tour Studio", exact: true }).click();
+        await openStudioGuide(page);
         const card = page.locator("[data-guide-card]:visible");
         await card.waitFor();
         const stops = [];
@@ -166,7 +164,7 @@ export async function checkCompactLook(browser, base, pictures) {
   try {
     await page.goto(`${base}/?guide=off`);
     await (await toolbarAction(page, "Look")).click();
-    await page.getByRole("button", { name: "More look settings", exact: true }).click();
+    await page.getByRole("button", { name: "Customise", exact: true }).click();
     const dialog = page.getByRole("dialog", { name: "Look", exact: true });
     await dialog.getByRole("tab", { name: "Customise", exact: true }).click();
     await dialog

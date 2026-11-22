@@ -25,15 +25,19 @@ test("every picture the kit shows is marked when an AI made it, or says why not"
 const mark = TEMPLATES["src/kit/AiMark.tsx"] ?? "";
 
 test("the AI mark is the EU's common icon, drawn in the kit, never loaded from elsewhere", () => {
-  // Its basic icon's three paths, unaltered: the black disc and the white A and I.
-  expect(mark.match(/<path\b/g)).toHaveLength(3);
+  // Its basic icon's three paths (the black disc, the white A and I) and its worded label's twelve
+  // (the black pill, A I and GENERATED), unaltered.
+  expect(mark.match(/<path\b/g)).toHaveLength(15);
+  expect(mark).toContain('d="M352.84,410.77h1093.16c85.55,0,145.54-59.94,145.54-133.2');
   expect(mark).toContain('d="M272.03,100.72c100.92,0,182.74,81.82,182.74,182.75');
   expect(mark).toContain('d="M328.11,353.74c-1.48,0-2.69-.47-3.63-1.41');
   expect(mark).not.toMatch(/https?:|<img|\.svg/);
 });
 
-test("the icon alone is named by the words file; across the page the words stand beside it", () => {
+test("the icon alone is named by the words file; across the page one badge, worded in English", () => {
   expect(mark).toContain("label={w.aiGenerated}");
+  // The EU's worded label is English alone: another language joins its own words to the icon.
+  expect(mark).toContain('language().startsWith("en") ? (\n            <AiLabel');
   expect(mark).toContain("{w.aiGenerated}\n");
   // The owner's switch hides every mark by this hook (themes.ts).
   expect(mark.match(/data-part="ai-mark"/g)).toHaveLength(2);

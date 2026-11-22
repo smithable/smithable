@@ -39,6 +39,7 @@ import { FirstLook } from "./FirstLook";
 import { lookSeenKey, seenLook } from "./first-look";
 import { doneKey, guideOff, presentedKey, TOURS } from "./guide";
 import { entryText, grouped, line } from "./history";
+import { LookPanel } from "./LookPanel";
 import { logStore } from "./logs";
 import { Making } from "./Making";
 import { ApplyVersionDialog, OldVersion, type OpenOld, openOldTab } from "./OldVersion";
@@ -60,6 +61,7 @@ import { plainRefusal } from "./refusal";
 import { needsLook, releaseProgress, trustedRelease } from "./release-review";
 import { type Bounds, type LayerMode, SmithLayer, sideFor, useSmithPlace } from "./SmithLayer";
 import { StudioHelp } from "./StudioHelp";
+import { StudioHint, useStudioHint } from "./StudioHints";
 import { StudioOverlay } from "./StudioOverlay";
 import { keptPage, Preview, Trace } from "./shared";
 import { useStudioQuestion } from "./studio-questions";
@@ -70,15 +72,14 @@ import { type PresentedDiagnostic, ValidationNotice } from "./validation-notice"
 import {
   gridOf,
   isManualView,
-  LayoutBar,
   type ManualView,
-  PhoneSettingsButton,
   type PhoneWindow,
   phoneWindows,
   type SlotContent,
-  shownSlots,
-  useArrangement,
+  useChangesBesideSmith,
+  useManualView,
   usePhoneSettings,
+  useSettingsOpen,
   WINDOW_NAMES,
   type WindowId,
 } from "./windows";
@@ -186,8 +187,10 @@ export function App() {
       if (mine === publishCheck.current) setCheckingPublish(false);
     }
   };
-  // Which windows are shown and where (studio-v3.md §8), kept in this browser.
-  const [arrangement, setArrangement] = useArrangement();
+  const [manual, setManual] = useManualView();
+  const [settingsOpen, setSettingsOpen] = useSettingsOpen();
+  const [leftClosed, setLeftClosed] = useState(false);
+  const [changesBeside, setChangesBeside] = useChangesBesideSmith();
   // A change's notice offers to undo it; errors stay until dismissed, other notices fade.
   const [message, setMessage] = useState<{
     ok: boolean;
@@ -238,15 +241,15 @@ export function App() {
   const [pickingLook, setPickingLook] = useState<{
     project: Project;
     preset: string;
-    automatic: boolean;
   }>();
   const [lookFinished, setLookFinished] = useState<string>();
+  // The Look panel (T1145): the whole app's look beside the preview, opened from the toolbar.
+  const [lookOpen, setLookOpen] = useState(false);
   const [troubleshooting, setTroubleshooting] = useState(false);
   const wakingNow = useSyncExternalStore(waking.subscribe, waking.get);
   const [outbox, setOutbox] = useState(false);
   const [help, setHelp] = useState(false);
   const [changesView, setChangesView] = useState<"history" | "details">();
-  const [workspaceControls, setWorkspaceControls] = useState<boolean>();
   const [addressHost, setAddressHost] = useState<HTMLDivElement | null>(null);
   // The sample users' panel, their state as the daemon last said, and a page for the preview (Follow).
   const [peopleOpen, setPeopleOpen] = useState(false);
@@ -358,19 +361,12 @@ export function App() {
   // Smith floating over the preview, or docked as the left window (smith-first.md §12.3); a
   // phone has him in its row of windows.
   const [smithAt, setSmithAt] = useSmithPlace();
-  const compact = useMedia("(max-width: 1439px), (max-height: 799px)");
-  const floating = !narrow && !compact && smithAt === "floating";
+  const floating = !narrow && smithAt === "floating";
   const [panelOpen, setPanelOpen] = useState(false);
   const [smithHidden, setSmithHidden] = useState(false);
-  const [smithHideHint, setSmithHideHint] = useState<"smith" | "call">();
-  const hideHintShown = useRef(new Set<"smith" | "call">());
+  const hint = useStudioHint();
   const [audio, setAudio] = useState<AudioActivity>();
   const smithFace = useRef<HTMLButtonElement>(null);
-  useEffect(() => {
-    if (!smithHideHint) return;
-    const timer = setTimeout(() => setSmithHideHint(undefined), 4500);
-    return () => clearTimeout(timer);
-  }, [smithHideHint]);
   // The preview's edges on the screen, which the floating panel hangs between.
   const [previewBox, setPreviewBox] = useState<HTMLDivElement | null>(null);
   const revealSelection = useCallback(
@@ -398,7 +394,7 @@ export function App() {
     };
   }, [previewBox]);
   const [phone, setPhone] = usePhoneSettings();
-  const phoneList = phoneWindows(phone);
+  const phoneList = phoneWindows;
   const phoneWindow: PhoneWindow = phoneList.includes(place.window as PhoneWindow)
     ? (place.window as PhoneWindow)
     : place.window === "changes" && phone.changesUnderSmith
@@ -406,15 +402,15 @@ export function App() {
       : isManualView(place.window)
         ? "manual"
         : "preview";
-  // Which of No code and Code the view shows; a phone without Code shows No code for it.
-  const manual: ManualView =
-    narrow && !phone.code && arrangement.manual === "code"
-      ? "nocode"
-      : (arrangement.manual ?? "nocode");
   const [phoneSmithSheet, setPhoneSmithSheet] = useState(false);
   const showWindow = (window: WindowId | PhoneWindow) => {
     setPhoneSmithSheet(false);
-    if (isManualView(window)) setArrangement({ ...arrangement, manual: window });
+    if (window === "changes" && !phone.changesUnderSmith) {
+      setChangesView("details");
+      return;
+    }
+    if (window === "smith" || window === "changes") setPhoneSub(window);
+    if (isManualView(window)) setManual(window);
     setPlace((p) => ({
       ...p,
       window:
@@ -522,42 +518,21 @@ export function App() {
       tab.location.href = old.url;
     }
   };
-  // The preview's arrows hide the window left or right of it for a while, for a bigger preview.
-  // Floating, Smith leaves the first place and the preview takes the width: the window there
-  // (Changes) comes back by the arrow or its tab (smith-first.md §12.3).
-  const [hidden, setHidden] = useState({ left: floating, right: false });
-  // A resize reveals Smith's dock, then gives the preview its width back on a wide screen.
-  // The saved placement preference remains unchanged.
-  const wasFloating = useRef(floating);
-  useEffect(() => {
-    if (wasFloating.current !== floating) {
-      setHidden((h) => ({ ...h, left: floating }));
-      wasFloating.current = floating;
-    }
-  }, [floating]);
-  const layout = narrow ? "one" : arrangement.layout;
-  // A phone has every window in one row, side by side, and shows one of them; a swipe moves the
-  // row (A 173).
-  // Floating, his place holds Changes alone.
-  const laid = arrangement.slots.map((s) =>
-    floating && (s === "smith+changes" || s === "smith") ? "changes" : s,
-  );
-  // One window with Smith floating shows the preview first.
-  const previewAt = laid.indexOf("preview");
-  if (floating && arrangement.layout === "one" && previewAt > 0)
-    [laid[0], laid[previewAt]] = [laid[previewAt] as SlotContent, laid[0] as SlotContent];
+  const leftContent = floating ? "changes" : changesBeside ? "smith+changes" : "smith";
   const slots: SlotContent[] = narrow
-    ? phoneList.map((w) => (w === "smith" && phone.changesUnderSmith ? "smith+changes" : w))
-    : laid;
-  const arrangedShown = shownSlots(layout, hidden);
+    ? phoneList.map((window) =>
+        window === "smith" && phone.changesUnderSmith ? "smith+changes" : window,
+      )
+    : [leftContent, "preview", "manual"];
+  const leftVisible =
+    !leftClosed && (!floating || changesBeside) && (!smithHidden || changesBeside);
   const shown: (0 | 1 | 2)[] = narrow
-    ? slots.map((_, i) => i as 0 | 1 | 2)
-    : arrangedShown.filter((i) => !smithHidden || slots[i] !== "smith");
-  if (!shown.length) shown.push((previewAt >= 0 ? previewAt : 0) as 0 | 1 | 2);
-  const dockedSmithSlot = arrangedShown.find(
-    (i) => slots[i] === "smith" || slots[i] === "smith+changes",
-  );
-  const phoneIndex = Math.max(0, phoneList.indexOf(phoneWindow));
+    ? [0, 1, 2]
+    : [...(leftVisible ? ([0] as const) : []), 1, ...(settingsOpen ? ([2] as const) : [])];
+  const mountedSlots: (0 | 1 | 2)[] = !narrow && !floating && !leftVisible ? [0, ...shown] : shown;
+  // The first-look picker leaves the other panes mounted and shows only the preview.
+  const lookAlone = Boolean(pickingLook);
+  const phoneIndex = Math.max(0, phoneList.indexOf(lookAlone ? "preview" : phoneWindow));
   /**
    * The slot a window is drawn in among those shown (the first that names it), or none. No code
    * and Code are in the view's slot when it shows them.
@@ -576,44 +551,23 @@ export function App() {
     const at = placed(window);
     return narrow && at !== phoneIndex ? undefined : at;
   };
-  // The sub-tabs a phone's window has: No code and Code, or Smith and Changes under him.
-  const subStep = (content: string | undefined, direction: 1 | -1): boolean => {
-    if (content === "manual") {
-      const subs: ManualView[] = phone.code ? ["nocode", "code"] : ["nocode"];
-      const next = subs[subs.indexOf(manual) + direction];
-      if (next) setArrangement({ ...arrangement, manual: next });
-      return Boolean(next);
-    }
-    if (content === "smith+changes") {
-      const subs = ["smith", "changes"] as const;
-      const next = subs[subs.indexOf(phoneSub) + direction];
-      if (next) setPhoneSub(next);
-      return Boolean(next);
-    }
-    return false;
+  const phoneNeighbor = (direction: 1 | -1) => {
+    const current = phoneSmithSheet ? 0 : phoneIndex;
+    return phoneList[(current + direction + phoneList.length) % phoneList.length] as PhoneWindow;
   };
-  // A swipe (A 173–174, Johan 2026-10-27): in a window's content with sub-tabs it goes to the
-  // next sub-tab, then on to the next window at the last; above it (the header and the tab rows)
-  // and in any other window it moves the row with the finger.
-  const subContent = (start: Element) =>
-    start.closest("[data-subtabs]")
-      ? undefined
-      : start.closest<HTMLElement>('[data-window="manual"], [data-window="smith+changes"]')?.dataset
-          .window;
-  const stepRow = (direction: 1 | -1) => {
-    const next = phoneList[phoneIndex + direction];
-    if (next) showWindow(next);
-  };
-  const swipeKey = useRef<(direction: 1 | -1) => void>(() => {});
-  swipeKey.current = (direction) => {
-    if (narrow && !project?.making) stepRow(direction);
+  const showPhonePane = (window: PhoneWindow) => {
+    if (
+      window !== "smith" &&
+      (phoneSmithSheet || (phoneWindow === "smith" && phoneSub === "smith"))
+    ) {
+      hint.reveal("smith-hidden");
+    }
+    showWindow(window);
   };
   const rowPan = usePan({
-    enabled: narrow && !project?.making && !phoneSmithSheet,
-    follows: (start) => subContent(start) === undefined,
-    onRelease: (direction, start) => {
-      if (!subStep(subContent(start), direction)) stepRow(direction);
-    },
+    enabled: narrow && !project?.making && !lookAlone,
+    follows: () => !phoneSmithSheet,
+    onRelease: (direction) => showPhonePane(phoneNeighbor(direction)),
   });
   // The creation wizard's "Ask Smith for help": Smith comes into view to take the words.
   const smithRef = useRef(() => {});
@@ -664,54 +618,21 @@ export function App() {
     return () => window.removeEventListener(SHOW_CODE, onShow);
   });
 
-  /**
-   * A window on screen from the header's tabs, a guide's stop or a link (smith-first.md §6). No
-   * code or Code: the view switches to it, and comes into view. A window in the third place,
-   * the arrow's (the view with No code and Code by default), opens the three windows; one hidden
-   * by an arrow comes back; any other takes the last place on screen that is not the preview, or
-   * the only one in one window, and the window moved out takes its place, so none is lost.
-   */
   const workIn = (window: WindowId) => {
-    if (floating && window === "smith") return setPanelOpen(true);
-    if (window === "smith") setSmithHidden(false);
-    const sub = isManualView(window) ? window : undefined;
-    const kept = { ...arrangement, ...(sub ? { manual: sub } : {}) };
-    if (slotOf(window) !== undefined) return;
-    const content: SlotContent = isManualView(window) ? "manual" : window;
-    const from = laid.findIndex(
-      (s) =>
-        s === content || (s === "smith+changes" && (window === "smith" || window === "changes")),
-    );
-    if (from >= 0 && arrangedShown.includes(from as 0 | 1 | 2)) return setArrangement(kept);
-    if (from === 0 && hidden.left) {
-      setHidden((h) => ({ ...h, left: false }));
-      return setArrangement(kept);
+    if (isManualView(window)) {
+      setManual(window);
+      setSettingsOpen(true);
+    } else if (window === "changes") {
+      setChangesBeside(true);
+      setLeftClosed(false);
+    } else if (window === "smith") {
+      if (floating) setPanelOpen(true);
+      else {
+        setSmithHidden(false);
+        setLeftClosed(false);
+      }
     }
-    if (from === 2 && (layout === "two" || layout === "three")) {
-      setHidden((h) => ({ ...h, right: false }));
-      return setArrangement({ ...kept, layout: "three" });
-    }
-    const at =
-      layout === "one"
-        ? (shown[0] ?? 0)
-        : ([...shown].reverse().find((i) => slots[i] !== "preview") ?? shown[0] ?? 0);
-    const next = [...laid] as typeof arrangement.slots;
-    if (from >= 0) [next[at], next[from]] = [next[from] as SlotContent, next[at] as SlotContent];
-    else next[at] = content;
-    // Floating, the place Smith left keeps his name for when he is docked again.
-    const smithWas = arrangement.slots.findIndex((s) => s === "smith+changes" || s === "smith");
-    if (floating && smithWas >= 0 && next[smithWas] === "changes")
-      next[smithWas] = arrangement.slots[smithWas] as SlotContent;
-    setArrangement({ ...kept, slots: next });
   };
-  // The header's tabs: the windows of the arrangement in their order, the view with No code and
-  // Code named by the one it shows, and a window off screen brought back by its tab.
-  const tabs: WindowId[] = [
-    ...new Set(
-      laid.map((s): WindowId => (s === "smith+changes" ? "smith" : s === "manual" ? manual : s)),
-    ),
-  ];
-
   // The spec the preview shows now, for what a change touches (refresh).
   const shownIR = useRef<Spec["ir"]>(undefined);
   // The newest change the preview has had: a "changed" without a new one (a file edited by hand,
@@ -794,6 +715,8 @@ export function App() {
       !project.making &&
       project.lookProject &&
       project.revision &&
+      // Only a new app, read from its history: never an app changed since it was made (T1163).
+      project.asMade &&
       !guideOff() &&
       !seenLook(lookApp) &&
       lookFinished !== lookApp,
@@ -803,7 +726,7 @@ export function App() {
   useEffect(() => {
     if (initialLook && !pickingLook && !editingLook && spec.ux && project) {
       showLookPreview.current("preview");
-      setPickingLook({ project, preset: spec.ux.theme.preset, automatic: true });
+      setPickingLook({ project, preset: spec.ux.theme.preset });
     }
   }, [initialLook, pickingLook, editingLook, spec.ux, project]);
   const messageErrors = (message?.diagnostics ?? []).filter((d) => d.severity === "error");
@@ -1047,8 +970,6 @@ export function App() {
     };
     const onMessage = (e: MessageEvent) => {
       if (isPreviewMessage(e) && e.data.type === "undo") undoKey.current();
-      // A swipe over the page in the preview, which is another document (A 174).
-      if (isPreviewMessage(e) && e.data.type === "swipe") swipeKey.current(e.data.direction);
     };
     window.addEventListener("keydown", onKey);
     window.addEventListener("message", onMessage);
@@ -1100,7 +1021,12 @@ export function App() {
   // third window comes into view in the same render the tour starts in.
   // A phone shows each stop's window as the tour reaches it, and the preview after it (A 161).
   // Floating, the screen as it was before the tour comes back after it (the preview alone).
-  const beforeGuide = useRef<{ arrangement: typeof arrangement; hidden: typeof hidden }>(undefined);
+  const beforeGuide = useRef<{
+    settingsOpen: boolean;
+    leftClosed: boolean;
+    changesBeside: boolean;
+    manual: ManualView;
+  }>(undefined);
   // The tour as it started: the shown change opens Code on the way, which is not Code's tour.
   const [touring, setTouring] = useState<keyof typeof TOURS>("nocode");
   const startGuide = () => {
@@ -1109,13 +1035,14 @@ export function App() {
     if (!guideStarted) setTouring(wanted);
     guideChange.current = changeKey;
     setGuideStarted(true);
-    if (floating && !guideStarted) beforeGuide.current = { arrangement, hidden };
+    if (!narrow && !guideStarted)
+      beforeGuide.current = { settingsOpen, leftClosed, changesBeside, manual };
     // The view with No code and Code comes into view for the tour's stops in it.
     if (wanted === "nocode" && !narrow) workIn("nocode");
     // Floating, Smith's panel opens for his lines, and the window he left comes on screen for its
     // stop.
     setPanelOpen(true);
-    if (floating) setHidden((h) => ({ ...h, left: false }));
+    if (floating) workIn("changes");
     setGuiding(true);
   };
   // Smith says the stops in his thread when he is on the screen (smith-first.md §7); a phone, or
@@ -1279,27 +1206,20 @@ export function App() {
   };
   // After the guide, the floating panel folds into his face when nothing happens in it a while.
   const [guided, setGuided] = useState(false);
-  // Docked again: his place back in the arrangement if a move took it, and the window shown.
   const dock = () => {
     setSmithHidden(false);
-    if (!arrangement.slots.some((s) => s === "smith" || s === "smith+changes")) {
-      const next = [...arrangement.slots] as typeof arrangement.slots;
-      next[Math.max(0, next.indexOf("changes"))] = "smith+changes";
-      setArrangement({ ...arrangement, slots: next });
-    }
-    setHidden((h) => ({ ...h, left: false }));
+    setLeftClosed(false);
     setSmithAt("docked");
   };
   const undock = () => {
     setPanelOpen(true);
     setSmithAt("floating");
-    setHidden((h) => ({ ...h, left: true }));
+    setLeftClosed(true);
   };
 
-  // What the shown change does, as it is now: the guide keeps the change as offered (its kind of
-  // record), and its steps act on Studio as it is when they run.
-  const live = useRef({ run, undo, workIn, nocodePlace, showWindow, arrangement, layout, narrow });
-  live.current = { run, undo, workIn, nocodePlace, showWindow, arrangement, layout, narrow };
+  // The guide keeps the change as offered and acts on Studio as it is when the steps run.
+  const live = useRef({ run, undo, workIn, nocodePlace, showWindow, narrow });
+  live.current = { run, undo, workIn, nocodePlace, showWindow, narrow };
   // Changes opened from Smith's answer (ask-flows.md §8): at a line, or at the top.
   const showChanges = (id?: string) => {
     const at = id ?? project?.trace[0]?.id;
@@ -1387,36 +1307,30 @@ export function App() {
     guiding && !narrow
       ? sideFor(lit?.anchor, lit?.box, window.innerWidth, window.innerHeight, over)
       : "right";
-  const smithVisible = floating
-    ? panelOpen && side !== "fold"
-    : narrow
-      ? phoneSmithSheet ||
-        (phoneWindow === "smith" && (!phone.changesUnderSmith || phoneSub === "smith"))
-      : slotOf("smith") !== undefined;
+  const smithVisible = lookAlone
+    ? false
+    : floating
+      ? panelOpen && side !== "fold"
+      : narrow
+        ? phoneSmithSheet ||
+          (phoneWindow === "smith" && (!phone.changesUnderSmith || phoneSub === "smith"))
+        : slotOf("smith") !== undefined;
   const onCall = Boolean(audio && audio.call !== "idle");
-  const listening = Boolean(audio && (audio.listening || audio.auto));
+  const listening = Boolean(audio && (audio.listening || audio.call === "active"));
   const speakingHidden = !smithVisible && Boolean(audio?.speaking);
   const audioHidden = !smithVisible && (onCall || listening || speakingHidden);
   const hideSmith = () => {
     if (floating) setPanelOpen(false);
     else if (narrow) showWindow("preview");
     else setSmithHidden(true);
-    const hint = onCall ? "call" : "smith";
-    if (hideHintShown.current.has(hint)) return;
-    hideHintShown.current.add(hint);
-    try {
-      const key = onCall ? "smithable:seen-smith-hide-call" : "smithable:seen-smith-hide";
-      if (localStorage.getItem(key) === "1") return;
-      localStorage.setItem(key, "1");
-    } catch {}
-    setSmithHideHint(hint);
+    hint.reveal("smith-hidden");
   };
   const toggleSmith = () => {
     if (smithVisible) {
       hideSmith();
       return;
     }
-    setSmithHideHint(undefined);
+    hint.dismiss();
     if (floating) {
       setPanelOpen(true);
     } else if (narrow) {
@@ -1483,7 +1397,7 @@ export function App() {
         });
       }
       // The completed tour restores the layout after the remaining top-bar stops.
-      setArrangement({ ...now.arrangement, manual: "nocode" });
+      setManual("nocode");
       if (now.narrow) now.showWindow("preview");
     },
     places: {
@@ -1497,24 +1411,26 @@ export function App() {
     if (narrow) showWindow("smith");
     else workIn("smith");
   };
-  const workspaceVisible =
-    workspaceControls ??
-    (narrow ? phoneWindow !== "preview" : !floating || slotOf(manual) !== undefined);
+  // Look opens on the left, or on the right when Smith is docked as the left window.
+  const lookRight = !narrow && !floating && slotOf("smith") === 0;
   const lookAction = project.lookProject && (
-    <Button
-      variant="ghost"
-      className="justify-start px-2"
+    <ToolbarButton
+      label="Look"
       data-guide="look"
-      disabled={busy || Boolean(pickingLook) || !spec.plugins}
+      text={narrow}
+      pressed={lookOpen}
+      disabled={!lookOpen && (busy || Boolean(pickingLook) || !spec.plugins)}
       onClick={() => {
+        if (lookOpen) return setLookOpen(false);
         pauseGuide();
         showWindow("preview");
-        if (spec.ux) setPickingLook({ project, preset: spec.ux.theme.preset, automatic: false });
+        if (spec.ux) setLookOpen(true);
         else setEditingLook({ project, path: keptPage() });
       }}
     >
-      Look
-    </Button>
+      <path d="M12 3a9 9 0 1 0 0 18c.9 0 1.5-.7 1.5-1.5 0-.4-.1-.7-.4-1-.2-.3-.4-.6-.4-1 0-.8.7-1.5 1.5-1.5H16a5 5 0 0 0 5-5c0-4.4-4-8-9-8Z" />
+      <path d="M7.5 11.5h.01M10 7.5h.01M15 7.5h.01" strokeWidth="2.6" />
+    </ToolbarButton>
   );
   const reviewCount = release.review
     ? needsLook(release.review, { hosted: Boolean(project.home) })
@@ -1529,9 +1445,9 @@ export function App() {
   const releaseStep = trustedRelease(project.beta?.release, project.home);
   const openPreviewWindow = () => (narrow ? showWindow("preview") : workIn("preview"));
   const openSettings = () => {
-    if (narrow) showWindow("nocode");
+    if (narrow) showWindow(phoneWindow === "manual" ? "preview" : "nocode");
+    else if (settingsOpen) setSettingsOpen(false);
     else workIn("nocode");
-    setWorkspaceControls(true);
   };
   const undoArrow = <path d="M4 10a8 8 0 1 1 1 8M4 4v6h6" />;
   const undoHistory = (
@@ -1606,7 +1522,13 @@ export function App() {
     </ToolbarButton>
   );
   const settingsAction = (
-    <ToolbarButton label="All settings" onClick={openSettings} text={narrow}>
+    <ToolbarButton
+      label="All settings"
+      pressed={slotOf(manual) !== undefined}
+      disabled={lookAlone}
+      onClick={openSettings}
+      text={narrow}
+    >
       <path d="M4 6h16M4 12h16M4 18h16M8 4v4M16 10v4M10 16v4" />
     </ToolbarButton>
   );
@@ -1625,6 +1547,11 @@ export function App() {
           {...rowPan.handlers}
         >
           {!project.making && <span className="sr-only">Studio for {project.name}</span>}
+          {busy && (
+            <span role="status" className="sr-only">
+              Working…
+            </span>
+          )}
           <div className="flex min-h-12 min-w-0 items-center gap-1 px-2 py-1.5 md:gap-2 md:px-4">
             <div
               className={cx(
@@ -1725,14 +1652,18 @@ export function App() {
                       {settingsAction}
                     </>
                   )}
-                  <Button
-                    variant="ghost"
-                    className="justify-start"
-                    aria-expanded={workspaceVisible}
-                    onClick={() => setWorkspaceControls(!workspaceVisible)}
-                  >
-                    Workspace layout
-                  </Button>
+                  {narrow && (
+                    <Button
+                      variant="ghost"
+                      className="justify-start"
+                      aria-pressed={phone.changesUnderSmith}
+                      onClick={() =>
+                        setPhone({ ...phone, changesUnderSmith: !phone.changesUnderSmith })
+                      }
+                    >
+                      Changes under Smith
+                    </Button>
+                  )}
                   {narrow && lookAction}
 
                   <Button
@@ -1753,6 +1684,7 @@ export function App() {
                     aria-label={questionWaiting ? "Smith, a question is waiting" : "Smith"}
                     aria-describedby={audioHidden ? "smith-hidden-audio" : undefined}
                     aria-pressed={smithVisible}
+                    disabled={lookAlone}
                     title={smithVisible ? "Hide Smith" : "Show Smith"}
                     onClick={toggleSmith}
                     className={cx(
@@ -1780,130 +1712,42 @@ export function App() {
                       </span>
                     )}
                   </button>
-                  {(audioHidden || smithHideHint) && (
-                    <div className="absolute top-full right-0 z-[65] mt-2 w-max max-w-[80vw] space-y-1 rounded-md border border-line bg-panel px-3 py-2 text-sm shadow-lg">
-                      {audioHidden && audio && (
-                        <div className="flex items-center gap-2">
-                          <span id="smith-hidden-audio" role="status">
-                            {speakingHidden
-                              ? "Smith is speaking"
-                              : audio.call === "starting"
-                                ? "Starting call…"
-                                : "Listening"}
-                          </span>
-                          {(onCall || listening) && (
-                            <button
-                              type="button"
-                              className="shrink-0 rounded px-1 py-0.5 font-medium text-accent hover:bg-subtle"
-                              onClick={() => {
-                                if (onCall) audio.endCall();
-                                else audio.stopListening();
-                                setSmithHideHint(undefined);
-                                smithFace.current?.focus();
-                              }}
-                            >
-                              {onCall ? "End call" : "Stop listening"}
-                            </button>
-                          )}
-                        </div>
-                      )}
-                      {smithHideHint && (
-                        <p role="status">
-                          {smithHideHint === "call"
-                            ? "You can hide Smith and keep talking."
-                            : "Click Smith to show him again."}
-                        </p>
-                      )}
-                    </div>
-                  )}
+                  <div className="absolute top-full right-0 z-[65] mt-2 w-max max-w-[80vw] space-y-1">
+                    {audioHidden && audio && (
+                      <div className="flex items-center gap-2 rounded-md border border-line bg-panel px-3 py-2 text-sm shadow-lg">
+                        <span id="smith-hidden-audio" role="status">
+                          {speakingHidden
+                            ? "Smith is speaking"
+                            : audio.call === "starting"
+                              ? "Starting call…"
+                              : "Listening"}
+                        </span>
+                        {(onCall || listening) && (
+                          <button
+                            type="button"
+                            className="shrink-0 rounded px-1 py-0.5 font-medium text-accent hover:bg-subtle"
+                            onClick={() => {
+                              if (onCall) audio.endCall();
+                              else audio.stopListening();
+                              hint.dismiss();
+                              smithFace.current?.focus();
+                            }}
+                          >
+                            {onCall ? "End call" : "Stop listening"}
+                          </button>
+                        )}
+                      </div>
+                    )}
+                    <StudioHint
+                      active={hint.active}
+                      dismiss={hint.dismiss}
+                      returnFocus={() => smithFace.current?.focus()}
+                    />
+                  </div>
                 </div>
               </div>
             )}
           </div>
-          {!project.making && workspaceVisible && (
-            <div
-              data-workspace-controls
-              className="flex flex-wrap items-center gap-2 border-t border-line px-2 py-1 md:px-4"
-            >
-              {narrow ? (
-                // A phone: one window at a time.
-                <fieldset className="flex rounded-md bg-subtle p-0.5">
-                  <legend className="sr-only">Window</legend>
-                  {phoneList.map((w) => (
-                    <label
-                      key={w}
-                      className={cx(
-                        "flex h-7 cursor-pointer items-center rounded px-2 text-xs font-medium has-focus-visible:ring-2 has-focus-visible:ring-accent/30",
-                        phoneWindow === w ? "bg-panel shadow-xs" : "text-muted",
-                      )}
-                    >
-                      <input
-                        type="radio"
-                        name="window"
-                        className="sr-only"
-                        checked={phoneWindow === w}
-                        onChange={() => showWindow(w)}
-                      />
-                      {WINDOW_NAMES[w === "manual" ? manual : w]}
-                    </label>
-                  ))}
-                </fieldset>
-              ) : (
-                <>
-                  <LayoutBar arrangement={arrangement} onChange={setArrangement} />
-                  {/* The windows of the arrangement, each brought into view by its tab; the view with
-                No code and Code named by the one it shows (smith-first.md §6). */}
-                  <fieldset className="flex rounded-md bg-subtle p-0.5">
-                    <legend className="sr-only">Windows</legend>
-                    {tabs.map((mode) => (
-                      <label
-                        key={mode}
-                        className={cx(
-                          "flex h-7 cursor-pointer items-center rounded px-2 text-xs font-medium has-focus-visible:ring-2 has-focus-visible:ring-accent/30",
-                          slotOf(mode) !== undefined ? "bg-panel shadow-xs" : "text-muted",
-                        )}
-                      >
-                        <input
-                          type="checkbox"
-                          className="sr-only"
-                          checked={slotOf(mode) !== undefined}
-                          onChange={() => workIn(mode)}
-                        />
-                        {WINDOW_NAMES[mode]}
-                      </label>
-                    ))}
-                  </fieldset>
-                </>
-              )}
-              {narrow && <PhoneSettingsButton settings={phone} onChange={setPhone} />}
-            </div>
-          )}
-          {((!project.making && !guideOff()) ||
-            busy ||
-            (!project.making && project.home && project.beta?.data === "test")) && (
-            <div className="flex items-center justify-end gap-2 px-2">
-              {!project.making && !guideOff() && (
-                <GuideMenu
-                  onTour={startGuide}
-                  onPresent={parts.length ? presentAgain : undefined}
-                />
-              )}
-              {busy && (
-                <span role="status" className="text-xs text-quiet">
-                  Working…
-                </span>
-              )}
-              {!project.making && project.home && project.beta?.data === "test" && (
-                <span
-                  data-part="test-only"
-                  title="Test hosting only. Use fictional data. Do not collect real bookings, customer records or mailbox messages."
-                  className="rounded bg-amber-50 px-1.5 py-0.5 text-xs font-medium text-amber-950"
-                >
-                  Test hosting only
-                </span>
-              )}
-            </div>
-          )}
         </header>
         {help && (
           <StudioHelp
@@ -1915,6 +1759,17 @@ export function App() {
                 startGuide();
               },
             })}
+            {...(!guideOff() &&
+              parts.length > 0 && {
+                onPresent: () => {
+                  setHelp(false);
+                  presentAgain();
+                },
+              })}
+            onResetHints={() => {
+              hint.reset();
+              setHelp(false);
+            }}
             onFeedback={() => {
               setHelp(false);
               setFeedback("");
@@ -2118,9 +1973,11 @@ export function App() {
                 setGuiding(false);
                 setGuideStarted(false);
                 setGuided(true);
-                if (floating && beforeGuide.current) {
-                  setArrangement(beforeGuide.current.arrangement);
-                  setHidden(beforeGuide.current.hidden);
+                if (beforeGuide.current) {
+                  setSettingsOpen(beforeGuide.current.settingsOpen);
+                  setLeftClosed(beforeGuide.current.leftClosed);
+                  setChangesBeside(beforeGuide.current.changesBeside);
+                  setManual(beforeGuide.current.manual);
                 }
                 beforeGuide.current = undefined;
                 setLit(undefined);
@@ -2159,7 +2016,13 @@ export function App() {
                       transform: `translateX(calc(${(-phoneIndex * 100) / slots.length}% + ${rowPan.dx}px))`,
                       transition: rowPan.dx ? "none" : "transform 250ms ease-out",
                     }
-                  : gridOf(shown.length === 1 ? "one" : layout, shown, slots)
+                  : {
+                      ...gridOf(lookAlone ? [1] : shown, slots),
+                      // The windows make room for Look beside them (T1145).
+                      ...(lookOpen && spec.ux
+                        ? { [lookRight ? "marginRight" : "marginLeft"]: "var(--look-width)" }
+                        : {}),
+                    }
               }
             >
               <div
@@ -2194,52 +2057,40 @@ export function App() {
                       : undefined
                   }
                 />
-                {!narrow && (
+                {!narrow && !lookAlone && (
                   <PreviewArrows
-                    left={
-                      layout !== "one" && slotOf("preview") !== 0
-                        ? {
-                            hidden: hidden.left,
-                            toggle: () => setHidden((h) => ({ ...h, left: !h.left })),
-                          }
-                        : undefined
-                    }
-                    right={
-                      // In two windows the arrow opens the third (No code and Code by default).
-                      layout === "two" && slotOf("preview") === 1
-                        ? {
-                            hidden: true,
-                            toggle: () => {
-                              setHidden((h) => ({ ...h, right: false }));
-                              setArrangement({ ...arrangement, layout: "three" });
-                            },
-                          }
-                        : layout === "three" && slotOf("preview") !== 2
-                          ? {
-                              hidden: hidden.right,
-                              toggle: () => setHidden((h) => ({ ...h, right: !h.right })),
-                            }
-                          : undefined
-                    }
+                    left={{
+                      hidden: !leftVisible,
+                      toggle: () => {
+                        if (leftVisible) {
+                          setLeftClosed(true);
+                          if (!floating && !smithHidden) hint.reveal("smith-hidden");
+                        } else workIn(floating ? "changes" : "smith");
+                      },
+                    }}
+                    right={{
+                      hidden: !settingsOpen,
+                      toggle: () => setSettingsOpen(!settingsOpen),
+                    }}
                   />
                 )}
               </div>
-              {(narrow ? shown : arrangedShown).map((s) => {
+              {mountedSlots.map((s) => {
                 const content = slots[s] as SlotContent;
                 const windows = windowsIn(content, manual);
                 const first = windows[0] as WindowId;
-                const slot = !narrow && first === "smith" ? dockedSmithSlot : placed(first);
+                const slot = !narrow && first === "smith" ? 0 : placed(first);
                 if (content === "preview" || slot !== s) return null;
                 const smithSheet = narrow && phoneSmithSheet && first === "smith";
                 return (
                   <div
-                    key={content}
+                    key={s}
                     data-window={content}
                     data-phone-sheet={smithSheet ? "smith" : undefined}
                     className={cx(
                       "flex flex-col border-line",
+                      !narrow && s === 0 && !leftVisible && "hidden",
                       s > 0 && "border-l",
-                      layout === "three-below" && s === 2 && "border-t border-l-0",
                       smithSheet &&
                         "z-40 mx-1.5 mb-1.5 h-[min(68dvh,36rem)] self-end overflow-hidden rounded-2xl border bg-panel shadow-2xl",
                       // Docked Smith stays above the guide's dimming (smith-first.md §12.4).
@@ -2250,7 +2101,11 @@ export function App() {
                     )}
                     style={{
                       gridArea: area(smithSheet ? placed("preview") : s),
-                      display: !narrow && smithHidden && content === "smith" ? "none" : undefined,
+                      display:
+                        (!narrow && smithHidden && content === "smith") ||
+                        (lookAlone && (!narrow || smithSheet))
+                          ? "none"
+                          : undefined,
                     }}
                   >
                     {smithSheet && (
@@ -2285,12 +2140,10 @@ export function App() {
                         <Tabs
                           tabs={[
                             ["nocode", WINDOW_NAMES.nocode],
-                            ...(narrow && !phone.code
-                              ? []
-                              : [["code", WINDOW_NAMES.code] as [ManualView, string]]),
+                            ["code", WINDOW_NAMES.code],
                           ]}
                           value={manual}
-                          onChange={(sub) => setArrangement({ ...arrangement, manual: sub })}
+                          onChange={setManual}
                         />
                       </div>
                     )}
@@ -2344,15 +2197,10 @@ export function App() {
                             scroll={false}
                             actions={
                               <div className="flex items-center gap-2">
-                                {!compact && !narrow && (
-                                  <button
-                                    type="button"
-                                    onClick={undock}
-                                    title="Move Smith over the preview"
-                                    className="text-xs font-medium text-muted hover:underline"
-                                  >
-                                    Undock
-                                  </button>
+                                {!narrow && (
+                                  <ToolbarButton label="Undock Smith" onClick={undock}>
+                                    <path d="M14 4h6v6m0-6-8 8m7 1v5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h5" />
+                                  </ToolbarButton>
                                 )}
                                 <button
                                   type="button"
@@ -2372,6 +2220,17 @@ export function App() {
                           <Panel
                             key={w}
                             title="Changes"
+                            actions={
+                              !narrow && (
+                                <Button
+                                  variant="ghost"
+                                  aria-label="Close Changes"
+                                  onClick={() => setChangesBeside(false)}
+                                >
+                                  ×
+                                </Button>
+                              )
+                            }
                             className={cx(
                               "min-h-0",
                               content === "smith+changes" ? "flex-[2] border-t" : "flex-1",
@@ -2395,6 +2254,12 @@ export function App() {
                 );
               })}
             </main>
+            {narrow && !lookAlone && (
+              <>
+                <PhoneArrow side="left" window={phoneNeighbor(-1)} show={showPhonePane} />
+                <PhoneArrow side="right" window={phoneNeighbor(1)} show={showPhonePane} />
+              </>
+            )}
             {narrow && guiding && !guideBlocked && guideLine && phoneWindow !== "smith" && (
               // The guide's line where Smith's thread is not on screen: one line at the window's
               // foot, with its chips (A 172).
@@ -2450,11 +2315,11 @@ export function App() {
       {pickingLook && (
         <FirstLook
           project={pickingLook.project}
+          spec={spec}
           preset={pickingLook.preset}
-          automatic={pickingLook.automatic}
           aiBadge={spec.ux?.aiBadge ?? true}
           onRefresh={catchUp}
-          onClose={({ error, settings }) => {
+          onClose={({ error }) => {
             const finishedApp = pickingLook.project.localDir ?? pickingLook.project.name;
             try {
               localStorage.setItem(lookSeenKey(finishedApp), "1");
@@ -2462,8 +2327,20 @@ export function App() {
             setLookFinished(finishedApp);
             setPickingLook(undefined);
             if (error) setMessage({ ok: false, text: error });
-            if (settings && pickingLook.project.lookProject === project.lookProject)
-              setEditingLook({ project, path: keptPage() });
+          }}
+        />
+      )}
+      {lookOpen && spec.ux && (
+        <LookPanel
+          key={project.lookProject}
+          project={project}
+          spec={spec}
+          place={narrow ? "sheet" : lookRight ? "right" : "left"}
+          onRefresh={catchUp}
+          onClose={({ error, customize }) => {
+            setLookOpen(false);
+            if (error) setMessage({ ok: false, text: error });
+            if (customize) setEditingLook({ project, path: keptPage() });
           }}
         />
       )}
@@ -2482,32 +2359,37 @@ export function App() {
         </Suspense>
       )}
       {layerOn && (
-        <SmithLayer
-          mode={layer ?? "panel"}
-          appName={project.name}
-          lighter={previewRuns}
-          phone={narrow}
-          motion={motion}
-          movable={floating && !guiding}
-          open={panelOpen && side !== "fold"}
-          {...(over ? { over } : {})}
-          side={side === "left" ? "left" : "right"}
-          {...(layer === "closing" && !floating ? { target: narrow ? undefined : dockedAt() } : {})}
-          {...(guided && !guiding && !show.going ? { foldAfter: 90_000 } : {})}
-          activity={project.trace.length}
-          onNext={() => (show.said >= parts.length ? previewRuns && closeOverlay() : show.next())}
-          onSkip={closeOverlay}
-          onClosed={() => {
-            setLayer(floating ? "panel" : undefined);
-            setPresented(true);
-            if (narrow) showWindow("smith");
-          }}
-          onFold={() => setPanelOpen(false)}
-          onHide={hideSmith}
-          onDock={dock}
-        >
-          {smith(layer === "overlay" ? "overlay" : "panel")}
-        </SmithLayer>
+        // Hidden, not taken away, while the look picker is open (T1163): his thread stays.
+        <div className={lookAlone ? "hidden" : "contents"}>
+          <SmithLayer
+            mode={layer ?? "panel"}
+            appName={project.name}
+            lighter={previewRuns}
+            phone={narrow}
+            motion={motion}
+            movable={floating && !guiding}
+            open={panelOpen && side !== "fold"}
+            {...(over ? { over } : {})}
+            side={side === "left" ? "left" : "right"}
+            {...(layer === "closing" && !floating
+              ? { target: narrow ? undefined : dockedAt() }
+              : {})}
+            {...(guided && !guiding && !show.going ? { foldAfter: 90_000 } : {})}
+            activity={project.trace.length}
+            onNext={() => (show.said >= parts.length ? previewRuns && closeOverlay() : show.next())}
+            onSkip={closeOverlay}
+            onClosed={() => {
+              setLayer(floating ? "panel" : undefined);
+              setPresented(true);
+              if (narrow) showWindow("smith");
+            }}
+            onFold={() => setPanelOpen(false)}
+            onHide={hideSmith}
+            onDock={dock}
+          >
+            {smith(layer === "overlay" ? "overlay" : "panel")}
+          </SmithLayer>
+        </div>
       )}
       {releaseView === "review" && (
         <ReleaseReview
@@ -2556,6 +2438,7 @@ export function App() {
         <PublishConfirmation
           project={project.name}
           hosted={Boolean(project.home)}
+          testHosting={Boolean(project.home) && project.beta?.data === "test"}
           busy={checkingPublish}
           progress={releaseStep ? releaseProgress(releaseStep).line : undefined}
           onConfirm={() => void checkPublish(releaseView)}
@@ -2615,6 +2498,7 @@ function ToolbarButton({
   text,
   disabled,
   pressed,
+  "data-guide": guide,
 }: {
   label: string;
   onClick: () => void;
@@ -2622,9 +2506,12 @@ function ToolbarButton({
   text?: boolean;
   disabled?: boolean;
   pressed?: boolean;
+  /** The guide stop beside it, as data-guide. */
+  "data-guide"?: string;
 }) {
   return (
     <Button
+      data-guide={guide}
       variant={pressed ? "primary" : "ghost"}
       aria-label={label}
       aria-pressed={pressed}
@@ -2697,63 +2584,6 @@ function ToolbarMore({ children, lookInMenu }: { children: React.ReactNode; look
   );
 }
 
-/** Guide in the top bar: the tour of Studio, and Smith's presentation again (smith-first.md §12.6). */
-function GuideMenu({ onTour, onPresent }: { onTour: () => void; onPresent?: () => void }) {
-  const [open, setOpen] = useState(false);
-  const menu = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (!open) return;
-    const away = (e: Event) => {
-      if (!menu.current?.contains(e.target as Node)) setOpen(false);
-    };
-    const esc = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOpen(false);
-    };
-    document.addEventListener("pointerdown", away);
-    document.addEventListener("keydown", esc);
-    return () => {
-      document.removeEventListener("pointerdown", away);
-      document.removeEventListener("keydown", esc);
-    };
-  }, [open]);
-  const item = (label: string, act: () => void) => (
-    <button
-      type="button"
-      role="menuitem"
-      onClick={() => {
-        setOpen(false);
-        act();
-      }}
-      className="block w-full px-3 py-1.5 text-left text-sm whitespace-nowrap hover:bg-subtle"
-    >
-      {label}
-    </button>
-  );
-  return (
-    <div ref={menu} className="relative">
-      <button
-        type="button"
-        aria-haspopup="menu"
-        aria-expanded={open}
-        onClick={() => setOpen(!open)}
-        className="text-xs font-medium text-muted hover:underline"
-      >
-        Guide
-      </button>
-      {open && (
-        <div
-          role="menu"
-          aria-label="Guide"
-          className="absolute top-full right-0 z-[60] mt-2 rounded-md border border-line bg-panel py-1 shadow-lg"
-        >
-          {item("Tour Studio", onTour)}
-          {onPresent && item("Present the app again", onPresent)}
-        </div>
-      )}
-    </div>
-  );
-}
-
 /** The windows a slot holds (the view with No code and Code: the one it shows, chosen by the caller). */
 const windowsIn = (content: SlotContent, manual: ManualView = "nocode"): WindowId[] =>
   content === "smith+changes" ? ["smith", "changes"] : content === "manual" ? [manual] : [content];
@@ -2788,6 +2618,38 @@ function PhoneRow({
     >
       {children}
     </div>
+  );
+}
+
+const phonePaneNames = {
+  smith: "Smith",
+  preview: "the app",
+  manual: "settings",
+};
+
+function PhoneArrow({
+  side,
+  window,
+  show,
+}: {
+  side: "left" | "right";
+  window: PhoneWindow;
+  show: (window: PhoneWindow) => void;
+}) {
+  const label = `Show ${phonePaneNames[window]}`;
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      title={label}
+      onClick={() => show(window)}
+      className={cx(
+        "absolute top-1/2 z-40 flex size-8 -translate-y-1/2 items-center justify-center border border-line bg-panel text-lg text-fg shadow-xs hover:bg-subtle focus-visible:outline-2 focus-visible:outline-accent",
+        side === "left" ? "left-0 rounded-r" : "right-0 rounded-l",
+      )}
+    >
+      <span aria-hidden="true">{side === "left" ? "‹" : "›"}</span>
+    </button>
   );
 }
 

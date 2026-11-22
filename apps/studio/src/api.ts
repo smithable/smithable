@@ -160,6 +160,8 @@ export interface Project {
   plugins: { name: string; version: number }[];
   concepts: ConceptInfo[];
   trace: TraceEntry[];
+  /** The app is as it was made, with no change since (first-look.md §1): the look picker opens by itself. */
+  asMade?: true;
   /** Redo would make again the last change undone (none made since). */
   canRedo?: boolean;
   preview: string;
@@ -492,6 +494,13 @@ export const api = {
         lookProject,
       }),
     ),
+  /** One change of the Look panel, made against the exact revision it was chosen on. */
+  lookChange: (
+    name: string,
+    args: Record<string, unknown>,
+    revision: string,
+    lookProject: string,
+  ) => changing(call<Result>("/api/op", { name, args, expectedRevision: revision, lookProject })),
   undoThemeChoice: (change: string, revision: string, lookProject: string) =>
     changing(
       call<Result>("/api/undo", {
@@ -559,12 +568,14 @@ export const api = {
     around: {
       conversation?: { request: string; reply: string }[];
       docs?: { title: string; url: string; text: string }[];
+      scope?: "reference-help";
     } = {},
   ) => call<Proposal>("/api/ask", { request, ...around }),
   /** Smith's thread lines that left no change, kept by Studio while it runs; one more with `line`. */
   said: (line?: { request: string; reply: string }) =>
     call<{ said: { at: string; request: string; reply: string }[] }>("/api/said", line),
-  applyProposal: (id: string) => changing(call<Result>("/api/ask/apply", { id })),
+  applyProposal: (id: string, scope?: "reference-help") =>
+    changing(call<Result>("/api/ask/apply", { id, scope })),
   /** Each change's verification kept for its revision, by id; one with none is left out. */
   verified: (ids: string[]) => call<Record<string, Verification>>("/api/verified", { ids }),
   /** Test it: the next depth on the newest revision (change-verified.md §5.2). */

@@ -62,16 +62,19 @@ The figures are A's bench of 2026-10-26 ([claude-5-5.md](../benchmarks/claude-5-
 
 (The default arrangement is revised in §12.3: Smith floating by default, docked as a choice.)
 
-- **Default arrangement:** Smith in the first slot with Changes under him, the preview in the second; the two-window layout on a wide screen. The manual view is not on the screen until the "show" arrow at the preview's edge opens it as the third slot (or, in the one-window layout, in place of Smith). The layouts stay as studio-v3.md §8 has them; only the defaults and the top bar change.
-- **The top bar:** no "No code | Code" choice. Its tabs are the windows of the current layout, with Map beside them, as A 161 made them; the manual view appears as one tab, named by its open sub-tab ("Behavior", "Code"). Inside the manual view, two sub-tabs: **No code** (Behavior, Look, Who can, Content as today) and **Code** (the files, the wizard). Nothing says "manual".
-- **Phone:** Smith first, the preview next, the manual view third; the swipe order follows.
-- **Kept per device** as today; a person who moved the windows keeps their arrangement, and the presentation still runs in Smith wherever he is.
+- **Default arrangement:** Smith starts docked on the left and the app preview sits beside him.
+  **All settings** opens and closes the right pane. Inside it, **No code** contains Behavior,
+  Layout, Who can and Content, and **Code** contains the files and wizard.
+- **Phone:** the edge arrows and sideways swipes on Studio move between Smith, the app and
+  settings. The preview handles its own gestures. More can place Changes under Smith.
+- **Placement:** on desktop, Smith's pane header offers **Undock Smith**, and the floating header
+  offers **Dock**. The top-bar Smith face shows or hides him in either place.
 
 ## 7. The guide as part of Smith
 
 (Revised in §12.4: the guide's stop is Smith's line and a small card at the place, both.)
 
-The tour's stops stay the stops of studio-guide.md (the running app, what it does, every change in words, the look, publish and share; the code stops when Code is open), but each is a line of Smith's in his thread, the mascot pointing, the place lit as the cards lit it; Next and Skip are chips, Esc skips. The first stop, "How do you want to work?", is removed: when the manual view is first opened, Smith says "Here you can change the app by hand: No code, or the code itself" and points at the two sub-tabs. The stops' texts stay in `guide.ts` as Studio's words, with Smith's voice; "Guide" in the top bar runs it again. It shows when studio-guide.md §2 says, after the presentation and the questions; a stop whose place is not on the screen is left out, as today.
+The tour's stops stay the stops of studio-guide.md (the running app, what it does, every change in words, the look, publish and share; the code stops when Code is open), but each is a line of Smith's in his thread, the mascot pointing, the place lit as the cards lit it; Next and Skip are chips, Esc skips. The first stop, "How do you want to work?", is removed: when the manual view is first opened, Smith says "Here you can change the app by hand: No code, or the code itself" and points at the two sub-tabs. The stops' texts stay in `guide.ts` as Studio's words, with Smith's voice; **Help → Tour Studio** runs it again. It shows when studio-guide.md §2 says, after the presentation and the questions; a stop whose place is not on the screen is left out, as today.
 
 ## 8. The beta, in Smith's words
 
@@ -130,14 +133,14 @@ A bit more like a video game is the rhythm, not the props. In the overlay and in
 
 Johan's question: should Smith always be on the overlay rather than in the left window, or more like the app's Ask, or should the person have the choice? The recommendation:
 
-- **One Smith, two sizes.** Smith's thread is one thing that can be **floating**, a panel over the preview opened from his face at the right end of the top bar (the feel of the kit's Ask, which the people who use the app meet in the app; his button is not at the bottom right, where the previewed app's own Ask sits), or **docked**, the window on the left as today with Changes under him. The overlay is the floating Smith at full size; closing it shrinks the thread into the open panel, hanging from the top right over the preview, so the guide has his lines in view; the panel folds into the face when the person closes it or when nothing has happened in it for a while after the guide, and opens again from the face. The switch between floating and docked is one button in Smith's header, remembered per device like the windows' arrangement. On a phone there is no choice: Smith is a window in the swipe row (A 172).
+- **One Smith, two sizes.** Smith's thread is one thing that can be **floating**, a panel over the preview opened from his face at the right end of the top bar (the feel of the kit's Ask, which the people who use the app meet in the app; his button is not at the bottom right, where the previewed app's own Ask sits), or **docked**, the window on the left as today with Changes under him. The overlay is the floating Smith at full size; closing it shrinks the thread into the open panel, hanging from the top right over the preview, so the guide has his lines in view; the panel folds into the face when the person closes it or when nothing has happened in it for a while after the guide, and opens again from the face. The switch between floating and docked is one button in Smith's header, remembered on this device. On a phone there is no choice: Smith is a window in the swipe row (A 172).
 - **The default is floating.** What Johan called chaotic is the number of things arriving at once; with Smith floating, the first screen after the overlay is the app, the top bar and his panel, and the manual view and Changes come when the "show" arrow at the preview's edge (§2 step 5) or a tab is opened; floating, Smith leaves the layout's first slot and the preview takes the width, Changes and the manual view being the windows behind the arrow and the tabs as §6 has them. Docking is for a long sitting of changes, where watching the preview beside the thread pays. A person who docks him keeps it.
 - **The guide runs in whichever he is.** A stop about a place the floating panel covers moves the panel to the other side for that stop and back afterwards; when no side has room (a narrow window, a split layout) the panel folds into the face for the stop and the card at the place carries the stop alone.
 - The left window is not removed: docked is the layout of §6; floating is a second state of the same component, not a second Smith.
 
 ### 12.4 The guide, between the cards and the lines
 
-Each stop is Smith's line in his thread **and** a small card at the place it is about: the card carries the stop's title and one sentence, with **Next** and **Skip**; the thread's line carries the same title, the full text, the same chips, and the mascot pointing. The two Next are one action, as are the two Skip. The place is lit and the rest dims a little, as the cards did (studio-guide.md §1); the dimmed rest takes no clicks, Smith's panel excepted. Esc skips, Enter is Next (§12.2's rule), **Guide** in the top bar runs it again. On a phone the card is left out and the stop scrolls its window into view (A 172). The stops are those of `guide.ts`; the ready prompts are not shown while the guide runs (Johan), and come back under the box when it ends or is skipped.
+Each stop is Smith's line in his thread **and** a small card at the place it is about: the card carries the stop's title and one sentence, with **Next** and **Skip**; the thread's line carries the same title, the full text, the same chips, and the mascot pointing. The two Next are one action, as are the two Skip. The place is lit and the rest dims a little, as the cards did (studio-guide.md §1); the dimmed rest takes no clicks, Smith's panel excepted. Esc skips, Enter is Next (§12.2's rule), **Help → Tour Studio** runs it again. On a phone the card is left out and the stop scrolls its window into view (A 172). The stops are those of `guide.ts`; the ready prompts are not shown while the guide runs (Johan), and come back under the box when it ends or is skipped.
 
 ### 12.5 One change, shown every way
 
