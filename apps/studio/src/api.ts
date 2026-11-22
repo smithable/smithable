@@ -546,7 +546,15 @@ export const api = {
     file?: { path: string; data: string },
   ) =>
     changing(
-      call<Result>("/api/op", { name, args, expectedRevision: revision, lookProject, file }),
+      call<Result>("/api/op", { name, args, expectedRevision: revision, lookProject, file }).catch(
+        // A 400 is refused before anything runs (a file that breaks a rule): nothing changed, so
+        // a try-on goes on, where a thrown error would stop it as an uncertain write.
+        (error: unknown) => {
+          if (error instanceof StudioRequestError && error.status === 400)
+            return { ok: false, output: error.message } as Result;
+          throw error;
+        },
+      ),
     ),
   undoThemeChoice: (change: string, revision: string, lookProject: string) =>
     changing(

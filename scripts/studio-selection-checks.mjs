@@ -205,6 +205,8 @@ export async function checkStudioSelection(browser, base) {
     await sectionForm.waitFor();
     const filmRow = sectionForm.locator("[data-section-film]");
     const sendFilm = async (buffer) => {
+      // The form is busy until the last change is read back: a file chosen then is not taken.
+      await filmRow.locator('input[type="file"]:enabled').waitFor({ state: "attached" });
       const sent = page.waitForResponse(
         (response) =>
           response.url() === `${base}/api/op` &&
