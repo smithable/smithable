@@ -340,11 +340,11 @@ export function validate(
       `${badgeExplained(isDirectory(target) ? target : dirname(target), shown.ux?.aiBadge)}\n`,
     );
     if (shown.ux?.pictures?.style === "ink-wash") {
-      const { primary, chroma, rule, treatment } = inkWashTreatment(
+      const { primary, chromaText, rule, treatment } = inkWashTreatment(
         resolveLook(shown.ux, shown.themes).tokens.light.primary,
       );
       io.out(
-        `Ink wash theme rule: ${treatment} (${rule}). Light primary ${primary}, OKLCH chroma ${chroma.toFixed(6)} (greyscale cutoff: ${INK_WASH_GREYSCALE_CUTOFF}, inclusive).\n`,
+        `Ink wash theme rule: ${treatment} (${rule}). Light primary ${primary}, OKLCH chroma ${chromaText} (greyscale cutoff: ${INK_WASH_GREYSCALE_CUTOFF}, inclusive).\n`,
       );
     }
   }

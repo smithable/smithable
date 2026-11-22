@@ -139,5 +139,6 @@ test("Explain uses the Ink wash cutoff with the effective light primary", async 
   const colour = captureIo();
   expect(await run(["validate", dir, "--explain"], colour)).toBe(0);
   expect(colour.stdout).toContain("Ink wash theme rule: light tint (ink-wash-b90).");
+  expect(colour.stdout).toContain("Light primary #5c4777, OKLCH chroma 0.080393");
   expect(colour.stdout).toContain("greyscale cutoff: 0.02, inclusive");
 });

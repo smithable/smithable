@@ -3,8 +3,7 @@
 Status: the host can select the tint rule. Rendering and offers are pending. The design follows the
 trial of 2026-11-20/21, two rounds of sheets on contrasting themes, where Johan chose variant B
 ("light, keep hues, 25% back toward the original"). It builds on first-look.md §4: image styles,
-the record in `pictures.json`, and the host's
-`place-pictures` effect.
+the record in `pictures.json`, and the host's `place-pictures` effect.
 
 **Changed 2026-11-22 after the comparison sheets: a theme change keeps the current pictures. Coloured
 themes qualify for a light tint and greyscale themes use the original drawings. §10 supersedes the
@@ -213,8 +212,9 @@ commit either way.
 
 ## 10 A light tint for coloured themes (2026-11-22)
 
-The comparison sheets favoured a light tint across the coloured themes sampled. Applying a theme
-leaves the pictures in place and the person decides whether to use the offered set.
+The 2026-11-22 comparison sheets favoured a light tint across the coloured themes sampled. The
+design adopted one tint and one greyscale cutoff. Applying a theme leaves the pictures in place
+and the person decides whether to use the offered set.
 
 - **A theme change changes the theme only.** `setTheme` reports no `place-pictures` effect and waits for
   no pictures. The app keeps the pictures it has. This replaces §5 points 1, 5 and 7.
@@ -227,10 +227,10 @@ leaves the pictures in place and the person decides whether to use the offered s
 
   The rule measures the light primary in force, including any brand colour override, in the same
   sRGB representation used by the [theme measurement sheets](../../scripts/theme-sheet.mjs).
-  Run the sheet script with `--all` for every built-in theme. The host's
+  Run the sheet script with `--all` for every built-in theme. The CLI host's
   `INK_WASH_GREYSCALE_CUTOFF` supplies the cutoff to both the sheets and `validate --explain`.
-  §6's picture and codec fallbacks still apply. For the light tint, §7 measures the paper against
-  90% of the original paper's distance from the theme background, plus 0.01 for encoding.
+  §6's picture and codec fallbacks still apply. Set §7's paper lightness bound for the light tint
+  when its rendered output is measured.
 - **The host prepares the set in the background** after the theme is applied, from the originals, into
   a folder outside the project's files. Nothing in the project changes while it works. A newer theme
   change discards a set still being prepared for the older one.

@@ -85,10 +85,10 @@ try {
     else op(dir, "setTheme", "--preset", name);
     const project = loadSpec(dir, { out: () => {}, err: (text) => process.stderr.write(text) });
     if (!project.ux) throw new Error(`Could not read the applied look for ${name}.`);
-    const { primary, chroma, treatment } = inkWashTreatment(
+    const { primary, chromaText, treatment } = inkWashTreatment(
       resolveLook(project.ux, project.themes).tokens.light.primary,
     );
-    const measurement = `Light primary ${primary} · OKLCH chroma ${chroma.toFixed(6)} · Ink wash ${treatment} (greyscale cutoff ${INK_WASH_GREYSCALE_CUTOFF}, inclusive)`;
+    const measurement = `Light primary ${primary} · OKLCH chroma ${chromaText} · Ink wash ${treatment} (greyscale cutoff ${INK_WASH_GREYSCALE_CUTOFF}, inclusive)`;
     const stop = await serve();
     let context;
     try {
