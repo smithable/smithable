@@ -204,8 +204,8 @@ export async function checkFirstLook(browser, base) {
       await page.getByRole("complementary", { name: "Smith", exact: true }).isVisible(),
       false,
     );
-    await page.goto(`${base}/?guide=off`);
     await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto(`${base}/?guide=off`);
     await (await toolbarAction(page, "Look")).click();
     const sheet = page.locator('[data-look-panel="sheet"]');
     await sheet.waitFor();
