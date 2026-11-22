@@ -136,6 +136,17 @@ export function SelectedSection({
   const [changed, setChanged] = useState(false);
   const [error, setError] = useState<string>();
   const running = useRef(false);
+  // Another section picked while an answer is awaited replaces this form (its key): what comes
+  // after the answer then leaves the new selection alone.
+  const mounted = useRef(true);
+  useEffect(
+    () => () => {
+      mounted.current = false;
+    },
+    [],
+  );
+  // A failed read leaves the form as it was, usable; the preview catches up on the next change.
+  const reread = () => refresh().catch(() => undefined);
   const heading = useId();
   const panel = useRef<HTMLDivElement>(null);
   const narrow = useMedia("(max-width: 1023px)");
@@ -179,9 +190,9 @@ export function SelectedSection({
       setError((reason as Error).message);
     } finally {
       setChanged(session.changed);
-      await refresh();
+      await reread();
       running.current = false;
-      setBusy(false);
+      if (mounted.current) setBusy(false);
     }
   };
   const cancel = async () => {
@@ -191,15 +202,20 @@ export function SelectedSection({
     try {
       await session.finish(false);
     } catch (reason) {
+      // Some were undone before one could not be: the preview shows what is left.
+      await reread();
       running.current = false;
+      if (!mounted.current) return;
       setBusy(false);
+      setChanged(session.changed);
       setError(
         `Cancel could not restore the section: ${(reason as Error).message} Review the changes in Changes.`,
       );
       return;
     }
-    await refresh();
-    close();
+    await reread();
+    running.current = false;
+    if (mounted.current) close();
   };
   const keep = () => {
     if (!running.current) close();

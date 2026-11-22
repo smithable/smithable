@@ -1464,9 +1464,7 @@ export async function studio(
                   "setPictureStyle",
                   "setAiBadge",
                   "setSectionLook",
-                ].includes(
-                  String(name),
-                ) &&
+                ].includes(String(name)) &&
                 result.ok &&
                 result.verification?.revision
               )
