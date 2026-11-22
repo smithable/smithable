@@ -45,6 +45,7 @@ import { FirstLook } from "./FirstLook";
 import { type LookSession, lookSeenKey, seenLook } from "./first-look";
 import { doneKey, guideOff, presentedKey, TOURS } from "./guide";
 import { entryText, grouped, line } from "./history";
+import { InkWashNotice } from "./InkWashNotice";
 import { LookPanel } from "./LookPanel";
 import { logStore } from "./logs";
 import { Making } from "./Making";
@@ -1960,6 +1961,17 @@ export function App() {
             }}
           />
         )}
+        {project.lookProject &&
+          project.revision &&
+          !project.making &&
+          spec.ux?.pictures?.style === "ink-wash" && (
+            <InkWashNotice
+              key={project.revision}
+              project={project.lookProject}
+              revision={project.revision}
+              onApplied={() => void refresh()}
+            />
+          )}
         {(message || pending) && (!validationErrors.length || pending || !messageErrors.length) && (
           // Hovering or focusing the notice keeps it while it is read.
           // biome-ignore lint/a11y/noStaticElementInteractions: a status or alert, which pauses its fading

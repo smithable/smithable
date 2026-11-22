@@ -8,12 +8,17 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright";
+import { YamlEditor } from "../packages/core/dist/index.js";
 import { checkPorts } from "./ports.mjs";
 
 const repo = resolve(import.meta.dirname, "..");
 const hash = (bytes) => createHash("sha256").update(bytes).digest("hex");
 
 async function pictureLibrary() {
+  const drawing = Buffer.from(
+    "UklGRlAAAABXRUJQVlA4TEQAAAAvCcABEB8gECByREsSY0dAQrwx2U85ICQgTpnsnAmagKDg/+jiA2SfgoI2kpS7Z351a3JNPoqI6H8CHvBrzbWmfGQhCw==",
+    "base64",
+  );
   const imageFiles = [
     "working",
     "proud",
@@ -57,7 +62,10 @@ async function pictureLibrary() {
     for (const [index, subject] of ["cafe", "bicycle", "lamp"].entries()) {
       for (const [styleIndex, style] of ["lifelike", "pastel", "ink-wash"].entries()) {
         if (style === "ink-wash" && subject === "lamp") continue;
-        const content = bytes[(index + styleIndex * 3 + offset) % bytes.length];
+        const content =
+          subject === "cafe" && style === "ink-wash"
+            ? drawing
+            : bytes[(index + styleIndex * 3 + offset) % bytes.length];
         const sha256 = hash(content);
         files.set(sha256, content);
         entries.push({
@@ -79,6 +87,7 @@ async function pictureLibrary() {
       styles: ["lifelike", "pastel", "ink-wash"].map((id) => ({
         id,
         generated: true,
+        ...(id === "ink-wash" ? { washHue: 300 } : {}),
         words: {
           en: {
             name: id === "ink-wash" ? "Ink wash" : id === "pastel" ? "Pastel" : "Lifelike",
@@ -296,6 +305,83 @@ export async function checkPicturePicker(port = 5840) {
     await opened.context.close();
     console.log(
       "  ✓ picture picker: complete app sets, staged Cancel, one pinned-version Keep, owned pictures, Look's choice and offline refusal",
+    );
+    library.offline(false);
+    const ink = expected("v2", "ink-wash", 0);
+    const heroPath = join(images, "hero.webp");
+    writeFileSync(heroPath, library.files.get(ink.sha256));
+    writeFileSync(join(images, "samples", "0.webp"), "First sample belongs to the owner");
+    writeFileSync(join(images, "samples", "1.webp"), "Second sample belongs to the owner");
+    writeFileSync(
+      join(images, "pictures.json"),
+      JSON.stringify({
+        "hero.webp": {
+          entry: ink.id,
+          style: ink.style,
+          version: "v2",
+          role: "hero",
+          generated: true,
+          sha256: ink.sha256,
+        },
+      }),
+    );
+    const uxPath = join(dir, "smithable.ux.yml");
+    const ux = new YamlEditor(readFileSync(uxPath, "utf8"));
+    if (ux.has(["theme"])) ux.set(["theme"], { preset: "sage-garden" });
+    else ux.add([], "theme", { preset: "sage-garden" });
+    if (ux.has(["pictures"])) ux.set(["pictures"], { style: "ink-wash" });
+    else ux.add([], "pictures", { style: "ink-wash" });
+    writeFileSync(uxPath, ux.text);
+    execFileSync("git", ["add", "-A"], { cwd: dir });
+    execFileSync("git", ["commit", "-qm", "Ink wash offer fixture"], { cwd: dir });
+    const offerPage = async () => {
+      const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+      page = await context.newPage();
+      await page.goto(`${base}/?guide=off`);
+      const compare = page.getByRole("button", { name: "Compare pictures", exact: true });
+      await compare.waitFor({ timeout: 60_000 });
+      assert.equal(hash(readFileSync(heroPath)), ink.sha256);
+      await compare.click();
+      const dialog = page.getByRole("dialog", { name: "Compare theme pictures", exact: true });
+      await dialog.waitFor();
+      await page.waitForFunction(() =>
+        [...document.querySelectorAll('dialog[aria-label="Compare theme pictures"] img')].every(
+          (img) => img.complete && img.naturalWidth > 0,
+        ),
+      );
+      return { context, dialog, compare };
+    };
+    const keptOffer = await offerPage();
+    await keptOffer.dialog.getByRole("button", { name: "Keep mine", exact: true }).click();
+    const reloaded = page.waitForResponse(
+      (response) => new URL(response.url()).pathname === "/api/ink-wash",
+    );
+    await page.reload();
+    const held = await (await reloaded).json();
+    assert.ok(held.offer);
+    await keptOffer.compare.waitFor({ state: "hidden" });
+    assert.equal(hash(readFileSync(heroPath)), ink.sha256);
+    await keptOffer.context.close();
+    const chosen = await offerPage();
+    const applied = page.waitForResponse(
+      (response) => new URL(response.url()).pathname === "/api/op",
+    );
+    await chosen.dialog.getByRole("button", { name: "Use these", exact: true }).click();
+    const appliedAnswer = await (await applied).json();
+    assert.ok(appliedAnswer.ok, appliedAnswer.output);
+    const record = JSON.parse(readFileSync(join(images, "pictures.json"), "utf8"))["hero.webp"];
+    assert.equal(record.source, ink.sha256);
+    assert.equal(record.rule, "ink-wash-b90");
+    const tinted = readFileSync(heroPath);
+    assert.notEqual(hash(tinted), ink.sha256);
+    assert.ok(tinted.includes("trainedAlgorithmicMedia"));
+    assert.equal(
+      readFileSync(join(images, "samples", "1.webp"), "utf8"),
+      "Second sample belongs to the owner",
+    );
+    await chosen.context.close();
+    console.log(
+      "  ✓ Ink wash offer: staged preview, remembered Keep mine, and one explicit apply with provenance",
     );
   } catch (error) {
     console.error(`Picture picker failed; fixture: ${root}`);

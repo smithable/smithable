@@ -59,7 +59,13 @@ import {
 import type { InkWashColours } from "./ink-wash-raster.js";
 import { type Io, lap, lapFrom } from "./io.js";
 import { SPEC_FILES } from "./managed.js";
-import { currentHashes, placedRealistic, placeStyle, reseedPictures } from "./picture-style.js";
+import {
+  currentHashes,
+  type PlacedStyle,
+  placedRealistic,
+  placeStyle,
+  reseedPictures,
+} from "./picture-style.js";
 import { loadPlugins } from "./plugins.js";
 import { ProjectBusyError, ProjectLockError, withProjectMutation } from "./project-mutation.js";
 import { projectRevision, sourceDigests } from "./project-revision.js";
@@ -127,6 +133,8 @@ export interface OpFlags {
   files?: { path: string; bytes: Uint8Array; fresh?: boolean }[];
   /** How the image library is reached (setPictureStyle); the global fetch when unsaid. */
   fetch?: typeof fetch;
+  /** Studio's prepared tint, accepted only with the offer's checked project revision. */
+  preparedPictures?: PlacedStyle;
   /** How deep to verify the change (change-verified.md §3.3); `change` when unsaid. */
   verify?: Depth;
   /** Where the change is made, for its result; local (or hosted, in a workspace) when unsaid. */
@@ -586,7 +594,9 @@ async function applyAndCheckpoint(
     recolour = { primary, foreground, background };
   }
   const placed =
-    placing && (await placeStyle(dir, placing.style, flags.fetch ?? fetch, undefined, recolour));
+    placing &&
+    ((placing.recolour && flags.preparedPictures) ||
+      (await placeStyle(dir, placing.style, flags.fetch ?? fetch, undefined, recolour)));
   if (typeof placed === "string") {
     io.err(`${placed}\n`);
     return 1;
