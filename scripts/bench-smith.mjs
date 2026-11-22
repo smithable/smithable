@@ -16,24 +16,21 @@
 // docs question the row says whether its labelled part ("docs") was among those found.
 // Not part of check; ask before a paid run (C runs it daily within the bench budget).
 // Writes docs/benchmarks/bench-smith-<label>.md and .jsonl.
-import {
-  appendFileSync,
-  existsSync,
-  mkdirSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { appendFileSync, existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { basename, join } from "node:path";
 import { claudeRoute } from "./claude-route.mjs";
 import { repo } from "./dev-app.mjs";
-import { acceptsQuestion, indexedProject, requestProject } from "./smith-cases.mjs";
+import {
+  acceptsQuestion,
+  judgeFacts,
+  recordingFolder,
+  requestProject,
+  smithRequest,
+  starterProject,
+} from "./smith-cases.mjs";
 
-const { appParts, buildContext, searchDocsWith, specLines } = await import(
-  join(repo, "packages/index/dist/index.js")
-);
-const { proposeChange, openAICompatible, listPrice, searchPhrases, cached } = await import(
+const { openAICompatible, listPrice, cached } = await import(
   join(repo, "packages/ai/dist/index.js")
 );
 
@@ -71,20 +68,10 @@ const route = provider === "claude" && !rulesOnly ? await claudeRoute() : undefi
 const recordDir = option("--record");
 const replayDir = option("--replay");
 if (recordDir && replayDir) throw new Error("--record or --replay, not both.");
-const folderStore = (dir) => {
-  mkdirSync(dir, { recursive: true });
-  return {
-    get: async (key) =>
-      existsSync(join(dir, `${key}.json`))
-        ? readFileSync(join(dir, `${key}.json`), "utf8")
-        : undefined,
-    set: async (key, value) => writeFileSync(join(dir, `${key}.json`), value),
-  };
-};
 /** The misses of the request being asked: each model call the recording did not have. */
 let misses = [];
 const wrapped = (p) => {
-  if (recordDir) return cached(p, folderStore(recordDir));
+  if (recordDir) return cached(p, recordingFolder(recordDir));
   if (!replayDir) return p;
   const refusing = {
     ...p,
@@ -99,7 +86,7 @@ const wrapped = (p) => {
       throw new Error("not recorded: this request was not in the recording");
     },
   };
-  return cached(refusing, folderStore(replayDir));
+  return cached(refusing, recordingFolder(replayDir));
 };
 const model = (name, tier) => wrapped(rawModel(name, tier));
 const rawModel = (name, tier) => {
@@ -191,24 +178,7 @@ const providersOf = (setup) =>
 /** A starter's files as Studio reads them. */
 const files = new Map();
 const project = (starter) => {
-  if (!files.has(starter)) {
-    const read = (name) => {
-      try {
-        return readFileSync(join(repo, "examples", starter, name), "utf8");
-      } catch {
-        return undefined;
-      }
-    };
-    const spec = read("smithable.yml");
-    const f = { spec };
-    for (const [key, name] of [
-      ["auth", "smithable.auth.yml"],
-      ["content", "smithable.content.yml"],
-      ["ux", "smithable.ux.yml"],
-    ])
-      if (read(name)) f[key] = read(name);
-    files.set(starter, indexedProject(f));
-  }
+  if (!files.has(starter)) files.set(starter, starterProject(repo, starter));
   return files.get(starter);
 };
 
@@ -231,25 +201,7 @@ async function judge(r, text) {
   const must = r.outcome.must ?? [];
   const mustNot = r.outcome.mustNot ?? [];
   if (!must.length && !mustNot.length) return { right: true };
-  const judging = model(JUDGE, "frontier");
-  const usage = [];
-  const { completeJson } = await import(join(repo, "packages/ai/dist/index.js"));
-  const verdict = await completeJson(
-    judging,
-    {
-      system:
-        'You judge an answer against facts. Reply with JSON {"right":true|false,"why":"…"}: right only when the answer states every fact under must (in any words) and none under mustNot.',
-      user: `Question: ${r.text}\nAnswer: ${text}\nmust: ${JSON.stringify(must)}\nmustNot: ${JSON.stringify(mustNot)}`,
-      schema: {
-        type: "object",
-        properties: { right: { type: "boolean" }, why: { type: "string" } },
-        required: ["right", "why"],
-        additionalProperties: false,
-      },
-    },
-    usage,
-  );
-  return { ...verdict, usage };
+  return judgeFacts(r.text, text, r.outcome, model(JUDGE, "frontier"));
 }
 
 /** Whether what came back is right for the request's label. */
@@ -337,39 +289,18 @@ for (const setup of rulesOnly ? ["rules"] : setups) {
     // Undo, redo and feedback are Studio's own rules before Smith (apps/studio's test).
     if (r.kind === "undo" || r.kind === "feedback") continue;
     if (rows.some((x) => x.setup === setup && x.id === r.id)) continue;
-    const {
-      files: f,
-      index,
-      summary,
-      conversation,
-    } = requestProject(project(r.starter), r, set.requests);
-    // As Studio: a question's search phrases from the cheapest model, the docs searched with them.
-    const phraseUsage = [];
-    const asked =
-      /\?\s*$/.test(r.text) ||
-      /^(how|where|what|why|can i|is there|hur|var|vad|varför|kan jag|finns det)\b/i.test(
-        r.text.trim(),
-      );
-    const phrases =
-      asked && providers[0] ? await searchPhrases(providers[0], r.text, phraseUsage) : [];
-    const docs = searchDocsWith(docsIndex, r.text, phrases);
+    const source = requestProject(project(r.starter), r, set.requests);
+    const { ask, docs, phraseUsage } = await smithRequest(
+      source,
+      r.text,
+      providers,
+      docsIndex,
+      source.conversation,
+    );
     const started = Date.now();
     misses = [];
     // A provider's rate limit (429) is the bench's pace, not the model's answer: the request is
     // asked again after a wait, up to four times (2026-11-13: 119 of small's 275 hit it).
-    const ask = () =>
-      proposeChange({
-        request: r.text,
-        files: f,
-        context: buildContext(index, r.text),
-        providers,
-        docs,
-        app: ((lines) =>
-          `${appParts(summary, r.text)}${lines ? `\n\nIts lines in smithable.yml:\n${lines}` : ""}`)(
-          specLines(f.spec, r.text),
-        ),
-        ...(conversation.length ? { conversation } : {}),
-      });
     let p = await ask();
     for (
       let wait = 10;
