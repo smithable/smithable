@@ -33,13 +33,14 @@ const { values: opts, positionals } = parseArgs({
     copy: { type: "string" },
     app: { type: "string" },
     "new-log": { type: "string" },
+    "measure-only": { type: "boolean", default: false },
     port: { type: "string", default: process.env.SITE_REBUILD_PORT ?? "8405" },
   },
 });
 const address = positionals[0];
 if (!address || !opts.out || !opts.app) {
   console.error(
-    "Usage: node scripts/site-rebuild.mjs <url> --app <dir> --out <dir> [--new-log f] [--copy d]",
+    "Usage: node scripts/site-rebuild.mjs <url> --app <dir> --out <dir> [--new-log f] [--copy d] [--measure-only]",
   );
   process.exit(2);
 }
@@ -622,7 +623,8 @@ function candidates(s) {
     }
   return out;
 }
-const MAX_ROUNDS = 3;
+// --measure-only scores and photographs the app as it is (after hand work through MCP), with no tries.
+const MAX_ROUNDS = opts["measure-only"] ? 0 : 3;
 let open = pairs.filter((p) => p.ours.kind !== "footer" && p.ours.kind !== "custom");
 for (let round = 1; round <= MAX_ROUNDS && open.length; round++) {
   const gained = [];
