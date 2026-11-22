@@ -120,9 +120,16 @@ export async function generate(dir: string, io: Io, flags: GenerateFlags): Promi
   });
   const previous = readRecord(dir);
 
-  // Never overwrite or delete a Smithable-owned file that was edited by hand.
+  // Never overwrite or delete a Smithable-owned file that was edited by hand. A file that is
+  // already what is written now, or the app card's own file where a model Card's now goes
+  // (T1236: both once wrote one path, and the record could name the other), loses nothing.
+  const writing = new Map(files.map((f) => [f.path, f.content]));
   const edited = Object.entries(previous.files)
     .filter(([path, hash]) => existsSync(join(dir, path)) && hashFile(join(dir, path)) !== hash)
+    .filter(([path]) => {
+      const text = readFileSync(join(dir, path), "utf8");
+      return text !== writing.get(path) && !oldAppCard(path, text);
+    })
     .map(([path]) => path)
     .filter((path) => !flags.overwrite?.includes(path));
   if (edited.length > 0 && !flags.force) {
@@ -385,6 +392,15 @@ function latestMigration(dir: string): string {
   const last = journal.entries[journal.entries.length - 1];
   if (!last) throw new Error("No migrations found.");
   return last.tag;
+}
+
+/** The app card's files as they were in src/generated before they moved to src/lib (T1236). */
+function oldAppCard(path: string, text: string): boolean {
+  return path === "src/generated/card.ts"
+    ? text.includes('import { CARDS, MAIN } from "./card.server";') &&
+        text.includes("export const appCard = createServerFn()")
+    : path === "src/generated/card.server.ts" &&
+        text.includes("export const CARDS: Record<string, CardFacts> =");
 }
 
 export function readRecord(dir: string): FileRecord {

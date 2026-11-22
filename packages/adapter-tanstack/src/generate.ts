@@ -221,11 +221,15 @@ export function generateApp(spec: SpecIR, options: GenerateOptions): GeneratedFi
   const seen = new Set<string>();
   for (const file of files.filter((f) => f.zone === "generated")) {
     if (seen.has(file.path)) {
-      const model = ir.models.find((m) => file.path.startsWith(`src/generated/${kebab(m.name)}.`));
+      const models = ir.models.filter((m) =>
+        file.path.startsWith(`src/generated/${kebab(m.name)}.`),
+      );
       throw new Error(
-        model
-          ? `The model ${model.name} would write ${file.path}, which the app itself uses: give the model another name.`
-          : `Two parts of the app would write ${file.path}.`,
+        models.length > 1
+          ? `The models ${models.map((m) => m.name).join(" and ")} would both write ${file.path}: give one another name.`
+          : models[0]
+            ? `The model ${models[0].name} would write ${file.path}, which the app itself uses: give the model another name.`
+            : `Two parts of the app would write ${file.path}.`,
       );
     }
     seen.add(file.path);
