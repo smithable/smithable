@@ -30,12 +30,12 @@ export async function checkStudioLookNavigation(browser, base, label = "Customer
     await launch.click();
     // Look opens its panel, which may reload the preview (signing it in again); the session ends
     // once it is open, so the editor's own frame is the one that meets sign-in.
-    const more = page.getByRole("button", { name: "Customise", exact: true });
+    const more = page.getByRole("button", { name: "Customize", exact: true });
     await more.waitFor();
     await context.clearCookies();
     await more.click();
     const dialog = page.getByRole("dialog", { name: "Look", exact: true });
-    await dialog.getByRole("tab", { name: "Customise", exact: true }).click();
+    await dialog.getByRole("tab", { name: "Customize", exact: true }).click();
     await dialog.getByRole("button", { name: label, exact: true }).click();
     const element = await dialog.locator("iframe[data-frame]").first().elementHandle();
     const frame = await element.contentFrame();

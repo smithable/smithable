@@ -163,9 +163,9 @@ export async function checkCompactLook(browser, base, pictures) {
   try {
     await page.goto(`${base}/?guide=off`);
     await (await toolbarAction(page, "Look")).click();
-    await page.getByRole("button", { name: "Customise", exact: true }).click();
+    await page.getByRole("button", { name: "Customize", exact: true }).click();
     const dialog = page.getByRole("dialog", { name: "Look", exact: true });
-    await dialog.getByRole("tab", { name: "Customise", exact: true }).click();
+    await dialog.getByRole("tab", { name: "Customize", exact: true }).click();
     await dialog
       .getByRole("status")
       .filter({ hasText: "Draft preview ready" })

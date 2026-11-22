@@ -171,7 +171,7 @@ try {
   );
 
   await page.getByRole("button", { name: "Look", exact: true }).click();
-  await page.getByRole("button", { name: "Customise", exact: true }).click();
+  await page.getByRole("button", { name: "Customize", exact: true }).click();
   const dialog = page.getByRole("dialog", { name: "Look", exact: true });
   await dialog.getByRole("tab", { name: "Theme and settings", exact: true }).waitFor();
   assert.equal(await dialog.getByRole("list", { name: "Themes", exact: true }).count(), 1);
@@ -180,7 +180,7 @@ try {
   await dialog.getByText("Add a theme", { exact: true }).click();
   await dialog.getByLabel("Theme name", { exact: true }).fill("unsaved-import");
   await dialog.getByRole("textbox", { name: "Theme", exact: true }).fill("name: unsaved-import\n");
-  await dialog.getByRole("tab", { name: "Customise", exact: true }).click();
+  await dialog.getByRole("tab", { name: "Customize", exact: true }).click();
   await dialog.getByLabel("Apply theme to", { exact: true }).waitFor();
   await dialog.getByRole("tab", { name: "Theme and settings", exact: true }).click();
   assert.equal(
@@ -214,7 +214,7 @@ try {
   );
 
   const beforeDraft = operations.length;
-  await dialog.getByRole("button", { name: "Customise Modern", exact: true }).click();
+  await dialog.getByRole("button", { name: "Customize Modern", exact: true }).click();
   const ready = () =>
     dialog
       .getByRole("status")
@@ -228,9 +228,9 @@ try {
   );
   await dialog.getByLabel("Theme name", { exact: true }).fill("");
   await dialog.getByRole("textbox", { name: "Theme", exact: true }).fill("");
-  await dialog.getByRole("tab", { name: "Customise", exact: true }).click();
+  await dialog.getByRole("tab", { name: "Customize", exact: true }).click();
   console.log(
-    "PASS whole-app default and unsaved live form retained across initial/new Customise drafts",
+    "PASS whole-app default and unsaved live form retained across initial/new Customize drafts",
   );
   assert.equal(await dialog.getByLabel("Apply theme to", { exact: true }).inputValue(), "welcome");
   assert.equal(await dialog.getByRole("button", { name: "Look gallery", exact: true }).count(), 0);
@@ -244,7 +244,7 @@ try {
     dialog.getByRole("button", { name: "Use Modern theme", exact: true }).click(),
   );
   assert.equal(operations.at(-1).args.page, "offer");
-  await dialog.getByRole("tab", { name: "Customise", exact: true }).click();
+  await dialog.getByRole("tab", { name: "Customize", exact: true }).click();
   assert.equal(await dialog.getByLabel("Name", { exact: true }).inputValue(), "pinned-draft");
   assert.equal(await dialog.getByLabel("radius", { exact: true }).inputValue(), "21px");
   assert.equal(

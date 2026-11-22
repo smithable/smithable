@@ -48,7 +48,7 @@ export function ThemeSettings({
   ownThemes,
   target,
   onTarget,
-  onCustomise,
+  onCustomize,
 }: {
   spec: Spec;
   run: Run;
@@ -56,7 +56,7 @@ export function ThemeSettings({
   ownThemes: Project["ownThemes"];
   target: string | null;
   onTarget: (page: string | null) => void;
-  onCustomise: (theme: string) => void;
+  onCustomize: (theme: string) => void;
 }) {
   const { ir, ux } = spec;
   const scope = useId();
@@ -124,7 +124,7 @@ export function ThemeSettings({
           onChoose={(preset) => {
             void run("setTheme", { preset, ...(target ? { page: target } : {}) });
           }}
-          onCustomise={onCustomise}
+          onCustomize={onCustomize}
         />
         <AddTheme run={run} />
       </Group>

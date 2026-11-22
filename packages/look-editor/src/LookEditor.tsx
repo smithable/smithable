@@ -46,7 +46,7 @@ import { useLookFrames } from "./useLookFrames";
 /** The look's settings in the person's words (Studio's Look tab says the same). */
 const LOOK_LABELS: Record<(typeof LOOK_KEYS)[number], string> = {
   preset: "Look",
-  primary: "Main colour",
+  primary: "Main color",
   background: "Background",
   font: "Font",
   density: "Density",
@@ -1257,7 +1257,7 @@ export function LookEditor({
             <section className="look-gallery" aria-label="Look gallery">
               <p>
                 {PUBLIC
-                  ? "Each card is a sample of a look's colours and type. The page below is a saved picture of a starter app."
+                  ? "Each card is a sample of a look's colors and type. The page below is a saved picture of a starter app."
                   : "Choose a look for this app. The settings you made yourself stay; Apply saves it as one change you can undo."}
               </p>
               <ul
@@ -1312,7 +1312,7 @@ export function LookEditor({
                         loading="lazy"
                       />
                       <span>{candidate.name}</span>
-                      <small>A sample of its colours and type</small>
+                      <small>A sample of its colors and type</small>
                     </button>
                   </li>
                 ))}
@@ -1431,7 +1431,7 @@ export function LookEditor({
                 <p>
                   {projectPreview?.impact.reasons.join(", ") ||
                     (STUDIO
-                      ? "This look changes how the pages are built, not only their colours and type."
+                      ? "This look changes how the pages are built, not only their colors and type."
                       : "This theme changes generated presentation.")}
                 </p>
                 <p>
@@ -1710,27 +1710,27 @@ function Controls({
   return (
     <>
       <fieldset>
-        <legend>Colours ({mode === "light" ? "light mode" : "dark mode"})</legend>
+        <legend>Colors ({mode === "light" ? "light mode" : "dark mode"})</legend>
         {color(mode, "primary", "Primary")}
         {color(mode, "background", "Background")}
         {color(mode, "card", "Surfaces (cards, menus, forms)")}
         {color(mode, "foreground", "Text")}
         <button type="button" onClick={reset}>
-          Let the other colours follow these again
+          Let the other colors follow these again
         </button>
         <p className="hint">
-          A colour you set yourself stays when the main colour or the background changes; this
-          button lets the others follow those two again.
+          A color you set yourself stays when the main color or the background changes; this button
+          lets the others follow those two again.
         </p>
         <label>
           <input type="checkbox" checked={follows} onChange={(e) => setFollows(e.target.checked)} />{" "}
-          Text colour follows the others
+          Text color follows the others
         </label>
         <p className="hint">
           {follows
             ? "The text changes to white or ink when a background or surface would make it hard to read."
             : "The text stays as chosen; a warning above says where it is hard to read."}{" "}
-          The text is one colour on the background and the surfaces; text on the primary colour
+          The text is one color on the background and the surfaces; text on the primary color
           (buttons) is a second one, white or ink, whichever reads on it.
         </p>
         <button
@@ -1744,7 +1744,7 @@ function Controls({
           {follows
             ? "The text changes to white or ink when a background or surface would make it hard to read."
             : "The text stays as chosen; a warning above says where it is hard to read."}{" "}
-          The text is one colour on the background and the surfaces; text on the primary colour
+          The text is one color on the background and the surfaces; text on the primary color
           (buttons) is a second one, white or ink, whichever reads on it.
         </p>
       </fieldset>
@@ -1840,8 +1840,8 @@ function Controls({
           </select>
         </label>
         <p className="hint">
-          A mode you turn off keeps its colours in this draft, so turning it on again brings them
-          back; only the modes that are on are saved. Undo draft brings the earlier text and colours
+          A mode you turn off keeps its colors in this draft, so turning it on again brings them
+          back; only the modes that are on are saved. Undo draft brings the earlier text and colors
           back.
         </p>
         <p className="hint" data-motion-note>
