@@ -14,6 +14,9 @@ test("Studio prepares its offer outside the project and invalidates it after a p
     "base64",
   );
   const digest = sha256(drawing);
+  const updatedDrawing = Buffer.concat([drawing, Buffer.from("JUNK\0\0\0\0")]);
+  updatedDrawing.writeUInt32LE(updatedDrawing.byteLength - 8, 4);
+  const updatedDigest = sha256(updatedDrawing);
   const dir = tempDir("ink-wash-offer-");
   const images = join(dir, "public", "images");
   mkdirSync(join(images, "samples"), { recursive: true });
@@ -32,7 +35,25 @@ test("Studio prepares its offer outside the project and invalidates it after a p
     "smithableUx: 0.1\npictures: { style: ink-wash }\ntheme: { preset: sage-garden }\n",
   );
   let libraryVersion = "v1";
+  let updatedPictureRequests = 0;
+  const heroEntry = {
+    id: "ink-hero",
+    subject: "hero",
+    kind: "hero",
+    generated: true,
+    style: "ink-wash",
+    alt: "Drawing",
+    sha256: digest,
+    url: `https://docs.smithable.ai/images/files/${digest}.webp`,
+  };
   const server = createServer((req, res) => {
+    if (req.url === `/images/files/${updatedDigest}.webp`) {
+      if (++updatedPictureRequests === 1) {
+        res.statusCode = 503;
+        return res.end();
+      }
+      return res.end(updatedDrawing);
+    }
     res.setHeader("Content-Type", "application/json");
     if (req.url === "/images/latest.json")
       return res.end(
@@ -44,16 +65,16 @@ test("Studio prepares its offer outside the project and invalidates it after a p
           version: libraryVersion,
           styles: [{ id: "ink-wash", generated: true, words: {}, washHue: 300 }],
           entries: [
-            {
-              id: "ink-hero",
-              subject: "hero",
-              kind: "hero",
-              generated: true,
-              style: "ink-wash",
-              alt: "Drawing",
-              sha256: digest,
-              url: `https://docs.smithable.ai/images/files/${digest}.webp`,
-            },
+            ...(libraryVersion === "v1"
+              ? [heroEntry]
+              : [
+                  {
+                    ...heroEntry,
+                    sha256: updatedDigest,
+                    url: `https://docs.smithable.ai/images/files/${updatedDigest}.webp`,
+                  },
+                  { ...heroEntry, id: "old-hero", style: "old-style" },
+                ]),
             {
               id: "ink-sample",
               subject: "sample",
@@ -97,7 +118,14 @@ test("Studio prepares its offer outside the project and invalidates it after a p
     libraryVersion = "v2";
     vi.setSystemTime(Date.now() + 61_000);
     expect(offers.get(dir, "project", revision)).toEqual({ pending: true });
+    await vi.waitFor(() => expect(offers.get(dir, "project", revision)).toEqual({}), {
+      timeout: 8000,
+    });
+    expect(updatedPictureRequests).toBe(1);
+    vi.setSystemTime(Date.now() + 61_000);
+    expect(offers.get(dir, "project", revision)).toEqual({ pending: true });
     const updated = await ready();
+    expect(updatedPictureRequests).toBe(2);
     expect(updated.binding).not.toBe(offer.binding);
     expect(offers.read(dir, "project", offer.id)).toBeUndefined();
     writeFileSync(hero, "The owner's new drawing");

@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { deserialize } from "node:v8";
 import { Worker } from "node:worker_threads";
 import { resolveLook } from "@smithable/core";
-import type { InkWashWork } from "./ink-wash-worker.js";
+import type { InkWashWork, InkWashWorkResult } from "./ink-wash-worker.js";
 import {
   type LibraryVersion,
   libraryVersion,
@@ -96,6 +96,8 @@ export class StudioInkWash {
 
   private remove(work: Preparation) {
     if (work.folder) rmSync(work.folder, { recursive: true, force: true });
+    delete work.folder;
+    delete work.destination;
   }
 
   private async prepare(dir: string, work: Preparation) {
@@ -108,9 +110,12 @@ export class StudioInkWash {
       if (work.version?.version === version.version) return;
       this.remove(work);
       delete work.offer;
-      work.version = version;
+      delete work.version;
       const style = version.styles.find((entry) => entry.id === "ink-wash");
-      if (!style || style.washHue === undefined) return;
+      if (!style || style.washHue === undefined) {
+        work.version = version;
+        return;
+      }
       const { primary, foreground, background } = resolveLook(ux, themes).tokens.light;
       const colours = { primary, foreground, background };
       work.folder = mkdtempSync(join(tmpdir(), "smithable-ink-wash-"));
@@ -124,24 +129,31 @@ export class StudioInkWash {
         resourceLimits: { maxOldGenerationSizeMb: 256 },
       });
       work.worker = worker;
-      const prepared = await new Promise<boolean>((done) => {
-        const deadline = setTimeout(() => void worker.terminate().catch(() => done(false)), 60_000);
+      const prepared = await new Promise<InkWashWorkResult>((done) => {
+        const deadline = setTimeout(
+          () => void worker.terminate().catch(() => done("failed")),
+          60_000,
+        );
         deadline.unref();
-        const finish = (value: boolean) => {
+        const finish = (value: InkWashWorkResult) => {
           clearTimeout(deadline);
           done(value);
         };
-        worker.once("message", (value: unknown) => finish(value === true));
-        worker.once("error", () => finish(false));
-        worker.once("exit", () => finish(false));
+        worker.once("message", (value: InkWashWorkResult) => finish(value));
+        worker.once("error", () => finish("failed"));
+        worker.once("exit", () => finish("failed"));
       });
       if (
-        !prepared ||
         this.current !== work ||
         work.revision !== projectRevision(dir) ||
         work.hashes !== pictureHashes(dir)
       )
         return;
+      if (prepared === "unchanged") {
+        work.version = version;
+        return;
+      }
+      if (prepared !== "ready") return;
       const placed = deserialize(readFileSync(work.destination)) as PlacedStyle;
       const binding = sha256(
         Buffer.from(JSON.stringify([dir, version.version, colours, placed.planned])),
@@ -180,6 +192,7 @@ export class StudioInkWash {
           };
         });
       work.offer = { id, binding, project: work.project, revision: work.revision, samples };
+      work.version = version;
     } catch {
       // The original pictures remain in place whenever preparation is unavailable.
     } finally {

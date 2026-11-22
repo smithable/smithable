@@ -1481,7 +1481,10 @@ export async function studio(
             name !== "setPictureStyle" ||
             choice.style !== "ink-wash" ||
             choice.recolour !== true ||
-            pictureOffer !== undefined ||
+            pictureOffer !== undefined
+          )
+            return json({ ok: false, output: "This request cannot apply an Ink wash offer." }, 400);
+          if (
             !preparedInkWash ||
             expectedLookProject !== lookProject ||
             expectedRevision !== preparedInkWash.revision

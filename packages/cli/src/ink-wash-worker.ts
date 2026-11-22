@@ -11,15 +11,23 @@ export interface InkWashWork {
   colours: InkWashColours;
 }
 
+export type InkWashWorkResult = "ready" | "unchanged" | "failed";
+
+function report(result: InkWashWorkResult) {
+  parentPort?.postMessage(result);
+}
+
 const work = workerData as InkWashWork;
 const placed = await placeStyle(work.dir, "ink-wash", fetch, work.version, work.colours);
-if (typeof placed === "string" || !placed.files.length) {
-  parentPort?.postMessage(false);
+if (typeof placed === "string") {
+  report("failed");
+} else if (!placed.files.length) {
+  report("unchanged");
 } else {
   const data = serialize(placed);
-  if (data.byteLength > 32 * 1024 * 1024) parentPort?.postMessage(false);
+  if (data.byteLength > 32 * 1024 * 1024) report("failed");
   else {
     await writeFile(work.destination, data, { flag: "wx", mode: 0o600 });
-    parentPort?.postMessage(true);
+    report("ready");
   }
 }
