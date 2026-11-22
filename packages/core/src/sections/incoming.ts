@@ -557,7 +557,6 @@ const addIncoming: Operation<{
     "smithable.yml:incoming.*.fields.subject",
     "smithable.yml:incoming.*.fields.body",
     "smithable.yml:incoming.*.fields.attachments",
-    "smithable.yml:incoming.*.reply",
     "smithable.yml:incoming.*.signed",
     "smithable.yml:incoming.*.signed.sha256",
     "smithable.yml:incoming.*.signed.prefix",
