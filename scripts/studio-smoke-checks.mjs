@@ -6,6 +6,7 @@ import {
   openFormEntry,
   openPreviewAddress,
   openSettings,
+  openStudioGuide,
   toolbarAction,
 } from "./studio-form-checks.mjs";
 import { checkStudioHistory } from "./studio-history-checks.mjs";
@@ -158,6 +159,15 @@ export async function checkStudioSmoke(browser, base, evidence, asMade) {
       await checkStudioHistory(page, phone, evidence);
       if (phone) await checkAppOwnsPhoneSwipe(page);
       else {
+        await openSettings(page);
+        await page.getByRole("tab", { name: "Code", exact: true }).click();
+        await page.getByRole("region", { name: "Code", exact: true }).waitFor();
+        await openStudioGuide(page);
+        const guide = page.locator('[data-guide-card="files"]');
+        await guide.waitFor();
+        await page.evaluate(() => document.activeElement?.blur());
+        await page.keyboard.press("Escape");
+        await guide.waitFor({ state: "detached" });
         // Range selection lives in the preview's table layout, which needs the full width.
         for (const side of ["left", "right"]) {
           const hide = page.getByRole("button", {

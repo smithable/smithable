@@ -53,18 +53,14 @@ export async function checkAppOwnsPhoneSwipe(page) {
     };
     window.addEventListener("message", receive);
   }, frame);
+  // Deliver the app's legacy swipe message from the frame without relying on its editor state.
+  const studioOrigin = new URL(page.url()).origin;
   await page
     .frameLocator(frame)
     .locator("body")
-    .evaluate((target) => {
-      const touch = (clientX) => new Touch({ identifier: 1, target, clientX, clientY: 150 });
-      target.dispatchEvent(
-        new TouchEvent("touchstart", { bubbles: true, touches: [touch(innerWidth * 0.85)] }),
-      );
-      target.dispatchEvent(
-        new TouchEvent("touchend", { bubbles: true, changedTouches: [touch(innerWidth * 0.15)] }),
-      );
-    });
+    .evaluate((_, origin) => {
+      parent.postMessage({ source: "smithable-preview", type: "swipe", direction: 1 }, origin);
+    }, studioOrigin);
   await page.locator('html[data-preview-swipe-fixture="seen"]').waitFor({ state: "attached" });
   await page.locator("main").evaluate(async (row) => {
     await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
