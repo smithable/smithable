@@ -466,6 +466,18 @@ const addPayment: Operation<PaymentArgs> = {
   name: "addPayment",
   summary:
     "Take payments for a model's records on the payment provider's page: the amount field, when (created, or a condition), what a payment sets, who may refund.",
+  sets: [
+    "smithable.yml:payments.*",
+    "smithable.yml:payments.*.on",
+    "smithable.yml:payments.*.amount",
+    "smithable.yml:payments.*.when",
+    "smithable.yml:payments.*.description",
+    "smithable.yml:payments.*.paid",
+    "smithable.yml:payments.*.paid.set",
+    "smithable.yml:payments.*.refund",
+    "smithable.yml:payments.*.refund.by",
+    "smithable.yml:payments.*.refund.when",
+  ],
   schema: {
     type: "object",
     required: ["name", "on", "amount", "when"],

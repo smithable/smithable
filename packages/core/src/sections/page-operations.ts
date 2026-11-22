@@ -19,6 +19,7 @@ const addPage: Operation<{ page: string; model: string; route?: string }> = {
   name: "addPage",
   summary:
     "Add a page that lists, shows, creates, edits and deletes a model, and add it to the main menu.",
+  sets: ["smithable.yml:pages.*", "smithable.yml:pages.*.route", "smithable.yml:pages.*.crud"],
   schema: {
     type: "object",
     required: ["page", "model"],
@@ -50,6 +51,13 @@ const addLandingPage: Operation<{ page: string; route?: string; public?: boolean
   name: "addLandingPage",
   summary:
     "Add a landing page for visitors, starting with a hero and a footer (add more with addSection). It opens without sign-in unless public is false.",
+  sets: [
+    "smithable.yml:pages.*",
+    "smithable.yml:pages.*.route",
+    "smithable.yml:pages.*.landing",
+    "smithable.yml:pages.*.landing.*.hero",
+    "smithable.yml:pages.*.landing.*.footer",
+  ],
   schema: {
     type: "object",
     required: ["page"],
@@ -83,6 +91,7 @@ const addUsersPage: Operation<{ page?: string; route?: string }> = {
   name: "addUsersPage",
   summary:
     "Add a page where administrators invite people by email address with a role, change roles and remove users; it goes in the main menu. An app has one.",
+  sets: ["smithable.yml:pages.*", "smithable.yml:pages.*.route", "smithable.yml:pages.*.users"],
   schema: {
     type: "object",
     additionalProperties: false,
@@ -112,6 +121,7 @@ const addDataPage: Operation<{ page?: string; route?: string; models?: string[] 
   name: "addDataPage",
   summary:
     "Add an administrators' page with every model's records (or the models named) to find, open, change and delete; it goes in the main menu.",
+  sets: ["smithable.yml:pages.*", "smithable.yml:pages.*.route", "smithable.yml:pages.*.data"],
   schema: {
     type: "object",
     additionalProperties: false,
@@ -151,6 +161,7 @@ const addReviewPage: Operation<{ page?: string; route?: string; models?: string[
   name: "addReviewPage",
   summary:
     "Add the page where the pictures and files that wait for review (a model's review) are approved or rejected, for admins and the roles granted review; it goes in the main menu.",
+  sets: ["smithable.yml:pages.*", "smithable.yml:pages.*.route", "smithable.yml:pages.*.review"],
   schema: {
     type: "object",
     additionalProperties: false,
@@ -190,6 +201,12 @@ const addCalendarPage: Operation<{ page: string; model: string; starts?: string 
   name: "addCalendarPage",
   summary:
     "Add a page showing a model's records in a week or month calendar, placed by a date or date-time field; it goes in the main menu.",
+  sets: [
+    "smithable.yml:pages.*",
+    "smithable.yml:pages.*.calendar",
+    "smithable.yml:pages.*.calendar.model",
+    "smithable.yml:pages.*.calendar.starts",
+  ],
   schema: {
     type: "object",
     required: ["page", "model"],
@@ -228,6 +245,14 @@ const addOrderPage: Operation<{
   name: "addOrderPage",
   summary:
     "Add a page where visitors choose records of one model (dishes) and send them as one order of another (with its lines and a number counting up); it is not in the menu.",
+  sets: [
+    "smithable.yml:pages.*",
+    "smithable.yml:pages.*.route",
+    "smithable.yml:pages.*.order",
+    "smithable.yml:pages.*.order.from",
+    "smithable.yml:pages.*.order.into",
+    "smithable.yml:pages.*.order.ask",
+  ],
   schema: {
     type: "object",
     required: ["page", "from", "into"],
@@ -268,6 +293,7 @@ const addArticlesPage: Operation<{ page: string; model: string }> = {
   name: "addArticlesPage",
   summary:
     "Add a page showing a model's records as articles (a blog or news): a list, and a page per article; it goes in the main menu.",
+  sets: ["smithable.yml:pages.*", "smithable.yml:pages.*.articles"],
   schema: {
     type: "object",
     required: ["page", "model"],
@@ -297,6 +323,11 @@ const addCalculatorPage: Operation<{ page: string; fields: Record<string, FieldA
   name: "addCalculatorPage",
   summary:
     "Add a calculator page: fields written as a model's, the entered ones its inputs and the formula fields its results, stored nowhere; it goes in the main menu.",
+  sets: [
+    "smithable.yml:pages.*",
+    "smithable.yml:pages.*.calculator",
+    "smithable.yml:pages.*.calculator.fields",
+  ],
   schema: {
     type: "object",
     required: ["page", "fields"],
@@ -334,6 +365,7 @@ const addCustomPage: Operation<{ page: string; component: string }> = {
   name: "addCustomPage",
   summary:
     "Add a page of your own (a chart, a map, a planner): its component is created once in src/custom/pages/ and is yours; the route, access and menu entry stay Smithable's.",
+  sets: ["smithable.yml:pages.*", "smithable.yml:pages.*.custom"],
   schema: {
     type: "object",
     required: ["page", "component"],
@@ -364,6 +396,7 @@ const addPrivacyPage: Operation<{ page?: string; route?: string }> = {
   name: "addPrivacyPage",
   summary:
     "Add a privacy page written from the app itself (who runs it, what it stores and why, cookies, mail, logs, rights); open to visitors and linked from the site's footer. The operator's name and contact go in smithable.content.yml.",
+  sets: ["smithable.yml:pages.*", "smithable.yml:pages.*.route", "smithable.yml:pages.*.legal"],
   schema: {
     type: "object",
     additionalProperties: false,
@@ -473,6 +506,19 @@ const addTile: Operation<{
   name: "addTile",
   summary:
     "Add a tile to a dashboard page (created, and added to the main menu, when it does not exist): a count, sum or average of records, a list of the latest ones, or a custom query's records.",
+  sets: [
+    "smithable.yml:pages.*.dashboard",
+    "smithable.yml:pages.*.dashboard.*",
+    "smithable.yml:pages.*.dashboard.*.count",
+    "smithable.yml:pages.*.dashboard.*.sum",
+    "smithable.yml:pages.*.dashboard.*.average",
+    "smithable.yml:pages.*.dashboard.*.list",
+    "smithable.yml:pages.*.dashboard.*.query",
+    "smithable.yml:pages.*.dashboard.*.where",
+    "smithable.yml:pages.*.dashboard.*.by",
+    "smithable.yml:pages.*.dashboard.*.period",
+    "smithable.yml:pages.*.dashboard.*.limit",
+  ],
   schema: {
     type: "object",
     required: ["page", "tile", "measure", "of"],
@@ -553,6 +599,7 @@ const setNavigation: Operation<{ menu: string; pages: string[] }> = {
   name: "setNavigation",
   summary:
     "Set which pages a menu shows, in order. The list replaces the menu: include every page that stays.",
+  sets: ["smithable.yml:navigation", "smithable.yml:navigation.*"],
   schema: {
     type: "object",
     required: ["menu", "pages"],
@@ -1050,6 +1097,46 @@ const addSection: Operation<{
 }> = {
   name: "addSection",
   summary: `Add a section to a page, below its others (above its footer): one named after its kind (${KINDS.join(", ")}), or any name with records (a model's records as cards, a table or a calendar), text (a heading and paragraphs) or custom. Its texts go in smithable.content.yml.`,
+  sets: [
+    "smithable.yml:pages.*.landing.*",
+    "smithable.yml:pages.*.sections.*",
+    "smithable.yml:pages.*.landing.*.records",
+    "smithable.yml:pages.*.landing.*.view",
+    "smithable.yml:pages.*.landing.*.starts",
+    "smithable.yml:pages.*.landing.*.where",
+    "smithable.yml:pages.*.landing.*.form",
+    "smithable.yml:pages.*.landing.*.button",
+    "smithable.yml:pages.*.landing.*.custom",
+    "smithable.yml:pages.*.landing.*.text",
+    "smithable.yml:pages.*.landing.*.hero",
+    "smithable.yml:pages.*.landing.*.features",
+    "smithable.yml:pages.*.landing.*.pricing",
+    "smithable.yml:pages.*.landing.*.testimonials",
+    "smithable.yml:pages.*.landing.*.faq",
+    "smithable.yml:pages.*.landing.*.callToAction",
+    "smithable.yml:pages.*.landing.*.contact",
+    "smithable.yml:pages.*.landing.*.gallery",
+    "smithable.yml:pages.*.landing.*.footer",
+    "smithable.yml:pages.*.landing.*.mediaText",
+    "smithable.yml:pages.*.sections.*.records",
+    "smithable.yml:pages.*.sections.*.view",
+    "smithable.yml:pages.*.sections.*.starts",
+    "smithable.yml:pages.*.sections.*.where",
+    "smithable.yml:pages.*.sections.*.form",
+    "smithable.yml:pages.*.sections.*.button",
+    "smithable.yml:pages.*.sections.*.custom",
+    "smithable.yml:pages.*.sections.*.text",
+    "smithable.yml:pages.*.sections.*.hero",
+    "smithable.yml:pages.*.sections.*.features",
+    "smithable.yml:pages.*.sections.*.pricing",
+    "smithable.yml:pages.*.sections.*.testimonials",
+    "smithable.yml:pages.*.sections.*.faq",
+    "smithable.yml:pages.*.sections.*.callToAction",
+    "smithable.yml:pages.*.sections.*.contact",
+    "smithable.yml:pages.*.sections.*.gallery",
+    "smithable.yml:pages.*.sections.*.footer",
+    "smithable.yml:pages.*.sections.*.mediaText",
+  ],
   schema: {
     type: "object",
     required: ["page", "section"],
@@ -1302,6 +1389,7 @@ const setShortcuts: Operation<{ page: string; pages?: string[] }> = {
   name: "setShortcuts",
   summary:
     "Give a landing page's hero up to four shortcuts to other pages, shown as round icons (no pages removes them).",
+  sets: ["smithable.yml:pages.*.landing.*.shortcuts", "smithable.yml:pages.*.sections.*.shortcuts"],
   schema: {
     type: "object",
     required: ["page"],
@@ -1361,6 +1449,12 @@ const setHeroButtons: Operation<{ page: string; button?: string; secondButton?: 
   name: "setHeroButtons",
   summary:
     'Choose the pages a landing page\'s hero buttons open: its button and a second one beside it, an outline button ("none" takes one away). Their words are setText … button / secondButton.',
+  sets: [
+    "smithable.yml:pages.*.landing.*.button",
+    "smithable.yml:pages.*.landing.*.secondButton",
+    "smithable.yml:pages.*.sections.*.button",
+    "smithable.yml:pages.*.sections.*.secondButton",
+  ],
   schema: {
     type: "object",
     required: ["page"],
@@ -1485,6 +1579,7 @@ const addSectionsPage: Operation<{ page: string; route?: string }> = {
   name: "addSectionsPage",
   summary:
     "Add a page of parts and no kind (an about page), starting with a text section; add more with addSection. It is in the main menu.",
+  sets: ["smithable.yml:pages.*", "smithable.yml:pages.*.route", "smithable.yml:pages.*.sections"],
   schema: {
     type: "object",
     required: ["page"],

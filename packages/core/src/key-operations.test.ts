@@ -17,6 +17,12 @@ const SCHEMAS: Record<string, JsonSchema> = {
   "smithable.context.yml": COMPANION_SCHEMAS["smithable.context.yml"] as JsonSchema,
 };
 
+/** A list's items ("rules.*") and the keys that hold only entries ("models"), by file:path. */
+const ITEMS = new Set<string>();
+const HOLDERS = new Set<string>();
+/** The keys of an object of named keys ("app": name, description, …), by file:path. */
+const OBJECTS = new Map<string, string[]>();
+
 /** Every key path a schema takes, "*" for a name in a named map, without the format version. */
 function keyPaths(file: string): string[][] {
   const schema = SCHEMAS[file] as JsonSchema;
@@ -35,6 +41,19 @@ function keyPaths(file: string): string[][] {
     if (!n || seen.has(n) || path.length > 8) return;
     const next = new Set(seen).add(n);
     if (path.length) out.set(path.join("."), path);
+    const key = `${file}:${path.join(".")}`;
+    const named = Object.keys((n.properties as Record<string, JsonSchema>) ?? {}).length > 0;
+    const entries =
+      (n.additionalProperties && typeof n.additionalProperties === "object") ||
+      Object.keys((n.patternProperties as Record<string, JsonSchema>) ?? {}).length > 0;
+    const list = !!n.items && typeof n.items === "object" && !Array.isArray(n.items);
+    if (list) ITEMS.add(`${key}.*`);
+    if (path.length && !named && (entries || list)) HOLDERS.add(key);
+    if (path.length && named && !entries && !list)
+      OBJECTS.set(key, [
+        ...(OBJECTS.get(key) ?? []),
+        ...Object.keys(n.properties as Record<string, JsonSchema>),
+      ]);
     for (const [k, v] of Object.entries((n.properties as Record<string, JsonSchema>) ?? {}))
       walk(v, [...path, k], next);
     if (n.additionalProperties && typeof n.additionalProperties === "object")
@@ -53,8 +72,23 @@ function keyPaths(file: string): string[][] {
 
 const ALL = Object.keys(SCHEMAS).flatMap((file) => keyPaths(file).map((path) => ({ file, path })));
 
+/**
+ * Whether an operation reaches a key (T1242: MCP has no editSpec, so a key no operation reaches
+ * is one an agent cannot set): one names it in its sets; or it is a list's item, set with its
+ * list; or it holds only entries or items, set by adding and removing them; or it is an object
+ * of named keys, every one of them reached.
+ */
+function reached(file: string, path: string[], way?: "up" | "down"): boolean {
+  if (operationsSetting(file, path).length) return true;
+  const key = `${file}:${path.join(".")}`;
+  if (way !== "down" && ITEMS.has(key) && reached(file, path.slice(0, -1), "up")) return true;
+  if (way !== "up" && HOLDERS.has(key) && reached(file, [...path, "*"], "down")) return true;
+  const keys = way === "up" ? undefined : OBJECTS.get(key);
+  return !!keys?.length && keys.every((k) => reached(file, [...path, k], "down"));
+}
+
 test("the keys left to editSpec, as reviewed: every other key has its operation", () => {
-  const left = ALL.filter(({ file, path }) => !operationsSetting(file, path).length).map(
+  const left = ALL.filter(({ file, path }) => !reached(file, path)).map(
     ({ file, path }) => `${file}:${path.join(".")}`,
   );
   expect(left.sort()).toMatchSnapshot();
