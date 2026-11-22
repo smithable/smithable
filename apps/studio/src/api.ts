@@ -547,7 +547,7 @@ export const api = {
   ) =>
     changing(
       call<Result>("/api/op", { name, args, expectedRevision: revision, lookProject, file }).catch(
-        // A 400 is refused before anything runs (a file that breaks a rule): nothing changed, so
+        // /api/op answers 400 only before it runs anything (a file that breaks a rule): nothing changed, so
         // a try-on goes on, where a thrown error would stop it as an uncertain write.
         (error: unknown) => {
           if (error instanceof StudioRequestError && error.status === 400)

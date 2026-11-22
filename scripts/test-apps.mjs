@@ -6103,19 +6103,24 @@ async function filmFlow(dir, base) {
     await pause.click();
     const resume = hero.getByRole("button", { name: "Play the film", exact: true });
     await resume.waitFor();
-    if (!(await playing.evaluate((v) => v.paused)))
+    // Found by itself, not by its playing mark: Pause may clear that.
+    const heroFilm = hero.locator("video").first();
+    if (!(await heroFilm.evaluate((v) => v.paused)))
       throw new Error("the film plays on after Pause");
     // Away and back: paused stays paused.
     await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
     await page.waitForTimeout(300);
     await page.evaluate(() => window.scrollTo(0, 0));
     await page.waitForTimeout(500);
-    if (!(await playing.evaluate((v) => v.paused)))
+    if (!(await heroFilm.evaluate((v) => v.paused)))
       throw new Error("the film played again in view");
     await resume.focus();
     await page.keyboard.press("Enter");
     await pause.waitFor();
     await page.waitForFunction(() => !document.querySelector("[data-hero] video")?.paused);
+    await playing.waitFor();
+    if (await mark.isVisible())
+      throw new Error("the picture's mark shows over its film after Play");
     console.log(
       "  ✓ browser: a hero's film plays over its picture in inset and split, the picture's mark giving way; paused by key or click it stays paused back in view; a range of it is answered 206",
     );
@@ -6183,6 +6188,8 @@ async function filmFlow(dir, base) {
       "the photo hero's film does not play",
     );
     const top = await hero.evaluate((section) => {
+      // What is painted on top, whether or not the film takes the pointer.
+      for (const v of section.querySelectorAll("video")) v.style.pointerEvents = "auto";
       const box = section.getBoundingClientRect();
       const at = (x, y) =>
         document.elementFromPoint(box.left + x * box.width, box.top + y * box.height);
