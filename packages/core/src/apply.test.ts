@@ -715,6 +715,21 @@ test("setText changes a landing section's list texts in place, by their position
   });
   expect(same.ok && same.files.content).toContain("widths: [800, 2400]");
   expect(same.ok && same.files.content).toMatch(/hero\.webp\n(.*\n){3}\s*generated: true/);
+  // A placed picture's kind goes with the mark: another file is not known to be one.
+  const kinded = {
+    ...invoicing,
+    content: (invoicing.content ?? "").replace(
+      /generated: true\n/,
+      "generated: true\n        kind: ai-realistic\n",
+    ),
+  };
+  expect(kinded.content).toContain("kind: ai-realistic");
+  const mine = applyOperation(kinded, "setText", {
+    path: ["pages", "home", "hero", "image", "src"],
+    text: "images/mine.webp",
+  });
+  expect(mine.ok).toBe(true);
+  expect(mine.ok && mine.files.content).not.toContain("kind: ai-realistic");
 });
 
 test("removePage takes a page out of the spec, the menus and its texts", () => {
@@ -1857,4 +1872,59 @@ test("setDocument writes a list page's document, refuses a field it may not prin
   expect(
     applyOperation(files, "setDocument", { page: "overview", show: ["number"] }),
   ).toMatchObject({ ok: false });
+});
+
+test("setSectionPicture replaces, keeps the alt of, and removes a section's own picture", () => {
+  const raw = import.meta.glob("../../../examples/invoicing/smithable*.yml", {
+    query: "?raw",
+    import: "default",
+    eager: true,
+  }) as Record<string, string>;
+  const [spec, auth, content] = ["", ".auth", ".content"].map(
+    (s) => raw[`../../../examples/invoicing/smithable${s}.yml`] as string,
+  );
+  const invoicing = { spec: spec as string, auth: auth as string, content };
+  const picture = (args: Record<string, string>) =>
+    applyOperation(invoicing, "setSectionPicture", { page: "home", section: "hero", ...args });
+  // Another file keeps what the picture was said to show, and loses the library's mark.
+  const mine = picture({ src: "images/hero-mine.webp" });
+  expect(mine.ok && mine.files.content).toContain(
+    "src: images/hero-mine.webp\n        alt: A calculator, receipts and a laptop on a wooden desk\n",
+  );
+  expect(mine.ok && mine.files.content).not.toMatch(/hero-mine\.webp\n.*\n\s*generated/);
+  // The same file with new words keeps its mark.
+  const said = picture({ src: "images/hero.webp", alt: "A desk" });
+  expect(said.ok && said.files.content).toMatch(/hero\.webp\n\s*alt: A desk\n\s*generated: true/);
+  // No src removes it; the hero is then shown without a picture.
+  const gone = picture({});
+  expect(gone.ok && gone.files.content).not.toContain("hero.webp");
+  expect(gone.ok && gone.files.content).toContain("button: Start invoicing");
+  const removedTwice =
+    gone.ok &&
+    applyOperation({ ...invoicing, content: gone.files.content }, "setSectionPicture", {
+      page: "home",
+      section: "hero",
+    });
+  expect(removedTwice && removedTwice.ok).toBe(false);
+  // A new picture where there was none needs to say what it shows.
+  const bare = { ...invoicing, content: gone.ok ? gone.files.content : "" };
+  const unsaid = applyOperation(bare, "setSectionPicture", {
+    page: "home",
+    section: "hero",
+    src: "images/team.webp",
+  });
+  expect(!unsaid.ok && unsaid.message).toMatch(/what the picture shows/);
+  const back = applyOperation(bare, "setSectionPicture", {
+    page: "home",
+    section: "hero",
+    src: "images/team.webp",
+    alt: "The team",
+  });
+  expect(back.ok && back.files.content).toContain("src: images/team.webp\n        alt: The team");
+  // Only a section with a picture of its own, and only a picture file under images/.
+  expect(picture({ section: "faq", src: "images/a.webp", alt: "A" }).ok).toBe(false);
+  expect(picture({ src: "../secrets.webp", alt: "A" }).ok).toBe(false);
+  expect(picture({ src: "images/logo.svg", alt: "A" }).ok).toBe(false);
+  // Only a src left out removes it; an empty one is no file.
+  expect(picture({ src: "" }).ok).toBe(false);
 });

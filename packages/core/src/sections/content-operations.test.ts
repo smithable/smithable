@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { applyOperation } from "../apply.js";
+import { applyOperation, findOperation, parseOperationArgs } from "../apply.js";
 
 const files = {
   spec: "smithable: 0.1\napp:\n  name: Club\nmodels:\n  Court:\n    fields:\n      name: string!\npages:\n  courts:\n    crud: Court\n  home:\n    route: /\n    landing:\n      hero: {}\n      features:\n      faq:\n      footer: {}\n",
@@ -41,4 +41,60 @@ test("setItems refuses a key the section's items do not have, and a section with
   expect(
     applyOperation(files, "setItems", { page: "home", section: "hero", items: [{ title: "x" }] }),
   ).toMatchObject({ ok: false });
+});
+
+test("the command line gives setItems its list of objects as JSON (T1213)", () => {
+  const op = findOperation("setItems");
+  if (!op) throw new Error("no setItems");
+  const list = parseOperationArgs(op, [
+    "home",
+    "features",
+    "--items",
+    '[{"title":"Courts, lit","text":"Play after dark, until ten."},{"title":"Coaching","text":"Weekly."}]',
+  ]);
+  expect(list.items).toEqual([
+    { title: "Courts, lit", text: "Play after dark, until ten." },
+    { title: "Coaching", text: "Weekly." },
+  ]);
+  const set = applyOperation(files, "setItems", list);
+  if (!set.ok) throw new Error(set.message);
+  expect(set.files.content).toContain("Courts, lit");
+  // One item at a time adds to the list given before.
+  const one = parseOperationArgs(op, [
+    "home",
+    "faq",
+    "--items",
+    '{"question":"Open on Sundays?","answer":"Yes."}',
+    "--items",
+    '{"question":"Parking?","answer":"Behind the hall."}',
+  ]);
+  expect(one.items).toHaveLength(2);
+  // Then a text of an item, by its place in the list, as the command line writes it.
+  const setText = findOperation("setText");
+  if (!setText) throw new Error("no setText");
+  const text = applyOperation(
+    set.files,
+    "setText",
+    parseOperationArgs(setText, [
+      "Courts with lights",
+      "pages",
+      "home",
+      "features",
+      "items",
+      "0",
+      "title",
+    ]),
+  );
+  if (!text.ok) throw new Error(text.message);
+  expect(text.files.content).toContain("Courts with lights");
+  // A list of words still splits on commas, brackets and all.
+  const words = {
+    ...op,
+    positional: [],
+    schema: { type: "object", properties: { pages: { type: "array", items: { type: "string" } } } },
+  } as typeof op;
+  expect(parseOperationArgs(words, ["--pages", "[draft],home"]).pages).toEqual(["[draft]", "home"]);
+  expect(() => parseOperationArgs(op, ["home", "faq", "--items", "[{oops"])).toThrow(
+    "--items is not JSON",
+  );
 });

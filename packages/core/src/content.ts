@@ -147,9 +147,12 @@ export interface ContentImage {
 }
 
 /** A picture's file, relative to the app's public/ folder. */
-const IMAGE_SRC = /^images\/([\w-][\w.-]*\/)*[\w-][\w.-]*\.(webp|avif|jpe?g|png)$/;
+export const IMAGE_SRC = /^images\/([\w-][\w.-]*\/)*[\w-][\w.-]*\.(webp|avif|jpe?g|png)$/;
 /** A mark's file: a picture's, or an SVG (a maker's own logo usually is one). */
 export const LOGO_SRC = /^images\/([\w-][\w.-]*\/)*[\w-][\w.-]*\.(webp|avif|jpe?g|png|svg)$/;
+
+/** Whether a kind of section shows one picture of its own (a hero, a media-and-text section). */
+export const sectionTakesPicture = (kind: string) => SECTION_TEXTS[kind]?.image === true;
 
 /** The keys of a kind of section's items that are plain texts (a pricing plan's features and a gallery's picture are not); none when its items are not texts alone. */
 export function sectionItemTexts(kind: string): string[] | undefined {
