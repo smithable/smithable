@@ -651,14 +651,28 @@ try {
     await op("setFilters", { page: "orders", fields: ["status"] });
     await firstWindow("nocode");
   });
-  await step("the preview says its records are samples, until dismissed", async () => {
-    const note = page.getByRole("note").filter({ hasText: "Your published app starts empty" });
-    await note.waitFor();
-    await note.getByRole("button", { name: "Dismiss" }).click();
-    await page.reload();
-    await page.getByRole("heading", { name: "Ask Smith", exact: true }).waitFor();
-    if (await note.count()) throw new Error("the samples notice came back");
-  });
+  const noticePage = await lookSeen.newPage();
+  try {
+    await step(
+      "the preview says its records are samples, until dismissed",
+      async () => {
+        // The notice expires by itself. Check dismissal on a fresh visit, before its timer ends.
+        await noticePage.goto(`${base}/?guide=off`);
+        const note = noticePage
+          .getByRole("note")
+          .filter({ hasText: "Your published app starts empty" });
+        await note.waitFor();
+        await note.getByRole("button", { name: "Dismiss", exact: true }).click();
+        await note.waitFor({ state: "detached" });
+        await noticePage.reload();
+        await noticePage.locator('iframe[title="App preview"]').waitFor();
+        if (await note.count()) throw new Error("the samples notice came back");
+      },
+      noticePage,
+    );
+  } finally {
+    await noticePage.close();
+  }
   await step(
     "the preview's address is no form a password manager fills, opens on Enter with no Go button, and its link button is kept",
     async () => {
