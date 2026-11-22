@@ -2429,6 +2429,7 @@ exports[`valid specs > ../../../examples/builder/smithable.yml 1`] = `
     {
       "actions": [
         "contacted",
+        "visited",
         "quoted",
         "won",
         "lost",
@@ -5545,6 +5546,7 @@ exports[`valid specs > ../../../examples/painter/smithable.yml 1`] = `
     {
       "actions": [
         "contacted",
+        "visited",
         "quoted",
         "won",
         "lost",
