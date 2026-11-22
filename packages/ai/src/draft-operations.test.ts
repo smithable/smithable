@@ -985,7 +985,13 @@ test("full website copy keeps its language and takes priority over the English d
 test("a website import repairs a draft that only created a privacy page", async () => {
   const prompts: string[] = [];
   const first = answering({ operations: [{ op: "addPrivacyPage", args: {} }] });
-  const repair = answering({ operations: [{ op: "addLandingPage", args: { page: "home" } }] });
+  const repair = answering({
+    operations: [
+      { op: "addLandingPage", args: { page: "home" } },
+      { op: "addModel", args: { model: "Contact", fields: { email: "email" } } },
+      { op: "setPublic", args: { pages: ["home"], read: ["Contact"] } },
+    ],
+  });
   const draft = await draftProjectByOperations({
     description: "Import the website for a bicycle shop.",
     requireLanding: true,
@@ -1000,6 +1006,7 @@ test("a website import repairs a draft that only created a privacy page", async 
     ],
   });
   expect(prompts[1]).toContain("The imported website needs a landing page");
+  expect(prompts[2]).toContain("including personal data");
   expect(draft.kind === "draft" && draft.files["smithable.yml"]).toContain("landing:");
   const incomplete = await draftProjectByOperations({
     description: "Import the website for a bicycle shop.",

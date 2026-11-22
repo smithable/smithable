@@ -745,10 +745,7 @@ export function untranslated(
 /** Flaws that expose someone weigh far more than flaws that only look broken. */
 const EXPOSES = new Set(["public-personal-data", "visitors-read-drafts"]);
 const weigh = (flaws: { code: string }[]) =>
-  flaws.reduce(
-    (n, f) => n + (EXPOSES.has(f.code) ? 100 : f.code === "missing-landing" ? 25 : 1),
-    0,
-  );
+  flaws.reduce((n, f) => n + (EXPOSES.has(f.code) ? 100 : 1), 0);
 
 const toProject = (files: SpecFiles): ProjectFiles => ({
   spec: files["smithable.yml"] ?? "",
@@ -927,8 +924,12 @@ export async function draftProjectByOperations(options: {
         if (done.length > 0) {
           files = mended(files, done);
           const found = flawsOf(files, options.requireLanding);
-          if (!best || weigh(found) < best.score)
-            best = { files, count: done.length, score: weigh(found) };
+          const score = weigh(found);
+          if (
+            !found.some((flaw) => flaw.code === "missing-landing") &&
+            (!best || score < best.score)
+          )
+            best = { files, count: done.length, score };
           const flaws = last ? [] : found.map((f) => f.message);
           if (critique && round === 1) {
             // The critique: the spec the draft became and what the checks find, to mend once.
