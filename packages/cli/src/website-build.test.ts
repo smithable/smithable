@@ -20,6 +20,7 @@ const state = vi.hoisted(() => ({
   personalEmail: "",
   draftLanguage: undefined as string | undefined,
   copiedText: "",
+  privacyOnly: false,
 }));
 vi.mock("@smithable/ai", async (original) => ({
   ...(await original<object>()),
@@ -34,6 +35,15 @@ vi.mock("@smithable/ai", async (original) => ({
   }) => {
     state.descriptions.push(options.description);
     state.draftLanguage = options.language;
+    if (state.privacyOnly)
+      return {
+        kind: "draft",
+        files: {
+          "smithable.yml":
+            "smithable: 0.1\napp: { name: Shop }\npages:\n  privacy: { route: /privacy, legal: privacy }\n",
+        },
+        usage: [],
+      };
     const files = { ...options.starter };
     const content = new YamlEditor(files["smithable.content.yml"] ?? "");
     content.set(
@@ -318,8 +328,23 @@ test("explicit full-content input preserves the source language and requested co
     expect(new YamlEditor(content).get(["language"])).toBe("sv");
     expect(content).toContain(text);
     expect(content).not.toContain("People and contact details are samples");
+
+    const incomplete = join(tempDir("website-full-incomplete-"), "app");
+    const errors: string[] = [];
+    state.privacyOnly = true;
+    expect(
+      await create(incomplete, { ...quiet, err: (message) => errors.push(message) }, "barbers", {
+        websiteInput: source,
+        yes: true,
+        unattended: true,
+        installed: true,
+      }),
+    ).toBe(1);
+    expect(errors.join("")).toContain("The website draft has no landing page.");
+    expect(existsSync(incomplete)).toBe(false);
   } finally {
     state.copiedText = "";
+    state.privacyOnly = false;
     vi.unstubAllEnvs();
   }
 });

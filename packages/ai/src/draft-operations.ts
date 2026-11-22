@@ -678,11 +678,20 @@ export function visitorFlaws(files: ProjectFiles): string[] {
   return flawsOf(files).map((d) => d.message);
 }
 
-function flawsOf(files: ProjectFiles): { code: string; message: string }[] {
+function flawsOf(files: ProjectFiles, requireLanding = false): { code: string; message: string }[] {
   const ir = validateSpec({ path: "smithable.yml", text: files.spec }).ir;
   if (!ir) return [];
   const english = untranslated(files);
   return [
+    ...(requireLanding && !ir.pages.some((page) => page.pattern.kind === "landing")
+      ? [
+          {
+            code: "missing-landing",
+            message:
+              "The imported website needs a landing page with the source home page's content.",
+          },
+        ]
+      : []),
     ...validateAuth({ path: "smithable.auth.yml", text: files.auth ?? "" }, ir).diagnostics.filter(
       (d) => d.severity === "warning" && VISITOR_FLAWS.has(d.code),
     ),
@@ -736,7 +745,10 @@ export function untranslated(
 /** Flaws that expose someone weigh far more than flaws that only look broken. */
 const EXPOSES = new Set(["public-personal-data", "visitors-read-drafts"]);
 const weigh = (flaws: { code: string }[]) =>
-  flaws.reduce((n, f) => n + (EXPOSES.has(f.code) ? 100 : 1), 0);
+  flaws.reduce(
+    (n, f) => n + (EXPOSES.has(f.code) ? 100 : f.code === "missing-landing" ? 25 : 1),
+    0,
+  );
 
 const toProject = (files: SpecFiles): ProjectFiles => ({
   spec: files["smithable.yml"] ?? "",
@@ -778,6 +790,7 @@ export async function draftProjectByOperations(options: {
   description: string;
   language?: Language;
   preserveSourceCopy?: boolean;
+  requireLanding?: boolean;
   providers: Provider[];
   /** The closest starter (clarify's choice): the example of shape, and the access default. */
   starter?: { name: string; files: SpecFiles };
@@ -819,7 +832,10 @@ export async function draftProjectByOperations(options: {
     if (language && language !== "en")
       files = applyAll(files, done, [{ op: "setLanguage", args: { language } }]).files;
     const wording = languageNote(options.description, language, options.preserveSourceCopy);
-    let prompt = `${options.attempt ? `(${options.attempt}.) ` : ""}Description: ${options.description}${wording}${done.length ? `\n\nApplied so far (do not repeat them):\n${JSON.stringify(done)}` : ""}${shape}`;
+    const landing = options.requireLanding
+      ? "\nThe result needs a landing page with the source home page's content. Start it with addLandingPage."
+      : "";
+    let prompt = `${options.attempt ? `(${options.attempt}.) ` : ""}Description: ${options.description}${wording}${landing}${done.length ? `\n\nApplied so far (do not repeat them):\n${JSON.stringify(done)}` : ""}${shape}`;
     let round = 0;
     let assumptions: Assumption[] = [];
     let refused: { step: Step; message: string }[] = [];
@@ -835,9 +851,15 @@ export async function draftProjectByOperations(options: {
     // added last, when the app has its texts: its file lists every one, to be filled in.
     const others = otherLanguages(options.description, language ?? "en");
     const draftOf = (dropped: string[]): Draft & { operations?: Step[] } => {
+      const selected = best?.files ?? files;
+      const ir = options.requireLanding
+        ? validateSpec({ path: "smithable.yml", text: selected.spec }).ir
+        : undefined;
+      if (options.requireLanding && !ir?.pages.some((page) => page.pattern.kind === "landing"))
+        return { kind: "failed", message: "The website draft has no landing page.", usage };
       const steps = [...(best ? done.slice(0, best.count) : done)];
       const chosen = applyAll(
-        best?.files ?? files,
+        selected,
         steps,
         others.map((other) => ({ op: "addLanguage", args: { language: other } })),
       ).files;
@@ -904,7 +926,7 @@ export async function draftProjectByOperations(options: {
         ];
         if (done.length > 0) {
           files = mended(files, done);
-          const found = flawsOf(files);
+          const found = flawsOf(files, options.requireLanding);
           if (!best || weigh(found) < best.score)
             best = { files, count: done.length, score: weigh(found) };
           const flaws = last ? [] : found.map((f) => f.message);

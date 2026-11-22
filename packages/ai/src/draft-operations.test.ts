@@ -981,3 +981,34 @@ test("full website copy keeps its language and takes priority over the English d
   expect(messages[1]).toContain("Keep each supplied passage in its original language");
   expect(draft.kind === "draft" && draft.files["smithable.content.yml"]).toContain("language: sv");
 });
+
+test("a website import repairs a draft that only created a privacy page", async () => {
+  const prompts: string[] = [];
+  const first = answering({ operations: [{ op: "addPrivacyPage", args: {} }] });
+  const repair = answering({ operations: [{ op: "addLandingPage", args: { page: "home" } }] });
+  const draft = await draftProjectByOperations({
+    description: "Import the website for a bicycle shop.",
+    requireLanding: true,
+    providers: [
+      {
+        ...first,
+        complete(request) {
+          prompts.push(request.user);
+          return (prompts.length === 1 ? first : repair).complete(request);
+        },
+      },
+    ],
+  });
+  expect(prompts[1]).toContain("The imported website needs a landing page");
+  expect(draft.kind === "draft" && draft.files["smithable.yml"]).toContain("landing:");
+  const incomplete = await draftProjectByOperations({
+    description: "Import the website for a bicycle shop.",
+    requireLanding: true,
+    repairs: 0,
+    providers: [first],
+  });
+  expect(incomplete).toMatchObject({
+    kind: "failed",
+    message: "The website draft has no landing page.",
+  });
+});

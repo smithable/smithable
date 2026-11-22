@@ -1,6 +1,19 @@
+import {
+  applyOperations,
+  DISPLAY_FONTS,
+  FONT_WEIGHTS,
+  FONTS,
+  resolveLook,
+  SHADOWS,
+  type SpecIR,
+  validateContent,
+  validateUx,
+  YamlEditor,
+} from "@smithable/core";
 import { type HTMLElement, parse } from "node-html-parser";
 import { type SiteReadPage, sameSiteAddress } from "./site-bundle.js";
 import { inlineHidden } from "./site-validation.js";
+import { matchSiteFont } from "./theme-from.js";
 
 const headings = "h1, h2, h3";
 const clean = (text: string, limit: number) => text.replace(/\s+/gu, " ").trim().slice(0, limit);
@@ -141,4 +154,103 @@ export function sourceLayout(pages: SiteReadPage[]) {
       return { page: index + 1, bodyFont, headingFont, blocks };
     })
     .filter(({ blocks }) => blocks.length > 0);
+}
+
+export function sourceSectionLooks(
+  home: ReturnType<typeof sourceLayout>[number],
+  files: Record<string, string>,
+  ir: SpecIR,
+) {
+  const page = ir.pages.find((page) => page.route === "/" && page.pattern.kind === "landing");
+  if (page?.pattern.kind !== "landing") return [];
+  const content = validateContent(
+    { path: "smithable.content.yml", text: files["smithable.content.yml"] ?? "" },
+    ir,
+  ).content;
+  const ux = new YamlEditor(files["smithable.ux.yml"] ?? "");
+  return page.pattern.sections.flatMap(({ name, kind }) => {
+    const title = content?.pages[page.id]?.sections?.[name]?.title;
+    if (!title) return [];
+    const matches = home.blocks.filter((block) => block.title === clean(title, 200));
+    if (matches.length !== 1) return [];
+    const source = matches[0];
+    const layout = ux.get(["pages", page.id, "sections", name, "layout"]);
+    const setting =
+      kind === "mediaText" && source?.picture?.side
+        ? { key: "image", value: source.picture.side }
+        : kind === "hero" && source?.darkOverlay && (layout === "cover" || layout === "photo")
+          ? { key: "overlay", value: "dark" }
+          : undefined;
+    return setting
+      ? [{ op: "setSectionLook", args: { page: page.id, section: name, ...setting } }]
+      : [];
+  });
+}
+
+/** Keep the home page's known font pair on the draft's selected palette and style. */
+export function sourceFontTheme(
+  home: ReturnType<typeof sourceLayout>[number],
+  files: Record<string, string>,
+  ir: SpecIR,
+) {
+  const hosted = (family: string | undefined) =>
+    FONTS.find((font) => font.toLowerCase() === family?.toLowerCase()) ?? matchSiteFont(family);
+  const sourceHeading = hosted(home.headingFont);
+  const heading = FONTS.find((font) => font === sourceHeading);
+  if (!heading) return undefined;
+  const page = ir.pages.find((page) => page.route === "/" && page.pattern.kind === "landing");
+  if (!page) return undefined;
+  const uxText = files["smithable.ux.yml"] ?? "smithableUx: 0.1\n";
+  const { ux } = validateUx({ path: "smithable.ux.yml", text: uxText }, ir);
+  if (!ux) return undefined;
+  const { theme, font, settings } = resolveLook(ux, [], page.id);
+  const sourceBody = hosted(home.bodyFont);
+  const body = sourceBody && !DISPLAY_FONTS.includes(sourceBody) ? sourceBody : font;
+  if (heading === body || (font === body && theme.style.headingFont === heading)) return undefined;
+  const { headingFont, labelsFont, headings, ...style } = theme.style;
+  const [minimum, maximum] = FONT_WEIGHTS[heading];
+  const weight = Math.max(
+    Math.ceil(minimum / 100) * 100,
+    Math.min(Math.floor(maximum / 100) * 100, headings.weight),
+  );
+  const name = "website-type";
+  const yaml = new YamlEditor("smithableTheme: 0.1\n");
+  const shadow = Object.entries(SHADOWS).find(([, value]) => value === theme.shadow)?.[0] ?? "soft";
+  for (const [key, value] of Object.entries({
+    name,
+    fonts: { body, heading, ...(labelsFont ? { labels: labelsFont } : {}) },
+    headings: { ...headings, weight },
+    ...style,
+    radius: theme.radius,
+    shadow,
+    density: theme.density,
+    motion: theme.motion,
+    chroma: theme.chroma,
+    modes: theme.modes,
+    ...(theme.defaults ? { defaults: { ...theme.defaults } } : {}),
+    ...(theme.modes !== "dark" ? { light: theme.light } : {}),
+    ...(theme.modes !== "light" ? { dark: theme.dark } : {}),
+  }))
+    yaml.add([], key, value);
+  return applyOperations(
+    {
+      spec: files["smithable.yml"] ?? "",
+      auth: files["smithable.auth.yml"],
+      content: files["smithable.content.yml"],
+      ux: uxText,
+    },
+    [
+      { op: "addTheme", args: { name, text: yaml.text } },
+      {
+        op: "setTheme",
+        args: {
+          page: page.id,
+          preset: name,
+          font: body,
+          density: settings.density,
+          motion: settings.motion,
+        },
+      },
+    ],
+  );
 }

@@ -62,7 +62,7 @@ import {
   websitePrivateProviders,
 } from "./website-generation.js";
 import { digest, parseWebsiteInput, type WebsiteGenerationInput } from "./website-input.js";
-import { sourceLayout } from "./website-layout.js";
+import { sourceFontTheme, sourceLayout, sourceSectionLooks } from "./website-layout.js";
 
 /**
  * The starter a description is, or is a small edit of, where that can be read without a model
@@ -217,6 +217,7 @@ export async function create(
   }
   let website: WebsiteContext | undefined;
   let websiteAssets: WebsiteAsset[] = [];
+  let websiteTheme: { path: string; text: string }[] = [];
   let websiteAssumptions: Assumption[] | undefined;
   if (options.contentMode === "full" && !options.from) {
     io.err("Full website content requires the explicit local --from workflow.\n");
@@ -465,6 +466,7 @@ export async function create(
             providers,
             language: website?.language,
             preserveSourceCopy: website?.contentMode === "full",
+            requireLanding: website?.contentMode === "full" && !options.websiteOwnerDescription,
             starter: { name, files },
             // The bench's harness switches (backlog Experiments 7); unset, the draft is made as always.
             ...(/^\d+$/.test(process.env.SMITHABLE_REPAIRS ?? "")
@@ -562,6 +564,14 @@ export async function create(
       text: files["smithable.auth.yml"] ?? "",
     }).auth;
     const ir = validateSpec({ path: "smithable.yml", text: files["smithable.yml"] ?? "" }).ir;
+    if (
+      website?.contentMode === "full" &&
+      !options.websiteOwnerDescription &&
+      !ir?.pages.some((page) => page.pattern.kind === "landing")
+    ) {
+      io.err("The website draft has no landing page. No app was created.\n");
+      return 1;
+    }
     const content = files["smithable.content.yml"];
     if (ir) {
       const texts = content
@@ -662,10 +672,35 @@ export async function create(
     pictures = placed.pictures;
     websiteAssets = placed.assets;
     files = replaceWebsitePersonalFiles(files, website);
+    const home = layout.find((page) => page.page === 1);
+    const sourceLooks = home ? sourceSectionLooks(home, files, ir) : [];
+    if (sourceLooks.length) {
+      const looks = applyOperations(
+        {
+          spec: files["smithable.yml"] ?? "",
+          auth: files["smithable.auth.yml"],
+          content: files["smithable.content.yml"],
+          ux: files["smithable.ux.yml"],
+        },
+        sourceLooks,
+      );
+      if (looks.ok && looks.files.ux) files = { ...files, "smithable.ux.yml": looks.files.ux };
+    }
+    const fonts = home && sourceFontTheme(home, files, ir);
+    if (fonts?.ok && fonts.files.ux) {
+      files = { ...files, "smithable.ux.yml": fonts.files.ux };
+      websiteTheme = fonts.added;
+    } else if (fonts && !fonts.ok) {
+      io.out("The source heading font could not be applied. Kept the draft theme.\n");
+    }
     fromPage = false;
   }
   mkdirSync(dir, { recursive: true });
   for (const [file, text] of Object.entries(files)) writeFileSync(join(dir, file), text);
+  for (const { path, text } of websiteTheme) {
+    mkdirSync(dirname(join(dir, path)), { recursive: true });
+    writeFileSync(join(dir, path), text);
+  }
   // The plain starter comes with its own custom code (e.g. the CRM's customer merge); an app
   // drafted from a description may have changed what that code relies on, so it gets stubs.
   if (!options.describe)
