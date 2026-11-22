@@ -217,8 +217,9 @@ export function samplePicture(
   // A starter's numbered pictures (0.webp, 1.webp, …), or a sample file's own by name.
   const name = typeof n === "number" ? `${n}.webp` : n;
   const said = placedPictures()[`samples/${name}`];
-  generated ??= said?.generated ?? typeof n === "number";
   kind ??= said?.kind;
+  // A kind says whether an AI made it; without one, the library's word or a starter's numbering.
+  generated ??= kind ? kind !== "photograph" : (said?.generated ?? typeof n === "number");
   const source = join("public", "images", "samples", name);
   if (!existsSync(source)) return null;
   const bytes = readFileSync(source);
@@ -231,7 +232,7 @@ export function samplePicture(
     return saved.width === width ? [{ file: saved.file, width, height: saved.height }] : [];
   });
   if (smaller.length) picture.smaller = smaller;
-  return generated ? { ...picture, generated: true, ...(kind ? { kind } : {}) } : picture;
+  return { ...picture, ...(generated ? { generated: true } : {}), ...(kind ? { kind } : {}) };
 }
 
 /** What a document field stores: the file under uploads/, the name it was sent with, its kind and size. */

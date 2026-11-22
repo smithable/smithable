@@ -64,6 +64,23 @@ test("switching the AI badge off is refused while a realistic placed picture wou
     expect(await op(dir, io, "setAiBadge", ["off"], { yes: false })).toBe(1);
     expect(io.stderr).toContain("--acknowledged");
     expect(readFileSync(join(dir, "smithable.ux.yml"), "utf8")).toBe("smithableUx: 0.1\n");
+    // The record says drawn, but a sample file names a realistic one of its own: still refused.
+    writeFileSync(
+      join(dir, "public", "images", "pictures.json"),
+      JSON.stringify({ "samples/0.webp": { generated: true, role: "sample", kind: "ai-drawn" } }),
+    );
+    mkdirSync(join(dir, "samples"));
+    writeFileSync(
+      join(dir, "samples", "item.yml"),
+      "- name: Lamp\n  photo: { picture: lamp.webp, alt: A lamp, generated: true, kind: ai-realistic }\n",
+    );
+    expect(await op(dir, io, "setAiBadge", ["off"], { yes: false })).toBe(1);
+    rmSync(join(dir, "samples"), { recursive: true });
+    // A starter's numbered sample picture with no record was the library's: counted as realistic.
+    mkdirSync(join(dir, "public", "images", "samples"));
+    writeFileSync(join(dir, "public", "images", "samples", "1.webp"), "");
+    expect(await op(dir, io, "setAiBadge", ["off"], { yes: false })).toBe(1);
+    expect(readFileSync(join(dir, "smithable.ux.yml"), "utf8")).toBe("smithableUx: 0.1\n");
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

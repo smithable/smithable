@@ -147,9 +147,37 @@ function placedFiles(dir: string): string[] {
  * `generated` and was the library's, so made by an AI.
  */
 export function placedRealistic(dir: string): boolean {
-  return Object.values(readRecords(dir)).some(
-    (r) => r.generated !== false && r.role !== "logo" && badgedByDefault(r.kind),
+  const records = readRecords(dir);
+  return (
+    Object.values(records).some(
+      (r) => r.generated !== false && r.role !== "logo" && badgedByDefault(r.kind),
+    ) ||
+    // A starter's numbered sample picture without a record was the library's, so made by an AI.
+    placedFiles(dir).some((f) => /^samples\/\d+\.webp$/.test(f) && !records[f]) ||
+    samplesRealistic(dir)
   );
+}
+
+/** Whether a sample file (samples/<model>.yml) names a picture an AI made that looks real. */
+function samplesRealistic(dir: string): boolean {
+  const folder = join(dir, "samples");
+  if (!plain(folder, "dir")) return false;
+  const realistic = (node: unknown): boolean => {
+    if (Array.isArray(node)) return node.some(realistic);
+    if (!node || typeof node !== "object") return false;
+    const o = node as { picture?: unknown; generated?: unknown; kind?: unknown };
+    if (o.picture !== undefined && (o.generated === true || o.kind === "ai-realistic"))
+      return badgedByDefault(o.kind as PictureKind | undefined);
+    return Object.values(o).some(realistic);
+  };
+  return readdirSync(folder).some((name) => {
+    if (!/\.ya?ml$/.test(name) || !plain(join(folder, name), "file")) return false;
+    try {
+      return realistic(new YamlEditor(treeText(join(folder, name))).get([]));
+    } catch {
+      return false;
+    }
+  });
 }
 
 /**

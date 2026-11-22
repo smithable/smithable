@@ -952,11 +952,19 @@ function readPicture(
           ? `"widths" of ${where} needs a file whose name ends in a lower-case extension (images/hero.webp): its copies are named after it.`
           : undefined);
   if (misfit) ctx.error(copies?.value ?? null, "invalid-value", misfit);
+  const generated = flag && readBoolean(ctx, flag.value, `"generated" of ${where}`) === true;
+  // The two say the same thing twice, so they must agree, or the badge would follow the wrong one.
+  if (kind && (kind === "photograph") === Boolean(generated))
+    ctx.error(
+      sort?.value ?? null,
+      "invalid-value",
+      kind === "photograph"
+        ? `"kind" of ${where} is photograph, but it says "generated: true": an AI picture is ai-realistic or ai-drawn.`
+        : `"kind" of ${where} is ${kind}, a picture an AI made: say "generated: true" beside it.`,
+    );
   return {
     ...texts,
-    ...(flag && readBoolean(ctx, flag.value, `"generated" of ${where}`) === true
-      ? { generated: true as const }
-      : {}),
+    ...(generated ? { generated: true as const } : {}),
     ...(kind ? { kind } : {}),
     ...(width ? { width } : {}),
     ...(widths && !misfit ? { widths } : {}),

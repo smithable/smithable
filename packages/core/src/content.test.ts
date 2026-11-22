@@ -185,6 +185,15 @@ pages:
       hero: { image: { src: "images/hero.webp", alt: "x", generated: true, kind: "ai-drawn" } },
     },
   });
+  // The kind and the flag must agree, or the badge would follow the wrong one (T1173).
+  expect(
+    hero("{ src: images/hero.webp, alt: x, kind: ai-realistic }").diagnostics[0]?.message,
+  ).toContain("generated: true");
+  expect(
+    hero("{ src: images/hero.webp, alt: x, generated: true, kind: photograph }").diagnostics[0]
+      ?.message,
+  ).toContain("an AI picture is ai-realistic or ai-drawn");
+  expect(hero("{ src: images/hero.webp, alt: x, kind: photograph }").diagnostics).toEqual([]);
   expect(hero("{ src: images/hero.webp, alt: x, kind: sketch }").diagnostics[0]?.message).toContain(
     "ai-realistic, ai-drawn, photograph",
   );

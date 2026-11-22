@@ -1120,10 +1120,10 @@ const setAiBadge: Operation<{ value?: "on" | "off" | "default"; acknowledged?: b
   apply(editors, { value, acknowledged }) {
     if (value !== "on" && value !== "off" && value !== "default")
       throw new OperationError(`"${String(value)}" is not on, off or default.`);
-    if (value === "off" && !acknowledged && realisticIn(editors.content.get(["pages"])))
+    if (value === "off" && acknowledged !== true && realisticIn(editors.content.get(["pages"])))
       throw new OperationError(AI_BADGE_OFF_REFUSAL);
     put(editors.ux, ["aiBadge"], value === "default" ? undefined : value === "on");
-    return value === "off" && !acknowledged ? [{ kind: "ai-badge-off" }] : [];
+    return value === "off" && acknowledged !== true ? [{ kind: "ai-badge-off" }] : [];
   },
 };
 
