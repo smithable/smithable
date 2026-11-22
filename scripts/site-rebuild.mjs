@@ -345,11 +345,13 @@ function ourSections() {
         ? "text"
         : value?.kind
           ? value.kind
-          : value?.custom
-            ? "custom"
-            : base === "footer" || base === "hero" || SECTION_LOOKS[base]
-              ? base
-              : "custom";
+          : value && Object.keys(value).find((k) => SECTION_LOOKS[k])
+            ? Object.keys(value).find((k) => SECTION_LOOKS[k])
+            : value?.custom
+              ? "custom"
+              : base === "footer" || base === "hero" || SECTION_LOOKS[base]
+                ? base
+                : "custom";
     const looks = ux.pages?.[page]?.sections?.[name] ?? {};
     const texts = content.pages?.[page]?.[name] ?? {};
     return { name, kind, looks, texts, records: value?.records };
@@ -766,6 +768,10 @@ for (const p of pairs) {
     if (p.site.kind === made.kind && String(now ?? "") !== String(v))
       fromList.push(`${made.name}: the site's look is ${k} ${v}; new --from set ${now ?? "none"}`);
   }
+  if (!p.first.desk)
+    fromList.push(
+      `${made.name}: not on our page${made.kind === "records" ? " (a records section with no records is hidden; new --from seeded none)" : ""}`,
+    );
   const sp = sourceMeasure[p.site.block].desk?.pics ?? 0;
   const op0 = p.first.desk?.pics ?? 0;
   if (sp >= 1 && op0 === 0)
