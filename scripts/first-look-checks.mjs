@@ -26,8 +26,14 @@ function operations(page) {
  */
 export async function asNewApp(target) {
   await target.route("**/api/project", async (route) => {
-    const response = await route.fetch();
-    await route.fulfill({ response, json: { ...(await response.json()), asMade: true } });
+    // A request still in flight when Studio stops (the checks' end) is reset: that page is done
+    // with, and an uncaught rejection here would end the whole check.
+    try {
+      const response = await route.fetch();
+      await route.fulfill({ response, json: { ...(await response.json()), asMade: true } });
+    } catch {
+      await route.abort().catch(() => {});
+    }
   });
 }
 
