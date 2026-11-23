@@ -8,8 +8,14 @@ import { pictureName } from "./SectionPicture";
 export const FILM_MAX_BYTES = 5_000_000;
 
 /** Why a chosen file is not sent, or undefined: by its type and size, before anything is read. */
-export function filmFileRefusal(file: { type: string; size: number }): string | undefined {
-  if (file.type !== "video/mp4") return "A film is an MP4 file.";
+export function filmFileRefusal(file: {
+  name: string;
+  type: string;
+  size: number;
+}): string | undefined {
+  // Some systems give an MP4 no type: its name lets it through to the server, which reads its bytes.
+  const mp4 = file.type === "video/mp4" || (file.type === "" && /\.mp4$/i.test(file.name));
+  if (!mp4) return "A film is an MP4 file.";
   if (file.size > FILM_MAX_BYTES)
     return `This file is ${(file.size / 1_000_000).toFixed(1)} MB; a film is at most 5 MB.`;
   return undefined;

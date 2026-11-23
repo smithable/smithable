@@ -215,7 +215,8 @@ export async function checkStudioSelection(browser, base) {
       await filmRow
         .locator('input[type="file"]')
         .setInputFiles({ name: "loop.mp4", mimeType: "video/mp4", buffer });
-      return (await sent).json();
+      const response = await sent;
+      return { ...(await response.json()), src: response.request().postDataJSON()?.args?.src };
     };
     const loud = await sendFilm(mp4Boxes({ sound: true }));
     assert.equal(loud.ok, false);
@@ -224,12 +225,32 @@ export async function checkStudioSelection(browser, base) {
       .getByRole("alert")
       .filter({ hasText: "Sound: it has a sound track" })
       .waitFor();
-    assert.equal((await sendFilm(mp4Boxes())).ok, true);
+    const tried = await sendFilm(mp4Boxes());
+    assert.equal(tried.ok, true);
     await filmRow.getByRole("button", { name: "Replace", exact: true }).waitFor();
     // The picture stays: it is what shows until a film plays, and when it cannot.
     await frame.locator("[data-hero] img").first().waitFor();
+    // Its file is in the app while it is tried on, and Cancel takes it out again with its change.
+    const preview = await page.locator('iframe[title="App preview"]').getAttribute("src");
+    const filmServed = async () => {
+      const response = await page.request.get(
+        new URL(`/${tried.src}`, new URL(preview, base)).href,
+      );
+      return response.ok() && (response.headers()["content-type"] ?? "").startsWith("video/mp4");
+    };
+    assert.equal(await filmServed(), true, "the film tried on is not in the app");
+    // Remove is tried on too: the row says there is none.
+    const filmRemoved = page.waitForResponse(
+      (response) =>
+        response.url() === `${base}/api/op` &&
+        response.request().postDataJSON()?.name === "setSectionFilm",
+    );
+    await filmRow.getByRole("button", { name: "Remove", exact: true }).click();
+    assert.equal((await (await filmRemoved).json()).ok, true);
+    await filmRow.getByText("No film: the picture stands still.", { exact: true }).waitFor();
     await sectionForm.getByRole("button", { name: "Cancel", exact: true }).click();
     await sectionForm.waitFor({ state: "hidden" });
+    assert.equal(await filmServed(), false, "Cancel left the film's file in the app");
     await select.click();
     await hero.click({ position: { x: 4, y: 4 } });
     await sectionForm.waitFor();
