@@ -1734,6 +1734,9 @@ test("setInitials puts one or two letters on the tile, refuses three, and none g
   const changed = applyOperation({ ...files, ...set.files }, "setInitials", { initials: "CR" });
   if (!changed.ok) throw new Error(changed.message);
   expect(changed.files.content).toMatch(/^initials: CR$/m);
+  // Changed back: the file with AC as it was, byte for byte.
+  const back = applyOperation({ ...files, ...changed.files }, "setInitials", { initials: "AC" });
+  expect(back.ok && back.files.content).toBe(set.files.content);
   // Undone: the file as it was, byte for byte.
   const removed = applyOperation({ ...files, ...changed.files }, "setInitials", { initials: "" });
   expect(removed.ok && removed.files.content).toBe(files.content);

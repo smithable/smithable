@@ -12,8 +12,12 @@ test("the initials by rule: the first letters of the first two words that have o
   // Emoji and signs are passed over, also in front.
   expect(initialsOf("🌿 Garden club")).toBe("GC");
   expect(initialsOf("7 eleven")).toBe("7E");
+  // A fraction is a sign, and a keycap digit an emoji.
+  expect(initialsOf("½ moon bakery")).toBe("MB");
+  expect(initialsOf("1\uFE0F\u20E3 Garden club")).toBe("GC");
   // Upper-cased without a locale, only the first character kept: ß gives S.
   expect(initialsOf("ßeta works")).toBe("SW");
+  expect(initialsOf("ß\u0301eta")).toBe("S\u0301");
   // A letter keeps its combining marks.
   expect(initialsOf("école normale")).toBe("ÉN");
   // A name without spaces in a script without case: one, as written.
@@ -31,6 +35,8 @@ test("a given initials is one or two letters or digits", () => {
   expect(initialsForm("SYZ")).toBe(false);
   expect(initialsForm("S Y")).toBe(false);
   expect(initialsForm("S&")).toBe(false);
+  expect(initialsForm("½")).toBe(false);
+  expect(initialsForm("1\uFE0F\u20E3")).toBe(false);
   expect(initialsForm("")).toBe(false);
 });
 

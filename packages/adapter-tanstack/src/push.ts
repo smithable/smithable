@@ -36,7 +36,8 @@ self.addEventListener("notificationclick", (event) => {
 
 /**
  * The web app manifest: the app's name and icons, opened as an app of its own. An app with a
- * logo lists it first, so an installed app carries the picture its tab does (app-logo.md §0).
+ * logo lists it after the tile: of icons equally fit a browser takes the last, so an installed
+ * app carries the picture its tab does (app-logo.md §0).
  */
 export function manifest(ir: SpecIR, content?: ContentIR): string {
   const logo = content?.logo?.src;
@@ -50,8 +51,8 @@ export function manifest(ir: SpecIR, content?: ContentIR): string {
       start_url: "/",
       display: "standalone",
       icons: [
-        ...(logo ? [{ src: `/${logo}`, sizes: "any", type }] : []),
         { src: "/favicon.svg", sizes: "any", type: "image/svg+xml" },
+        ...(logo ? [{ src: `/${logo}`, sizes: "any", type }] : []),
       ],
     },
     null,

@@ -119,7 +119,7 @@ test("the name is a wordmark in the shell and the landing header, with or withou
   expect(rule).toContain("letter-spacing: -0.02em");
 });
 
-test("an installed app with a logo carries it first in its manifest, the tile after it", () => {
+test("an installed app with a logo carries it last in its manifest, after the tile", () => {
   const content = validateContent(
     {
       path: "smithable.content.yml",
@@ -129,8 +129,8 @@ test("an installed app with a logo carries it first in its manifest, the tile af
   ).content;
   const icons = JSON.parse(manifest(ir, content)).icons;
   expect(icons).toEqual([
-    { src: "/images/logo.webp", sizes: "any", type: "image/webp" },
     { src: "/favicon.svg", sizes: "any", type: "image/svg+xml" },
+    { src: "/images/logo.webp", sizes: "any", type: "image/webp" },
   ]);
   expect(JSON.parse(manifest(ir)).icons).toHaveLength(1);
 });
