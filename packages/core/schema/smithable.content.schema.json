@@ -472,7 +472,7 @@
                   },
                   "image": {
                     "type": "object",
-                    "description": "A gallery or feature card picture: { src: images/…, alt: what it shows }.",
+                    "description": "A gallery, feature card or media collage picture: { src: images/…, alt: what it shows }.",
                     "additionalProperties": false,
                     "dependencies": {
                       "kept": {

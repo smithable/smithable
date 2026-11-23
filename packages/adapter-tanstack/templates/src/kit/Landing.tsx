@@ -2158,6 +2158,7 @@ function MediaTextView({
   title,
   text,
   image,
+  items,
   caption,
   link,
   layout = "split",
@@ -2175,10 +2176,18 @@ function MediaTextView({
     image?: LandingImage;
     caption?: string;
     link?: LandingLink;
-    layout?: "split" | "stacked";
+    items?: { image: LandingImage }[];
+    layout?: "split" | "stacked" | "collage";
     imageSide?: "left" | "right";
   }) {
   const dialog = useRef<HTMLDialogElement>(null);
+  const [open, setOpen] = useState(0);
+  const collage = layout === "collage";
+  const pictures: { image: LandingImage; caption?: string }[] = [
+    ...(image ? [{ image, caption }] : []),
+    ...(items ?? []),
+  ];
+  const show = (index: number) => setOpen((index + pictures.length) % pictures.length);
   return (
     <section
       {...sectionHooks(texts)}
@@ -2217,7 +2226,58 @@ function MediaTextView({
             </Link>
           )}
         </div>
-        {image && (
+        {collage && pictures.length > 0 && (
+          <ul
+            className={cn(
+              "grid gap-3 sm:flex sm:items-start sm:gap-0 sm:pb-4",
+              pictures.length > 1 && "grid-cols-2",
+            )}
+          >
+            {pictures.map(({ image: photo, caption: note }, index) => (
+              <li
+                key={`${index}:${photo.src}`}
+                className={cn(
+                  "relative min-w-0 flex-1 focus-within:z-10",
+                  index > 0 && "sm:-ms-4",
+                  index % 2 === 1 && "sm:mt-4",
+                )}
+              >
+                <figure>
+                  <button
+                    type="button"
+                    aria-label={w.openPicture(photo.alt)}
+                    className="block w-full overflow-hidden rounded-lg border-2 border-background bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                    onClick={() => {
+                      show(index);
+                      dialog.current?.showModal();
+                    }}
+                  >
+                    <AiMarked generated={photo.generated} kind={photo.kind}>
+                      <img
+                        src={photo.src}
+                        alt={photo.alt}
+                        srcSet={photo.srcSet}
+                        sizes={photo.srcSet && "(min-width: 640px) 33vw, 50vw"}
+                        loading="lazy"
+                        {...mediaSize(aspect)}
+                        className={cn("block w-full", mediaClasses({ fit, aspect, focal }))}
+                      />
+                    </AiMarked>
+                  </button>
+                  {note && (
+                    <figcaption
+                      className="mt-2 text-sm text-muted-foreground"
+                      {...mark(texts, "caption")}
+                    >
+                      {note}
+                    </figcaption>
+                  )}
+                </figure>
+              </li>
+            ))}
+          </ul>
+        )}
+        {!collage && image && (
           <figure
             className={cn(
               "min-w-0",
@@ -2258,9 +2318,9 @@ function MediaTextView({
       </div>
       <PictureDialog
         dialog={dialog}
-        pictures={image ? [{ image, caption }] : []}
-        open={0}
-        show={() => {}}
+        pictures={collage ? pictures : image ? [{ image, caption }] : []}
+        open={collage ? open : 0}
+        show={collage ? show : () => {}}
       />
     </section>
   );

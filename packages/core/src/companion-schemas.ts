@@ -768,7 +768,7 @@ const section: JsonSchema = {
           image: {
             type: "object",
             description:
-              "A gallery or feature card picture: { src: images/…, alt: what it shows }.",
+              "A gallery, feature card or media collage picture: { src: images/…, alt: what it shows }.",
             additionalProperties: false,
             dependencies: {
               kept: { required: ["generated"], properties: { generated: { const: true } } },
