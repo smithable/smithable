@@ -166,8 +166,8 @@ exports[`../../../examples/api/smithable.yml > file list and generated code > pa
 
 exports[`../../../examples/api/smithable.yml > file list and generated code > public/favicon.svg 1`] = `
 "<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  <rect width="32" height="32" rx="7" fill="#3b5bdb"/>
-  <text x="16" y="22" text-anchor="middle" font-family="system-ui, sans-serif" font-size="18" font-weight="700" fill="#fff">T</text>
+  <rect width="32" height="32" rx="6.4" fill="#4f46e5"/>
+  <text x="16" y="21" text-anchor="middle" style="unicode-bidi:plaintext" font-family="system-ui, sans-serif" font-size="14" font-weight="700" fill="#ffffff">TT</text>
 </svg>
 "
 `;
@@ -14086,7 +14086,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "package.json": "9d0004ce generated",
   "playwright.config.ts": "5ffef2a7 kit",
   "pnpm-workspace.yaml": "1da1537f scaffold",
-  "public/favicon.svg": "246dedca generated",
+  "public/favicon.svg": "ebbd34a1 generated",
   "server.mjs": "e77d2b28 kit",
   "smithable.lock": "2c03be87 generated",
   "src/components/ui/badge.tsx": "7c9b048e kit",
@@ -14141,7 +14141,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/AiMark.tsx": "f9eb07a2 kit",
   "src/kit/AppCard.tsx": "76e8455d kit",
   "src/kit/AppLink.tsx": "841a9af0 kit",
-  "src/kit/AppShell.tsx": "7cdeb539 kit",
+  "src/kit/AppShell.tsx": "6dca6653 kit",
   "src/kit/AppearancePicker.tsx": "0cd564d2 kit",
   "src/kit/Ask.tsx": "e5277427 kit",
   "src/kit/Combobox.tsx": "c3a18c75 kit",
@@ -14265,7 +14265,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/routes/team/activity.tsx": "f071bc95 generated",
   "src/routes/team/index.tsx": "c1b1e9fc generated",
   "src/start.ts": "6b874d2d kit",
-  "src/styles.css": "706d757b kit",
+  "src/styles.css": "1f4ccc9e kit",
   "src/theme.css": "1fd40aa1 generated",
   "tests/smoke.spec.ts": "24a5a8cb generated",
   "tsconfig.json": "802b1b64 kit",
@@ -14435,8 +14435,8 @@ exports[`../../../examples/barbers/smithable.yml > file list and generated code 
 
 exports[`../../../examples/barbers/smithable.yml > file list and generated code > public/favicon.svg 1`] = `
 "<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  <rect width="32" height="32" rx="7" fill="#3b5bdb"/>
-  <text x="16" y="22" text-anchor="middle" font-family="system-ui, sans-serif" font-size="18" font-weight="700" fill="#fff">H</text>
+  <rect width="32" height="32" rx="6.4" fill="#4f46e5"/>
+  <text x="16" y="21" text-anchor="middle" style="unicode-bidi:plaintext" font-family="system-ui, sans-serif" font-size="14" font-weight="700" fill="#ffffff">HC</text>
 </svg>
 "
 `;
@@ -21901,7 +21901,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "package.json": "ce8ec275 generated",
   "playwright.config.ts": "5ffef2a7 kit",
   "pnpm-workspace.yaml": "1da1537f scaffold",
-  "public/favicon.svg": "220f4dc6 generated",
+  "public/favicon.svg": "3806c8e2 generated",
   "server.mjs": "e77d2b28 kit",
   "smithable.lock": "2c03be87 generated",
   "src/components/ui/badge.tsx": "7c9b048e kit",
@@ -21955,7 +21955,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/AiMark.tsx": "f9eb07a2 kit",
   "src/kit/AppCard.tsx": "76e8455d kit",
   "src/kit/AppLink.tsx": "841a9af0 kit",
-  "src/kit/AppShell.tsx": "7cdeb539 kit",
+  "src/kit/AppShell.tsx": "6dca6653 kit",
   "src/kit/AppearancePicker.tsx": "0cd564d2 kit",
   "src/kit/Calendar.tsx": "5f787e2e kit",
   "src/kit/Combobox.tsx": "c3a18c75 kit",
@@ -21965,7 +21965,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/Filters.tsx": "0f5bfdfd kit",
   "src/kit/ImportDialog.tsx": "d65da47a kit",
   "src/kit/InlineRows.tsx": "5a097006 kit",
-  "src/kit/Landing.tsx": "d1b83dac kit",
+  "src/kit/Landing.tsx": "c991eeed kit",
   "src/kit/LegalPage.tsx": "f9a9df1e kit",
   "src/kit/Live.tsx": "fbaa47cd kit",
   "src/kit/ModelForm.tsx": "f90ea7e8 kit",
@@ -22062,7 +22062,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/routes/time-off/index.tsx": "0126663b generated",
   "src/routes/time-off/new.tsx": "007c55c8 generated",
   "src/start.ts": "6b874d2d kit",
-  "src/styles.css": "706d757b kit",
+  "src/styles.css": "1f4ccc9e kit",
   "src/theme.css": "1fd40aa1 generated",
   "tests/smoke.spec.ts": "dabb9af3 generated",
   "tsconfig.json": "802b1b64 kit",
@@ -22232,8 +22232,8 @@ exports[`../../../examples/booking/smithable.yml > file list and generated code 
 
 exports[`../../../examples/booking/smithable.yml > file list and generated code > public/favicon.svg 1`] = `
 "<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  <rect width="32" height="32" rx="7" fill="#3b5bdb"/>
-  <text x="16" y="22" text-anchor="middle" font-family="system-ui, sans-serif" font-size="18" font-weight="700" fill="#fff">S</text>
+  <rect width="32" height="32" rx="6.4" fill="#4f46e5"/>
+  <text x="16" y="21" text-anchor="middle" style="unicode-bidi:plaintext" font-family="system-ui, sans-serif" font-size="14" font-weight="700" fill="#ffffff">SY</text>
 </svg>
 "
 `;
@@ -37261,7 +37261,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "package.json": "b9c002e6 generated",
   "playwright.config.ts": "5ffef2a7 kit",
   "pnpm-workspace.yaml": "1da1537f scaffold",
-  "public/favicon.svg": "059fe4c5 generated",
+  "public/favicon.svg": "d6f525dd generated",
   "server.mjs": "e77d2b28 kit",
   "smithable.lock": "2c03be87 generated",
   "src/components/ui/badge.tsx": "7c9b048e kit",
@@ -37333,7 +37333,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/AiMark.tsx": "f9eb07a2 kit",
   "src/kit/AppCard.tsx": "76e8455d kit",
   "src/kit/AppLink.tsx": "841a9af0 kit",
-  "src/kit/AppShell.tsx": "7cdeb539 kit",
+  "src/kit/AppShell.tsx": "6dca6653 kit",
   "src/kit/AppearancePicker.tsx": "0cd564d2 kit",
   "src/kit/Articles.tsx": "f3fb4114 kit",
   "src/kit/Ask.tsx": "e5277427 kit",
@@ -37347,7 +37347,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/ImportDialog.tsx": "d65da47a kit",
   "src/kit/InlineRows.tsx": "5a097006 kit",
   "src/kit/Inspector.tsx": "2425cac5 kit",
-  "src/kit/Landing.tsx": "d1b83dac kit",
+  "src/kit/Landing.tsx": "c991eeed kit",
   "src/kit/LegalPage.tsx": "f9a9df1e kit",
   "src/kit/Live.tsx": "fbaa47cd kit",
   "src/kit/Markdown.tsx": "24e2fcd2 kit",
@@ -37489,7 +37489,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/sign-in.tsx": "64dbc342 generated",
   "src/routes/sitemap[.]xml.ts": "018df36b generated",
   "src/start.ts": "6b874d2d kit",
-  "src/styles.css": "706d757b kit",
+  "src/styles.css": "1f4ccc9e kit",
   "src/theme.css": "1fd40aa1 generated",
   "tests/smoke.spec.ts": "c6858e63 generated",
   "tsconfig.json": "802b1b64 kit",
@@ -37665,8 +37665,8 @@ exports[`../../../examples/builder/smithable.yml > file list and generated code 
 
 exports[`../../../examples/builder/smithable.yml > file list and generated code > public/favicon.svg 1`] = `
 "<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  <rect width="32" height="32" rx="7" fill="#3b5bdb"/>
-  <text x="16" y="22" text-anchor="middle" font-family="system-ui, sans-serif" font-size="18" font-weight="700" fill="#fff">N</text>
+  <rect width="32" height="32" rx="6.4" fill="#4f46e5"/>
+  <text x="16" y="21" text-anchor="middle" style="unicode-bidi:plaintext" font-family="system-ui, sans-serif" font-size="14" font-weight="700" fill="#ffffff">NJ</text>
 </svg>
 "
 `;
@@ -45224,7 +45224,7 @@ exports[`../../../examples/builder/smithable.yml > the generated files are as re
   "package.json": "a09e32a1 generated",
   "playwright.config.ts": "5ffef2a7 kit",
   "pnpm-workspace.yaml": "1da1537f scaffold",
-  "public/favicon.svg": "e4b054e8 generated",
+  "public/favicon.svg": "8a054009 generated",
   "server.mjs": "e77d2b28 kit",
   "smithable.lock": "2c03be87 generated",
   "src/components/ui/badge.tsx": "7c9b048e kit",
@@ -45281,7 +45281,7 @@ exports[`../../../examples/builder/smithable.yml > the generated files are as re
   "src/kit/AiMark.tsx": "f9eb07a2 kit",
   "src/kit/AppCard.tsx": "76e8455d kit",
   "src/kit/AppLink.tsx": "841a9af0 kit",
-  "src/kit/AppShell.tsx": "7cdeb539 kit",
+  "src/kit/AppShell.tsx": "6dca6653 kit",
   "src/kit/AppearancePicker.tsx": "0cd564d2 kit",
   "src/kit/Combobox.tsx": "c3a18c75 kit",
   "src/kit/Consent.tsx": "c5ee7e50 kit",
@@ -45292,7 +45292,7 @@ exports[`../../../examples/builder/smithable.yml > the generated files are as re
   "src/kit/Filters.tsx": "0f5bfdfd kit",
   "src/kit/ImportDialog.tsx": "d65da47a kit",
   "src/kit/InlineRows.tsx": "5a097006 kit",
-  "src/kit/Landing.tsx": "d1b83dac kit",
+  "src/kit/Landing.tsx": "c991eeed kit",
   "src/kit/LegalPage.tsx": "f9a9df1e kit",
   "src/kit/ModelForm.tsx": "f90ea7e8 kit",
   "src/kit/ModelTable.tsx": "5252e1d6 kit",
@@ -45381,7 +45381,7 @@ exports[`../../../examples/builder/smithable.yml > the generated files are as re
   "src/routes/team/activity.tsx": "6b0a8c76 generated",
   "src/routes/team/index.tsx": "66862ce0 generated",
   "src/start.ts": "6b874d2d kit",
-  "src/styles.css": "706d757b kit",
+  "src/styles.css": "1f4ccc9e kit",
   "src/theme.css": "1fd40aa1 generated",
   "tests/smoke.spec.ts": "8b39da31 generated",
   "tsconfig.json": "802b1b64 kit",
@@ -45557,8 +45557,8 @@ exports[`../../../examples/crm/smithable.yml > file list and generated code > pa
 
 exports[`../../../examples/crm/smithable.yml > file list and generated code > public/favicon.svg 1`] = `
 "<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  <rect width="32" height="32" rx="7" fill="#3b5bdb"/>
-  <text x="16" y="22" text-anchor="middle" font-family="system-ui, sans-serif" font-size="18" font-weight="700" fill="#fff">A</text>
+  <rect width="32" height="32" rx="6.4" fill="#4f46e5"/>
+  <text x="16" y="21" text-anchor="middle" style="unicode-bidi:plaintext" font-family="system-ui, sans-serif" font-size="14" font-weight="700" fill="#ffffff">AC</text>
 </svg>
 "
 `;
@@ -55164,7 +55164,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "package.json": "12aee325 generated",
   "playwright.config.ts": "5ffef2a7 kit",
   "pnpm-workspace.yaml": "1da1537f scaffold",
-  "public/favicon.svg": "3567ba27 generated",
+  "public/favicon.svg": "a04fad4d generated",
   "server.mjs": "e77d2b28 kit",
   "smithable.lock": "2c03be87 generated",
   "src/components/ui/badge.tsx": "7c9b048e kit",
@@ -55221,7 +55221,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/AiMark.tsx": "f9eb07a2 kit",
   "src/kit/AppCard.tsx": "76e8455d kit",
   "src/kit/AppLink.tsx": "841a9af0 kit",
-  "src/kit/AppShell.tsx": "7cdeb539 kit",
+  "src/kit/AppShell.tsx": "6dca6653 kit",
   "src/kit/AppearancePicker.tsx": "0cd564d2 kit",
   "src/kit/Ask.tsx": "e5277427 kit",
   "src/kit/Combobox.tsx": "c3a18c75 kit",
@@ -55232,7 +55232,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/ImportDialog.tsx": "d65da47a kit",
   "src/kit/InlineRows.tsx": "5a097006 kit",
   "src/kit/Inspector.tsx": "2425cac5 kit",
-  "src/kit/Landing.tsx": "d1b83dac kit",
+  "src/kit/Landing.tsx": "c991eeed kit",
   "src/kit/MergeDialog.tsx": "9794e745 kit",
   "src/kit/ModelForm.tsx": "f90ea7e8 kit",
   "src/kit/ModelTable.tsx": "5252e1d6 kit",
@@ -55329,7 +55329,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/routes/team/index.tsx": "6349287f generated",
   "src/routes/team/trash.tsx": "bbce40d6 generated",
   "src/start.ts": "6b874d2d kit",
-  "src/styles.css": "706d757b kit",
+  "src/styles.css": "1f4ccc9e kit",
   "src/theme.css": "1fd40aa1 generated",
   "tests/smoke.spec.ts": "cd6797d3 generated",
   "tsconfig.json": "802b1b64 kit",
@@ -55505,8 +55505,8 @@ exports[`../../../examples/food-truck/smithable.yml > file list and generated co
 
 exports[`../../../examples/food-truck/smithable.yml > file list and generated code > public/favicon.svg 1`] = `
 "<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  <rect width="32" height="32" rx="7" fill="#3b5bdb"/>
-  <text x="16" y="22" text-anchor="middle" font-family="system-ui, sans-serif" font-size="18" font-weight="700" fill="#fff">E</text>
+  <rect width="32" height="32" rx="6.4" fill="#4f46e5"/>
+  <text x="16" y="21" text-anchor="middle" style="unicode-bidi:plaintext" font-family="system-ui, sans-serif" font-size="14" font-weight="700" fill="#ffffff">EW</text>
 </svg>
 "
 `;
@@ -62503,7 +62503,7 @@ exports[`../../../examples/food-truck/smithable.yml > the generated files are as
   "package.json": "53253c45 generated",
   "playwright.config.ts": "5ffef2a7 kit",
   "pnpm-workspace.yaml": "1da1537f scaffold",
-  "public/favicon.svg": "32812053 generated",
+  "public/favicon.svg": "1a0f4d35 generated",
   "server.mjs": "e77d2b28 kit",
   "smithable.lock": "2c03be87 generated",
   "src/components/ui/badge.tsx": "7c9b048e kit",
@@ -62557,7 +62557,7 @@ exports[`../../../examples/food-truck/smithable.yml > the generated files are as
   "src/kit/AiMark.tsx": "f9eb07a2 kit",
   "src/kit/AppCard.tsx": "76e8455d kit",
   "src/kit/AppLink.tsx": "841a9af0 kit",
-  "src/kit/AppShell.tsx": "7cdeb539 kit",
+  "src/kit/AppShell.tsx": "6dca6653 kit",
   "src/kit/AppearancePicker.tsx": "0cd564d2 kit",
   "src/kit/Combobox.tsx": "c3a18c75 kit",
   "src/kit/Consent.tsx": "c5ee7e50 kit",
@@ -62566,7 +62566,7 @@ exports[`../../../examples/food-truck/smithable.yml > the generated files are as
   "src/kit/Filters.tsx": "0f5bfdfd kit",
   "src/kit/ImportDialog.tsx": "d65da47a kit",
   "src/kit/InlineRows.tsx": "5a097006 kit",
-  "src/kit/Landing.tsx": "d1b83dac kit",
+  "src/kit/Landing.tsx": "c991eeed kit",
   "src/kit/ModelForm.tsx": "f90ea7e8 kit",
   "src/kit/ModelTable.tsx": "5252e1d6 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
@@ -62654,7 +62654,7 @@ exports[`../../../examples/food-truck/smithable.yml > the generated files are as
   "src/routes/team/index.tsx": "b480dbbe generated",
   "src/routes/where/index.tsx": "a3a356b3 generated",
   "src/start.ts": "6b874d2d kit",
-  "src/styles.css": "706d757b kit",
+  "src/styles.css": "1f4ccc9e kit",
   "src/theme.css": "1fd40aa1 generated",
   "tests/smoke.spec.ts": "39765be4 generated",
   "tsconfig.json": "802b1b64 kit",
@@ -62824,8 +62824,8 @@ exports[`../../../examples/invoicing/smithable.yml > file list and generated cod
 
 exports[`../../../examples/invoicing/smithable.yml > file list and generated code > public/favicon.svg 1`] = `
 "<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  <rect width="32" height="32" rx="7" fill="#3b5bdb"/>
-  <text x="16" y="22" text-anchor="middle" font-family="system-ui, sans-serif" font-size="18" font-weight="700" fill="#fff">I</text>
+  <rect width="32" height="32" rx="6.4" fill="#4f46e5"/>
+  <text x="16" y="22" text-anchor="middle" style="unicode-bidi:plaintext" font-family="system-ui, sans-serif" font-size="18" font-weight="700" fill="#ffffff">I</text>
 </svg>
 "
 `;
@@ -72731,7 +72731,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "package.json": "adf2eeb2 generated",
   "playwright.config.ts": "5ffef2a7 kit",
   "pnpm-workspace.yaml": "1da1537f scaffold",
-  "public/favicon.svg": "288fe58f generated",
+  "public/favicon.svg": "07f97e21 generated",
   "server.mjs": "e77d2b28 kit",
   "smithable.lock": "2c03be87 generated",
   "src/components/ui/badge.tsx": "7c9b048e kit",
@@ -72791,7 +72791,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/AiMark.tsx": "f9eb07a2 kit",
   "src/kit/AppCard.tsx": "76e8455d kit",
   "src/kit/AppLink.tsx": "841a9af0 kit",
-  "src/kit/AppShell.tsx": "7cdeb539 kit",
+  "src/kit/AppShell.tsx": "6dca6653 kit",
   "src/kit/AppearancePicker.tsx": "0cd564d2 kit",
   "src/kit/Ask.tsx": "e5277427 kit",
   "src/kit/Combobox.tsx": "c3a18c75 kit",
@@ -72804,7 +72804,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/ImportDialog.tsx": "d65da47a kit",
   "src/kit/InlineRows.tsx": "5a097006 kit",
   "src/kit/Inspector.tsx": "2425cac5 kit",
-  "src/kit/Landing.tsx": "d1b83dac kit",
+  "src/kit/Landing.tsx": "c991eeed kit",
   "src/kit/LegalPage.tsx": "f9a9df1e kit",
   "src/kit/Live.tsx": "fbaa47cd kit",
   "src/kit/ModelForm.tsx": "f90ea7e8 kit",
@@ -72909,7 +72909,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/routes/sitemap[.]xml.ts": "5c8fa673 generated",
   "src/routes/welcome/index.tsx": "ad2a6a87 generated",
   "src/start.ts": "6b874d2d kit",
-  "src/styles.css": "706d757b kit",
+  "src/styles.css": "1f4ccc9e kit",
   "src/theme.css": "1fd40aa1 generated",
   "tests/smoke.spec.ts": "dadec54d generated",
   "tsconfig.json": "802b1b64 kit",
@@ -73087,8 +73087,8 @@ exports[`../../../examples/kiosk/smithable.yml > file list and generated code > 
 
 exports[`../../../examples/kiosk/smithable.yml > file list and generated code > public/favicon.svg 1`] = `
 "<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  <rect width="32" height="32" rx="7" fill="#3b5bdb"/>
-  <text x="16" y="22" text-anchor="middle" font-family="system-ui, sans-serif" font-size="18" font-weight="700" fill="#fff">K</text>
+  <rect width="32" height="32" rx="6.4" fill="#4f46e5"/>
+  <text x="16" y="22" text-anchor="middle" style="unicode-bidi:plaintext" font-family="system-ui, sans-serif" font-size="18" font-weight="700" fill="#ffffff">K</text>
 </svg>
 "
 `;
@@ -82098,7 +82098,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "package.json": "f840bb3a generated",
   "playwright.config.ts": "5ffef2a7 kit",
   "pnpm-workspace.yaml": "1da1537f scaffold",
-  "public/favicon.svg": "e09d9afd generated",
+  "public/favicon.svg": "70fe2e53 generated",
   "public/manifest.webmanifest": "5ed0ee91 generated",
   "public/sw.js": "107e85e9 generated",
   "server.mjs": "e77d2b28 kit",
@@ -82165,7 +82165,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/AiMark.tsx": "f9eb07a2 kit",
   "src/kit/AppCard.tsx": "76e8455d kit",
   "src/kit/AppLink.tsx": "841a9af0 kit",
-  "src/kit/AppShell.tsx": "7cdeb539 kit",
+  "src/kit/AppShell.tsx": "6dca6653 kit",
   "src/kit/AppearancePicker.tsx": "0cd564d2 kit",
   "src/kit/Combobox.tsx": "c3a18c75 kit",
   "src/kit/Consent.tsx": "c5ee7e50 kit",
@@ -82174,7 +82174,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/Filters.tsx": "0f5bfdfd kit",
   "src/kit/ImportDialog.tsx": "d65da47a kit",
   "src/kit/InlineRows.tsx": "5a097006 kit",
-  "src/kit/Landing.tsx": "d1b83dac kit",
+  "src/kit/Landing.tsx": "c991eeed kit",
   "src/kit/Live.tsx": "fbaa47cd kit",
   "src/kit/ModelForm.tsx": "f90ea7e8 kit",
   "src/kit/ModelTable.tsx": "5252e1d6 kit",
@@ -82273,7 +82273,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/routes/team/index.tsx": "d0aa5bca generated",
   "src/routes/where/index.tsx": "712d3315 generated",
   "src/start.ts": "6b874d2d kit",
-  "src/styles.css": "706d757b kit",
+  "src/styles.css": "1f4ccc9e kit",
   "src/theme.css": "1fd40aa1 generated",
   "tests/smoke.spec.ts": "7a8dce6a generated",
   "tsconfig.json": "802b1b64 kit",
@@ -82443,8 +82443,8 @@ exports[`../../../examples/marketplace/smithable.yml > file list and generated c
 
 exports[`../../../examples/marketplace/smithable.yml > file list and generated code > public/favicon.svg 1`] = `
 "<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  <rect width="32" height="32" rx="7" fill="#3b5bdb"/>
-  <text x="16" y="22" text-anchor="middle" font-family="system-ui, sans-serif" font-size="18" font-weight="700" fill="#fff">T</text>
+  <rect width="32" height="32" rx="6.4" fill="#4f46e5"/>
+  <text x="16" y="22" text-anchor="middle" style="unicode-bidi:plaintext" font-family="system-ui, sans-serif" font-size="18" font-weight="700" fill="#ffffff">T</text>
 </svg>
 "
 `;
@@ -87579,7 +87579,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "package.json": "a1c55e4d generated",
   "playwright.config.ts": "5ffef2a7 kit",
   "pnpm-workspace.yaml": "1da1537f scaffold",
-  "public/favicon.svg": "246dedca generated",
+  "public/favicon.svg": "1c3b511c generated",
   "server.mjs": "e77d2b28 kit",
   "smithable.lock": "2c03be87 generated",
   "src/components/ui/badge.tsx": "7c9b048e kit",
@@ -87616,7 +87616,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/AiMark.tsx": "f9eb07a2 kit",
   "src/kit/AppCard.tsx": "76e8455d kit",
   "src/kit/AppLink.tsx": "841a9af0 kit",
-  "src/kit/AppShell.tsx": "7cdeb539 kit",
+  "src/kit/AppShell.tsx": "6dca6653 kit",
   "src/kit/AppearancePicker.tsx": "0cd564d2 kit",
   "src/kit/Ask.tsx": "e5277427 kit",
   "src/kit/Combobox.tsx": "c3a18c75 kit",
@@ -87628,7 +87628,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/ImportDialog.tsx": "d65da47a kit",
   "src/kit/InlineRows.tsx": "5a097006 kit",
   "src/kit/Inspector.tsx": "2425cac5 kit",
-  "src/kit/Landing.tsx": "d1b83dac kit",
+  "src/kit/Landing.tsx": "c991eeed kit",
   "src/kit/ModelForm.tsx": "f90ea7e8 kit",
   "src/kit/ModelTable.tsx": "5252e1d6 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
@@ -87724,7 +87724,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/routes/sitemap[.]xml.ts": "abb491ed generated",
   "src/routes/welcome/index.tsx": "427e81bc generated",
   "src/start.ts": "6b874d2d kit",
-  "src/styles.css": "706d757b kit",
+  "src/styles.css": "1f4ccc9e kit",
   "src/theme.css": "1fd40aa1 generated",
   "tests/smoke.spec.ts": "dcf4060e generated",
   "tsconfig.json": "802b1b64 kit",
@@ -87900,8 +87900,8 @@ exports[`../../../examples/painter/smithable.yml > file list and generated code 
 
 exports[`../../../examples/painter/smithable.yml > file list and generated code > public/favicon.svg 1`] = `
 "<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  <rect width="32" height="32" rx="7" fill="#3b5bdb"/>
-  <text x="16" y="22" text-anchor="middle" font-family="system-ui, sans-serif" font-size="18" font-weight="700" fill="#fff">F</text>
+  <rect width="32" height="32" rx="6.4" fill="#4f46e5"/>
+  <text x="16" y="21" text-anchor="middle" style="unicode-bidi:plaintext" font-family="system-ui, sans-serif" font-size="14" font-weight="700" fill="#ffffff">FP</text>
 </svg>
 "
 `;
@@ -94407,7 +94407,7 @@ exports[`../../../examples/painter/smithable.yml > the generated files are as re
   "package.json": "98cc3fb3 generated",
   "playwright.config.ts": "5ffef2a7 kit",
   "pnpm-workspace.yaml": "1da1537f scaffold",
-  "public/favicon.svg": "2fd773a0 generated",
+  "public/favicon.svg": "bb99542b generated",
   "server.mjs": "e77d2b28 kit",
   "smithable.lock": "2c03be87 generated",
   "src/components/ui/badge.tsx": "7c9b048e kit",
@@ -94459,7 +94459,7 @@ exports[`../../../examples/painter/smithable.yml > the generated files are as re
   "src/kit/AiMark.tsx": "f9eb07a2 kit",
   "src/kit/AppCard.tsx": "76e8455d kit",
   "src/kit/AppLink.tsx": "841a9af0 kit",
-  "src/kit/AppShell.tsx": "7cdeb539 kit",
+  "src/kit/AppShell.tsx": "6dca6653 kit",
   "src/kit/AppearancePicker.tsx": "0cd564d2 kit",
   "src/kit/Combobox.tsx": "c3a18c75 kit",
   "src/kit/Consent.tsx": "c5ee7e50 kit",
@@ -94470,7 +94470,7 @@ exports[`../../../examples/painter/smithable.yml > the generated files are as re
   "src/kit/Filters.tsx": "0f5bfdfd kit",
   "src/kit/ImportDialog.tsx": "d65da47a kit",
   "src/kit/InlineRows.tsx": "5a097006 kit",
-  "src/kit/Landing.tsx": "d1b83dac kit",
+  "src/kit/Landing.tsx": "c991eeed kit",
   "src/kit/LegalPage.tsx": "f9a9df1e kit",
   "src/kit/ModelForm.tsx": "f90ea7e8 kit",
   "src/kit/ModelTable.tsx": "5252e1d6 kit",
@@ -94556,7 +94556,7 @@ exports[`../../../examples/painter/smithable.yml > the generated files are as re
   "src/routes/team/activity.tsx": "5a20d270 generated",
   "src/routes/team/index.tsx": "a6bc2c30 generated",
   "src/start.ts": "6b874d2d kit",
-  "src/styles.css": "706d757b kit",
+  "src/styles.css": "1f4ccc9e kit",
   "src/theme.css": "1fd40aa1 generated",
   "tests/smoke.spec.ts": "6b877684 generated",
   "tsconfig.json": "802b1b64 kit",
@@ -94726,8 +94726,8 @@ exports[`../../../examples/records/smithable.yml > file list and generated code 
 
 exports[`../../../examples/records/smithable.yml > file list and generated code > public/favicon.svg 1`] = `
 "<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  <rect width="32" height="32" rx="7" fill="#3b5bdb"/>
-  <text x="16" y="22" text-anchor="middle" font-family="system-ui, sans-serif" font-size="18" font-weight="700" fill="#fff">O</text>
+  <rect width="32" height="32" rx="6.4" fill="#4f46e5"/>
+  <text x="16" y="21" text-anchor="middle" style="unicode-bidi:plaintext" font-family="system-ui, sans-serif" font-size="14" font-weight="700" fill="#ffffff">OC</text>
 </svg>
 "
 `;
@@ -98531,7 +98531,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "package.json": "f5422993 generated",
   "playwright.config.ts": "5ffef2a7 kit",
   "pnpm-workspace.yaml": "1da1537f scaffold",
-  "public/favicon.svg": "57bda269 generated",
+  "public/favicon.svg": "d370f823 generated",
   "server.mjs": "e77d2b28 kit",
   "smithable.lock": "2c03be87 generated",
   "src/components/ui/badge.tsx": "7c9b048e kit",
@@ -98566,7 +98566,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/AiMark.tsx": "f9eb07a2 kit",
   "src/kit/AppCard.tsx": "76e8455d kit",
   "src/kit/AppLink.tsx": "841a9af0 kit",
-  "src/kit/AppShell.tsx": "7cdeb539 kit",
+  "src/kit/AppShell.tsx": "6dca6653 kit",
   "src/kit/AppearancePicker.tsx": "0cd564d2 kit",
   "src/kit/Ask.tsx": "e5277427 kit",
   "src/kit/Combobox.tsx": "c3a18c75 kit",
@@ -98576,7 +98576,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/ImportDialog.tsx": "d65da47a kit",
   "src/kit/InlineRows.tsx": "5a097006 kit",
   "src/kit/Inspector.tsx": "2425cac5 kit",
-  "src/kit/Landing.tsx": "d1b83dac kit",
+  "src/kit/Landing.tsx": "c991eeed kit",
   "src/kit/ModelForm.tsx": "f90ea7e8 kit",
   "src/kit/ModelTable.tsx": "5252e1d6 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
@@ -98656,7 +98656,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/routes/sign-in.tsx": "563d1820 generated",
   "src/routes/sitemap[.]xml.ts": "8c1882fb generated",
   "src/start.ts": "6b874d2d kit",
-  "src/styles.css": "706d757b kit",
+  "src/styles.css": "1f4ccc9e kit",
   "src/theme.css": "1fd40aa1 generated",
   "tests/smoke.spec.ts": "b04668e0 generated",
   "tsconfig.json": "802b1b64 kit",
@@ -98832,8 +98832,8 @@ exports[`../../../examples/restaurant/smithable.yml > file list and generated co
 
 exports[`../../../examples/restaurant/smithable.yml > file list and generated code > public/favicon.svg 1`] = `
 "<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  <rect width="32" height="32" rx="7" fill="#3b5bdb"/>
-  <text x="16" y="22" text-anchor="middle" font-family="system-ui, sans-serif" font-size="18" font-weight="700" fill="#fff">A</text>
+  <rect width="32" height="32" rx="6.4" fill="#4f46e5"/>
+  <text x="16" y="21" text-anchor="middle" style="unicode-bidi:plaintext" font-family="system-ui, sans-serif" font-size="14" font-weight="700" fill="#ffffff">AQ</text>
 </svg>
 "
 `;
@@ -105843,7 +105843,7 @@ exports[`../../../examples/restaurant/smithable.yml > the generated files are as
   "package.json": "c199f139 generated",
   "playwright.config.ts": "5ffef2a7 kit",
   "pnpm-workspace.yaml": "1da1537f scaffold",
-  "public/favicon.svg": "3567ba27 generated",
+  "public/favicon.svg": "ebbede8f generated",
   "server.mjs": "e77d2b28 kit",
   "smithable.lock": "2c03be87 generated",
   "src/components/ui/badge.tsx": "7c9b048e kit",
@@ -105895,7 +105895,7 @@ exports[`../../../examples/restaurant/smithable.yml > the generated files are as
   "src/kit/AiMark.tsx": "f9eb07a2 kit",
   "src/kit/AppCard.tsx": "76e8455d kit",
   "src/kit/AppLink.tsx": "841a9af0 kit",
-  "src/kit/AppShell.tsx": "7cdeb539 kit",
+  "src/kit/AppShell.tsx": "6dca6653 kit",
   "src/kit/AppearancePicker.tsx": "0cd564d2 kit",
   "src/kit/Combobox.tsx": "c3a18c75 kit",
   "src/kit/Consent.tsx": "c5ee7e50 kit",
@@ -105903,7 +105903,7 @@ exports[`../../../examples/restaurant/smithable.yml > the generated files are as
   "src/kit/Filters.tsx": "0f5bfdfd kit",
   "src/kit/ImportDialog.tsx": "d65da47a kit",
   "src/kit/InlineRows.tsx": "5a097006 kit",
-  "src/kit/Landing.tsx": "d1b83dac kit",
+  "src/kit/Landing.tsx": "c991eeed kit",
   "src/kit/ModelForm.tsx": "f90ea7e8 kit",
   "src/kit/ModelTable.tsx": "5252e1d6 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
@@ -105984,7 +105984,7 @@ exports[`../../../examples/restaurant/smithable.yml > the generated files are as
   "src/routes/team/index.tsx": "9781ccd6 generated",
   "src/routes/venue/index.tsx": "d91537a5 generated",
   "src/start.ts": "6b874d2d kit",
-  "src/styles.css": "706d757b kit",
+  "src/styles.css": "1f4ccc9e kit",
   "src/theme.css": "1fd40aa1 generated",
   "tests/smoke.spec.ts": "3a404ee7 generated",
   "tsconfig.json": "802b1b64 kit",
@@ -106160,8 +106160,8 @@ exports[`../../../examples/status/smithable.yml > file list and generated code >
 
 exports[`../../../examples/status/smithable.yml > file list and generated code > public/favicon.svg 1`] = `
 "<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  <rect width="32" height="32" rx="7" fill="#3b5bdb"/>
-  <text x="16" y="22" text-anchor="middle" font-family="system-ui, sans-serif" font-size="18" font-weight="700" fill="#fff">N</text>
+  <rect width="32" height="32" rx="6.4" fill="#4f46e5"/>
+  <text x="16" y="21" text-anchor="middle" style="unicode-bidi:plaintext" font-family="system-ui, sans-serif" font-size="14" font-weight="700" fill="#ffffff">NS</text>
 </svg>
 "
 `;
@@ -120377,7 +120377,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "package.json": "80b7f102 generated",
   "playwright.config.ts": "5ffef2a7 kit",
   "pnpm-workspace.yaml": "1da1537f scaffold",
-  "public/favicon.svg": "e4b054e8 generated",
+  "public/favicon.svg": "44f7ef50 generated",
   "server.mjs": "e77d2b28 kit",
   "smithable.lock": "2c03be87 generated",
   "src/components/ui/badge.tsx": "7c9b048e kit",
@@ -120439,7 +120439,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/AiMark.tsx": "f9eb07a2 kit",
   "src/kit/AppCard.tsx": "76e8455d kit",
   "src/kit/AppLink.tsx": "841a9af0 kit",
-  "src/kit/AppShell.tsx": "7cdeb539 kit",
+  "src/kit/AppShell.tsx": "6dca6653 kit",
   "src/kit/AppearancePicker.tsx": "0cd564d2 kit",
   "src/kit/Articles.tsx": "f3fb4114 kit",
   "src/kit/Ask.tsx": "e5277427 kit",
@@ -120452,7 +120452,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/InlineRows.tsx": "5a097006 kit",
   "src/kit/Inspector.tsx": "2425cac5 kit",
   "src/kit/Keys.tsx": "f32c246d kit",
-  "src/kit/Landing.tsx": "d1b83dac kit",
+  "src/kit/Landing.tsx": "c991eeed kit",
   "src/kit/Markdown.tsx": "24e2fcd2 kit",
   "src/kit/MarkdownFormatted.tsx": "300ef9a1 kit",
   "src/kit/ModelForm.tsx": "f90ea7e8 kit",
@@ -120564,7 +120564,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/routes/updates/index.tsx": "11c7f442 generated",
   "src/routes/updates/new.tsx": "ac78941b generated",
   "src/start.ts": "6b874d2d kit",
-  "src/styles.css": "706d757b kit",
+  "src/styles.css": "1f4ccc9e kit",
   "src/theme.css": "1fd40aa1 generated",
   "tests/smoke.spec.ts": "5de3170c generated",
   "tsconfig.json": "802b1b64 kit",
@@ -120740,8 +120740,8 @@ exports[`../../../examples/support/smithable.yml > file list and generated code 
 
 exports[`../../../examples/support/smithable.yml > file list and generated code > public/favicon.svg 1`] = `
 "<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  <rect width="32" height="32" rx="7" fill="#3b5bdb"/>
-  <text x="16" y="22" text-anchor="middle" font-family="system-ui, sans-serif" font-size="18" font-weight="700" fill="#fff">H</text>
+  <rect width="32" height="32" rx="6.4" fill="#4f46e5"/>
+  <text x="16" y="21" text-anchor="middle" style="unicode-bidi:plaintext" font-family="system-ui, sans-serif" font-size="14" font-weight="700" fill="#ffffff">HS</text>
 </svg>
 "
 `;
@@ -128484,7 +128484,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "package.json": "1bc9ee5d generated",
   "playwright.config.ts": "5ffef2a7 kit",
   "pnpm-workspace.yaml": "1da1537f scaffold",
-  "public/favicon.svg": "220f4dc6 generated",
+  "public/favicon.svg": "21a3a3f2 generated",
   "server.mjs": "e77d2b28 kit",
   "smithable.lock": "2c03be87 generated",
   "src/components/ui/badge.tsx": "7c9b048e kit",
@@ -128536,7 +128536,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/AiMark.tsx": "f9eb07a2 kit",
   "src/kit/AppCard.tsx": "76e8455d kit",
   "src/kit/AppLink.tsx": "841a9af0 kit",
-  "src/kit/AppShell.tsx": "7cdeb539 kit",
+  "src/kit/AppShell.tsx": "6dca6653 kit",
   "src/kit/AppearancePicker.tsx": "0cd564d2 kit",
   "src/kit/Ask.tsx": "e5277427 kit",
   "src/kit/Combobox.tsx": "c3a18c75 kit",
@@ -128642,7 +128642,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/routes/team/activity.tsx": "468cb15a generated",
   "src/routes/team/index.tsx": "b9305ec9 generated",
   "src/start.ts": "6b874d2d kit",
-  "src/styles.css": "706d757b kit",
+  "src/styles.css": "1f4ccc9e kit",
   "src/theme.css": "1fd40aa1 generated",
   "tests/smoke.spec.ts": "ed46d289 generated",
   "tsconfig.json": "802b1b64 kit",
