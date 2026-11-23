@@ -4,7 +4,7 @@ These illustrative images were generated for the Smithable image library and are
 
 Library revision `8b279a1e36032737df61c52f61aba050dd715a03`.
 - `hero/hero-farm-b.webp`: A red farmhouse and barn by a field of grain under a wide sky
-- `hero/hero-home-b.webp`: A bright living room with a sofa, rug, bookshelf and large windows
+- `samples/hero-home-b.webp`: A bright living room with a sofa, rug, bookshelf and large windows
 - `samples/house-red-b.webp`: A red wooden house with white corners
 - `samples/house-cottage-b.webp`: A small cottage by a lake
 - `samples/house-modern-b.webp`: A modern wooden house with large windows seen from its garden

@@ -4039,6 +4039,7 @@ async function painterFlow(dir, base) {
         })
         .first(),
     );
+    await page.getByRole("button", { name: "Picture 2 of 2", exact: true }).click();
     await loaded(
       page
         .getByRole("img", {
@@ -4055,7 +4056,7 @@ async function painterFlow(dir, base) {
       await open(page, `${base}${path}`);
       await page
         .getByText(
-          /^(Red farmhouse|Lakeside cottage|Window surrounds|Yellow cladding|Green door|Living room|Street-facing trim)/,
+          /^(Red farmhouse|Painted eaves|Window surrounds|Yellow cladding|Green door|Living room|Street-facing trim|Pale timber floor)/,
         )
         .first()
         .waitFor();

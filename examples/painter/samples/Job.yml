@@ -10,12 +10,12 @@
       alt: "A red wooden house with white corners"
       generated: true
       kind: ai-realistic
-- title: "Lakeside cottage weatherboards"
-  surface: facade
+- title: "Painted eaves on a lakeside cottage"
+  surface: roof
   setting: outdoor
   place: Lemland
   year: 2025
-  summary: "The lake-facing boards had begun to lift at the joints. We replaced two boards, sealed the cut ends and coated the exposed wall before the autumn rain."
+  summary: "The paint on the eaves had started to peel where rain reached the roof edge. We cleaned and sanded the timber, sealed the end grain and painted the fascia without coating the clay tiles."
   photos:
     - file: house-cottage-b.webp
       alt: "A small cottage by a lake"
@@ -78,5 +78,16 @@
   photos:
     - file: house-terrace-b.webp
       alt: "A row of terraced houses"
+      generated: true
+      kind: ai-realistic
+- title: Pale timber floor refinished
+  surface: floors
+  setting: indoor
+  place: Föglö
+  year: 2023
+  summary: The worn floor was sanded to bare wood along the window and finished with two thin coats of pale hardwax oil. We let it cure before the rug and furniture went back.
+  photos:
+    - file: hero-home-b.webp
+      alt: A bright living room with a sofa, rug, bookshelf and large windows
       generated: true
       kind: ai-realistic

@@ -65,7 +65,7 @@ pages:
       items:
         - caption: A bright interior after work
           image:
-            src: images/hero/hero-home-b.webp
+            src: images/samples/hero-home-b.webp
             alt: A bright living room with a sofa, rug, bookshelf and large windows
             generated: true
             kind: ai-realistic
