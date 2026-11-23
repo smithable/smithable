@@ -195,7 +195,12 @@ process.on("exit", () => {
       process.kill(-pid);
     } catch {}
 });
-for (const signal of ["SIGINT", "SIGTERM", "SIGHUP"]) process.on(signal, () => process.exit(130));
+for (const [signal, code] of [
+  ["SIGHUP", 129],
+  ["SIGINT", 130],
+  ["SIGTERM", 143],
+])
+  process.on(signal, () => process.exit(code));
 // A stand-in model, so describing a change works without a real one.
 const model = await startFakeModel();
 const server = spawn("node", [cli, "studio", dir, "--port", String(port)], {

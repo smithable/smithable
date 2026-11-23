@@ -183,8 +183,13 @@ until [ "$(waiting | head -1 | cut -f1)" = "${ticket##*/}" ] && flock -n 9; do
 done
 rm -f "$ticket"
 # Its ports first, in its turn (T1317): a Studio or vite left by a check that crashed holds one,
-# and the gate would fail on it twenty minutes in. Exit 76, naming the process holding each.
-if [ -z "${GATE_RUN:-}" ] && ! node scripts/gate-ports.mjs; then exit 76; fi
+# and the gate would fail on it twenty minutes in. Exit 76, naming the process holding each. When
+# the ports cannot be read at all, it says so and runs unchecked.
+if [ -z "${GATE_RUN:-}" ]; then
+  node scripts/gate-ports.mjs; ports=$?
+  [ "$ports" -ne 1 ] || exit 76
+  [ "$ports" -eq 0 ] || echo "gate.sh: its ports were not checked (gate-ports exit $ports); running all the same." >&2
+fi
 # Nobody was running or waiting: the count of turns starts again.
 [ -n "$said" ] || : > "$turns"
 echo "$session" >> "$turns"

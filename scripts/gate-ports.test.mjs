@@ -27,9 +27,9 @@ test("ss's listening sockets are read with their pids, any address form", () => 
   assert.deepEqual(
     [...held],
     [
-      [7200, 949219],
+      [7200, { name: "node", pid: 949219 }],
       [7201, undefined],
-      [7202, 12],
+      [7202, { name: "vite", pid: 12 }],
     ],
   );
 });
