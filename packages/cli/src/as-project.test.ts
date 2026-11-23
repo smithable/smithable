@@ -65,6 +65,12 @@ test("an undefined in a list is a value, not a hole, and data shaped like a tag 
     two: { $set: [1], other: 2 },
   };
   expect(decode(encode(value))).toEqual(value);
+  // Judged by what is written: an undefined beside a tag, a record without a prototype.
+  const bare = Object.assign(Object.create(null), { $undefined: true });
+  const odd = decode(
+    encode({ beside: { $set: [1], gone: undefined }, bare, only: { $set: undefined } }),
+  );
+  expect(odd).toEqual({ beside: { $set: [1] }, bare: { $undefined: true }, only: {} });
 });
 
 test("given a project user, the app's database and the tree are worked on by a child, with the same results", () => {
