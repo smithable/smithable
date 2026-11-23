@@ -52,7 +52,9 @@ const time = (s) => {
   const ss = String(Math.floor(ms / 1000) % 60).padStart(2, "0");
   return `${hh}:${mm}:${ss}.${String(ms % 1000).padStart(3, "0")}`;
 };
-const timed = moments.map((m, i) => ({ ...m, until: moments[i + 1]?.at ?? stop })).filter((m) => m.caption);
+const timed = moments
+  .map((m, i) => ({ ...m, until: moments[i + 1]?.at ?? stop }))
+  .filter((m) => m.caption);
 const missing = timed.filter((c) => !SWEDISH[name]?.[c.name]).map((c) => c.name);
 if (missing.length) throw new Error(`No Swedish caption for: ${missing.join(", ")}`);
 // A caption shown for less than MIN_CUE seconds cannot be read: it is joined with the next one.
@@ -61,7 +63,12 @@ const cues = [];
 let held;
 for (const c of timed) {
   const cue = held
-    ? { at: held.at, until: c.until, en: `${held.en}. ${c.caption}`, sv: `${held.sv}. ${SWEDISH[name][c.name]}` }
+    ? {
+        at: held.at,
+        until: c.until,
+        en: `${held.en}. ${c.caption}`,
+        sv: `${held.sv}. ${SWEDISH[name][c.name]}`,
+      }
     : { at: c.at, until: c.until, en: c.caption, sv: SWEDISH[name][c.name] };
   held = cue.until - cue.at < MIN_CUE && c !== timed.at(-1) ? cue : undefined;
   if (!held) cues.push(cue);
