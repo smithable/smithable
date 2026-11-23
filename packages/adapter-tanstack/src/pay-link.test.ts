@@ -73,6 +73,21 @@ test("a mail that says {pay} makes the pay page, a link per recipient and the bo
   for (const kit of ["kit/pay-link.server.ts", "kit/PayLink.tsx", "kit/view.server.ts"])
     expect([...files.keys()].some((p) => p.endsWith(kit))).toBe(true);
   expect([...files.keys()].some((p) => p.endsWith("kit/SentDocuments.tsx"))).toBe(false);
+  // A paid record shows the payment only through a link for the amount and currency paid; an
+  // older one ended. The currency is bound when the link is made and checked again where it pays.
+  const page = [...files.entries()].find(([p]) => p.endsWith("kit/pay-link.server.ts"))?.[1];
+  expect(page).toMatch(
+    /if \(paid && \(paid\.amount !== link\.amount \|\| paid\.currency !== link\.currency\)\)\s+return \{ state: "ended", amount: 0,/,
+  );
+  expect(page).toContain("link.currency !== app.currency");
+  const kitFile = (end: string) => [...files.entries()].find(([p]) => p.endsWith(end))?.[1];
+  expect(kitFile("kit/view.server.ts")).toContain("currency: app.currency,");
+  const pay = kitFile("kit/payments.server.ts");
+  expect(pay).toContain(
+    "bound.currency !== app.currency || entry.due?.(tx, row.id) !== bound.amount",
+  );
+  expect(pay).toContain("pending.amount !== amount || pending.currency !== app.currency");
+  expect(file("src/db/schema.ts")).toMatch(/amount: integer\(\),\n\s+currency: text\(\),/);
   expect([...files.keys()].some((p) => p.endsWith("routes/d.$token.tsx"))).toBe(false);
   // The page has no frame: no menu for someone without an account.
   expect(file("src/routes/__root.tsx")).toMatch(/bareRoutes = \[[^\]]*"\/p"/);

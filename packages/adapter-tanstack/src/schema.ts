@@ -420,11 +420,12 @@ const SENT_TABLES = [
     tokenHash: text().notNull(),
     /** A view link's copy. */
     documentId: integer().references(() => sentDocuments.id, { onDelete: "cascade" }),
-    /** A pay link's payments entry, record and amount (in the currency's smallest unit). */
+    /** A pay link's payments entry, record, amount (in the currency's smallest unit) and currency. */
     entry: text(),
     model: text(),
     recordId: integer(),
     amount: integer(),
+    currency: text(),
     to: text().notNull(),
     until: integer({ mode: "timestamp_ms" }).notNull(),
     /** When and why it ended early: withdrawn, trashed or removed. */

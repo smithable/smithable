@@ -10,6 +10,7 @@ import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 import { and, desc, eq, gt, inArray, isNull, lte, or } from "drizzle-orm";
 import { db } from "#/db";
 import { recordLinks, sentDocuments } from "#/db/schema";
+import { app } from "#/generated/app";
 import { Conflict, type Viewer } from "./access";
 import { audit } from "./audit.server";
 
@@ -84,7 +85,7 @@ const PAY_DAYS = 60;
 
 /**
  * The pay links of one send (payments.md §4.1): each recipient a token of their own, bound to the
- * payments entry, the record and the amount it asks for now. A retry of the mail's delivery sends
+ * payments entry, the record and the amount it asks for now, in the app's currency. A retry of the mail's delivery sends
  * the same text, so the same link.
  */
 export function payLinks(
@@ -103,6 +104,7 @@ export function payLinks(
         model: send.model,
         recordId: send.record,
         amount: Math.round(send.amount),
+        currency: app.currency,
         to: email,
         until,
       })
@@ -124,7 +126,7 @@ export function payLinks(
  */
 export function openPay(
   token: string,
-): { entry: string; model: string; record: number; amount: number } | null {
+): { entry: string; model: string; record: number; amount: number; currency: string } | null {
   if (!/^[A-Za-z0-9_-]{43}$/.test(token)) return null;
   const hash = hashOf(token);
   const found = db
@@ -134,6 +136,7 @@ export function openPay(
       model: recordLinks.model,
       record: recordLinks.recordId,
       amount: recordLinks.amount,
+      currency: recordLinks.currency,
     })
     .from(recordLinks)
     .where(
@@ -147,8 +150,19 @@ export function openPay(
     .get();
   // Found by its hash; compared again in constant time, as a key is.
   const same = found !== undefined && timingSafeEqual(Buffer.from(found.hash), Buffer.from(hash));
-  return same && found.entry && found.model && found.record !== null && found.amount !== null
-    ? { entry: found.entry, model: found.model, record: found.record, amount: found.amount }
+  return same &&
+    found.entry &&
+    found.model &&
+    found.record !== null &&
+    found.amount !== null &&
+    found.currency
+    ? {
+        entry: found.entry,
+        model: found.model,
+        record: found.record,
+        amount: found.amount,
+        currency: found.currency,
+      }
     : null;
 }
 

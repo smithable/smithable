@@ -791,23 +791,26 @@ export function paidWith(tx: Tx, entry: string, record: number) {
  * Starts paying for an existing record (§4.1): the record read as the viewer may (the caller
  * passes it), checked against its entry's condition and that it is not paid, its amount read here,
  * the pending Payment written (or the one there found), bound to this browser, and the provider's
- * page asked. A pay link passes the amount it was made for: the record must still ask exactly
- * that, checked again in the transaction that writes the pending Payment.
+ * page asked. A pay link passes the amount and currency it was made for: the record must still
+ * ask exactly that, in the app's currency, checked again in the transaction that writes the
+ * pending Payment.
  */
 export async function startPayment(
   entryName: string,
   row: Record<string, unknown> & { id: number },
   description: string,
-  bound?: number,
+  bound?: { amount: number; currency: string },
 ): Promise<string> {
   const entry = PAYMENT_ENTRIES[entryName];
   if (!entry?.when || !fits(entry.when, row)) throw new BadInput(w.paymentGone);
-  const amount = bound ?? Math.round(Number(row[entry.amount] ?? 0));
+  const amount = bound?.amount ?? Math.round(Number(row[entry.amount] ?? 0));
   if (!(amount > 0)) throw new BadInput(w.paymentGone);
   const id = db.transaction((tx) => {
-    if (bound !== undefined && entry.due?.(tx, row.id) !== bound) throw new BadInput(w.paymentGone);
+    if (bound && (bound.currency !== app.currency || entry.due?.(tx, row.id) !== bound.amount))
+      throw new BadInput(w.paymentGone);
     if (paidFor(tx, entryName, row.id)) throw new BadInput(w.paymentGone);
-    // A pending one for another amount (the record changed since) is given up for a new one.
+    // A pending one for another amount or currency (the record or the app changed since) is given
+    // up for a new one.
     const pending = tx
       .select()
       .from(payments)
@@ -819,7 +822,8 @@ export async function startPayment(
         ),
       )
       .get();
-    if (pending && pending.amount !== amount) fail(tx, pending, "left unfinished");
+    if (pending && (pending.amount !== amount || pending.currency !== app.currency))
+      fail(tx, pending, "left unfinished");
     return askPayment(tx, entryName, row.id, amount, app.currency, description);
   });
   bindBrowser(id);

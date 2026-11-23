@@ -225,9 +225,9 @@ payments: { provider: mollie }       # stripe | mollie | fake
    page of the app that shows the description and the amount and a Pay button, nothing else of
    the record. The link carries a random token (stored as a hash, as keys are) bound to the entry
    and the record; it works while the record fits `when`, is unpaid and keeps the amount the link
-   was made for, and ends after 60 days. The page is behind the kit's limiter. Each recipient gets
+   was made for, in the currency it was made in, and ends after 60 days. The page is behind the kit's limiter. Each recipient gets
    a link of their own, a row of kind `pay` in the token table record-documents.md §5 adds (its
-   `entry`, `model`, `recordId` and `amount`; no copy). The page is `/p/<token>`, out of
+   `entry`, `model`, `recordId`, `amount` and `currency`; no copy). The page is `/p/<token>`, out of
    search engines, caches and the next site's Referer, with no frame; a wrong, ended or withdrawn
    link, a view link's token and a record gone or in the trash all answer the same 404, and the
    token is compared by its hash in constant time. The amount bound is the one the record asks

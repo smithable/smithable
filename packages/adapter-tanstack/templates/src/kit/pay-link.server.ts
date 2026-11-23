@@ -41,8 +41,11 @@ export function payLinkShown(token: string, describe: Describe): PayLinkShown | 
   const found = linked(token);
   if (!found) return null;
   const { link, entry, row } = found;
-  // Paid: what the payment was, as it was made, not the link's amount or the record's words now.
+  // Paid: what the payment was, as it was made, not the record's words now. Only a link for that
+  // amount says so; an older link for another amount ended and shows nothing of the payment.
   const paid = db.transaction((tx) => paidWith(tx, link.entry, link.record));
+  if (paid && (paid.amount !== link.amount || paid.currency !== link.currency))
+    return { state: "ended", amount: 0, currency: app.currency, description: "" };
   if (paid)
     return {
       state: "paid",
@@ -53,7 +56,7 @@ export function payLinkShown(token: string, describe: Describe): PayLinkShown | 
   // It no longer fits the condition, or asks for another amount: the sender sends a new link, and
   // this one says nothing of the record.
   const due = db.transaction((tx) => entry.due?.(tx, link.record));
-  if (due !== link.amount || !(link.amount > 0))
+  if (due !== link.amount || link.currency !== app.currency || !(link.amount > 0))
     return { state: "ended", amount: 0, currency: app.currency, description: "" };
   return {
     state: "open",
@@ -65,7 +68,7 @@ export function payLinkShown(token: string, describe: Describe): PayLinkShown | 
 
 /**
  * Pays through a pay link: on to the provider's page, the pending Payment bound to this browser.
- * The amount is checked again where the pending Payment is written.
+ * The amount and currency are checked again where the pending Payment is written.
  */
 export async function payByLink(token: string, describe: Describe): Promise<string> {
   const found = linked(token);
@@ -73,5 +76,8 @@ export async function payByLink(token: string, describe: Describe): Promise<stri
   const { link, row } = found;
   // No await between the link's check above and startPayment's write transaction, and the
   // database is one synchronous connection: nothing ends the link or trashes the record between.
-  return startPayment(link.entry, row, describe[link.entry]?.(row) ?? "", link.amount);
+  return startPayment(link.entry, row, describe[link.entry]?.(row) ?? "", {
+    amount: link.amount,
+    currency: link.currency,
+  });
 }
