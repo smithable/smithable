@@ -656,13 +656,20 @@ export async function ${a.run}(viewer: Viewer | null, ids: number[], given: Reco
  * what is still as the merge left it goes back, what was changed since stays and is counted.
  * Empty for a model no merge is on.
  */
-export function unmergeCode(ir: SpecIR, model: ModelIR, auth: AuthIR, t: Texts): string {
+export function unmergeCode(
+  ir: SpecIR,
+  model: ModelIR,
+  auth: AuthIR,
+  t: Texts,
+  sending: string[] = [],
+): string {
   if (!model.trash || !mergesOf(ir, model.name).length) return "";
   const n = names(model, t);
   const signedIn = hasSignIn(auth);
   const tables = [
     ...new Map(referrersOf(ir, model.name).map((r) => [r.model.name, r.model])).values(),
   ];
+  const links = linked(tables, sending);
   return `
 /** The tables a merge of ${inert(n.pluralLabel.toLowerCase())} moves records in, by model. */
 const MERGED_TABLES = { ${tables.map((m) => `${JSON.stringify(m.name)}: ${names(m, t).table}`).join(", ")} } as const;
@@ -715,7 +722,16 @@ function unmerge(tx: Parameters<Parameters<typeof db.transaction>[0]>[0], viewer
       stayed++;
       continue;
     }
-    const table = MERGED_TABLES[d.model] as unknown as typeof ${n.table};
+    const table = MERGED_TABLES[d.model] as unknown as typeof ${n.table};${
+      links.length
+        ? `
+    // A link made before the merge put it in the trash ends now, as a merge ends one today.
+    if ((${literal(links)} as string[]).includes(d.model)) {
+      const was = tx.select({ at: table.deletedAt }).from(table).where(eq(table.id, d.id)).get();
+      if (was?.at) endLinks(tx, viewer, d.model, d.id, "trashed", was.at);
+    }`
+        : ""
+    }
     tx.update(table).set({ deletedAt: null, deletedBy: null } as never).where(eq(table.id, d.id)).run();
   }
   // A value the merge gave the kept one, still as it left it, goes back to what it was.
@@ -759,12 +775,28 @@ function revived(like: unknown, value: unknown): unknown {
 `;
 }
 
-/** What the merged record's Restore imports: the other models' rules, to check a move back. */
-export function unmergeImports(ir: SpecIR, model: ModelIR, t: Texts): string {
-  return [...new Map(referrersOf(ir, model.name).map((r) => [r.model.name, r.model])).values()]
+/** The models among these whose records go to the trash and whose mails send links. */
+const linked = (tables: ModelIR[], sending: string[]) =>
+  tables.filter((m) => m.trash && sending.includes(m.name)).map((m) => m.name);
+
+/**
+ * What the merged record's Restore imports: the other models' rules, to check a move back, and
+ * endLinks when a model it brings back sends links and its own module does not import it already.
+ */
+export function unmergeImports(
+  ir: SpecIR,
+  model: ModelIR,
+  t: Texts,
+  sending: string[] = [],
+): string {
+  const tables = [
+    ...new Map(referrersOf(ir, model.name).map((r) => [r.model.name, r.model])).values(),
+  ];
+  const ends = linked(tables, sending).length > 0 && !sending.includes(model.name);
+  return `${ends ? 'import { endLinks } from "#/kit/view.server";\n' : ""}${tables
     .filter((m) => m.name !== model.name)
     .map((m) => `import { ${names(m, t).access} } from "./${kebab(m.name)}.server";\n`)
-    .join("");
+    .join("")}`;
 }
 
 /** The user model is never merged; kept here so the check reads where the code is. */

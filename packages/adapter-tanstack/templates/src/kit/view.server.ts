@@ -5,7 +5,7 @@
 // record. A link ends after its days, when its record goes to the trash or is removed, or when
 // someone withdraws it; an ended link stays ended.
 import { createHash, randomBytes } from "node:crypto";
-import { and, desc, eq, gt, inArray, isNull } from "drizzle-orm";
+import { and, desc, eq, gt, inArray, isNull, lte } from "drizzle-orm";
 import { db } from "#/db";
 import { recordLinks, sentDocuments } from "#/db/schema";
 import { Conflict, type Viewer } from "./access";
@@ -143,13 +143,18 @@ export function sentOf(model: string, record: number, q: Pick<typeof db, "select
   }));
 }
 
-/** Ends every open link to a record's copies, for good: why is "withdrawn", "trashed" or "removed". */
+/**
+ * Ends every open link to a record's copies, for good: why is "withdrawn", "trashed" or "removed".
+ * With madeBefore, only those made by then: a restore ends what its trash should have ended (a
+ * record trashed before trashing ended its links).
+ */
 export function endLinks(
   tx: Writer,
   viewer: Viewer | null,
   model: string,
   record: number,
   why: "withdrawn" | "trashed" | "removed",
+  madeBefore?: Date,
 ): number {
   const copies = tx
     .select({ id: sentDocuments.id })
@@ -161,7 +166,13 @@ export function endLinks(
   const ended = tx
     .update(recordLinks)
     .set({ endedAt: new Date(), ended: why })
-    .where(and(inArray(recordLinks.documentId, copies), isNull(recordLinks.endedAt)))
+    .where(
+      and(
+        inArray(recordLinks.documentId, copies),
+        isNull(recordLinks.endedAt),
+        madeBefore && lte(recordLinks.createdAt, madeBefore),
+      ),
+    )
     .returning({ id: recordLinks.id })
     .all().length;
   if (ended && why === "withdrawn")

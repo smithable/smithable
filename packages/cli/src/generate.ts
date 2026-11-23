@@ -156,7 +156,11 @@ export async function generate(dir: string, io: Io, flags: GenerateFlags): Promi
   const changes: TreeChange[] = [];
   let written = 0;
   const changed: string[] = [];
+  // A path given twice is written and counted once, as its first entry.
+  const seen = new Set<string>();
   for (const file of files) {
+    if (seen.has(file.path)) continue;
+    seen.add(file.path);
     const path = join(dir, file.path);
     // Scaffold and custom files are created once and then belong to the project.
     if (file.zone === "scaffold" || file.zone === "custom") {
