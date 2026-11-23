@@ -140,12 +140,14 @@ export function editAsOperations(
   if (file === "smithable.content.yml") {
     const operations: EditOperation[] = [];
     textChanges(b, a, [], operations);
-    // The version line and the logo are no texts.
+    // The version line, the logo and the initials are no texts.
     return {
       operations: operations.filter(
-        (o) => !/^(smithableContent|logo)$/.test(String((o.args.path as string[])[0])),
+        (o) => !/^(smithableContent|logo|initials)$/.test(String((o.args.path as string[])[0])),
       ),
-      other: operations.some((o) => (o.args.path as string[])[0] === "logo") ? ["the logo"] : [],
+      other: (["logo", "initials"] as const).flatMap((key) =>
+        operations.some((o) => (o.args.path as string[])[0] === key) ? [`the ${key}`] : [],
+      ),
     };
   }
   return {

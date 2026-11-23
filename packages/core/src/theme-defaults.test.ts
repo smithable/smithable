@@ -91,6 +91,7 @@ test("finite defaults parse from one capability vocabulary; references and execu
     "app: {permissions: admin}",
     "sections: {hero: {stage: customers}}",
     "sections: {hero: {facts: [Customer]}}",
+    "sections: {mediaText: {layout: collage}}",
     "sections: {hero: {overlay: 'url(https://example.test)'}}",
     "kinds: {crud: {table: {mark: admin}}}",
   ]) {

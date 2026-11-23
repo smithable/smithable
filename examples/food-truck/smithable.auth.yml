@@ -17,7 +17,7 @@ defaultAccess: shared
 admins: [owner@emberwheel.example]
 
 public:
-  pages: [home, menu, catering]
+  pages: [home, menu, where, catering]
   read:
     - Stop: { where: { status: confirmed } }
     - MenuItem

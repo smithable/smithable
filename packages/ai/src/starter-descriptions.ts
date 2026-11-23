@@ -73,7 +73,7 @@ export const STARTER_TEXTS: Record<string, StarterText> = {
     pages: { job: "jobs", enquiry: "enquiries" },
   },
   "food-truck": {
-    text: "A public food-truck site where people browse our stops and menu, with catering enquiries and staff we invite.",
+    text: "A public site for a food truck where people browse our stops and menu, with catering enquiries and staff we invite.",
     pages: { stop: "stops", enquiry: "enquiries" },
   },
 };

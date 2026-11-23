@@ -11,6 +11,7 @@ import {
   readString,
 } from "./context.js";
 import { type Diagnostic, hasErrors } from "./diagnostics.js";
+import { initialsForm } from "./initials.js";
 import { channelsOf, type ModelIR, type OutgoingIR, type SpecIR, USER_MODEL } from "./ir.js";
 import { capitalize, humanize, plural } from "./naming.js";
 import { patternInfo } from "./patterns.js";
@@ -41,6 +42,8 @@ export interface ContentIR {
   translations?: Partial<Record<Language, ContentIR>>;
   /** The app's mark, before its name in the shell and the landing header, and its tab icon. */
   logo?: ContentImage;
+  /** The one or two letters on the app's tile (its favicon), when not the ones by rule (initials.ts). */
+  initials?: string;
   models: Record<string, ModelContent>;
   pages: Record<string, PageContent>;
   menus: Record<string, { label?: string }>;
@@ -172,8 +175,9 @@ export const sectionTakesPicture = (kind: string) => SECTION_TEXTS[kind]?.image 
 
 /** The keys of a kind of section's items that are plain texts (a pricing plan's features and a gallery's picture are not); none when its items are not texts alone. */
 export function sectionItemTexts(kind: string): string[] | undefined {
-  const items = SECTION_TEXTS[kind]?.items;
-  return items && !items.includes("image") ? items.filter((k) => k !== "features") : undefined;
+  if (kind === "gallery") return undefined;
+  const texts = SECTION_TEXTS[kind]?.items?.filter((key) => key !== "features" && key !== "image");
+  return texts?.length ? texts : undefined;
 }
 
 /** The keys a kind of section's texts may have in the content file: its texts, and items, image or fields when it takes them. */
@@ -188,9 +192,13 @@ const SECTION_TEXTS: Record<
   string,
   { texts: string[]; items?: string[]; image?: true; fields?: true }
 > = {
-  mediaText: { texts: ["eyebrow", "title", "text", "button", "caption"], image: true },
+  mediaText: {
+    texts: ["eyebrow", "title", "text", "button", "caption"],
+    image: true,
+    items: ["image"],
+  },
   hero: { texts: ["eyebrow", "title", "subtitle", "button", "secondButton"], image: true },
-  features: { texts: ["eyebrow", "title", "text"], items: ["title", "text"] },
+  features: { texts: ["eyebrow", "title", "text"], items: ["title", "text", "image"], image: true },
   records: { texts: ["eyebrow", "title", "text"] },
   pricing: {
     texts: ["eyebrow", "title", "text"],
@@ -198,7 +206,7 @@ const SECTION_TEXTS: Record<
   },
   testimonials: { texts: ["eyebrow", "title"], items: ["quote", "name", "role"] },
   faq: { texts: ["eyebrow", "title"], items: ["question", "answer"] },
-  callToAction: { texts: ["title", "text", "button"] },
+  callToAction: { texts: ["title", "text", "button"], image: true },
   // Opening hours one per line; "thanks" is shown once a visitor has sent the form.
   contact: {
     texts: ["eyebrow", "title", "text", "address", "phone", "email", "hours", "button", "thanks"],
@@ -210,7 +218,7 @@ const SECTION_TEXTS: Record<
   calculator: { texts: ["title", "text", "results"], fields: true },
   custom: { texts: ["title", "text"] },
   // A text section: a heading and its paragraphs.
-  text: { texts: ["eyebrow", "title", "text"] },
+  text: { texts: ["eyebrow", "title", "text"], image: true },
   // A calculator page's results heading.
   results: { texts: ["title"] },
   // A link is a page's address ("/pricing") or a full one ("https://…", "mailto:…").
@@ -301,7 +309,8 @@ export function textPaths(content: ContentIR): Map<string, string> {
         if (!notText(key, inner, at.split(".").at(-1))) walk(inner, at ? `${at}.${key}` : key);
   };
   for (const [key, value] of Object.entries(content))
-    if (!["language", "languages", "translations", "logo"].includes(key)) walk(value, key);
+    if (!["language", "languages", "translations", "logo", "initials"].includes(key))
+      walk(value, key);
   return paths;
 }
 
@@ -427,7 +436,7 @@ export function validateContent(
     allowed: [
       "smithableContent",
       // A language file holds the texts only: the app's languages and its mark are the content file's.
-      ...(translation ? [] : ["language", "languages", "logo"]),
+      ...(translation ? [] : ["language", "languages", "logo", "initials"]),
       "models",
       "pages",
       "menus",
@@ -490,6 +499,16 @@ export function validateContent(
         );
       else if (!alt) ctx.error(value, "logo-alt", '"logo" needs "alt": what the mark shows.');
       else content.logo = { src, alt, ...(generated ? { generated } : {}) };
+    }
+    if (key === "initials") {
+      const initials = readString(ctx, value, '"initials"');
+      if (initials && !initialsForm(initials))
+        ctx.error(
+          value,
+          "initials-form",
+          '"initials" is one or two letters (or digits), e.g. SY; nothing said, the first letters of the app\'s first two words.',
+        );
+      else if (initials) content.initials = initials;
     }
     if (key === "consent")
       content.consent = readTexts(ctx, value, '"consent"', ["text", "accept", "decline"]);
@@ -868,7 +887,18 @@ function readPage(ctx: ParseContext, node: ParsedNode | null, id: string, ir: Sp
         sectionFields,
       );
     const items = known.find((e) => e.key === "items");
-    if (items && rules.items) section.items = readItems(ctx, items.value, partWhere, rules.items);
+    if (items && rules.items) {
+      section.items = readItems(ctx, items.value, partWhere, rules.items);
+      if (
+        kind === "mediaText" &&
+        (section.items.length > 3 || section.items.some((item) => !item.image))
+      )
+        ctx.error(
+          items.value,
+          "invalid-value",
+          `The items of ${partWhere} are up to three extra pictures, each with an image and its alternative text.`,
+        );
+    }
     const image = known.find((e) => e.key === "image");
     if (image) {
       const read = readImage(ctx, image.value, `the image of ${partWhere}`, kind === "hero");

@@ -603,10 +603,11 @@ export function dataModule(
   ir: SpecIR,
   auth: AuthIR,
   ux: UxIR = emptyUx(),
-  /** Its mails send links to a copy of its document (record-documents.md §5). */
-  sends = false,
+  /** The models whose mails send links to a copy of their document (record-documents.md §5). */
+  sending: string[] = [],
 ): string {
   const n = names(model, t);
+  const sends = sending.includes(model.name);
   // The order an order page makes (orders.md §3): its lines are written with it, priced here.
   const orderPage = ir.pages
     .map((p) => p.pattern)
@@ -1674,7 +1675,7 @@ ${roots
 `
     : "";
   // A merged record's Restore puts back what the merge moved (docs/design/intents.md §3).
-  const unmerge = unmergeCode(ir, model, auth, t);
+  const unmerge = unmergeCode(ir, model, auth, t, sending);
   const trashedRows = `and(isNotNull(${n.table}.deletedAt), ${held.length ? `${self}.unheld(viewer), ` : ""}${self}.scoped(viewer))`;
   const allowed = `.filter((row) => allows(${n.access}.delete, viewer, ${rowOwner}))`;
   const named = signedIn
@@ -1723,7 +1724,7 @@ ${roots
   /** Takes the chosen ${inert(n.pluralLabel.toLowerCase())} out of the trash, those the viewer may delete. */
   restore(viewer: Viewer | null, ids: number[]): { restored: number; skipped: number${unmerge ? "; stayed: number" : ""} } {
     const rows = db
-      .select(${selectOwner.replace("{ ", `{ id: ${n.table}.id, ${roots.length ? `deletedWith: ${n.table}.deletedWith, ` : ""}${unmerge ? `deletedAt: ${n.table}.deletedAt, ` : ""}`)})
+      .select(${selectOwner.replace("{ ", `{ id: ${n.table}.id, ${roots.length ? `deletedWith: ${n.table}.deletedWith, ` : ""}${unmerge || sends ? `deletedAt: ${n.table}.deletedAt, ` : ""}`)})
       .from(${n.table})
       .where(and(inArray(${n.table}.id, ids), ${trashedRows}))
       .all()${allowed};${
@@ -1739,7 +1740,13 @@ ${roots
     // A unique value a live record has taken since refuses it, as it refuses a new record.${unmerge ? "\n    let stayed = 0;" : ""}
     try {
       db.transaction((tx) => {
-        for (const row of rows) {${unmerge ? "\n          // What a merge moved goes back first, so a value it gave the kept record is free again.\n          stayed += unmerge(tx, viewer, row.id, row.deletedAt);" : ""}
+        for (const row of rows) {${unmerge ? "\n          // What a merge moved goes back first, so a value it gave the kept record is free again.\n          stayed += unmerge(tx, viewer, row.id, row.deletedAt);" : ""}${
+          sends
+            ? `
+          // A link made before it went to the trash ends now, as its trash ends one today.
+          if (row.deletedAt) endLinks(tx, viewer, "${model.name}", row.id, "trashed", row.deletedAt);`
+            : ""
+        }
           const back = tx.update(${n.table}).set({ deletedAt: null, deletedBy: null, deletedWith: null }).where(eq(${n.table}.id, row.id)).returning().get();
           audit(tx, viewer, { action: "restored", model: "${model.name}", record: row.id, title: back.${titleKey} });${
             together && group.length
@@ -1849,7 +1856,13 @@ ${dropPictures(
   },
 
   /** Takes the ${inert(n.pluralLabel.toLowerCase())} that went to the trash with a record out of it again. */
-  restoreWith(tx: Tx, viewer: Viewer | null, tag: string): void {
+  restoreWith(tx: Tx, viewer: Viewer | null, tag: string): void {${
+    sends
+      ? `
+    for (const row of tx.select({ id: ${n.table}.id, deletedAt: ${n.table}.deletedAt }).from(${n.table}).where(eq(${n.table}.deletedWith, tag)).all())
+      if (row.deletedAt) endLinks(tx, viewer, "${model.name}", row.id, "trashed", row.deletedAt);`
+      : ""
+  }
     const back = tx.update(${n.table}).set({ deletedAt: null, deletedBy: null, deletedWith: null }).where(eq(${n.table}.deletedWith, tag)).returning().all();
     for (const row of back)
       audit(tx, viewer, { action: "restored", model: "${model.name}", record: row.id, title: row.${titleKey}, details: { with: tag } });
@@ -1974,7 +1987,7 @@ ${(composedName(model) || lined) && referenced ? 'import { sortRows } from "#/ki
   .join(
     "",
   )}${longTitle(model) ? 'import { titleOf } from "#/kit/format";\n' : ""}${mails ? `${OUTGOING_IMPORT}\n` : ""}${filteredBy || ((referenced || paged) && titleColumn !== "id") || (paged && (searched.length || nameSearch.some((c) => c.includes("contains(")))) ? `import { contains } from "#/kit/search";\n` : ""}${paged || ruled || orderPage || filteredBy ? 'import { BadInput } from "#/kit/refusal";\n' : ""}${ruled ? 'import { fits } from "#/kit/model";\n' : ""}${paged ? 'import { aggregate, type Filterable, nearest, sortOf, whereOf, wordsOf } from "#/kit/where";\n' : ""}${ruled ? 'import { w } from "#/kit/words";\n' : ""}${pictures.length ? `import { ${[...(singles.length || pictureLists.length ? ["deletePicture", "dropCopies"] : []), ...(docSingles.length || docLists.length ? ["deleteFile"] : [])].join(", ")} } from "#/kit/uploads";\n` : ""}${model.fields.some(isUpload) ? 'import { acceptFiles, cleanUploads, keepsUpload } from "#/kit/receipts.server";\n' : ""}${model.review && signedIn ? 'import { tellReviewers } from "#/kit/review-mail.server";\n' : ""}${capacity?.closes || capacity?.cancelUntil ? 'import { now } from "#/kit/now";\n' : ""}${payEntry ? 'import { askPayment } from "#/kit/payments.server";\n' : ""}${sends ? `import { ${trashing ? "endLinks, " : ""}removeCopies } from "#/kit/view.server";\n` : ""}import { afterChange, afterDelete } from "./hooks";
-${occ ? occupiesImports() : ""}${unmerge ? unmergeImports(ir, model, t) : ""}${[...others]
+${occ ? occupiesImports() : ""}${unmerge ? unmergeImports(ir, model, t, sending) : ""}${[...others]
   .map((m) => `import { ${names(m, t).data} } from "./${kebab(m.name)}.server";`)
   .join("\n")}${others.size ? "\n" : ""}${[...labelledKinds]
   .filter((m) => m !== model)

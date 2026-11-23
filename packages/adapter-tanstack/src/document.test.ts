@@ -152,12 +152,17 @@ test("a mail that says {view} makes the link's page, and the document page lists
   // Removing an invoice removes its copies, and their links with them (it has no trash).
   const data = [...app].find(([path]) => path.endsWith("/invoice.server.ts"))?.[1];
   expect(data).toContain('removeCopies(tx, "Invoice", id);');
-  // With a trash, trashing ends the links (restoring touches no link, so they stay ended).
+  // With a trash, trashing ends the links (restoring opens none, so they stay ended).
   const trashed = files(
     at("smithable.yml").replace("  Invoice:\n", "  Invoice:\n    trash: true\n"),
   );
   const kept = [...trashed].find(([path]) => path.endsWith("/invoice.server.ts"))?.[1];
   expect(kept).toContain('endLinks(tx, viewer, "Invoice", id, "trashed");');
+  // A restore ends a link made before the trash, one trashing left open before it ended links (T1083).
+  expect(kept).toContain("deletedAt: schema.invoices.deletedAt, ");
+  expect(kept).toContain(
+    'if (row.deletedAt) endLinks(tx, viewer, "Invoice", row.id, "trashed", row.deletedAt);',
+  );
   // A trashed invoice shows no Sent list and refuses Withdraw, as a missing one does.
   const trashedPage = [...trashed].find(([path]) =>
     path.endsWith("/invoices/$id_.document.tsx"),
@@ -196,6 +201,18 @@ test("a merge or a split that trashes or deletes a record ends its links as a de
   const deleted = file(spec(false), "/actions/merge-invoices.server.ts");
   expect(deleted).toContain('import { removeCopies } from "#/kit/view.server";');
   expect(deleted).toContain('if (goes.has(other.id)) removeCopies(tx, "Invoice", other.id);');
+  // Undoing a merge of clients brings back the invoices it put in the trash, and ends their
+  // links made before (T1083); a client's own module imports endLinks for it.
+  const clients = files(
+    at("smithable.yml")
+      .replace("actions:\n", "actions:\n  mergeClients:\n    merge: Client\n")
+      .replace("  Client:\n", "  Client:\n    trash: true\n")
+      .replace("  Invoice:\n", "  Invoice:\n    trash: true\n"),
+  );
+  const client = file(clients, "/client.server.ts");
+  expect(client).toContain('import { endLinks } from "#/kit/view.server";');
+  expect(client).toContain('if ((["Invoice"] as string[]).includes(d.model)) {');
+  expect(client).toContain('if (was?.at) endLinks(tx, viewer, d.model, d.id, "trashed", was.at);');
   // A model that sends no link imports nothing for it.
   const words = at("smithable.content.yml").split(" See it here: {view}").join("");
   const plain = files(

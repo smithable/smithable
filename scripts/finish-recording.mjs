@@ -26,9 +26,9 @@ const SWEDISH = {
   undo: {
     "the app as it is": "Tre instruktörer, var och en med ett telefonnummer",
     "a change removes the field": "En ändring tar bort telefonfältet",
-    "the warning": "Studio säger att tre nummer följer med",
+    "the warning": "Studio säger att tre nummer försvinner med det",
     "the numbers are gone": "Fältet och dess nummer är borta",
-    "one Undo": "Ett klick på Undo",
+    "one Undo": "Ett klick på Ångra",
     "back as before": "Samma nummer är tillbaka",
   },
   assistant: {
@@ -52,20 +52,38 @@ const time = (s) => {
   const ss = String(Math.floor(ms / 1000) % 60).padStart(2, "0");
   return `${hh}:${mm}:${ss}.${String(ms % 1000).padStart(3, "0")}`;
 };
-const cues = moments
+const timed = moments
   .map((m, i) => ({ ...m, until: moments[i + 1]?.at ?? stop }))
   .filter((m) => m.caption);
+const missing = timed.filter((c) => !SWEDISH[name]?.[c.name]).map((c) => c.name);
+if (missing.length) throw new Error(`No Swedish caption for: ${missing.join(", ")}`);
+// A caption shown for less than MIN_CUE seconds cannot be read: it is joined with the next one.
+const MIN_CUE = 1.5;
+const cues = [];
+let held;
+for (const c of timed) {
+  const cue = held
+    ? {
+        at: held.at,
+        until: c.until,
+        en: `${held.en}. ${c.caption}`,
+        sv: `${held.sv}. ${SWEDISH[name][c.name]}`,
+      }
+    : { at: c.at, until: c.until, en: c.caption, sv: SWEDISH[name][c.name] };
+  // Joined only with a caption that follows at once, never across a moment without one.
+  const next = timed[timed.indexOf(c) + 1];
+  held = cue.until - cue.at < MIN_CUE && next?.at === c.until ? cue : undefined;
+  if (!held) cues.push(cue);
+}
 const vtt = (text) =>
   `WEBVTT\n\n${cues.map((c, i) => `${i + 1}\n${time(c.at)} --> ${time(c.until)}\n${text(c)}\n`).join("\n")}`;
-const missing = cues.filter((c) => !SWEDISH[name]?.[c.name]).map((c) => c.name);
-if (missing.length) throw new Error(`No Swedish caption for: ${missing.join(", ")}`);
 writeFileSync(
   join(out, `${name}.en.vtt`),
-  vtt((c) => c.caption),
+  vtt((c) => c.en),
 );
 writeFileSync(
   join(out, `${name}.sv.vtt`),
-  vtt((c) => SWEDISH[name][c.name]),
+  vtt((c) => c.sv),
 );
 console.log(
   `${name}: ${cues.length} captions, ${time(stop)} long; ${name}.en.vtt and ${name}.sv.vtt`,

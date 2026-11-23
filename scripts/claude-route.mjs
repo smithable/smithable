@@ -147,7 +147,7 @@ const isJson = (text) => {
 };
 
 /** Starts the route on a free loopback port. */
-export async function claudeRoute() {
+export async function claudeRoute({ respectOutputLimit = false } = {}) {
   const key = claudeKey();
   const server = createServer(async (req, res) => {
     const send = (status, value, headers = {}) => {
@@ -172,7 +172,12 @@ export async function claudeRoute() {
         });
         return { response, text: await response.text() };
       };
-      const body = messagesBody(JSON.parse(raw));
+      const input = JSON.parse(raw);
+      const outputLimit =
+        respectOutputLimit && Number.isSafeInteger(input.max_tokens) && input.max_tokens > 0
+          ? Math.min(16000, input.max_tokens)
+          : undefined;
+      const body = messagesBody(input, outputLimit);
       let { response, text } = await ask(body);
       let content;
       // A schema the API cannot take (the engine's arguments keyed by an app's own names are maps,

@@ -26,6 +26,7 @@ exports[`every kit component's hooks, as they are 1`] = `
     "data-kit="drawer"",
     "data-part="count"",
     "data-part="logo"",
+    "data-part="wordmark"",
     "data-kit="nav"",
     "data-part="sign-out"",
     "data-kit={kind}",
@@ -111,6 +112,7 @@ exports[`every kit component's hooks, as they are 1`] = `
   ],
   "src/kit/Landing.tsx": [
     "data-part="logo"",
+    "data-part="wordmark"",
     "data-kit="landing"",
     "data-part="header"",
     "data-part="footer"",

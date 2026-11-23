@@ -1027,9 +1027,12 @@ function SectionAppearance({
     <div className="space-y-2 text-sm">
       {sections.map((section) =>
         Object.entries(SECTION_LOOKS[section.kind] ?? {}).map(([key, values]) => {
+          if (section.kind === "footer" || key === "mark") return null;
+          const basicMediaLayout = section.kind === "mediaText" && key === "layout";
           const label = `${humanize(key)} of ${humanize(section.name)}`;
           const inputId = `${scope}-${section.name}-${key}`;
           const current = ux.looks?.[section.name]?.[key as "layout"];
+          if (basicMediaLayout && current === "collage") return null;
           const heroLayoutOf = (name: string) => ux.looks?.[name]?.layout;
           const set = (value: string) =>
             run("setSectionLook", { page, section: section.name, key, value });
@@ -1115,7 +1118,7 @@ function SectionAppearance({
               page={page}
               section={section.name}
               name={key}
-              values={values}
+              values={basicMediaLayout ? values.filter((value) => value !== "collage") : values}
               current={current}
               label={label}
               set={set}

@@ -292,6 +292,7 @@ export function readDescription(given: string): Reading {
   words.forEach((word, i) => {
     const w = stem(word);
     const as: string[] = [];
+    if (cateringTruck && w === "food" && /^truck$/i.test(words[i + 1] ?? "")) as.push("generic");
     if (inClause.has(i)) as.push("clause");
     // "Books" are things one reads; "book" and "booking" are what one does.
     const cues = /^books$/i.test(word) ? [] : (KIND[w] ?? []);

@@ -24,7 +24,8 @@
 # when the kit's templates, the adapter's page patterns or themes, the look editor or the visual
 # check itself changed. With nothing changed (CI's run on main) everything runs.
 # "scripts/gate.sh --plan" prints the plan without a ticket or the lock. The exit status is the
-# check's. The lock is released when the gate ends, however it ends.
+# check's, or 75 (too many ahead) or 76 (one of its ports is taken, scripts/gate-ports.mjs). The
+# lock is released when the gate ends, however it ends.
 set -u
 # Everything below is one block, so bash has read the whole file before it runs any of it: a
 # copy that is replaced while gates run from it (it happened, and six gates died of a syntax
@@ -181,6 +182,14 @@ until [ "$(waiting | head -1 | cut -f1)" = "${ticket##*/}" ] && flock -n 9; do
   sleep 2
 done
 rm -f "$ticket"
+# Its ports first, in its turn (T1317): a Studio or vite left by a check that crashed holds one,
+# and the gate would fail on it twenty minutes in. Exit 76, naming the process holding each. When
+# the ports cannot be read at all, it says so and runs unchecked.
+if [ -z "${GATE_RUN:-}" ]; then
+  node scripts/gate-ports.mjs; ports=$?
+  [ "$ports" -ne 1 ] || exit 76
+  [ "$ports" -eq 0 ] || echo "gate.sh: its ports were not checked (gate-ports exit $ports); running all the same." >&2
+fi
 # Nobody was running or waiting: the count of turns starts again.
 [ -n "$said" ] || : > "$turns"
 echo "$session" >> "$turns"

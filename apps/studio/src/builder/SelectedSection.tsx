@@ -27,6 +27,7 @@ const KEYS: Record<string, string> = {
   image: "Picture side",
   height: "Height",
   band: "Background",
+  mark: "Heading",
 };
 const HEIGHTS: Record<string, string> = {
   default: "Layout's own",
@@ -39,12 +40,14 @@ export function selectedSection(selection: Selection | undefined, spec: Spec) {
   const picked = /^section:([^.]+)\.(.+)$/.exec(selection?.concept ?? "");
   if (!picked || !spec.ir) return;
   const [, page = "", name = ""] = picked;
-  const section = spec.ir.pages
-    .find((item) => item.id === page)
-    ?.sections.find((item) => item.name === name);
+  const sections = spec.ir.pages.find((item) => item.id === page)?.sections;
+  const section =
+    sections?.find((item) => item.name === name) ??
+    (name === "@footer" ? sections?.find((item) => item.kind === "footer") : undefined);
   if (!section) return;
+  const sectionName = section.name;
   const looks = SECTION_LOOKS[section.kind] ?? {};
-  const look = (spec.ux?.pages[page]?.looks?.[name] ?? {}) as Record<string, unknown>;
+  const look = (spec.ux?.pages[page]?.looks?.[sectionName] ?? {}) as Record<string, unknown>;
   const layout = String(look.layout ?? (Array.isArray(looks.layout) ? looks.layout[0] : ""));
   // A hero's tiles are its two or three shortcuts, and its stage a list everyone sees: a layout
   // the section cannot take is not offered (T1196), unless it is the one it has.
@@ -57,10 +60,26 @@ export function selectedSection(selection: Selection | undefined, spec: Spec) {
     (value === "tiles"
       ? shortcuts >= 2 && shortcuts <= 3
       : value !== "stage" || Boolean(stagePage(ir)));
+  const landings =
+    section.kind === "footer" ? ir.pages.filter((item) => item.pattern.kind === "landing") : [];
+  const siteHome =
+    landings.find((item) => spec.auth?.public.pages.includes(item.id)) ?? landings[0];
+  const contactName = siteHome?.sections.find((item) => item.kind === "contact")?.name;
+  const contact =
+    siteHome && contactName ? spec.content?.pages[siteHome.id]?.sections?.[contactName] : undefined;
   const choices = Object.keys(KEYS).flatMap((key) => {
     const all = looks[key];
     if (!Array.isArray(all)) return [];
+    if (key === "mark" && !spec.content?.logo)
+      return look.mark === "logo" ? [{ key, values: ["title"], current: "logo" }] : [];
+    if (
+      section.kind === "footer" &&
+      ![contact?.address, contact?.phone, contact?.email, contact?.hours].some(Boolean)
+    )
+      return layout === "contactBand" ? [{ key, values: ["standard"], current: layout }] : [];
     const values = all.filter((value) => applies(key, String(value)));
+    // A collage stacks its pictures under the text.
+    if (section.kind === "mediaText" && key === "image" && layout === "collage") return [];
     // A hero's picture has a side only beside its text.
     if (section.kind === "hero" && key === "image" && !["split", "inset"].includes(layout))
       return [];
@@ -76,21 +95,43 @@ export function selectedSection(selection: Selection | undefined, spec: Spec) {
     const current = look[key] ?? (key === "band" ? "none" : values[0]);
     return [{ key, values: values.map(String), current: String(current) }];
   });
+  const content = spec.content?.pages[page]?.sections?.[sectionName];
+  const collage = section.kind === "mediaText" && layout === "collage";
+  const entries = section.kind === "features" || collage ? (content?.items ?? []) : [];
+  const itemPictures = entries.map((item, index) => ({
+    index,
+    label: collage
+      ? `Extra picture ${index + 1}`
+      : typeof item.title === "string"
+        ? `${item.title} picture`
+        : `Feature ${index + 1} picture`,
+    image: typeof item.image === "object" && !Array.isArray(item.image) ? item.image : undefined,
+  }));
+  if (collage && entries.length < 3)
+    itemPictures.push({
+      index: entries.length,
+      label: `Extra picture ${entries.length + 1}`,
+      image: undefined,
+    });
   return {
     page,
-    section: name,
+    section: sectionName,
     kind: section.kind,
-    label: selection?.label?.trim() || humanize(name),
+    label: selection?.label?.trim() || humanize(sectionName),
     choices,
     // A section with a picture of its own, and the one it has (none: the section shows its text).
-    picture: sectionTakesPicture(section.kind)
-      ? { image: spec.content?.pages[page]?.sections?.[name]?.image }
-      : undefined,
+    itemPictures,
+    picture: sectionTakesPicture(section.kind) ? { image: content?.image } : undefined,
   };
 }
 
 const named = (kind: string, key: string, value: string) =>
   (kind === "hero" && key === "layout" ? HERO_LAYOUTS[value] : undefined) ??
+  (kind === "footer" && key === "layout"
+    ? value === "contactBand"
+      ? "Contact band"
+      : "Standard footer"
+    : undefined) ??
   (key === "height" ? HEIGHTS[value] : undefined) ??
   humanize(value);
 
@@ -135,6 +176,12 @@ export function SelectedSection({
           values: {
             ...Object.fromEntries(section.choices.map((c) => [c.key, c.current])),
             picture: pictureValue(section.picture?.image),
+            ...Object.fromEntries(
+              section.itemPictures.map(({ index, image }) => [
+                `picture:${index}`,
+                pictureValue(image),
+              ]),
+            ),
           },
           revision: project.revision ?? "",
         },
@@ -195,14 +242,15 @@ export function SelectedSection({
   const choosePicture = (
     args: { src?: string; alt?: string },
     file?: { path: string; data: string },
+    item?: number,
   ) =>
     attempt(
-      "picture",
+      item === undefined ? "picture" : `picture:${item}`,
       pictureValue(args.src ? { src: args.src, alt: args.alt ?? "" } : undefined),
       (revision) =>
         api.lookChange(
           "setSectionPicture",
-          { page: section.page, section: section.section, ...args },
+          { page: section.page, section: section.section, ...args, item },
           revision,
           lookProject,
           file,
@@ -334,6 +382,11 @@ export function SelectedSection({
             page={section.page}
             section={section.section}
             image={section.picture.image}
+            label={
+              ["text", "callToAction", "features"].includes(section.kind)
+                ? "Background picture"
+                : undefined
+            }
             change={(args, file) => void choosePicture(args, file)}
             busy={busy}
           />
@@ -348,6 +401,17 @@ export function SelectedSection({
             busy={busy}
           />
         )}
+        {section.itemPictures.map(({ index, label, image }) => (
+          <SectionPicture
+            key={`${index}:${pictureValue(image)}`}
+            page={section.page}
+            section={`${section.section}-${index + 1}`}
+            label={label}
+            image={image}
+            change={(args, file) => void choosePicture(args, file, index)}
+            busy={busy}
+          />
+        ))}
         {error && (
           <p role="alert" className="text-sm text-red-700">
             {error}

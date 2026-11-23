@@ -39,7 +39,7 @@ export interface PictureCredit {
 
 export interface PickedPictures {
   hero?: PictureEntry;
-  /** Always one when the library has marks: a fitting one, else an abstract one. */
+  /** A mark that fits, else none: the app's wordmark and tile are its identity (app-logo.md §4). */
   logo?: PictureEntry;
   /**
    * Sample pictures for each model that stores pictures, chosen by the model's own subject; a
@@ -229,19 +229,17 @@ export function pickPictures(
     heroes.all.find((e) => e.id.startsWith("hero-abstract-calm")) ??
     heroes.all[0];
   // The mark's tie-break is salted and stirred, so it does not follow the hero's. No mark fits:
-  // an abstract one by the same number, so no app is without one.
+  // none (2026-11-20; before, an abstract one).
   const n = stir(hash(`logo\n${text}`));
   // A starter's monogram is its own name's letter, so another app never gets one.
   const marks = fitting("logo", n, (e) => !e.tags.includes("monogram"));
-  const abstract = marks.all
-    .filter((e) => e.tags.includes("abstract"))
-    .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
-  const logo = marks.chosen ?? abstract[n % (abstract.length || 1)];
+  const logo = marks.chosen;
   // Each model's samples by its own subject first (a Dish gets dishes, whatever "book a table"
   // in the description says), then what the app says among those. A model whose words no
   // picture shares gets one only by the app's name ("Harbour Café" for its Items) or what the
   // description means without saying it (a marketplace's second-hand things), else none.
-  const samples = index.filter((e) => e.kind === "sample");
+  // The hero's picture is not a record's too: one photo would show twice in the app.
+  const samples = index.filter((e) => e.kind === "sample" && e.id !== hero?.id);
   const named = new Set(words(options.ir?.app.name ?? ""));
   for (const word of said.keys()) for (const t of SYNONYMS[word] ?? []) named.add(t);
   const models: Record<string, PictureEntry[]> = {};

@@ -11,7 +11,15 @@ import { w } from "./words";
  * it; it shows from its first frame played, and on any failure the picture shows again. Written
  * only into an app with a film; the page hands it to the hero.
  */
-export function Film({
+/**
+ * A hero whose film changes while it stays on the page starts again with the new one: a player of
+ * its own per address, so neither the old film nor an earlier failure is kept.
+ */
+export function Film(props: Parameters<typeof FilmPlayer>[0]) {
+  return <FilmPlayer key={props.src} {...props} />;
+}
+
+function FilmPlayer({
   src,
   generated,
   kind,

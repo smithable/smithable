@@ -7,6 +7,7 @@ models:
       startsAt: { label: Service starts }
       endsAt: { label: Service ends }
       directionsUrl: { label: Map link }
+      photo: { label: Stop photo }
       menuOverride:
         label: Menu for this stop
         help: Add dishes and prices for this venue. Leave blank to use the regular menu.
@@ -30,8 +31,11 @@ pages:
   home:
     hero:
       title: Hot off the griddle
-      subtitle: Crisp-edged flatbreads and seasonal sides from a travelling kitchen.
+      subtitle: Burgers, seasonal sides and fresh juice from a travelling kitchen.
       button: See the menu
+      image:
+        src: images/samples/food-truck-evening.webp
+        alt: People at tables under string lights by a food truck on a summer evening
     stops:
       title: Find the truck
     gallery:
@@ -39,11 +43,12 @@ pages:
       title: From the truck
       items:
         - caption: The truck at the market
-        - caption: Flatbreads on the griddle
+        - caption: From the griddle
     footer:
       text: Ember & Wheel
       items:
         - { label: Menu, link: /menu }
+        - { label: Stops, link: /where }
         - { label: Catering, link: /catering }
   menu:
     title: Menu
@@ -52,10 +57,27 @@ pages:
       text: Our regular menu. Look for the menu on a confirmed stop for any changes at that venue.
   catering:
     title: Catering
+    hero:
+      title: Food truck catering
+      subtitle: Burgers and seasonal sides cooked on site for your guests.
+      image:
+        src: images/hero/event-table.webp
+        alt: A long table set for a celebration under string lights in a garden
+        generated: true
     contact:
       title: Bring the truck to your event
       text: Tell us where and when you are gathering, and how many you are feeding. We’ll get back to you about the menu and availability.
       button: Send catering enquiry
       thanks: Thanks for your enquiry. We’ll get back to you about your event.
+  where:
+    title: Stops
+    hero:
+      title: Food truck stops
+      subtitle: Find the next venue, service hours and directions.
+      image:
+        src: images/hero/market-stall.webp
+        alt: Green gourds, beans and potatoes in baskets at a market stall
+    stops:
+      title: Upcoming stops
   enquiries:
     title: Catering enquiries
