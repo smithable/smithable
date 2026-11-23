@@ -20,8 +20,11 @@ test("the initials by rule: the first letters of the first two words that have o
   expect(initialsOf("ß\u0301eta")).toBe("S\u0301");
   // A mark the upper case brings is kept: ǰ has no capital of its own.
   expect(initialsOf("ǰ")).toBe("J\u030C");
-  // A letter keeps its combining marks.
+  // A letter keeps its combining marks, three at most.
   expect(initialsOf("école normale")).toBe("ÉN");
+  expect(initialsOf(`e${"\u0301".repeat(200)}x`)).toBe("E\u0301\u0301\u0301");
+  // A modifier letter at the front of an upper case is passed over: ŉ upper-cases to ʼN.
+  expect(initialsOf("ŉ works")).toBe("NW");
   // A name without spaces in a script without case: one, as written.
   expect(initialsOf("東京書店")).toBe("東");
   // Two right-to-left words: in their own (logical) order; the tile sets their direction.
@@ -34,6 +37,8 @@ test("a given initials is one or two letters or digits", () => {
   expect(initialsForm("SY")).toBe(true);
   expect(initialsForm("東")).toBe(true);
   expect(initialsForm("ÉN")).toBe(true);
+  expect(initialsForm("E\u0301\u0301\u0301")).toBe(true);
+  expect(initialsForm(`E${"\u0301".repeat(4)}`)).toBe(false);
   expect(initialsForm("SYZ")).toBe(false);
   expect(initialsForm("S Y")).toBe(false);
   expect(initialsForm("S&")).toBe(false);
