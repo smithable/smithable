@@ -19,9 +19,13 @@ const MAIN = fileURLToPath(new URL("../dist/as-project-main.js", import.meta.url
 type Op = (...args: any[]) => unknown;
 const ops = new Map<string, Op>();
 
+/** The one-key objects the codec stands for something else with. */
+const TAGS = new Set(["$bytes", "$map", "$set", "$undefined", "$object"]);
+
 /**
  * JSON that keeps Maps, Sets, bytes and an undefined in a list (an argument left out), and leaves
- * an undefined property out, as a call would see them.
+ * an undefined property out, as a call would see them. A plain object that looks like one of its
+ * tags is escaped, so it comes back as it went.
  */
 export function encode(value: unknown): string {
   return JSON.stringify(value, function (key, v) {
@@ -30,16 +34,22 @@ export function encode(value: unknown): string {
     if (raw instanceof Uint8Array) return { $bytes: Buffer.from(raw).toString("base64") };
     if (v instanceof Map) return { $map: [...v.entries()] };
     if (v instanceof Set) return { $set: [...v] };
+    if (v && Object.getPrototypeOf(v) === Object.prototype) {
+      const keys = Object.keys(v);
+      if (keys.length === 1 && TAGS.has(keys[0] as string)) return { $object: Object.entries(v) };
+    }
     return v === undefined && Array.isArray(this) ? { $undefined: true } : v;
   });
 }
 export function decode(text: string): unknown {
   return JSON.parse(text, (_, v) => {
-    if (!v || typeof v !== "object" || Array.isArray(v) || Object.keys(v).length !== 1) return v;
+    // An undefined in a list is a hole once revived: made a value again, as a call passes it.
+    if (Array.isArray(v)) return Array.from(v);
+    if (!v || typeof v !== "object" || Object.keys(v).length !== 1) return v;
+    if (Array.isArray(v.$object)) return Object.fromEntries(v.$object);
     if (Array.isArray(v.$map)) return new Map(v.$map);
     if (Array.isArray(v.$set)) return new Set(v.$set);
     if (typeof v.$bytes === "string") return new Uint8Array(Buffer.from(v.$bytes, "base64"));
-    // Left as a hole in its list, which reads as undefined.
     if (v.$undefined === true) return undefined;
     return v;
   });

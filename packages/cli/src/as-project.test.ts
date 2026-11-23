@@ -51,6 +51,22 @@ test("a call's arguments and answer keep their Maps and bytes", () => {
   expect(back.list).toEqual([1, "two"]);
 });
 
+test("an undefined in a list is a value, not a hole, and data shaped like a tag comes back as it went (T1082)", () => {
+  const args = decode(encode([1, undefined])) as unknown[];
+  expect(1 in args).toBe(true);
+  expect(args.map((v) => v ?? "none")).toEqual([1, "none"]);
+  const value = {
+    set: { $set: [1] },
+    map: { $map: [] },
+    bytes: { $bytes: "AQ==" },
+    undef: { $undefined: true },
+    object: { $object: [["a", 1]] },
+    nested: { $set: { $map: new Map([["k", new Set([2])]]) } },
+    two: { $set: [1], other: 2 },
+  };
+  expect(decode(encode(value))).toEqual(value);
+});
+
 test("given a project user, the app's database and the tree are worked on by a child, with the same results", () => {
   const dir = tempDir();
   mkdirSync(join(dir, "data", "db"), { recursive: true });
