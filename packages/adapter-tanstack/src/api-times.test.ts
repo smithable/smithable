@@ -120,10 +120,18 @@ test("an app without a time zone keeps UTC, and reads only ISO on a real day", a
   expect(moment("2026-11-28T10:00:00+01:00", "startsAt").toISOString()).toBe(
     "2026-11-28T09:00:00.000Z",
   );
-  // Without an offset, UTC, as the API gives times back; not the server's own zone.
-  expect(moment("2026-11-28T10:00:30.5", "startsAt").toISOString()).toBe(
-    "2026-11-28T10:00:30.500Z",
-  );
+  // Without an offset, UTC, as the API gives times back; not the server's own zone, here New York's.
+  const before = process.env.TZ;
+  process.env.TZ = "America/New_York";
+  try {
+    expect(new Date("2026-11-28T10:00").toISOString()).toBe("2026-11-28T15:00:00.000Z");
+    expect(moment("2026-11-28T10:00:30.5", "startsAt").toISOString()).toBe(
+      "2026-11-28T10:00:30.500Z",
+    );
+  } finally {
+    if (before === undefined) delete process.env.TZ;
+    else process.env.TZ = before;
+  }
   expect(read(new Date("2026-11-28T08:00:30Z"))).toBe("2026-11-28T08:00:30.000Z");
   for (const wrong of [
     "2026-02-30T10:00",

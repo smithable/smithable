@@ -559,7 +559,7 @@ export function momentOut(v: unknown): string | null {
   if (!(v instanceof Date)) return (v as string | null) ?? null;
   const text = isoIn(v, ${zone});
   const ms = v.getUTCMilliseconds();
-  return ms ? \`\${text.slice(0, 19)}.\${String(ms).padStart(3, "0")}\${text.slice(19)}\` : text;
+  return ms ? \`\${text.slice(0, -6)}.\${String(ms).padStart(3, "0")}\${text.slice(-6)}\` : text;
 }
 `
     : ""
