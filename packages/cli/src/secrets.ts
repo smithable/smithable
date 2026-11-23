@@ -289,16 +289,41 @@ export function copyBack(from: string, to: string): void {
 
 /**
  * Copies what a child made in `from` into `to`, a folder of this process's: folders and plain
- * files only, each file as `copyBack` copies it (a link or another user's file is refused, so a
- * folder on the way swapped for a link reaches only what the project could have put here itself).
+ * files only, each file as `copyBack` copies it (a link or another user's file is refused). Each
+ * folder is held open while it is read, and on Linux its entries are reached through it
+ * (/proc/self/fd/N, as openat would), so a folder swapped for a link once opened still shows only
+ * its own entries; a folder below `from` must be the project user's. `opened` is for tests.
  */
-export function takeBack(from: string, to: string): void {
-  for (const entry of readdirSync(from)) {
-    const [a, b] = [join(from, entry), join(to, entry)];
-    if (lstatSync(a).isDirectory()) {
-      mkdirSync(b);
-      takeBack(a, b);
-    } else copyBack(a, b);
+export function takeBack(from: string, to: string, opened?: (dir: string) => void): void {
+  takeFolder(from, to, false, opened);
+}
+
+function takeFolder(
+  from: string,
+  to: string,
+  below: boolean,
+  opened?: (dir: string) => void,
+): void {
+  const fd = openSync(
+    from,
+    constants.O_RDONLY | (constants.O_DIRECTORY ?? 0) | (constants.O_NOFOLLOW ?? 0),
+  );
+  try {
+    const stat = fstatSync(fd);
+    const owner = projectUser()?.uid ?? process.getuid?.() ?? stat.uid;
+    if (!stat.isDirectory() || (below && stat.uid !== owner))
+      throw new Error(`${from} is not a folder the child made.`);
+    opened?.(from);
+    const here = process.platform === "linux" ? `/proc/self/fd/${fd}` : from;
+    for (const entry of readdirSync(here)) {
+      const [a, b] = [join(here, entry), join(to, entry)];
+      if (lstatSync(a).isDirectory()) {
+        mkdirSync(b);
+        takeFolder(a, b, true, opened);
+      } else copyBack(a, b);
+    }
+  } finally {
+    closeSync(fd);
   }
 }
 

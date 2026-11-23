@@ -5,6 +5,7 @@ import {
   mkdtempSync,
   readdirSync,
   readFileSync,
+  renameSync,
   rmSync,
   statSync,
   symlinkSync,
@@ -138,6 +139,27 @@ test("a link planted in a scratch folder makes the write or the taking back fail
   dirs.push(again);
   expect(() => takeBack(out, again)).toThrow();
   expect(existsSync(join(again, "uploads", "b.png"))).toBe(false);
+  // A folder swapped for a link once it is open still shows only its own entries (T1093).
+  if (process.platform === "linux") {
+    const tree = mkdtempSync(join(tmpdir(), "smithable-scratch-test-"));
+    const elsewhere = mkdtempSync(join(tmpdir(), "smithable-scratch-test-"));
+    const taken = mkdtempSync(join(tmpdir(), "smithable-scratch-test-"));
+    dirs.push(tree, elsewhere, taken);
+    mkdirSync(join(tree, "uploads"));
+    writeFileSync(join(tree, "uploads", "a.png"), "png");
+    writeFileSync(join(elsewhere, "secret.png"), "not the project's");
+    takeBack(tree, taken, (dir) => {
+      if (!dir.endsWith("uploads")) return;
+      renameSync(join(tree, "uploads"), join(tree, "moved"));
+      symlinkSync(elsewhere, join(tree, "uploads"));
+    });
+    expect(readdirSync(join(taken, "uploads"))).toEqual(["a.png"]);
+    // And a folder that is a link when it is reached is refused, not followed.
+    const linked = mkdtempSync(join(tmpdir(), "smithable-scratch-test-"));
+    dirs.push(linked);
+    expect(() => takeBack(join(tree, "uploads"), linked)).toThrow();
+    expect(readdirSync(linked)).toEqual([]);
+  }
   // A folder swapped for a link to this process's own: its files are not the project's.
   if (process.platform !== "linux" || process.getuid?.() === 0) return;
   process.env.SMITHABLE_PROJECT_UID = String((process.getuid?.() ?? 0) + 1);
