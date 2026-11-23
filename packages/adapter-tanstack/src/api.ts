@@ -92,17 +92,27 @@ const CHOICES_SCHEMA = {
   additionalProperties: { oneOf: [{ enum: ["keep", "sum", "join"] }, { type: "integer" }] },
 };
 
-/** A value as the API gives it, from a record's (code on `row`). */
-export function readCode(f: FieldIR): string {
+/**
+ * A value as the API gives it, from a record's (code on `row`). Given the app's time zone, a
+ * date-time carries its offset there (isoIn from the kit's zoned.ts), so a reader sees the app's
+ * own clock; without one, UTC.
+ */
+export function readCode(f: FieldIR, timeZone?: string): string {
   if (f.type.kind === "relation") return `row.${f.name}Id ?? null`;
   switch (kind(f)) {
     case "money":
       return `row.${f.name} == null ? null : (Number(row.${f.name}) / 100).toFixed(2)`;
     case "datetime":
-      return `row.${f.name} instanceof Date ? row.${f.name}.toISOString() : (row.${f.name} ?? null)`;
+      return momentCode(`row.${f.name}`, timeZone);
     default:
       return `row.${f.name} ?? null`;
   }
+}
+
+/** A moment's code as the API gives it: with the app's offset when it has a time zone. */
+function momentCode(value: string, timeZone?: string): string {
+  const text = timeZone ? `isoIn(${value}, ${JSON.stringify(timeZone)})` : `${value}.toISOString()`;
+  return `${value} instanceof Date ? ${text} : (${value} ?? null)`;
 }
 
 /** A value as the data functions take it, from the API's (code on `v`), or a refusal. */
@@ -119,8 +129,13 @@ function writeCode(f: FieldIR): string {
   }
 }
 
+/** What a date-time is said to mean, given the app's time zone. */
+export function momentWords(timeZone: string): string {
+  return `In ${timeZone} when given without an offset, like 2026-10-04T09:30; given back with that zone's offset.`;
+}
+
 /** An OpenAPI schema for a field's value. */
-function fieldSchema(f: FieldIR): Record<string, unknown> {
+function fieldSchema(f: FieldIR, timeZone?: string): Record<string, unknown> {
   if (f.type.kind === "relation")
     return {
       type: f.type.model === USER_MODEL ? "string" : "integer",
@@ -139,7 +154,10 @@ function fieldSchema(f: FieldIR): Record<string, unknown> {
     case "date":
       return { type: "string", format: "date" };
     case "datetime":
-      return { type: "string", format: "date-time" };
+      // A wall time without an offset is accepted, so not every value is RFC 3339's date-time.
+      return timeZone
+        ? { type: "string", description: momentWords(timeZone) }
+        : { type: "string", format: "date-time" };
     case "email":
       return { type: "string", format: "email" };
     case "url":
@@ -167,7 +185,7 @@ export function apiModule(ir: SpecIR, auth: AuthIR, t: Texts): string {
         ...Object.fromEntries(
           fields.map((f) => [
             f.name,
-            { ...fieldSchema(f), ...(f.formula ? { readOnly: true } : {}) },
+            { ...fieldSchema(f, ir.app.timezone), ...(f.formula ? { readOnly: true } : {}) },
           ]),
         ),
         createdAt: { type: "string", format: "date-time", readOnly: true },
@@ -503,7 +521,7 @@ export function apiModule(ir: SpecIR, auth: AuthIR, t: Texts): string {
 // spec's field names, amounts as decimal texts, times as ISO texts) and their values back, checked
 // by each model's own schema, as a form's are.
 import { BadInput } from "#/kit/api.server";
-${conversionsCode(models)}
+${conversionsCode(models, ir.app.timezone)}
 
 /** The whole API in the OpenAPI format, for tools and agents. */
 export const OPENAPI = ${JSON.stringify(openapi, null, 2)};
@@ -522,9 +540,16 @@ export const OPENAPI_BY_ROLE: ReadonlyMap<string, unknown> = new Map(${JSON.stri
  * `<model>ToApi` and `<model>FromApi` functions, with only the helpers some field needs. The
  * caller imports BadInput.
  */
-function conversionsCode(models: { model: ModelIR; n: ReturnType<typeof names> }[]): string {
+function conversionsCode(
+  models: { model: ModelIR; n: ReturnType<typeof names> }[],
+  timeZone?: string,
+): string {
   const uses = (k: string) => models.some(({ model }) => entered(model).some((f) => kind(f) === k));
-  return `${models.map(({ n }) => `import { ${n.schema} } from "${n.module}.schema";`).join("\n")}
+  const zoned = timeZone
+    ? [...(uses("datetime") ? ["instantOf"] : []), ...(models.length ? ["isoIn"] : [])]
+    : [];
+  const zone = JSON.stringify(timeZone);
+  return `${zoned.length ? `import { ${zoned.join(", ")} } from "#/kit/zoned";\n` : ""}${models.map(({ n }) => `import { ${n.schema} } from "${n.module}.schema";`).join("\n")}
 
 ${
   models.some(({ model }) =>
@@ -556,14 +581,36 @@ ${
 `
     : ""
 }${
-  uses("datetime")
-    ? `const moment = (v: unknown, field: string) => {
+  uses("datetime") && timeZone
+    ? `/**
+ * An ISO date and time, on a day the calendar has (JavaScript would roll 30 February over); one
+ * without an offset is a wall time in the app's zone, seconds kept.
+ */
+const moment = (v: unknown, field: string) => {
+  const parts =
+    typeof v === "string"
+      ? /^(\\d{4}-\\d{2}-\\d{2})T(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(Z|[+-]\\d{2}:\\d{2})?$/.exec(v)
+      : null;
+  const at = parts ? Date.parse(parts[2] ? parts[0] : \`\${parts[0]}Z\`) : Number.NaN;
+  const day = parts ? Date.parse(\`\${parts[1]}T00:00:00Z\`) : Number.NaN;
+  const d =
+    !parts || !Number.isFinite(at) || !Number.isFinite(day) || new Date(day).toISOString().slice(0, 10) !== parts[1]
+      ? undefined
+      : parts[2]
+        ? new Date(at)
+        : new Date(instantOf(parts[0], ${zone}).getTime() + at - Date.parse(\`\${parts[0].slice(0, 16)}:00Z\`));
+  if (d && !Number.isNaN(d.getTime())) return d;
+  throw new BadInput(\`"\${field}" must be a date and time, like "2026-10-04T09:30" (in ${timeZone}) or "2026-10-04T09:30:00Z".\`);
+};
+`
+    : uses("datetime")
+      ? `const moment = (v: unknown, field: string) => {
   const d = typeof v === "string" ? new Date(v) : undefined;
   if (d && !Number.isNaN(d.getTime())) return d;
   throw new BadInput(\`"\${field}" must be a date and time, like "2026-10-04T09:30:00Z".\`);
 };
 `
-    : ""
+      : ""
 }
 /** The body as an object of known fields, or a refusal naming the first unknown one. */
 function fieldsOf(body: unknown, known: readonly string[]): Record<string, unknown> {
@@ -582,9 +629,13 @@ ${models
 export function ${camelName}ToApi(row: Record<string, any>) {
   return {
     id: row.id as number,
-${fields.map((f) => `    ${f.name}: ${readCode(f)},`).join("\n")}
-    createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
-    updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : row.updatedAt,
+${fields.map((f) => `    ${f.name}: ${readCode(f, timeZone)},`).join("\n")}
+${["createdAt", "updatedAt"]
+  .map(
+    (k) =>
+      `    ${k}: ${timeZone ? momentCode(`row.${k}`, timeZone) : `row.${k} instanceof Date ? row.${k}.toISOString() : row.${k}`},`,
+  )
+  .join("\n")}
   };
 }
 
@@ -1366,7 +1417,7 @@ ${actions
       `\nimport { ${actionNames(a).run} } from "./actions/${kebab(a.name)}.server";\nimport { ${actionNames(a).input} } from "./actions/${kebab(a.name)}.input";${confirms ? `\nimport { ${actionNames(a).access} } from "./actions/${kebab(a.name)}";` : ""}`,
   )
   .join("")}
-${app ? conversionsCode(models) : ""}
+${app ? conversionsCode(models, ir.app.timezone) : ""}
 
 /**
  * What each caller is offered (by the key's role, and for a visitor without a key): the tools,

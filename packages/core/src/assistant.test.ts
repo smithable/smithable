@@ -291,8 +291,9 @@ test("few tokens: every starter's tools and summary stay within a budget", () =>
     // a model. A change that makes either heavier should be a decision, not an accident (the
     // base grew by 20 on 2026-10-23 for an action's condition on the person, "Only when
     // assignee is not you", which the support starter now says; and by 300 on 2026-10-29 for a
-    // merge's `other` and `choices` and a split's `move` in run, which the CRM starter now has).
-    expect(JSON.stringify(offer.tools).length, `${starter}: tools`).toBeLessThan(4300);
+    // merge's `other` and `choices` and a split's `move` in run, which the CRM starter now has; and
+    // by 100 on 2026-11-23 for a time's zone in add and change, T1307, so a model stops guessing it).
+    expect(JSON.stringify(offer.tools).length, `${starter}: tools`).toBeLessThan(4400);
     expect(offer.summary.length, `${starter}: summary`).toBeLessThan(
       320 + 260 * starterIr.models.length,
     );
@@ -413,4 +414,44 @@ test("people by name only for a key whose role may set a field that refers to a 
   };
   expect(filled("by: app", "create: [Order], write: [Order]")).toBe(false);
   expect(filled("locked: true", "create: [Order], write: [Order]")).toBe(true);
+});
+
+test("a time's zone is said where an offered kind holds a date and time (T1307)", () => {
+  const timed = (extra: string) =>
+    validateSpec({
+      path: "smithable.yml",
+      text: `smithable: 0.1\napp: { name: Classes${extra} }\nmodels:\n  Lesson:\n    fields:\n      title: string!\n      startsAt: datetime\n      day: date\npages:\n  lessons: { crud: Lesson }\n`,
+    }).ir as SpecIR;
+  const auth = (spec: SpecIR) =>
+    validateAuth(
+      {
+        path: "smithable.auth.yml",
+        text: "smithableAuth: 0.1\nsignIn: { providers: [email] }\ndefaultAccess: shared\nroles: { admin: all, viewer: { pages: all } }\ndefaultRole: viewer\napi: { models: all, assistants: true }\n",
+      },
+      spec,
+    ).auth as AuthIR;
+  const zoned = timed(", timezone: Europe/Mariehamn");
+  const offer = assistantOffer(zoned, auth(zoned), { role: "admin" });
+  expect(offer.tools.map((t) => t.name)).toContain("change");
+  const said =
+    "Times are in Europe/Mariehamn: one without an offset, like 2026-10-04T09:30, is read there, and times come back with its offset.";
+  expect(offer.summary).toContain(said);
+  for (const tool of ["add", "change"])
+    expect(offer.tools.find((t) => t.name === tool)?.description).toContain(
+      "A time without an offset is in Europe/Mariehamn.",
+    );
+  // No zone in the app, or no date and time in what is offered: nothing is said.
+  const bare = timed("");
+  expect(JSON.stringify(assistantOffer(bare, auth(bare), { role: "admin" }))).not.toContain(
+    "Times are in",
+  );
+  expect(
+    JSON.stringify(
+      assistantOffer(
+        { ...ir, app: { ...ir.app, timezone: "Europe/Mariehamn" } },
+        authOf("api: { models: all, assistants: true }\n"),
+        { role: "admin" },
+      ),
+    ),
+  ).not.toContain("Times are in");
 });
