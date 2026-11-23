@@ -8,11 +8,11 @@ import {
 import { expect, test } from "vitest";
 import { generateApp } from "./generate.js";
 
-// A time through the API and the assistants' tools, in the app's own zone (T1307).
-const conversions = (app: string) => {
+// A time through the API and the assistants' tools, in the app's own zone (T1307, T1308).
+const conversions = (app: string, file = "src/generated/api.server.ts") => {
   const ir = validateSpec({
     path: "smithable.yml",
-    text: `smithable: 0.1\napp: { name: Classes${app} }\nmodels:\n  Lesson:\n    fields: { title: string!, startsAt: datetime }\npages:\n  lessons: { crud: Lesson }\n  team: { users: manage }\n`,
+    text: `smithable: 0.1\napp: { name: Classes${app} }\nmodels:\n  Lesson:\n    trash: true\n    fields: { title: string!, startsAt: datetime }\npages:\n  lessons: { crud: Lesson }\n  team: { users: manage }\n`,
   }).ir as SpecIR;
   const auth = validateAuth(
     {
@@ -23,7 +23,7 @@ const conversions = (app: string) => {
   ).auth as AuthIR;
   return (
     generateApp(ir, { smithableVersion: "0.0.0", auth, content: emptyContent() }).find(
-      (f) => f.path === "src/generated/api.server.ts",
+      (f) => f.path === file,
     )?.content ?? ""
   );
 };
@@ -45,7 +45,11 @@ const run = async (code: string) => {
     instantOf,
     BadInput,
   ) as (v: unknown, field: string) => Date;
-  const read = new Function("isoIn", "row", `return ${reading};`) as (
+  const out = code
+    .match(/export function momentOut\(v: unknown\): string \| null \{[\s\S]*?\n\}/)?.[0]
+    ?.replace("export function momentOut(v: unknown): string | null", "function momentOut(v)")
+    .replace("(v as string | null)", "v");
+  const read = new Function("isoIn", "row", `${out ?? ""}\nreturn ${reading};`) as (
     isoIn: unknown,
     row: unknown,
   ) => unknown;
@@ -70,10 +74,12 @@ test("a time without an offset is the app's wall time, and is given back with th
   expect(moment("2026-10-24T10:00", "startsAt").toISOString()).toBe("2026-10-24T07:00:00.000Z");
   expect(moment("2026-10-26T10:00", "startsAt").toISOString()).toBe("2026-10-26T08:00:00.000Z");
   // What was stored, as the result gives it, the record's own times too.
-  expect(code).toContain(
-    'createdAt: row.createdAt instanceof Date ? isoIn(row.createdAt, "Europe/Mariehamn")',
-  );
+  expect(code).toContain("createdAt: momentOut(row.createdAt),");
   expect(read(new Date("2026-11-28T08:00:30Z"))).toBe("2026-11-28T10:00:30+02:00");
+  // Milliseconds stored are given back, before the offset; none are added where there were none.
+  expect(read(new Date("2026-11-28T08:00:30.5Z"))).toBe("2026-11-28T10:00:30.500+02:00");
+  expect(read(new Date("2026-11-28T08:00:30.007Z"))).toBe("2026-11-28T10:00:30.007+02:00");
+  expect(read(null as unknown as Date)).toBeNull();
   expect(read(new Date("2026-10-24T07:00:00Z"))).toBe("2026-10-24T10:00:00+03:00");
   // At the changes themselves: 03:30 is skipped in spring (read with the offset before it) and
   // happens twice in autumn (its first occurrence).
@@ -102,7 +108,7 @@ test("a time without an offset is the app's wall time, and is given back with th
   );
 });
 
-test("an app without a time zone keeps UTC and reads a time as before", async () => {
+test("an app without a time zone keeps UTC, and reads only ISO on a real day", async () => {
   const code = conversions("");
   expect(code).not.toContain("#/kit/zoned");
   expect(code).toContain('"format": "date-time"');
@@ -111,7 +117,37 @@ test("an app without a time zone keeps UTC and reads a time as before", async ()
   );
   const { moment, read } = await run(code);
   expect(moment("2026-11-28T10:00:00Z", "startsAt").toISOString()).toBe("2026-11-28T10:00:00.000Z");
+  expect(moment("2026-11-28T10:00:00+01:00", "startsAt").toISOString()).toBe(
+    "2026-11-28T09:00:00.000Z",
+  );
+  // Without an offset, UTC, as the API gives times back; not the server's own zone.
+  expect(moment("2026-11-28T10:00:30.5", "startsAt").toISOString()).toBe(
+    "2026-11-28T10:00:30.500Z",
+  );
   expect(read(new Date("2026-11-28T08:00:30Z"))).toBe("2026-11-28T08:00:30.000Z");
+  for (const wrong of [
+    "2026-02-30T10:00",
+    "2026-11-28 10:00",
+    "2026-11-28",
+    "2026-11-28T24:00Z",
+    1764316800000,
+  ])
+    expect(() => moment(wrong, "startsAt")).toThrow(
+      '"startsAt" must be a date and time, like "2026-10-04T09:30:00Z".',
+    );
+  const trash = conversions("", "src/routes/api/v1/lessons/index.ts");
+  expect(trash).toContain(
+    "deletedAt: row.deletedAt instanceof Date ? row.deletedAt.toISOString() : row.deletedAt }",
+  );
+  expect(trash).not.toContain("momentOut");
+});
+
+test("a trashed record's time of deletion carries the zone's offset too", () => {
+  const trash = conversions(", timezone: Europe/Mariehamn", "src/routes/api/v1/lessons/index.ts");
+  expect(trash).toContain(
+    'import { lessonFromApi, lessonToApi, momentOut } from "#/generated/api.server";',
+  );
+  expect(trash).toContain("deletedAt: momentOut(row.deletedAt) }");
 });
 
 test("the pages never read a time through these conversions: their round trip stays as it was", () => {

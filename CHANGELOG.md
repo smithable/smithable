@@ -12,7 +12,7 @@ The entries are filled in from the merged pull requests at each release. A fix t
 
 ### Breaking
 
-- **The app's API**: in an app with a time zone (`app.timezone`), a date and time without an offset is read in that zone (it was the server's), only ISO on a day the calendar has is taken (`2026-11-28 10:00`, a date alone, `2026-02-30` and hour 24 are refused), and times come back with the zone's offset instead of `Z`, the same instant (fix `api-times-in-zone`). An app without a time zone is unchanged.
+- **The app's API**: in an app with a time zone (`app.timezone`), a date and time without an offset is read in that zone (it was the server's), only ISO on a day the calendar has is taken (`2026-11-28 10:00`, a date alone, `2026-02-30` and hour 24 are refused), and times come back with the zone's offset instead of `Z`, the same instant (fix `api-times-in-zone`). An app without a time zone reads a date and time without an offset as UTC (it was the server's zone) and takes only ISO on a real day too; a trashed record's `deletedAt` carries the zone's offset like the other times, and stored milliseconds are given back (fix `api-times-strict`).
 
 - **The engine**: `setAiBadge` takes `on`, `off` or `default` (it took `shown: true|false`), and switching the badge off while a realistic AI picture is placed needs `--acknowledged`. **The spec**: `aiBadge` unsaid no longer means on: it means by each picture's `kind` (a drawn picture is not badged); an app that wants every AI picture badged says `aiBadge: true`. Pictures without a `kind`, every app's today, are badged as before.
 
