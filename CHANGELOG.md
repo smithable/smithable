@@ -12,6 +12,8 @@ The entries are filled in from the merged pull requests at each release. A fix t
 
 ### Breaking
 
+- **The app's API**: in an app with a time zone (`app.timezone`), a date and time without an offset is read in that zone (it was the server's), only ISO on a day the calendar has is taken (`2026-11-28 10:00`, a date alone, `2026-02-30` and hour 24 are refused), and times come back with the zone's offset instead of `Z`, the same instant (fix `api-times-in-zone`). An app without a time zone is unchanged.
+
 - **The engine**: `setAiBadge` takes `on`, `off` or `default` (it took `shown: true|false`), and switching the badge off while a realistic AI picture is placed needs `--acknowledged`. **The spec**: `aiBadge` unsaid no longer means on: it means by each picture's `kind` (a drawn picture is not badged); an app that wants every AI picture badged says `aiBadge: true`. Pictures without a `kind`, every app's today, are badged as before.
 
 - **The engine**: `smithable report --always` and Studio's Always send are gone: every error report is shown in full and sent by hand. Someone who chose always before is asked again.

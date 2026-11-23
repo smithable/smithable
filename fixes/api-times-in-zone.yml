@@ -1,0 +1,8 @@
+id: api-times-in-zone
+title: In an app with a time zone, the API and the assistants' tools read a time without an offset in the server's zone and gave every time back in UTC, so an assistant could save a class an hour off.
+severity: fix
+exposure: A record added or changed through the API or an assistant with a time but no offset could have been saved at the wrong hour.
+introduced: unknown
+affects:
+  features: [field:datetime]
+migration: none
