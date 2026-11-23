@@ -71,6 +71,18 @@ test("an undefined in a list is a value, not a hole, and data shaped like a tag 
     encode({ beside: { $set: [1], gone: undefined }, bare, only: { $set: undefined } }),
   );
   expect(odd).toEqual({ beside: { $set: [1] }, bare: { $undefined: true }, only: {} });
+  let reads = 0;
+  const getter = {
+    get $set() {
+      reads++;
+      return [reads];
+    },
+  };
+  const more = decode(
+    encode({ fn: { $set: [1], f() {} }, sym: { $set: [1], s: Symbol() }, getter }),
+  );
+  expect(more).toEqual({ fn: { $set: [1] }, sym: { $set: [1] }, getter: { $set: [1] } });
+  expect(reads).toBe(1);
 });
 
 test("given a project user, the app's database and the tree are worked on by a child, with the same results", () => {
