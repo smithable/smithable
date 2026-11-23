@@ -67,22 +67,63 @@ const WRITES_ITSELF: Record<string, string> = {
 };
 
 const WRITE =
-  /^(writeFileSync|appendFileSync|mkdirSync|rmSync|unlinkSync|cpSync|copyFileSync|renameSync|symlinkSync|utimesSync|createWriteStream|writeFile|appendFile|rm|mkdir|cp|rename|unlink)$/;
+  /^(writeFileSync|appendFileSync|mkdirSync|rmSync|unlinkSync|cpSync|copyFileSync|renameSync|symlinkSync|linkSync|utimesSync|truncateSync|ftruncateSync|openSync|writeSync|writevSync|createWriteStream|writeFile|appendFile|rm|mkdir|cp|copyFile|rename|unlink|symlink|link|truncate|open)$/;
+
+/**
+ * Whether a module's own code may write files: it imports a writing function of node:fs (by its
+ * name, also under another one), or the whole module (`* as fs`, a default import, `import()`),
+ * whose every function it may call. A child's code in a string (`require("fs")` sent to a
+ * container) is not this process's.
+ */
+function writesFiles(text: string): boolean {
+  const fs = String.raw`"(?:node:)?fs(?:\/promises)?"`;
+  if (new RegExp(String.raw`\bimport\s*\(\s*${fs}`).test(text)) return true;
+  for (const m of text.matchAll(
+    new RegExp(String.raw`^import\s+(?!type\b)([^;]*?)\s+from\s*${fs}`, "gm"),
+  )) {
+    const clause = m[1] ?? "";
+    const named = /\{([^}]*)\}/.exec(clause);
+    if (
+      clause
+        .replace(/\{[^}]*\}/, "")
+        .replace(/,/g, "")
+        .trim()
+    )
+      return true;
+    const names = (named?.[1] ?? "").split(",").map((n) => n.trim());
+    if (names.some((n) => !n.startsWith("type ") && WRITE.test(n.split(/\s+as\s+/)[0] ?? "")))
+      return true;
+  }
+  return false;
+}
 
 test("every module that writes files itself is placed, with its reason", () => {
   const here = new URL(".", import.meta.url).pathname;
   const writers = readdirSync(here)
     .filter((f) => f.endsWith(".ts") && !f.endsWith(".test.ts"))
-    .filter((f) =>
-      [
-        ...readFileSync(join(here, f), "utf8").matchAll(
-          /import\s*\{([^}]*)\}\s*from\s*"node:fs(?:\/promises)?"/g,
-        ),
-      ]
-        .flatMap((m) => (m[1] ?? "").split(","))
-        .some((name) => WRITE.test(name.trim())),
-    );
+    .filter((f) => writesFiles(readFileSync(join(here, f), "utf8")));
   expect(writers.sort()).toEqual(Object.keys(WRITES_ITSELF).sort());
+});
+
+test("a module that writes is found however it imports node:fs", () => {
+  for (const text of [
+    'import { writeFileSync } from "node:fs";',
+    'import { readFileSync, writeFileSync as put } from "node:fs";',
+    'import * as fs from "node:fs";',
+    'import fs from "fs";',
+    'import fs, { readFileSync } from "node:fs";',
+    'import { open } from "node:fs/promises";',
+    'import {\n  openSync,\n  readSync,\n} from "node:fs";',
+    'const fs = await import("node:fs");',
+  ])
+    expect(writesFiles(text), text).toBe(true);
+  for (const text of [
+    'import { readFileSync, statSync } from "node:fs";',
+    'import type { Stats } from "node:fs";',
+    'import { type WriteStream, readFileSync } from "node:fs";',
+    'const code = `const fs=require("fs");fs.rmSync("/data/x")`;',
+  ])
+    expect(writesFiles(text), text).toBe(false);
 });
 
 test("a fresh file is written only where none is, and never over one that is there", async () => {
