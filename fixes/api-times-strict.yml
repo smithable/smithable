@@ -1,0 +1,8 @@
+id: api-times-strict
+title: In an app without a time zone, the API and the assistants' tools read a time without an offset in the server's zone and rolled an impossible day such as 30 February over to March; with a time zone, a trashed record's time of deletion came back in UTC, and every time came back without its milliseconds.
+severity: fix
+exposure: A record added or changed through the API or an assistant with a time but no offset, or with a day the calendar does not have, could have been saved at another hour or on another day.
+introduced: unknown
+affects:
+  features: [field:datetime]
+migration: none

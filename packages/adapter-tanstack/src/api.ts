@@ -109,10 +109,11 @@ export function readCode(f: FieldIR, timeZone?: string): string {
   }
 }
 
-/** A moment's code as the API gives it: with the app's offset when it has a time zone. */
+/** A moment's code as the API gives it: through momentOut when the app has a time zone. */
 function momentCode(value: string, timeZone?: string): string {
-  const text = timeZone ? `isoIn(${value}, ${JSON.stringify(timeZone)})` : `${value}.toISOString()`;
-  return `${value} instanceof Date ? ${text} : (${value} ?? null)`;
+  return timeZone
+    ? `momentOut(${value})`
+    : `${value} instanceof Date ? ${value}.toISOString() : (${value} ?? null)`;
 }
 
 /** A value as the data functions take it, from the API's (code on `v`), or a refusal. */
@@ -552,6 +553,17 @@ function conversionsCode(
   return `${zoned.length ? `import { ${zoned.join(", ")} } from "#/kit/zoned";\n` : ""}${models.map(({ n }) => `import { ${n.schema} } from "${n.module}.schema";`).join("\n")}
 
 ${
+  timeZone && models.length
+    ? `/** A stored moment as the API gives it: with ${timeZone}'s offset, and its milliseconds when it has any. */
+export function momentOut(v: unknown): string | null {
+  if (!(v instanceof Date)) return (v as string | null) ?? null;
+  const text = isoIn(v, ${zone});
+  const ms = v.getUTCMilliseconds();
+  return ms ? \`\${text.slice(0, -6)}.\${String(ms).padStart(3, "0")}\${text.slice(-6)}\` : text;
+}
+`
+    : ""
+}${
   models.some(({ model }) =>
     entered(model).some((f) => f.type.kind === "relation" && f.type.model !== USER_MODEL),
   )
@@ -581,10 +593,10 @@ ${
 `
     : ""
 }${
-  uses("datetime") && timeZone
+  uses("datetime")
     ? `/**
  * An ISO date and time, on a day the calendar has (JavaScript would roll 30 February over); one
- * without an offset is a wall time in the app's zone, seconds kept.
+ * without an offset is a wall time ${timeZone ? "in the app's zone" : "in UTC"}, seconds kept.
  */
 const moment = (v: unknown, field: string) => {
   const parts =
@@ -596,21 +608,18 @@ const moment = (v: unknown, field: string) => {
   const d =
     !parts || !Number.isFinite(at) || !Number.isFinite(day) || new Date(day).toISOString().slice(0, 10) !== parts[1]
       ? undefined
-      : parts[2]
+      : ${
+        timeZone
+          ? `parts[2]
         ? new Date(at)
-        : new Date(instantOf(parts[0], ${zone}).getTime() + at - Date.parse(\`\${parts[0].slice(0, 16)}:00Z\`));
+        : new Date(instantOf(parts[0], ${zone}).getTime() + at - Date.parse(\`\${parts[0].slice(0, 16)}:00Z\`))`
+          : "new Date(at)"
+      };
   if (d && !Number.isNaN(d.getTime())) return d;
-  throw new BadInput(\`"\${field}" must be a date and time, like "2026-10-04T09:30" (in ${timeZone}) or "2026-10-04T09:30:00Z".\`);
+  throw new BadInput(\`"\${field}" must be a date and time, like ${timeZone ? `"2026-10-04T09:30" (in ${timeZone}) or ` : ""}"2026-10-04T09:30:00Z".\`);
 };
 `
-    : uses("datetime")
-      ? `const moment = (v: unknown, field: string) => {
-  const d = typeof v === "string" ? new Date(v) : undefined;
-  if (d && !Number.isNaN(d.getTime())) return d;
-  throw new BadInput(\`"\${field}" must be a date and time, like "2026-10-04T09:30:00Z".\`);
-};
-`
-      : ""
+    : ""
 }
 /** The body as an object of known fields, or a refusal naming the first unknown one. */
 function fieldsOf(body: unknown, known: readonly string[]): Record<string, unknown> {
@@ -697,7 +706,7 @@ export const Route = createFileRoute("/api/v1/openapi.json")({
     files[`src/routes/api/v1/${path}/index.ts`] =
       `${HEADER}// ${inert(n.pluralLabel)} for programs with a key (docs/design/integrations.md §2): what the key's role may read, a page at a time, and adding one.
 import { createFileRoute } from "@tanstack/react-router";
-import { ${camelName}FromApi, ${camelName}ToApi } from "#/generated/api.server";
+import { ${camelName}FromApi, ${camelName}ToApi${model.trash && ir.app.timezone ? ", momentOut" : ""} } from "#/generated/api.server";
 import { ${n.data} } from "#/generated/${kebab(model.name)}.server";
 import { ${[...new Set([reads, adds, ...(adds === "openApiCall" ? ["BadInput"] : [])])].sort().join(", ")} } from "#/kit/api.server";
 import { importItems } from "#/kit/import.server";
@@ -714,7 +723,7 @@ export const Route = createFileRoute("/api/v1/${path}/")({
           // ?trashed=true: the trash, what this key may delete in it (docs/design/trash.md).
           if (query.get("trashed") === "true") {
             const rows = await ${n.data}.trash(viewer);
-            const items = rows.map((row) => ({ ...${camelName}ToApi(row), deletedAt: row.deletedAt instanceof Date ? row.deletedAt.toISOString() : row.deletedAt }));
+            const items = rows.map((row) => ({ ...${camelName}ToApi(row), deletedAt: ${ir.app.timezone ? "momentOut(row.deletedAt)" : "row.deletedAt instanceof Date ? row.deletedAt.toISOString() : row.deletedAt"} }));
             return { items, page: 1, pages: 1, total: items.length };
           }`
               : ""
