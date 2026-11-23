@@ -1,43 +1,82 @@
-# Finished jobs shown to visitors. A job reads well without photos; the painter adds their own.
-- title: Red farmhouse in linseed oil paint
+# Illustrative finished jobs. Replace the sample photos with your own work.
+- title: "Red farmhouse in linseed oil paint"
   surface: facade
   setting: outdoor
   place: Finström
   year: 2025
-  summary: A farmhouse from 1890 with cladding that had not been painted in thirty years. Scraped to the wood where it flaked, boards mended, two coats of red linseed oil paint and white trim.
-- title: Tin roof on a summer house
-  surface: roof
+  summary: "Loose paint was scraped back by hand. Sound boards were washed and oiled along the end grain, then finished with two thin coats of red linseed oil paint and white trim."
+  photos:
+    - file: house-red-b.webp
+      alt: "A red wooden house with white corners"
+      generated: true
+      kind: ai-realistic
+- title: "Lakeside cottage weatherboards"
+  surface: facade
   setting: outdoor
   place: Lemland
   year: 2025
-  summary: A tin roof with rust along the seams. Washed, rust treated, primed and painted black in two coats, with new paint on the chimney flashing.
-- title: Twelve windows from a villa in town
+  summary: "The lake-facing boards had begun to lift at the joints. We replaced two boards, sealed the cut ends and coated the exposed wall before the autumn rain."
+  photos:
+    - file: house-cottage-b.webp
+      alt: "A small cottage by a lake"
+      generated: true
+      kind: ai-realistic
+- title: "Window surrounds on a timber house"
   surface: windows
   setting: outdoor
   place: Mariehamn
   year: 2025
-  summary: The windows of a 1910 villa, taken out in October and restored in the workshop over winter. New putty, mended sills, linseed oil paint inside and out.
-- title: Yellow cladding facing the sea
+  summary: "We sanded the painted timber around the glazing, stripped loose sealant and repainted the frames without coating the seals or staining the cladding."
+  photos:
+    - file: house-modern-b.webp
+      alt: "A modern wooden house with large windows seen from its garden"
+      generated: true
+      kind: ai-realistic
+- title: "Yellow cladding and white trim"
   surface: facade
   setting: outdoor
   place: Eckerö
   year: 2024
-  summary: A summer house on the west shore, where the sun and the salt take the paint off in a few years. Washed, scraped, primed with oil and painted a pale yellow.
-- title: Staircase and banisters
+  summary: "We washed the siding, feathered the failing paint at the south corner and tested two shades before applying the new yellow finish and white trim."
+  photos:
+    - file: house-yellow-b.webp
+      alt: "A yellow two-story house with a garden"
+      generated: true
+      kind: ai-realistic
+- title: "Green door and garden studio"
   surface: woodwork
-  setting: indoor
+  setting: outdoor
   place: Jomala
   year: 2024
-  summary: A staircase from the 1950s with layers of old varnish. Stripped, sanded and painted in a hard-wearing floor paint, the handrail oiled.
-- title: Living room and hall in a 1930s flat
+  summary: "The door was sanded and primed around the bottom edge where it takes rain. The exterior finish keeps the wood grain visible while the new green door gives the studio a clear entrance."
+  photos:
+    - file: construction-wooden-house-b.webp
+      alt: "A small new wooden house with a green door"
+      generated: true
+      kind: ai-realistic
+- title: "Living room and hall refresh"
   surface: walls
   setting: indoor
   place: Mariehamn
   year: 2024
-  summary: Cracks filled, the ceiling painted white and the walls a warm grey, the plaster cornice picked out. Done in a week with the family at home.
-- title: Pine floor painted grey
-  surface: floors
-  setting: indoor
+  summary: "Flaking paint came off the window reveal and old fixing holes were filled. We cut in around the ceiling and balcony door, then rolled the walls and finished one accent wall in sage green."
+  photos:
+    - file: apartment-interior-b.webp
+      alt: "A bright apartment living room with a balcony door"
+      generated: true
+      kind: ai-realistic
+    - file: service-painting-b.webp
+      alt: "A freshly painted green wall with a roller and an open tin of the same paint"
+      generated: true
+      kind: ai-realistic
+- title: "Street-facing trim on terrace houses"
+  surface: woodwork
+  setting: outdoor
   place: Saltvik
   year: 2023
-  summary: A worn pine floor in a cottage kitchen, sanded and painted in three coats of floor paint, a pale grey that hides the sand brought in from the shore.
+  summary: "Door and window trim was washed and hand-sanded, then finished in the same low-sheen paint along the row. We worked one entrance at a time so residents could come and go."
+  photos:
+    - file: house-terrace-b.webp
+      alt: "A row of terraced houses"
+      generated: true
+      kind: ai-realistic

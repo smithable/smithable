@@ -144,7 +144,7 @@ See it live: coming soon.
 ![The jobs, filtered by surface and indoors or out, as a visitor sees them, with the painter starter, Fairweather Painters](starters/painter-1.webp)
 ![A job with its quote request, as a visitor sees it](starters/painter-2.webp)
 
-For a painter, a decorator or any trade whose work is told by the surface it was done on. Visitors see the finished jobs and filter them by surface (facade, roof, windows, woodwork, walls, floors) and by indoors or out, and ask for a quote from the job nearest what they want. Each job reads well on its words alone: photos of the work after, and optionally before, are added when the painter has them, each with its description as the caption. What clients said is on the landing page as text, with no photos needed. The enquiries are followed up as in the builder starter, from contacted to a site visit, a quote, and won or lost.
+For a painter, a decorator or a trade where customers want to see the work. The landing page opens with a wide image and a grid of recent projects. Each cover opens a project with its photos, a description of the work and a quote request. Visitors can also filter **Our work** by surface or by whether the work was indoors or out. The starter includes illustrative images and sample projects that you can replace with your own. Projects can still be shown without pictures. Staff follow enquiries from first contact through a site visit and a quote.
 
 ```sh
 smithable new my-firm --starter painter
