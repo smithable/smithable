@@ -4226,7 +4226,7 @@ exports[`valid specs > ../../../examples/kiosk/smithable.yml 1`] = `
   ],
   "app": {
     "currency": "EUR",
-    "description": "A harbour food truck where people order ahead and pick up.",
+    "description": "Food truck pickup.",
     "name": "Kiosken",
     "timezone": "Europe/Mariehamn",
   },

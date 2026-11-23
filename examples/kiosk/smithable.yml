@@ -1,7 +1,7 @@
 smithable: 0.1
 app:
   name: Kiosken
-  description: A harbour food truck where people order ahead and pick up.
+  description: Food truck pickup.
   currency: EUR
   timezone: Europe/Mariehamn
 
