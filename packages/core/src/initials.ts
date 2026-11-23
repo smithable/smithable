@@ -9,12 +9,12 @@
 const LETTERS = /([\p{L}\p{Nd}])(\p{M}*)/gu;
 const EMOJI = /[\u{FE0F}\u{20E3}]/u;
 
-/** The first letter of a word, upper-cased without a locale: of the base, only its first
- * character is kept (ß gives S), its marks staying with it. */
+/** The first letter of a word, upper-cased without a locale: of the upper case, only its first
+ * character and the marks on it are kept (ß gives S, ǰ gives J̌), the word's own marks after. */
 function first(word: string): string | undefined {
   for (const [, base = "", marks = ""] of word.matchAll(LETTERS)) {
     if (EMOJI.test(marks)) continue;
-    return [...base.toUpperCase()][0] + marks;
+    return (/^.\p{M}*/su.exec(base.toUpperCase())?.[0] ?? base) + marks;
   }
   return undefined;
 }

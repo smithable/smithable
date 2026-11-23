@@ -18,6 +18,8 @@ test("the initials by rule: the first letters of the first two words that have o
   // Upper-cased without a locale, only the first character kept: ß gives S.
   expect(initialsOf("ßeta works")).toBe("SW");
   expect(initialsOf("ß\u0301eta")).toBe("S\u0301");
+  // A mark the upper case brings is kept: ǰ has no capital of its own.
+  expect(initialsOf("ǰ")).toBe("J\u030C");
   // A letter keeps its combining marks.
   expect(initialsOf("école normale")).toBe("ÉN");
   // A name without spaces in a script without case: one, as written.
