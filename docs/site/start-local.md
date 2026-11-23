@@ -21,7 +21,7 @@ cd my-crm
 smithable studio          # the app and its editor in the browser
 ```
 
-`--starter <name>` picks another of the [fourteen starters](starters.md).
+`--starter <name>` picks another of the [thirteen starters](starters.md).
 
 `smithable studio` opens the editor in the browser: Smith, its assistant, beside a preview of the app. The first time you open an app, Smith presents it part by part, asks about anything a drafted app had to assume, and then shows you round; **Guide** in the top bar shows the tour again. Tell him what to change: he shows the change in plain words and makes it when you confirm; a request no wording rule reads needs a model ([AI setup](../ai.md)). Or change the app by hand: **No code** in the top bar opens a window with it in plain words and forms (**Behavior**, **Look**, **Who can**, **Content**), and a **Code** tab beside **No code** with the spec files themselves, with suggestions as you type. Smith stays beside you either way. Every change is an operation, so Undo (Ctrl+Z) takes it back.
 

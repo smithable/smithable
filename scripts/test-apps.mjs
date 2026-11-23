@@ -1400,7 +1400,15 @@ async function kioskLandingFlow(dir, base) {
     console.log(
       "  ✓ browser: a tiles hero draws its shortcuts as tiles: a picture where given, the page's title on the primary where not",
     );
-    // The week's stops as a week (A 215): each under its day, the days in their order, at most seven.
+    // Keep checking the generic weekly layout with the kiosk's confirmed schedule fixtures.
+    for (const args of [
+      ["changeSectionKind", "where", "stops", "records", "--records", "Stop", "--yes"],
+      ["setSectionLook", "where", "stops", "layout", "week"],
+    ]) {
+      const result = smithable(dir, "op", ...args);
+      if (result.code !== 0) throw new Error(`weekly layout fixture: ${result.out}`);
+      changed++;
+    }
     await open(page, `${base}/where`);
     const days = page.locator('[data-layout="week"] [data-part="day"]');
     await days.first().waitFor({ timeout: 10000 * P });
@@ -4032,9 +4040,10 @@ async function painterFlow(dir, base) {
   }
 }
 
-async function foodTruckFlow(dir, base) {
+async function kioskScheduleFlow(dir, base) {
   const browser = await chromium.launch();
   const page = await browser.newPage({ viewport: { width: 390, height: 844 }, isMobile: true });
+  let changed = false;
   const heroPhoto = () =>
     page.waitForFunction(() => {
       const image = document.querySelector("[data-hero] img");
@@ -4047,7 +4056,7 @@ async function foodTruckFlow(dir, base) {
       body: JSON.stringify({ at }),
     });
     if (!moved.ok) throw new Error(`the stop's test clock: ${moved.status} ${await moved.text()}`);
-    await open(page, base);
+    await open(page, `${base}/where`);
   };
   try {
     write(
@@ -4060,7 +4069,7 @@ async function foodTruckFlow(dir, base) {
         ('Private draft', ${Date.parse("2026-11-23T09:00Z")}, ${Date.parse("2026-11-23T13:00Z")}, NULL, NULL, 'draft', unixepoch() * 1000, unixepoch() * 1000)`,
     );
     const venues = page
-      .getByRole("region", { name: "Find the truck" })
+      .getByRole("region", { name: "Upcoming stops" })
       .getByRole("heading", { level: 3 });
     await showAt("2026-11-21T12:55:00.000Z");
     await heroPhoto();
@@ -4072,8 +4081,6 @@ async function foodTruckFlow(dir, base) {
     const map = page.getByRole("link", { name: "Map and directions" });
     if ((await map.getAttribute("href")) !== "https://example.com/map")
       throw new Error("the stop's map link is missing");
-    await open(page, `${base}/where`);
-    await heroPhoto();
     const stopPhoto = page.getByRole("region", { name: "Upcoming stops" }).getByRole("img");
     await stopPhoto.scrollIntoViewIfNeeded();
     await page.waitForFunction(() => {
@@ -4086,13 +4093,7 @@ async function foodTruckFlow(dir, base) {
     if ((await venues.allTextContents()).join(",") !== "Sunday square")
       throw new Error("Saturday's stop is still on the schedule after closing");
     await page.getByRole("link", { name: "Regular menu" }).click();
-    await page.getByText("Cheeseburger and fries", { exact: true }).waitFor();
-    const menuPhoto = page.getByRole("img", { name: "A cheeseburger and fries on a wooden board" });
-    await menuPhoto.scrollIntoViewIfNeeded();
-    await page.waitForFunction(() => {
-      const image = document.querySelector('img[src^="/files/menu-item/"]');
-      return image?.complete && image.naturalWidth > 0;
-    });
+    await page.getByRole("button", { name: "Add Fish soup", exact: true }).waitFor();
 
     await showAt("2026-11-22T13:00:00.000Z");
     await page.getByText("No stop planned.", { exact: true }).waitFor();
@@ -4105,19 +4106,36 @@ async function foodTruckFlow(dir, base) {
       .fill("Lunch for a garden party");
     await page.getByRole("button", { name: "Send catering enquiry" }).click();
     await page.getByText("Thanks for your enquiry.").waitFor();
-    await signInAs(page, base, "admin");
+    const fallback = smithable(dir, "op", "setSectionPicture", "where", "hero");
+    if (fallback.code !== 0) throw new Error(`remove the schedule hero picture: ${fallback.out}`);
+    changed = true;
+    await open(page, `${base}/where`);
+    const plain = page.locator('[data-hero][data-layout="plain"]');
+    await plain.getByRole("heading", { name: "Find the truck", exact: true }).waitFor();
+    await page.getByRole("link", { name: "Ask about catering", exact: true }).waitFor();
+    await signInAs(page, base, "staff");
     await open(page, `${base}/enquiries`);
     await page.getByText("Catering Test", { exact: true }).first().waitFor();
+    const [enquiry] = query(
+      dir,
+      "SELECT status, follow_up_on FROM catering_enquiries WHERE name = 'Catering Test'",
+    );
+    if (enquiry?.status !== "new" || enquiry.follow_up_on !== "2026-11-22")
+      throw new Error("the catering enquiry has no initial follow-up date");
     console.log(
-      "  ✓ food truck: the next stop replaces Saturday, and catering works after the last stop",
+      "  ✓ kiosk schedule: the next stop replaces Saturday, and catering works after the last stop",
     );
   } catch (error) {
     console.log(
-      `  ✗ food truck: ${error.message}\n    at ${page.url()}, see ${await screenshot(page)}`,
+      `  ✗ kiosk schedule: ${error.message}\n    at ${page.url()}, see ${await screenshot(page)}`,
     );
-    failures.push("food truck flow");
+    failures.push("kiosk schedule flow");
   } finally {
     await browser.close();
+    if (changed) {
+      const back = smithable(dir, "undo");
+      if (back.code !== 0) failures.push(`kiosk schedule put back: ${back.out}`);
+    }
   }
 }
 
@@ -10154,13 +10172,13 @@ test("the session cookie's name and attributes", async () => {
       if (example === "support") await supportFlow(dir, base);
       if (example === "kiosk") {
         await kioskFlow(dir, base);
+        await kioskScheduleFlow(dir, base);
         await kioskLandingFlow(dir, base);
         await kioskPaymentFlow(dir, base);
       }
       if (example === "barbers") await barbersFlow(dir, base);
       if (example === "restaurant") await restaurantFlow(base);
       if (example === "painter") await painterFlow(dir, base);
-      if (example === "food-truck") await foodTruckFlow(dir, base);
       if (example === "crm") await importFlow(dir, base);
       if (example === "status") await statusFlow(base);
       if (example === "status") await sessionFlow(base);

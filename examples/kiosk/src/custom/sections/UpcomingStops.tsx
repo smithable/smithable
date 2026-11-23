@@ -85,7 +85,7 @@ function StopCard({ stop }: { stop: Stops[number] }) {
         </div>
       ) : (
         <AppLink
-          href="/menu"
+          href="/"
           className="inline-flex min-h-11 items-center text-primary-text underline underline-offset-4"
         >
           Regular menu

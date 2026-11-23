@@ -94,16 +94,18 @@ See it live: coming soon.
 
 ## Food truck
 
-*A menu people order from on their phone, and the orders for your staff.*
+*A menu for ordering ahead, the next stop and a catering enquiry form.*
 
-![The kiosk starter, Kiosken: where the truck stands this week, under an evening photo of the truck and its tables](starters/kiosk-1.webp)
+![The kiosk starter, Kiosken: the public stop schedule under an evening photo of the truck](starters/kiosk-1.webp)
 ![The orders as the staff see them, with their status and Accept](starters/kiosk-2.webp)
 
-For a food truck, a café's takeaway or a bakery's pre-orders. Visitors open the menu, grouped by section with a picture and price for each dish, add what they want, and send it with their name and phone; the order gets a number they can say at the hatch. The prices are read again on the server, a dish sold out in the meantime is refused, and outside the opening hours the menu says when it opens. Staff see today's orders, accept, mark them ready and collected, or decline with a reason; the customer is mailed when the order is accepted and when it is ready, if they gave an email. Marking a dish sold out and back is one button. Where the truck stands this week is a page of its own.
+For a food truck, a café's takeaway or a bakery's pre-orders. Visitors open the menu, grouped by section with a picture and price for each dish, add what they want, and send it with their name and phone; the order gets a number they can say at the hatch. The prices are read again on the server, a dish sold out in the meantime is refused, and outside the opening hours the menu says when it opens. Staff see today's orders, accept, mark them ready and collected, or decline with a reason; the customer is mailed when the order is accepted and when it is ready, if they gave an email. Marking a dish sold out and back is one button.
 
 ```sh
 smithable new my-truck --starter kiosk
 ```
+
+In **Stops**, enter a venue, service times and an optional map link or menu for that stop. Mark it **Confirmed** when it is ready to show. Visitors see the next confirmed stop first, or **No stop planned** when the list is empty. They can still send a catering enquiry. Staff see enquiries and follow-up dates under **Catering enquiries**.
 
 See it live: coming soon.
 
@@ -196,20 +198,3 @@ smithable new my-restaurant --starter restaurant
 Create a seasonal menu in **Menus**, set its first and last serving days and add dishes to it. Change its status to **Published** when it's ready. The seasonal menu appears at the start of its first day in the restaurant's time zone. The regular menu returns at the end of its last day. If two seasonal menus overlap, the one with the later start date takes precedence.
 
 In **Service hours**, enter a serving window for each weekday and service you offer. In **Venue details**, replace the sample table booking and directions links. Add your own photos to the home page's dining room cover and kitchen gallery, or remove both pictures in Studio for a text-only site.
-
-## Food truck
-
-![The Ember & Wheel home page with a sample confirmed stop](starters/food-truck-1.webp)
-![The public catering enquiry form](starters/food-truck-2.webp)
-![The public food truck schedule](starters/food-truck-3.webp)
-![The pictured sample menu](starters/food-truck-4.webp)
-
-Ember & Wheel gives visitors a schedule, a regular menu and a catering enquiry form. In **Stops**, add the venue, start and end times, and a map link. Add a menu for that venue if the dishes or prices differ. Choose **Confirmed** to show the stop to visitors.
-
-```sh
-smithable new my-truck --starter food-truck
-```
-
-The public schedule starts empty. There is a pictured draft stop in the crew's **Stops** list. Once a confirmed stop closes, the next one moves to the top. When nothing else is scheduled, visitors see **No stop planned** and can still ask about catering. The crew sees requests and follow-up dates in **Catering enquiries**.
-
-Edit the pictured sample dishes and prices in **Menu items**. Replace the photos with your own and add truck and griddle photos to the home gallery when you have them.
