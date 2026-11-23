@@ -1445,8 +1445,10 @@ const SECTION_GENERATORS: SectionGenerator[] = [
                 ),
               ]
             : []),
+          // A component two sections share is created once, by the first of them.
           ...page.sections.flatMap((s) =>
-            s.component
+            s.component &&
+            ctx.ir.pages.flatMap((p) => p.sections).find((x) => x.component === s.component) === s
               ? [custom(`src/custom/sections/${s.component}.tsx`, customSectionStub(s.component))]
               : [],
           ),
