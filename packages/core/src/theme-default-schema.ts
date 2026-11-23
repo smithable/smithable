@@ -49,6 +49,7 @@ for (const [kind, looks] of Object.entries(SECTION_LOOKS)) {
   if (kind === "footer") continue;
   const finite = Object.fromEntries(
     Object.entries(looks ?? {})
+      // A hero can use the app's logo only by a choice on that section.
       .filter(([key, values]) => key !== "mark" && Array.isArray(values))
       .map(([key, values]) => [
         key,
