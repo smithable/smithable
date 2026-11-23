@@ -1381,7 +1381,8 @@ async function callReceiver() {
  */
 async function kioskLandingFlow(dir, base) {
   const browser = await chromium.launch();
-  const page = await browser.newPage({ viewport: { width: 1600, height: 900 } });
+  const viewport = { width: 1600, height: 900 };
+  let page = await browser.newPage({ viewport });
   let changed = 0;
   try {
     await open(page, `${base}/where`);
@@ -1409,6 +1410,8 @@ async function kioskLandingFlow(dir, base) {
       if (result.code !== 0) throw new Error(`weekly layout fixture: ${result.out}`);
       changed++;
     }
+    await page.close();
+    page = await browser.newPage({ viewport });
     await open(page, `${base}/where`);
     const days = page.locator('[data-layout="week"] [data-part="day"]');
     await days.first().waitFor({ timeout: 10000 * P });
@@ -4104,13 +4107,16 @@ async function kioskScheduleFlow(dir, base) {
       const image = document.querySelector("[data-hero] img");
       return image?.complete && image.naturalWidth > 0;
     });
-  const showAt = async (at) => {
+  const clock = async (at) => {
     const moved = await fetch(`${base}/_dev/clock`, {
       method: "POST",
       headers: { "x-dev-door": DOOR_SECRET, "Content-Type": "application/json" },
       body: JSON.stringify({ at }),
     });
     if (!moved.ok) throw new Error(`the stop's test clock: ${moved.status} ${await moved.text()}`);
+  };
+  const showAt = async (at) => {
+    await clock(at);
     await open(page, `${base}/where`);
   };
   try {
@@ -4176,15 +4182,25 @@ async function kioskScheduleFlow(dir, base) {
     const plain = page.locator('[data-hero][data-layout="plain"]');
     await plain.getByRole("heading", { name: "Find the truck", exact: true }).waitFor();
     await page.getByRole("link", { name: "Ask about catering", exact: true }).waitFor();
+    await clock("2026-11-22T13:00:00.000Z");
     await signInAs(page, base, "staff");
     await open(page, `${base}/enquiries`);
     await page.getByText("Catering Test", { exact: true }).first().waitFor();
     const [enquiry] = query(
       dir,
-      "SELECT status, follow_up_on FROM catering_enquiries WHERE name = 'Catering Test'",
+      "SELECT id, status FROM catering_enquiries WHERE name = 'Catering Test'",
     );
-    if (enquiry?.status !== "new" || enquiry.follow_up_on !== "2026-11-22")
-      throw new Error("the catering enquiry has no initial follow-up date");
+    if (enquiry?.status !== "new") throw new Error("the catering enquiry did not arrive as new");
+    await open(page, `${base}/enquiries/${enquiry.id}`);
+    const contacted = page.getByRole("button", { name: "Mark contacted", exact: true });
+    await contacted.click();
+    await contacted.waitFor({ state: "hidden" });
+    const [followUp] = query(
+      dir,
+      `SELECT status, follow_up_on FROM catering_enquiries WHERE id = ${enquiry.id}`,
+    );
+    if (followUp?.status !== "contacted" || followUp.follow_up_on !== "2026-11-25")
+      throw new Error("Mark contacted did not schedule the catering follow-up in three days");
     console.log(
       "  ✓ kiosk schedule: the next stop replaces Saturday, and catering works after the last stop",
     );
