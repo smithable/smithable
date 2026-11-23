@@ -39,11 +39,11 @@ pages:
 `;
 const ir = validateSpec({ path: "smithable.yml", text: spec }).ir as SpecIR;
 const words = validateContent({ path: "smithable.content.yml", text: content }, ir).content;
-const site = (publicPages: string) => {
+const site = (publicPages: string, signIn = "{ providers: [google] }") => {
   const auth = validateAuth(
     {
       path: "smithable.auth.yml",
-      text: `smithableAuth: 0.1\nsignIn: { providers: [google] }\ndefaultAccess: shared\npublic:\n  pages: [${publicPages}]\n  read:\n    - Post: { where: { status: published } }\n`,
+      text: `smithableAuth: 0.1\nsignIn: ${signIn}\ndefaultAccess: shared\npublic:\n  pages: [${publicPages}]\n  read:\n    - Post: { where: { status: published } }\n`,
     },
     ir,
   ).auth as AuthIR;
@@ -65,4 +65,12 @@ test("the site's shared contact details come only from a landing visitors may op
   expect(withWelcome("src/generated/site.ts")).toContain("+358 222 welcome");
   expect(withWelcome("src/generated/site.ts")).not.toContain("+358 111 members");
   expect(withWelcome("src/generated/site.ts")).toContain('home: "/"');
+  // With no sign-in every page is open: the one listed as public still comes first, as the home
+  // link does; with none listed, the first landing.
+  const open = site("welcome", "none");
+  expect(open("src/generated/site.ts")).toContain("+358 222 welcome");
+  expect(open("src/generated/site.ts")).toContain('home: "/"');
+  const openNoneListed = site("blog", "none");
+  expect(openNoneListed("src/generated/site.ts")).toContain("+358 111 members");
+  expect(openNoneListed("src/generated/site.ts")).toContain('home: "/members"');
 });

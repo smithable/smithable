@@ -774,12 +774,15 @@ function homeForSite(ir: SpecIR, auth: AuthIR) {
 }
 
 /**
- * The first landing page visitors may open (any, in an app with no sign-in): the only one the
- * site's shared texts are taken from.
+ * The landing page visitors may open that the site's shared texts are taken from: the first listed
+ * as public, or with no sign-in (every page open) the first of all. None when every landing is
+ * open only to some.
  */
 function publicLanding(ir: SpecIR, auth: AuthIR) {
-  return ir.pages.find(
-    (p) => p.pattern.kind === "landing" && (!hasSignIn(auth) || auth.public.pages.includes(p.id)),
+  const landings = ir.pages.filter((p) => p.pattern.kind === "landing");
+  return (
+    landings.find((p) => auth.public.pages.includes(p.id)) ??
+    (hasSignIn(auth) ? undefined : landings[0])
   );
 }
 
