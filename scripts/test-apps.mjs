@@ -7598,7 +7598,10 @@ function smithable(dir, ...args) {
   // A project has a history from smithable new (cloud #348), and an operation refuses edits
   // not committed: the steps that edit files by hand commit them first, as a developer would.
   if (args[0] === "op") ownEdits(dir);
-  const result = spawnSync("node", [cli, ...args, "--dir", dir], { cwd: repo, encoding: "utf8" });
+  const result = spawnSync("node", [cli, ...args, ...dirOption(args, dir)], {
+    cwd: repo,
+    encoding: "utf8",
+  });
   return { code: result.status, out: `${result.stdout}${result.stderr}`, stdout: result.stdout };
 }
 
@@ -7624,10 +7627,14 @@ function ownEdits(dir) {
   );
 }
 
+// The project folder for every command but new, which takes it as its argument and refuses
+// options it does not know (#1344).
+const dirOption = (args, dir) => (args[0] === "new" ? [] : ["--dir", dir]);
+
 /** Runs the CLI without blocking, so a stand-in model in this process can answer it. */
 function smithableAsync(dir, env, ...args) {
   return new Promise((resolve) => {
-    const child = spawn("node", [cli, ...args, "--dir", dir], {
+    const child = spawn("node", [cli, ...args, ...dirOption(args, dir)], {
       cwd: repo,
       env: { ...process.env, ...env },
     });
