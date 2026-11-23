@@ -1332,6 +1332,7 @@ exports[`../../../examples/api/smithable.yml > file list and generated code > sr
 // spec's field names, amounts as decimal texts, times as ISO texts) and their values back, checked
 // by each model's own schema, as a form's are.
 import { BadInput } from "#/kit/api.server";
+import { isoIn } from "#/kit/zoned";
 import { projectSchema } from "#/generated/project.schema";
 import { taskSchema } from "#/generated/task.schema";
 import { noteSchema } from "#/generated/note.schema";
@@ -1359,8 +1360,8 @@ export function projectToApi(row: Record<string, any>) {
     id: row.id as number,
     name: row.name ?? null,
     description: row.description ?? null,
-    createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
-    updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : row.updatedAt,
+    createdAt: row.createdAt instanceof Date ? isoIn(row.createdAt, "UTC") : (row.createdAt ?? null),
+    updatedAt: row.updatedAt instanceof Date ? isoIn(row.updatedAt, "UTC") : (row.updatedAt ?? null),
   };
 }
 
@@ -1396,8 +1397,8 @@ export function taskToApi(row: Record<string, any>) {
     dueDate: row.dueDate ?? null,
     assignee: row.assigneeId ?? null,
     details: row.details ?? null,
-    createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
-    updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : row.updatedAt,
+    createdAt: row.createdAt instanceof Date ? isoIn(row.createdAt, "UTC") : (row.createdAt ?? null),
+    updatedAt: row.updatedAt instanceof Date ? isoIn(row.updatedAt, "UTC") : (row.updatedAt ?? null),
   };
 }
 
@@ -1442,8 +1443,8 @@ export function noteToApi(row: Record<string, any>) {
     title: row.title ?? null,
     project: row.projectId ?? null,
     body: row.body ?? null,
-    createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
-    updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : row.updatedAt,
+    createdAt: row.createdAt instanceof Date ? isoIn(row.createdAt, "UTC") : (row.createdAt ?? null),
+    updatedAt: row.updatedAt instanceof Date ? isoIn(row.updatedAt, "UTC") : (row.updatedAt ?? null),
   };
 }
 
@@ -5192,6 +5193,7 @@ import { projectUi } from "./project";
 import { taskUi } from "./task";
 import { runComplete } from "./actions/complete.server";
 import { runReopen } from "./actions/reopen.server";
+import { isoIn } from "#/kit/zoned";
 import { projectSchema } from "#/generated/project.schema";
 import { taskSchema } from "#/generated/task.schema";
 import { noteSchema } from "#/generated/note.schema";
@@ -5219,8 +5221,8 @@ export function projectToApi(row: Record<string, any>) {
     id: row.id as number,
     name: row.name ?? null,
     description: row.description ?? null,
-    createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
-    updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : row.updatedAt,
+    createdAt: row.createdAt instanceof Date ? isoIn(row.createdAt, "UTC") : (row.createdAt ?? null),
+    updatedAt: row.updatedAt instanceof Date ? isoIn(row.updatedAt, "UTC") : (row.updatedAt ?? null),
   };
 }
 
@@ -5256,8 +5258,8 @@ export function taskToApi(row: Record<string, any>) {
     dueDate: row.dueDate ?? null,
     assignee: row.assigneeId ?? null,
     details: row.details ?? null,
-    createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
-    updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : row.updatedAt,
+    createdAt: row.createdAt instanceof Date ? isoIn(row.createdAt, "UTC") : (row.createdAt ?? null),
+    updatedAt: row.updatedAt instanceof Date ? isoIn(row.updatedAt, "UTC") : (row.updatedAt ?? null),
   };
 }
 
@@ -5302,8 +5304,8 @@ export function noteToApi(row: Record<string, any>) {
     title: row.title ?? null,
     project: row.projectId ?? null,
     body: row.body ?? null,
-    createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
-    updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : row.updatedAt,
+    createdAt: row.createdAt instanceof Date ? isoIn(row.createdAt, "UTC") : (row.createdAt ?? null),
+    updatedAt: row.updatedAt instanceof Date ? isoIn(row.updatedAt, "UTC") : (row.updatedAt ?? null),
   };
 }
 
@@ -14089,9 +14091,9 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/generated/actions/reopen.server.ts": "6d1e193a generated",
   "src/generated/actions/reopen.ts": "3317e68c generated",
   "src/generated/activity.server.ts": "3bfe13cf generated",
-  "src/generated/api.server.ts": "d3d27b03 generated",
+  "src/generated/api.server.ts": "b3982106 generated",
   "src/generated/app.ts": "547ab03a generated",
-  "src/generated/ask.server.ts": "4f092194 generated",
+  "src/generated/ask.server.ts": "daa14af3 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/dev-door.server.ts": "4ab97120 generated",
   "src/generated/hooks.ts": "d6804a3c generated",
@@ -23812,18 +23814,23 @@ const userId = (v: unknown, field: string) => {
   if (typeof v === "string" && v.length > 0) return v;
   throw new BadInput(\`"\${field}" must be a user's id, a nonempty text.\`);
 };
-/** A date and time; one without an offset is a wall time in the app's zone, seconds kept. */
+/**
+ * An ISO date and time, on a day the calendar has (JavaScript would roll 30 February over); one
+ * without an offset is a wall time in the app's zone, seconds kept.
+ */
 const moment = (v: unknown, field: string) => {
-  const wall =
-    typeof v === "string" &&
-    /^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}(:\\d{2}(\\.\\d+)?)?$/.test(v) &&
-    Number.isFinite(Date.parse(\`\${v}Z\`));
+  const parts =
+    typeof v === "string"
+      ? /^(\\d{4}-\\d{2}-\\d{2})T\\d{2}:\\d{2}(?::\\d{2}(?:\\.\\d+)?)?(Z|[+-]\\d{2}:\\d{2})?$/.exec(v)
+      : null;
+  const at = parts ? Date.parse(parts[2] ? parts[0] : \`\${parts[0]}Z\`) : Number.NaN;
+  const day = parts ? Date.parse(\`\${parts[1]}T00:00:00Z\`) : Number.NaN;
   const d =
-    typeof v !== "string"
+    !parts || !Number.isFinite(at) || !Number.isFinite(day) || new Date(day).toISOString().slice(0, 10) !== parts[1]
       ? undefined
-      : wall
-        ? new Date(instantOf(v, "Europe/Mariehamn").getTime() + Date.parse(\`\${v}Z\`) - Date.parse(\`\${v.slice(0, 16)}:00Z\`))
-        : new Date(v);
+      : parts[2]
+        ? new Date(at)
+        : new Date(instantOf(parts[0], "Europe/Mariehamn").getTime() + at - Date.parse(\`\${parts[0].slice(0, 16)}:00Z\`));
   if (d && !Number.isNaN(d.getTime())) return d;
   throw new BadInput(\`"\${field}" must be a date and time, like "2026-10-04T09:30" (in Europe/Mariehamn) or "2026-10-04T09:30:00Z".\`);
 };
@@ -23844,8 +23851,8 @@ export function classTypeToApi(row: Record<string, any>) {
     summary: row.summary ?? null,
     level: row.level ?? null,
     durationMinutes: row.durationMinutes ?? null,
-    createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
-    updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : row.updatedAt,
+    createdAt: row.createdAt instanceof Date ? isoIn(row.createdAt, "Europe/Mariehamn") : (row.createdAt ?? null),
+    updatedAt: row.updatedAt instanceof Date ? isoIn(row.updatedAt, "Europe/Mariehamn") : (row.updatedAt ?? null),
   };
 }
 
@@ -23883,8 +23890,8 @@ export function instructorToApi(row: Record<string, any>) {
     id: row.id as number,
     name: row.name ?? null,
     bio: row.bio ?? null,
-    createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
-    updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : row.updatedAt,
+    createdAt: row.createdAt instanceof Date ? isoIn(row.createdAt, "Europe/Mariehamn") : (row.createdAt ?? null),
+    updatedAt: row.updatedAt instanceof Date ? isoIn(row.updatedAt, "Europe/Mariehamn") : (row.updatedAt ?? null),
   };
 }
 
@@ -23919,8 +23926,8 @@ export function sessionToApi(row: Record<string, any>) {
     startsAt: row.startsAt instanceof Date ? isoIn(row.startsAt, "Europe/Mariehamn") : (row.startsAt ?? null),
     capacity: row.capacity ?? null,
     placesLeft: row.placesLeft ?? null,
-    createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
-    updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : row.updatedAt,
+    createdAt: row.createdAt instanceof Date ? isoIn(row.createdAt, "Europe/Mariehamn") : (row.createdAt ?? null),
+    updatedAt: row.updatedAt instanceof Date ? isoIn(row.updatedAt, "Europe/Mariehamn") : (row.updatedAt ?? null),
   };
 }
 
@@ -23958,8 +23965,8 @@ export function bookingToApi(row: Record<string, any>) {
     id: row.id as number,
     session: row.sessionId ?? null,
     attendee: row.attendeeId ?? null,
-    createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
-    updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : row.updatedAt,
+    createdAt: row.createdAt instanceof Date ? isoIn(row.createdAt, "Europe/Mariehamn") : (row.createdAt ?? null),
+    updatedAt: row.updatedAt instanceof Date ? isoIn(row.updatedAt, "Europe/Mariehamn") : (row.updatedAt ?? null),
   };
 }
 
@@ -23995,8 +24002,8 @@ export function postToApi(row: Record<string, any>) {
     body: row.body ?? null,
     publishedOn: row.publishedOn ?? null,
     status: row.status ?? null,
-    createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
-    updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : row.updatedAt,
+    createdAt: row.createdAt instanceof Date ? isoIn(row.createdAt, "Europe/Mariehamn") : (row.createdAt ?? null),
+    updatedAt: row.updatedAt instanceof Date ? isoIn(row.updatedAt, "Europe/Mariehamn") : (row.updatedAt ?? null),
   };
 }
 
@@ -24041,8 +24048,8 @@ export function messageToApi(row: Record<string, any>) {
     name: row.name ?? null,
     email: row.email ?? null,
     message: row.message ?? null,
-    createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
-    updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : row.updatedAt,
+    createdAt: row.createdAt instanceof Date ? isoIn(row.createdAt, "Europe/Mariehamn") : (row.createdAt ?? null),
+    updatedAt: row.updatedAt instanceof Date ? isoIn(row.updatedAt, "Europe/Mariehamn") : (row.updatedAt ?? null),
   };
 }
 
@@ -37251,7 +37258,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/actions/publish.ts": "21bb5fc0 generated",
   "src/generated/activity.server.ts": "b8ebc789 generated",
   "src/generated/app.ts": "7320a04b generated",
-  "src/generated/ask.server.ts": "38fa8601 generated",
+  "src/generated/ask.server.ts": "de0f27e8 generated",
   "src/generated/booking.import.server.ts": "5dd23f09 generated",
   "src/generated/booking.import.ts": "19831a63 generated",
   "src/generated/booking.name.ts": "aba5786c generated",
@@ -46792,18 +46799,23 @@ const amount = (v: unknown, field: string) => {
   if (Number.isFinite(n)) return n;
   throw new BadInput(\`"\${field}" must be an amount, like "12.50".\`);
 };
-/** A date and time; one without an offset is a wall time in the app's zone, seconds kept. */
+/**
+ * An ISO date and time, on a day the calendar has (JavaScript would roll 30 February over); one
+ * without an offset is a wall time in the app's zone, seconds kept.
+ */
 const moment = (v: unknown, field: string) => {
-  const wall =
-    typeof v === "string" &&
-    /^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}(:\\d{2}(\\.\\d+)?)?$/.test(v) &&
-    Number.isFinite(Date.parse(\`\${v}Z\`));
+  const parts =
+    typeof v === "string"
+      ? /^(\\d{4}-\\d{2}-\\d{2})T\\d{2}:\\d{2}(?::\\d{2}(?:\\.\\d+)?)?(Z|[+-]\\d{2}:\\d{2})?$/.exec(v)
+      : null;
+  const at = parts ? Date.parse(parts[2] ? parts[0] : \`\${parts[0]}Z\`) : Number.NaN;
+  const day = parts ? Date.parse(\`\${parts[1]}T00:00:00Z\`) : Number.NaN;
   const d =
-    typeof v !== "string"
+    !parts || !Number.isFinite(at) || !Number.isFinite(day) || new Date(day).toISOString().slice(0, 10) !== parts[1]
       ? undefined
-      : wall
-        ? new Date(instantOf(v, "Europe/Mariehamn").getTime() + Date.parse(\`\${v}Z\`) - Date.parse(\`\${v.slice(0, 16)}:00Z\`))
-        : new Date(v);
+      : parts[2]
+        ? new Date(at)
+        : new Date(instantOf(parts[0], "Europe/Mariehamn").getTime() + at - Date.parse(\`\${parts[0].slice(0, 16)}:00Z\`));
   if (d && !Number.isNaN(d.getTime())) return d;
   throw new BadInput(\`"\${field}" must be a date and time, like "2026-10-04T09:30" (in Europe/Mariehamn) or "2026-10-04T09:30:00Z".\`);
 };
@@ -46827,8 +46839,8 @@ export function customerToApi(row: Record<string, any>) {
     creditLimit: row.creditLimit == null ? null : (Number(row.creditLimit) / 100).toFixed(2),
     notes: row.notes ?? null,
     accountManager: row.accountManagerId ?? null,
-    createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
-    updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : row.updatedAt,
+    createdAt: row.createdAt instanceof Date ? isoIn(row.createdAt, "Europe/Mariehamn") : (row.createdAt ?? null),
+    updatedAt: row.updatedAt instanceof Date ? isoIn(row.updatedAt, "Europe/Mariehamn") : (row.updatedAt ?? null),
   };
 }
 
@@ -46880,8 +46892,8 @@ export function orderToApi(row: Record<string, any>) {
     shippingMethod: row.shippingMethod ?? null,
     shippingCost: row.shippingCost == null ? null : (Number(row.shippingCost) / 100).toFixed(2),
     placedAt: row.placedAt instanceof Date ? isoIn(row.placedAt, "Europe/Mariehamn") : (row.placedAt ?? null),
-    createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
-    updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : row.updatedAt,
+    createdAt: row.createdAt instanceof Date ? isoIn(row.createdAt, "Europe/Mariehamn") : (row.createdAt ?? null),
+    updatedAt: row.updatedAt instanceof Date ? isoIn(row.updatedAt, "Europe/Mariehamn") : (row.updatedAt ?? null),
   };
 }
 
@@ -46927,8 +46939,8 @@ export function followUpToApi(row: Record<string, any>) {
     dueOn: row.dueOn ?? null,
     done: row.done ?? null,
     note: row.note ?? null,
-    createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
-    updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : row.updatedAt,
+    createdAt: row.createdAt instanceof Date ? isoIn(row.createdAt, "Europe/Mariehamn") : (row.createdAt ?? null),
+    updatedAt: row.updatedAt instanceof Date ? isoIn(row.updatedAt, "Europe/Mariehamn") : (row.updatedAt ?? null),
   };
 }
 
@@ -55146,7 +55158,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/generated/actions/schedule-follow-ups.ts": "3190ea81 generated",
   "src/generated/activity.server.ts": "b375128c generated",
   "src/generated/app.ts": "4f89cb6c generated",
-  "src/generated/ask.server.ts": "b6e7987c generated",
+  "src/generated/ask.server.ts": "33121a77 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/customer.import.server.ts": "6460f913 generated",
   "src/generated/customer.import.ts": "53f4b1d0 generated",
@@ -95126,6 +95138,7 @@ import type { Offer } from "#/kit/tools";
 import { itemData } from "./item.server";
 import { itemUi } from "./item";
 
+import { isoIn } from "#/kit/zoned";
 import { itemSchema } from "#/generated/item.schema";
 
 
@@ -95146,8 +95159,8 @@ export function itemToApi(row: Record<string, any>) {
     kind: row.kind ?? null,
     link: row.link ?? null,
     addedOn: row.addedOn ?? null,
-    createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
-    updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : row.updatedAt,
+    createdAt: row.createdAt instanceof Date ? isoIn(row.createdAt, "Europe/Mariehamn") : (row.createdAt ?? null),
+    updatedAt: row.updatedAt instanceof Date ? isoIn(row.updatedAt, "Europe/Mariehamn") : (row.updatedAt ?? null),
   };
 }
 
@@ -98487,7 +98500,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/generated/access.test.ts": "2a3af11c generated",
   "src/generated/activity.server.ts": "4ed2a764 generated",
   "src/generated/app.ts": "2da3a528 generated",
-  "src/generated/ask.server.ts": "bfe90d6d generated",
+  "src/generated/ask.server.ts": "775f6e72 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/dev-door.server.ts": "8d9bb3d1 generated",
   "src/generated/hooks.ts": "e268b462 generated",
@@ -107583,18 +107596,23 @@ const whole = (v: unknown, field: string) => {
   if (Number.isInteger(v)) return v as number;
   throw new BadInput(\`"\${field}" must be a record's id, a whole number.\`);
 };
-/** A date and time; one without an offset is a wall time in the app's zone, seconds kept. */
+/**
+ * An ISO date and time, on a day the calendar has (JavaScript would roll 30 February over); one
+ * without an offset is a wall time in the app's zone, seconds kept.
+ */
 const moment = (v: unknown, field: string) => {
-  const wall =
-    typeof v === "string" &&
-    /^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}(:\\d{2}(\\.\\d+)?)?$/.test(v) &&
-    Number.isFinite(Date.parse(\`\${v}Z\`));
+  const parts =
+    typeof v === "string"
+      ? /^(\\d{4}-\\d{2}-\\d{2})T\\d{2}:\\d{2}(?::\\d{2}(?:\\.\\d+)?)?(Z|[+-]\\d{2}:\\d{2})?$/.exec(v)
+      : null;
+  const at = parts ? Date.parse(parts[2] ? parts[0] : \`\${parts[0]}Z\`) : Number.NaN;
+  const day = parts ? Date.parse(\`\${parts[1]}T00:00:00Z\`) : Number.NaN;
   const d =
-    typeof v !== "string"
+    !parts || !Number.isFinite(at) || !Number.isFinite(day) || new Date(day).toISOString().slice(0, 10) !== parts[1]
       ? undefined
-      : wall
-        ? new Date(instantOf(v, "Europe/Mariehamn").getTime() + Date.parse(\`\${v}Z\`) - Date.parse(\`\${v.slice(0, 16)}:00Z\`))
-        : new Date(v);
+      : parts[2]
+        ? new Date(at)
+        : new Date(instantOf(parts[0], "Europe/Mariehamn").getTime() + at - Date.parse(\`\${parts[0].slice(0, 16)}:00Z\`));
   if (d && !Number.isNaN(d.getTime())) return d;
   throw new BadInput(\`"\${field}" must be a date and time, like "2026-10-04T09:30" (in Europe/Mariehamn) or "2026-10-04T09:30:00Z".\`);
 };
@@ -107614,8 +107632,8 @@ export function componentToApi(row: Record<string, any>) {
     name: row.name ?? null,
     status: row.status ?? null,
     description: row.description ?? null,
-    createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
-    updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : row.updatedAt,
+    createdAt: row.createdAt instanceof Date ? isoIn(row.createdAt, "Europe/Mariehamn") : (row.createdAt ?? null),
+    updatedAt: row.updatedAt instanceof Date ? isoIn(row.updatedAt, "Europe/Mariehamn") : (row.updatedAt ?? null),
   };
 }
 
@@ -107654,8 +107672,8 @@ export function incidentToApi(row: Record<string, any>) {
     detectedAt: row.detectedAt instanceof Date ? isoIn(row.detectedAt, "Europe/Mariehamn") : (row.detectedAt ?? null),
     resolvedAt: row.resolvedAt instanceof Date ? isoIn(row.resolvedAt, "Europe/Mariehamn") : (row.resolvedAt ?? null),
     summary: row.summary ?? null,
-    createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
-    updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : row.updatedAt,
+    createdAt: row.createdAt instanceof Date ? isoIn(row.createdAt, "Europe/Mariehamn") : (row.createdAt ?? null),
+    updatedAt: row.updatedAt instanceof Date ? isoIn(row.updatedAt, "Europe/Mariehamn") : (row.updatedAt ?? null),
   };
 }
 
@@ -109911,18 +109929,23 @@ const whole = (v: unknown, field: string) => {
   if (Number.isInteger(v)) return v as number;
   throw new BadInput(\`"\${field}" must be a record's id, a whole number.\`);
 };
-/** A date and time; one without an offset is a wall time in the app's zone, seconds kept. */
+/**
+ * An ISO date and time, on a day the calendar has (JavaScript would roll 30 February over); one
+ * without an offset is a wall time in the app's zone, seconds kept.
+ */
 const moment = (v: unknown, field: string) => {
-  const wall =
-    typeof v === "string" &&
-    /^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}(:\\d{2}(\\.\\d+)?)?$/.test(v) &&
-    Number.isFinite(Date.parse(\`\${v}Z\`));
+  const parts =
+    typeof v === "string"
+      ? /^(\\d{4}-\\d{2}-\\d{2})T\\d{2}:\\d{2}(?::\\d{2}(?:\\.\\d+)?)?(Z|[+-]\\d{2}:\\d{2})?$/.exec(v)
+      : null;
+  const at = parts ? Date.parse(parts[2] ? parts[0] : \`\${parts[0]}Z\`) : Number.NaN;
+  const day = parts ? Date.parse(\`\${parts[1]}T00:00:00Z\`) : Number.NaN;
   const d =
-    typeof v !== "string"
+    !parts || !Number.isFinite(at) || !Number.isFinite(day) || new Date(day).toISOString().slice(0, 10) !== parts[1]
       ? undefined
-      : wall
-        ? new Date(instantOf(v, "Europe/Mariehamn").getTime() + Date.parse(\`\${v}Z\`) - Date.parse(\`\${v.slice(0, 16)}:00Z\`))
-        : new Date(v);
+      : parts[2]
+        ? new Date(at)
+        : new Date(instantOf(parts[0], "Europe/Mariehamn").getTime() + at - Date.parse(\`\${parts[0].slice(0, 16)}:00Z\`));
   if (d && !Number.isNaN(d.getTime())) return d;
   throw new BadInput(\`"\${field}" must be a date and time, like "2026-10-04T09:30" (in Europe/Mariehamn) or "2026-10-04T09:30:00Z".\`);
 };
@@ -109942,8 +109965,8 @@ export function componentToApi(row: Record<string, any>) {
     name: row.name ?? null,
     status: row.status ?? null,
     description: row.description ?? null,
-    createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
-    updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : row.updatedAt,
+    createdAt: row.createdAt instanceof Date ? isoIn(row.createdAt, "Europe/Mariehamn") : (row.createdAt ?? null),
+    updatedAt: row.updatedAt instanceof Date ? isoIn(row.updatedAt, "Europe/Mariehamn") : (row.updatedAt ?? null),
   };
 }
 
@@ -109982,8 +110005,8 @@ export function incidentToApi(row: Record<string, any>) {
     detectedAt: row.detectedAt instanceof Date ? isoIn(row.detectedAt, "Europe/Mariehamn") : (row.detectedAt ?? null),
     resolvedAt: row.resolvedAt instanceof Date ? isoIn(row.resolvedAt, "Europe/Mariehamn") : (row.resolvedAt ?? null),
     summary: row.summary ?? null,
-    createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
-    updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : row.updatedAt,
+    createdAt: row.createdAt instanceof Date ? isoIn(row.createdAt, "Europe/Mariehamn") : (row.createdAt ?? null),
+    updatedAt: row.updatedAt instanceof Date ? isoIn(row.updatedAt, "Europe/Mariehamn") : (row.updatedAt ?? null),
   };
 }
 
@@ -110029,8 +110052,8 @@ export function incidentUpdateToApi(row: Record<string, any>) {
     at: row.at instanceof Date ? isoIn(row.at, "Europe/Mariehamn") : (row.at ?? null),
     status: row.status ?? null,
     message: row.message ?? null,
-    createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
-    updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : row.updatedAt,
+    createdAt: row.createdAt instanceof Date ? isoIn(row.createdAt, "Europe/Mariehamn") : (row.createdAt ?? null),
+    updatedAt: row.updatedAt instanceof Date ? isoIn(row.updatedAt, "Europe/Mariehamn") : (row.updatedAt ?? null),
   };
 }
 
@@ -110071,8 +110094,8 @@ export function maintenanceToApi(row: Record<string, any>) {
     startsAt: row.startsAt instanceof Date ? isoIn(row.startsAt, "Europe/Mariehamn") : (row.startsAt ?? null),
     endsAt: row.endsAt instanceof Date ? isoIn(row.endsAt, "Europe/Mariehamn") : (row.endsAt ?? null),
     description: row.description ?? null,
-    createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
-    updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : row.updatedAt,
+    createdAt: row.createdAt instanceof Date ? isoIn(row.createdAt, "Europe/Mariehamn") : (row.createdAt ?? null),
+    updatedAt: row.updatedAt instanceof Date ? isoIn(row.updatedAt, "Europe/Mariehamn") : (row.updatedAt ?? null),
   };
 }
 
@@ -120316,9 +120339,9 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/generated/actions/resolve.server.ts": "a2a5449e generated",
   "src/generated/actions/resolve.ts": "ff4366e0 generated",
   "src/generated/activity.server.ts": "dc01d286 generated",
-  "src/generated/api.server.ts": "5989aa6c generated",
+  "src/generated/api.server.ts": "a42ebaad generated",
   "src/generated/app.ts": "c7fc730f generated",
-  "src/generated/ask.server.ts": "a4039a27 generated",
+  "src/generated/ask.server.ts": "90ead9d2 generated",
   "src/generated/component.import.server.ts": "25ae311e generated",
   "src/generated/component.import.ts": "53644553 generated",
   "src/generated/component.schema.ts": "8a49641f generated",
@@ -122251,6 +122274,7 @@ import { startWorkAsks } from "./actions/start-work";
 import { runClose } from "./actions/close.server";
 import { closeAsks } from "./actions/close";
 import { runReopen } from "./actions/reopen.server";
+import { isoIn } from "#/kit/zoned";
 import { supportCaseSchema } from "#/generated/support-case.schema";
 import { messageSchema } from "#/generated/message.schema";
 
@@ -122281,8 +122305,8 @@ export function supportCaseToApi(row: Record<string, any>) {
     priority: row.priority ?? null,
     assignee: row.assigneeId ?? null,
     body: row.body ?? null,
-    createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
-    updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : row.updatedAt,
+    createdAt: row.createdAt instanceof Date ? isoIn(row.createdAt, "Europe/Mariehamn") : (row.createdAt ?? null),
+    updatedAt: row.updatedAt instanceof Date ? isoIn(row.updatedAt, "Europe/Mariehamn") : (row.updatedAt ?? null),
   };
 }
 
@@ -122329,8 +122353,8 @@ export function messageToApi(row: Record<string, any>) {
     agent: row.agentId ?? null,
     fromEmail: row.fromEmail ?? null,
     supportCase: row.supportCaseId ?? null,
-    createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
-    updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : row.updatedAt,
+    createdAt: row.createdAt instanceof Date ? isoIn(row.createdAt, "Europe/Mariehamn") : (row.createdAt ?? null),
+    updatedAt: row.updatedAt instanceof Date ? isoIn(row.updatedAt, "Europe/Mariehamn") : (row.updatedAt ?? null),
   };
 }
 
@@ -128419,7 +128443,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/generated/actions/start-work.ts": "2fdc7c64 generated",
   "src/generated/activity.server.ts": "958f7815 generated",
   "src/generated/app.ts": "50242584 generated",
-  "src/generated/ask.server.ts": "8e379833 generated",
+  "src/generated/ask.server.ts": "1cc7a198 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/dev-door.server.ts": "3782a982 generated",
   "src/generated/hooks.ts": "1260830e generated",

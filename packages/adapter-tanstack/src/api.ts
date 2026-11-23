@@ -546,12 +546,7 @@ function conversionsCode(
 ): string {
   const uses = (k: string) => models.some(({ model }) => entered(model).some((f) => kind(f) === k));
   const zoned = timeZone
-    ? [
-        ...(uses("datetime") ? ["instantOf"] : []),
-        ...(models.some(({ model }) => apiFields(model).some((f) => kind(f) === "datetime"))
-          ? ["isoIn"]
-          : []),
-      ]
+    ? [...(uses("datetime") ? ["instantOf"] : []), ...(models.length ? ["isoIn"] : [])]
     : [];
   const zone = JSON.stringify(timeZone);
   return `${zoned.length ? `import { ${zoned.join(", ")} } from "#/kit/zoned";\n` : ""}${models.map(({ n }) => `import { ${n.schema} } from "${n.module}.schema";`).join("\n")}
@@ -587,18 +582,23 @@ ${
     : ""
 }${
   uses("datetime") && timeZone
-    ? `/** A date and time; one without an offset is a wall time in the app's zone, seconds kept. */
+    ? `/**
+ * An ISO date and time, on a day the calendar has (JavaScript would roll 30 February over); one
+ * without an offset is a wall time in the app's zone, seconds kept.
+ */
 const moment = (v: unknown, field: string) => {
-  const wall =
-    typeof v === "string" &&
-    /^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}(:\\d{2}(\\.\\d+)?)?$/.test(v) &&
-    Number.isFinite(Date.parse(\`\${v}Z\`));
+  const parts =
+    typeof v === "string"
+      ? /^(\\d{4}-\\d{2}-\\d{2})T\\d{2}:\\d{2}(?::\\d{2}(?:\\.\\d+)?)?(Z|[+-]\\d{2}:\\d{2})?$/.exec(v)
+      : null;
+  const at = parts ? Date.parse(parts[2] ? parts[0] : \`\${parts[0]}Z\`) : Number.NaN;
+  const day = parts ? Date.parse(\`\${parts[1]}T00:00:00Z\`) : Number.NaN;
   const d =
-    typeof v !== "string"
+    !parts || !Number.isFinite(at) || !Number.isFinite(day) || new Date(day).toISOString().slice(0, 10) !== parts[1]
       ? undefined
-      : wall
-        ? new Date(instantOf(v, ${zone}).getTime() + Date.parse(\`\${v}Z\`) - Date.parse(\`\${v.slice(0, 16)}:00Z\`))
-        : new Date(v);
+      : parts[2]
+        ? new Date(at)
+        : new Date(instantOf(parts[0], ${zone}).getTime() + at - Date.parse(\`\${parts[0].slice(0, 16)}:00Z\`));
   if (d && !Number.isNaN(d.getTime())) return d;
   throw new BadInput(\`"\${field}" must be a date and time, like "2026-10-04T09:30" (in ${timeZone}) or "2026-10-04T09:30:00Z".\`);
 };
@@ -630,8 +630,12 @@ export function ${camelName}ToApi(row: Record<string, any>) {
   return {
     id: row.id as number,
 ${fields.map((f) => `    ${f.name}: ${readCode(f, timeZone)},`).join("\n")}
-    createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
-    updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : row.updatedAt,
+${["createdAt", "updatedAt"]
+  .map(
+    (k) =>
+      `    ${k}: ${timeZone ? momentCode(`row.${k}`, timeZone) : `row.${k} instanceof Date ? row.${k}.toISOString() : row.${k}`},`,
+  )
+  .join("\n")}
   };
 }
 

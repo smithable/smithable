@@ -69,10 +69,27 @@ test("a time without an offset is the app's wall time, and is given back with th
   // Across the change from summer time (25 October 2026): the same wall time, an hour apart in UTC.
   expect(moment("2026-10-24T10:00", "startsAt").toISOString()).toBe("2026-10-24T07:00:00.000Z");
   expect(moment("2026-10-26T10:00", "startsAt").toISOString()).toBe("2026-10-26T08:00:00.000Z");
-  // What was stored, as the result gives it.
+  // What was stored, as the result gives it, the record's own times too.
+  expect(code).toContain(
+    'createdAt: row.createdAt instanceof Date ? isoIn(row.createdAt, "Europe/Mariehamn")',
+  );
   expect(read(new Date("2026-11-28T08:00:30Z"))).toBe("2026-11-28T10:00:30+02:00");
   expect(read(new Date("2026-10-24T07:00:00Z"))).toBe("2026-10-24T10:00:00+03:00");
-  for (const wrong of ["tomorrow", "2026-13-40T99:99", 1764316800000])
+  // At the changes themselves: 03:30 is skipped in spring (read with the offset before it) and
+  // happens twice in autumn (its first occurrence).
+  expect(moment("2026-03-29T03:30", "startsAt").toISOString()).toBe("2026-03-29T01:30:00.000Z");
+  expect(moment("2026-10-25T03:30", "startsAt").toISOString()).toBe("2026-10-25T00:30:00.000Z");
+  // Only ISO, on a day the calendar has: no rolling 30 February over, no server-zone guesses.
+  for (const wrong of [
+    "tomorrow",
+    "2026-13-40T99:99",
+    1764316800000,
+    "2026-02-30T10:00",
+    "2026-02-31T10:00:00+01:00",
+    "2026-11-28 10:00",
+    "2026-11-28",
+    "2026-11-28T25:00",
+  ])
     expect(() => moment(wrong, "startsAt")).toThrow(
       '"startsAt" must be a date and time, like "2026-10-04T09:30" (in Europe/Mariehamn) or "2026-10-04T09:30:00Z".',
     );
@@ -86,6 +103,9 @@ test("an app without a time zone keeps UTC and reads a time as before", async ()
   const code = conversions("");
   expect(code).not.toContain("#/kit/zoned");
   expect(code).toContain('"format": "date-time"');
+  expect(code).toContain(
+    "createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,",
+  );
   const { moment, read } = await run(code);
   expect(moment("2026-11-28T10:00:00Z", "startsAt").toISOString()).toBe("2026-11-28T10:00:00.000Z");
   expect(read(new Date("2026-11-28T08:00:30Z"))).toBe("2026-11-28T08:00:30.000Z");
