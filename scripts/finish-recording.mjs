@@ -70,7 +70,9 @@ for (const c of timed) {
         sv: `${held.sv}. ${SWEDISH[name][c.name]}`,
       }
     : { at: c.at, until: c.until, en: c.caption, sv: SWEDISH[name][c.name] };
-  held = cue.until - cue.at < MIN_CUE && c !== timed.at(-1) ? cue : undefined;
+  // Joined only with a caption that follows at once, never across a moment without one.
+  const next = timed[timed.indexOf(c) + 1];
+  held = cue.until - cue.at < MIN_CUE && next?.at === c.until ? cue : undefined;
   if (!held) cues.push(cue);
 }
 const vtt = (text) =>
