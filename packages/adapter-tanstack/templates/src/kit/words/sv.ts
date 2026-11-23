@@ -512,6 +512,12 @@ export const w = {
   importHint:
     "En CSV-fil med kolumnernas namn på första raden. Ett kalkylark sparar en: Spara som, sedan CSV.",
   importColumns: "Kolumner:",
+  importMail: {
+    held: "E-post från appen hålls kvar: ingen får e-post, inte heller adresserna i den här filen.",
+    testers:
+      "Appen skickar e-post bara till sina testare: de andra adresserna i filen får ingenting.",
+    all: "Appen skickar e-post till adresserna i sina poster, också dem i den här filen.",
+  },
   importIgnored: (columns: string) => `Utelämnade (inget fält med det namnet): ${columns}.`,
   importWillAdd: (n: number) => (n === 1 ? "1 post läggs till." : `${n} poster läggs till.`),
   importAdded: (n: number) => (n === 1 ? "1 post lades till." : `${n} poster lades till.`),

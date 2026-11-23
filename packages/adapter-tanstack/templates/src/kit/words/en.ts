@@ -534,6 +534,11 @@ export const w = {
   importHint:
     "A CSV file with the columns' names on its first line. A spreadsheet saves one: Save as, then CSV.",
   importColumns: "Columns:",
+  importMail: {
+    held: "Mail from this app is held: nobody is mailed, the addresses in this file included.",
+    testers: "This app mails only its testers: the other addresses in this file get nothing.",
+    all: "This app mails the addresses in its records, the ones in this file too.",
+  },
   importIgnored: (columns: string) => `Left out (no field of that name): ${columns}.`,
   importWillAdd: (n: number) =>
     n === 1 ? "1 record will be added." : `${n} records will be added.`,

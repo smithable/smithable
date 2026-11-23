@@ -1995,6 +1995,13 @@ async function importFlow(dir, base) {
       buffer: Buffer.from(csv),
     });
     await dialog.getByText("2 records will be added.").waitFor({ timeout: 20000 * P });
+    // Started with MAIL_MODE=outbox: the preview says the file's addresses are mailed nobody.
+    await dialog
+      .getByText(
+        "Mail from this app is held: nobody is mailed, the addresses in this file included.",
+        { exact: true },
+      )
+      .waitFor();
     for (const line of [
       'Line 4, Customer: No record named "No Such Company".',
       "Line 5, Total: Not a number.",
@@ -2016,7 +2023,7 @@ async function importFlow(dir, base) {
     ).n;
     if (left !== 0) throw new Error(`${left} imported orders are still there after the undo`);
     console.log(
-      "  ✓ crm: orders imported from a CSV (a customer by its name, a choice by its label, a decimal comma); the preview names the refused rows by line and column; Undo takes the import back to the trash",
+      "  ✓ crm: orders imported from a CSV (a customer by its name, a choice by its label, a decimal comma); the preview names the refused rows by line and column and says the app's mail is held (MAIL_MODE=outbox); Undo takes the import back to the trash",
     );
   } catch (error) {
     console.log(
@@ -8917,8 +8924,12 @@ for (const [index, example] of examples.entries()) {
         () => demoVisitorsFlow(dir, port + 400),
       );
 
-    // A door secret as a host would give one: a production build still has no door (A 180).
-    let stop = await serve(dir, port, "production", { DEV_DOOR_SECRET: DOOR_SECRET });
+    // A door secret as a host would give one: a production build still has no door (A 180). The
+    // crm runs as a host runs a held copy, MAIL_MODE=outbox, and its import says so (T1325).
+    let stop = await serve(dir, port, "production", {
+      DEV_DOOR_SECRET: DOOR_SECRET,
+      ...(example === "crm" ? { MAIL_MODE: "outbox" } : {}),
+    });
     try {
       const base = `http://localhost:${port}`;
       const { ir } = validateSpec({

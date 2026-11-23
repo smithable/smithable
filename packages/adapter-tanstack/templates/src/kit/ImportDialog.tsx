@@ -17,6 +17,7 @@ export interface ImportAnswer {
   refusals: ImportRefusal[];
   count: number;
   undo?: number;
+  mail?: "held" | "testers" | "all";
 }
 
 /** At most this many refusals listed; the rest counted. */
@@ -111,6 +112,8 @@ export function ImportDialog({
               <p role="status" className="font-medium">
                 {done ? w.importAdded(done.count) : w.importWillAdd(shown.count)}
               </p>
+              {/* Whether the addresses in the file are mailed, where the app was started with a mode. */}
+              {shown.mail && <p data-kit="import-mail">{w.importMail[shown.mail]}</p>}
               {shown.refusals.length > 0 && (
                 <div className="space-y-1">
                   <p>{w.importRefusedRows(shown.refusals.length)}</p>

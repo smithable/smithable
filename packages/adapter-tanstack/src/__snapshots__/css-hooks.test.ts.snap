@@ -93,6 +93,9 @@ exports[`every kit component's hooks, as they are 1`] = `
     "data-kit="filters"",
     "data-part="saved-tabs"",
   ],
+  "src/kit/ImportDialog.tsx": [
+    "data-kit="import-mail"",
+  ],
   "src/kit/InlineRows.tsx": [
     "data-kit="inline-rows"",
     "data-part="sum"",

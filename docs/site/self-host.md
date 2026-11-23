@@ -80,6 +80,7 @@ The app reads these from its environment. None is needed beyond the ones `smitha
 | `SMTP_URL` | none | Where mail is sent (`smtp://user:password@host:587`); or the four below. Without either, mail is written to `DATA_DIR/mail/outbox`. |
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD` | none | The same, one part each. |
 | `MAIL_FROM` | none | The sender of the app's mail (`Acme <hello@acme.example>`). |
+| `MAIL_MODE` | none | Set by a host that holds or limits a copy's mail: `outbox` (or any value but the two below) keeps every mail in `DATA_DIR/mail/outbox` even with mail settings; `testers` (the mail server lets only testers through) and `all` send as usual. Import then says which, beside the rows it will add. |
 | `SMS_PROVIDER` | none | The SMS provider (`46elks`). Without it, texts are written to `DATA_DIR/sms/outbox`. |
 | `SMS_KEY`, `SMS_SECRET`, `SMS_FROM` | none | The provider's account and the sender name or number. |
 | `SMS_MAX_PER_DAY` | `50` | The most texts the app sends in a day (and at most ten to one number); a text over it is not sent and is marked failed. |

@@ -41,7 +41,7 @@ The team page lists who has access and lets administrators invite people by emai
 Sign-up is closed (see \`selfSignUp\` under \`signIn\` in \`smithable.auth.yml\`): only invited addresses and the \`admins\` of \`smithable.auth.yml\` can sign in. Everyone else is refused at sign-in and told to ask an administrator. A demo (\`DEMO_SIGN_IN=1\`) is the exception: its "Try it as" buttons sign in demo users, who join whatever the setting says; set it only on a showcase app whose data is reset.
 ## Mail
 
-Hooks (\`src/custom/hooks.ts\`) and custom code send mail with \`sendMail\` from \`src/kit/mail.ts\`. It reads SMTP settings from the environment: \`SMTP_URL\` (\`smtp://user:password@host:587\`, or \`smtps://\` for TLS from the start) or \`SMTP_HOST\`, \`SMTP_PORT\`, \`SMTP_USER\` and \`SMTP_PASSWORD\`, plus \`MAIL_FROM\` (the sender). Any provider works; give its SPF, DKIM and DMARC records to the sender's domain so the mail arrives. Without settings nothing is sent: mails are written to \`data/mail/outbox\` as \`.eml\` files, which is what development and tests look at.
+Hooks (\`src/custom/hooks.ts\`) and custom code send mail with \`sendMail\` from \`src/kit/mail.ts\`. It reads SMTP settings from the environment: \`SMTP_URL\` (\`smtp://user:password@host:587\`, or \`smtps://\` for TLS from the start) or \`SMTP_HOST\`, \`SMTP_PORT\`, \`SMTP_USER\` and \`SMTP_PASSWORD\`, plus \`MAIL_FROM\` (the sender). Any provider works; give its SPF, DKIM and DMARC records to the sender's domain so the mail arrives. Without settings nothing is sent: mails are written to \`data/mail/outbox\` as \`.eml\` files, which is what development and tests look at. \`MAIL_MODE=outbox\` keeps them there with settings too; started with \`MAIL_MODE\` (\`outbox\`, \`testers\` where the mail server lets only testers through, or \`all\`), the app says on Import what happens to the addresses in a file.
 
 ## Limits
 
@@ -14081,7 +14081,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "LICENSES/hallmark-MIT.txt": "26d1de6b kit",
   "LICENSES/shadcn-ui.txt": "38dd653a kit",
   "LICENSES/tweakcn-Apache-2.0.txt": "dc4aedc0 kit",
-  "README.md": "c404dd3b generated",
+  "README.md": "66c58e90 generated",
   "drizzle.config.ts": "0987fb48 kit",
   "package.json": "9d0004ce generated",
   "playwright.config.ts": "5ffef2a7 kit",
@@ -14148,7 +14148,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/Consent.tsx": "c5ee7e50 kit",
   "src/kit/FieldInput.tsx": "39e40fcb kit",
   "src/kit/FileInput.tsx": "5d567f82 kit",
-  "src/kit/ImportDialog.tsx": "d65da47a kit",
+  "src/kit/ImportDialog.tsx": "07f5864f kit",
   "src/kit/InlineRows.tsx": "5a097006 kit",
   "src/kit/Inspector.tsx": "2425cac5 kit",
   "src/kit/Keys.tsx": "f32c246d kit",
@@ -14183,11 +14183,11 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/formats.ts": "2257fcc1 kit",
   "src/kit/formula.ts": "d73c0380 kit",
   "src/kit/grounded.ts": "5513d9ac kit",
-  "src/kit/import.server.ts": "7a5a3701 kit",
+  "src/kit/import.server.ts": "889830b2 kit",
   "src/kit/import.ts": "3f48e858 kit",
   "src/kit/limit.ts": "dafa01cd kit",
   "src/kit/log.server.ts": "4d493425 kit",
-  "src/kit/mail.ts": "d005acf1 kit",
+  "src/kit/mail.ts": "6aa0d2af kit",
   "src/kit/mcp.server.ts": "2e063918 kit",
   "src/kit/model.ts": "4f517d82 kit",
   "src/kit/now.ts": "5ea87828 kit",
@@ -14210,7 +14210,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "a509a677 kit",
+  "src/kit/words/en.ts": "5a6224bb kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/app-card.server.ts": "9b4d94be generated",
   "src/lib/app-card.ts": "93f0b476 generated",
@@ -14310,7 +14310,7 @@ In production, set \`BETTER_AUTH_SECRET\` (at least 32 random characters, e.g. \
 People type their address and get a six-digit code by mail, good for ten minutes and five tries. Signing in and signing up are the same form; who may sign up follows the app's sign-in settings, and anyone else is told the same and gets no mail. At most five codes an hour go to one address (and twenty to one network address): someone asking for a sixth waits. The codes go out through the app's mail settings (\`SMTP_URL\` and \`MAIL_FROM\`, see "Mail"); without them, in development, they land in \`data/mail/outbox\`, and in production the sign-in page says that it cannot send mail.
 ## Mail
 
-Hooks (\`src/custom/hooks.ts\`) and custom code send mail with \`sendMail\` from \`src/kit/mail.ts\`. It reads SMTP settings from the environment: \`SMTP_URL\` (\`smtp://user:password@host:587\`, or \`smtps://\` for TLS from the start) or \`SMTP_HOST\`, \`SMTP_PORT\`, \`SMTP_USER\` and \`SMTP_PASSWORD\`, plus \`MAIL_FROM\` (the sender). Any provider works; give its SPF, DKIM and DMARC records to the sender's domain so the mail arrives. Without settings nothing is sent: mails are written to \`data/mail/outbox\` as \`.eml\` files, which is what development and tests look at.
+Hooks (\`src/custom/hooks.ts\`) and custom code send mail with \`sendMail\` from \`src/kit/mail.ts\`. It reads SMTP settings from the environment: \`SMTP_URL\` (\`smtp://user:password@host:587\`, or \`smtps://\` for TLS from the start) or \`SMTP_HOST\`, \`SMTP_PORT\`, \`SMTP_USER\` and \`SMTP_PASSWORD\`, plus \`MAIL_FROM\` (the sender). Any provider works; give its SPF, DKIM and DMARC records to the sender's domain so the mail arrives. Without settings nothing is sent: mails are written to \`data/mail/outbox\` as \`.eml\` files, which is what development and tests look at. \`MAIL_MODE=outbox\` keeps them there with settings too; started with \`MAIL_MODE\` (\`outbox\`, \`testers\` where the mail server lets only testers through, or \`all\`), the app says on Import what happens to the addresses in a file.
 
 ## Limits
 
@@ -21896,7 +21896,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "LICENSES/hallmark-MIT.txt": "26d1de6b kit",
   "LICENSES/shadcn-ui.txt": "38dd653a kit",
   "LICENSES/tweakcn-Apache-2.0.txt": "dc4aedc0 kit",
-  "README.md": "b9fcd689 generated",
+  "README.md": "656dcf28 generated",
   "drizzle.config.ts": "0987fb48 kit",
   "package.json": "ce8ec275 generated",
   "playwright.config.ts": "5ffef2a7 kit",
@@ -21963,7 +21963,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/FieldInput.tsx": "39e40fcb kit",
   "src/kit/FileInput.tsx": "5d567f82 kit",
   "src/kit/Filters.tsx": "0f5bfdfd kit",
-  "src/kit/ImportDialog.tsx": "d65da47a kit",
+  "src/kit/ImportDialog.tsx": "07f5864f kit",
   "src/kit/InlineRows.tsx": "5a097006 kit",
   "src/kit/Landing.tsx": "c991eeed kit",
   "src/kit/LegalPage.tsx": "f9a9df1e kit",
@@ -21996,12 +21996,12 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/format.ts": "b9e92275 kit",
   "src/kit/formats.ts": "2257fcc1 kit",
   "src/kit/formula.ts": "d73c0380 kit",
-  "src/kit/import.server.ts": "7a5a3701 kit",
+  "src/kit/import.server.ts": "889830b2 kit",
   "src/kit/import.ts": "3f48e858 kit",
   "src/kit/limit.ts": "dafa01cd kit",
   "src/kit/live.server.ts": "474834ab kit",
   "src/kit/log.server.ts": "4d493425 kit",
-  "src/kit/mail.ts": "d005acf1 kit",
+  "src/kit/mail.ts": "6aa0d2af kit",
   "src/kit/model.ts": "4f517d82 kit",
   "src/kit/now.ts": "5ea87828 kit",
   "src/kit/origin.ts": "f7090ee4 kit",
@@ -22023,7 +22023,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/uploads.ts": "4e982bfe kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "a509a677 kit",
+  "src/kit/words/en.ts": "5a6224bb kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/app-card.server.ts": "86f8f526 generated",
   "src/lib/app-card.ts": "93f0b476 generated",
@@ -22107,7 +22107,7 @@ In production, set \`BETTER_AUTH_SECRET\` (at least 32 random characters, e.g. \
 People type their address and get a six-digit code by mail, good for ten minutes and five tries. Signing in and signing up are the same form; who may sign up follows the app's sign-in settings, and anyone else is told the same and gets no mail. At most five codes an hour go to one address (and twenty to one network address): someone asking for a sixth waits. The codes go out through the app's mail settings (\`SMTP_URL\` and \`MAIL_FROM\`, see "Mail"); without them, in development, they land in \`data/mail/outbox\`, and in production the sign-in page says that it cannot send mail.
 ## Mail
 
-Hooks (\`src/custom/hooks.ts\`) and custom code send mail with \`sendMail\` from \`src/kit/mail.ts\`. It reads SMTP settings from the environment: \`SMTP_URL\` (\`smtp://user:password@host:587\`, or \`smtps://\` for TLS from the start) or \`SMTP_HOST\`, \`SMTP_PORT\`, \`SMTP_USER\` and \`SMTP_PASSWORD\`, plus \`MAIL_FROM\` (the sender). Any provider works; give its SPF, DKIM and DMARC records to the sender's domain so the mail arrives. Without settings nothing is sent: mails are written to \`data/mail/outbox\` as \`.eml\` files, which is what development and tests look at.
+Hooks (\`src/custom/hooks.ts\`) and custom code send mail with \`sendMail\` from \`src/kit/mail.ts\`. It reads SMTP settings from the environment: \`SMTP_URL\` (\`smtp://user:password@host:587\`, or \`smtps://\` for TLS from the start) or \`SMTP_HOST\`, \`SMTP_PORT\`, \`SMTP_USER\` and \`SMTP_PASSWORD\`, plus \`MAIL_FROM\` (the sender). Any provider works; give its SPF, DKIM and DMARC records to the sender's domain so the mail arrives. Without settings nothing is sent: mails are written to \`data/mail/outbox\` as \`.eml\` files, which is what development and tests look at. \`MAIL_MODE=outbox\` keeps them there with settings too; started with \`MAIL_MODE\` (\`outbox\`, \`testers\` where the mail server lets only testers through, or \`all\`), the app says on Import what happens to the addresses in a file.
 
 ## Limits
 
@@ -37256,7 +37256,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "LICENSES/hallmark-MIT.txt": "26d1de6b kit",
   "LICENSES/shadcn-ui.txt": "38dd653a kit",
   "LICENSES/tweakcn-Apache-2.0.txt": "dc4aedc0 kit",
-  "README.md": "20c87bfd generated",
+  "README.md": "3bafa6fc generated",
   "drizzle.config.ts": "0987fb48 kit",
   "package.json": "b9c002e6 generated",
   "playwright.config.ts": "5ffef2a7 kit",
@@ -37344,7 +37344,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/FieldInput.tsx": "39e40fcb kit",
   "src/kit/FileInput.tsx": "5d567f82 kit",
   "src/kit/Filters.tsx": "0f5bfdfd kit",
-  "src/kit/ImportDialog.tsx": "d65da47a kit",
+  "src/kit/ImportDialog.tsx": "07f5864f kit",
   "src/kit/InlineRows.tsx": "5a097006 kit",
   "src/kit/Inspector.tsx": "2425cac5 kit",
   "src/kit/Landing.tsx": "c991eeed kit",
@@ -37386,12 +37386,12 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/formats.ts": "2257fcc1 kit",
   "src/kit/formula.ts": "d73c0380 kit",
   "src/kit/grounded.ts": "5513d9ac kit",
-  "src/kit/import.server.ts": "7a5a3701 kit",
+  "src/kit/import.server.ts": "889830b2 kit",
   "src/kit/import.ts": "3f48e858 kit",
   "src/kit/limit.ts": "dafa01cd kit",
   "src/kit/live.server.ts": "474834ab kit",
   "src/kit/log.server.ts": "4d493425 kit",
-  "src/kit/mail.ts": "d005acf1 kit",
+  "src/kit/mail.ts": "6aa0d2af kit",
   "src/kit/model.ts": "4f517d82 kit",
   "src/kit/now.ts": "5ea87828 kit",
   "src/kit/origin.ts": "f7090ee4 kit",
@@ -37416,7 +37416,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "a509a677 kit",
+  "src/kit/words/en.ts": "5a6224bb kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/app-card.server.ts": "72496fa8 generated",
   "src/lib/app-card.ts": "93f0b476 generated",
@@ -37540,7 +37540,7 @@ The team page lists who has access and lets administrators invite people by emai
 Sign-up is closed (see \`selfSignUp\` under \`signIn\` in \`smithable.auth.yml\`): only invited addresses and the \`admins\` of \`smithable.auth.yml\` can sign in. Everyone else is refused at sign-in and told to ask an administrator. A demo (\`DEMO_SIGN_IN=1\`) is the exception: its "Try it as" buttons sign in demo users, who join whatever the setting says; set it only on a showcase app whose data is reset.
 ## Mail
 
-Hooks (\`src/custom/hooks.ts\`) and custom code send mail with \`sendMail\` from \`src/kit/mail.ts\`. It reads SMTP settings from the environment: \`SMTP_URL\` (\`smtp://user:password@host:587\`, or \`smtps://\` for TLS from the start) or \`SMTP_HOST\`, \`SMTP_PORT\`, \`SMTP_USER\` and \`SMTP_PASSWORD\`, plus \`MAIL_FROM\` (the sender). Any provider works; give its SPF, DKIM and DMARC records to the sender's domain so the mail arrives. Without settings nothing is sent: mails are written to \`data/mail/outbox\` as \`.eml\` files, which is what development and tests look at.
+Hooks (\`src/custom/hooks.ts\`) and custom code send mail with \`sendMail\` from \`src/kit/mail.ts\`. It reads SMTP settings from the environment: \`SMTP_URL\` (\`smtp://user:password@host:587\`, or \`smtps://\` for TLS from the start) or \`SMTP_HOST\`, \`SMTP_PORT\`, \`SMTP_USER\` and \`SMTP_PASSWORD\`, plus \`MAIL_FROM\` (the sender). Any provider works; give its SPF, DKIM and DMARC records to the sender's domain so the mail arrives. Without settings nothing is sent: mails are written to \`data/mail/outbox\` as \`.eml\` files, which is what development and tests look at. \`MAIL_MODE=outbox\` keeps them there with settings too; started with \`MAIL_MODE\` (\`outbox\`, \`testers\` where the mail server lets only testers through, or \`all\`), the app says on Import what happens to the addresses in a file.
 
 ## Limits
 
@@ -45219,7 +45219,7 @@ exports[`../../../examples/builder/smithable.yml > the generated files are as re
   "LICENSES/hallmark-MIT.txt": "26d1de6b kit",
   "LICENSES/shadcn-ui.txt": "38dd653a kit",
   "LICENSES/tweakcn-Apache-2.0.txt": "dc4aedc0 kit",
-  "README.md": "e87340f0 generated",
+  "README.md": "f66017d9 generated",
   "drizzle.config.ts": "0987fb48 kit",
   "package.json": "a09e32a1 generated",
   "playwright.config.ts": "5ffef2a7 kit",
@@ -45290,7 +45290,7 @@ exports[`../../../examples/builder/smithable.yml > the generated files are as re
   "src/kit/FieldInput.tsx": "39e40fcb kit",
   "src/kit/FileInput.tsx": "5d567f82 kit",
   "src/kit/Filters.tsx": "0f5bfdfd kit",
-  "src/kit/ImportDialog.tsx": "d65da47a kit",
+  "src/kit/ImportDialog.tsx": "07f5864f kit",
   "src/kit/InlineRows.tsx": "5a097006 kit",
   "src/kit/Landing.tsx": "c991eeed kit",
   "src/kit/LegalPage.tsx": "f9a9df1e kit",
@@ -45322,11 +45322,11 @@ exports[`../../../examples/builder/smithable.yml > the generated files are as re
   "src/kit/format.ts": "b9e92275 kit",
   "src/kit/formats.ts": "2257fcc1 kit",
   "src/kit/formula.ts": "d73c0380 kit",
-  "src/kit/import.server.ts": "7a5a3701 kit",
+  "src/kit/import.server.ts": "889830b2 kit",
   "src/kit/import.ts": "3f48e858 kit",
   "src/kit/limit.ts": "dafa01cd kit",
   "src/kit/log.server.ts": "4d493425 kit",
-  "src/kit/mail.ts": "d005acf1 kit",
+  "src/kit/mail.ts": "6aa0d2af kit",
   "src/kit/model.ts": "4f517d82 kit",
   "src/kit/now.ts": "5ea87828 kit",
   "src/kit/origin.ts": "f7090ee4 kit",
@@ -45344,7 +45344,7 @@ exports[`../../../examples/builder/smithable.yml > the generated files are as re
   "src/kit/uploads.ts": "4e982bfe kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "a509a677 kit",
+  "src/kit/words/en.ts": "5a6224bb kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/app-card.server.ts": "b498b974 generated",
   "src/lib/app-card.ts": "93f0b476 generated",
@@ -45432,7 +45432,7 @@ The team page lists who has access and lets administrators invite people by emai
 Sign-up is closed (see \`selfSignUp\` under \`signIn\` in \`smithable.auth.yml\`): only invited addresses and the \`admins\` of \`smithable.auth.yml\` can sign in. Everyone else is refused at sign-in and told to ask an administrator. A demo (\`DEMO_SIGN_IN=1\`) is the exception: its "Try it as" buttons sign in demo users, who join whatever the setting says; set it only on a showcase app whose data is reset.
 ## Mail
 
-Hooks (\`src/custom/hooks.ts\`) and custom code send mail with \`sendMail\` from \`src/kit/mail.ts\`. It reads SMTP settings from the environment: \`SMTP_URL\` (\`smtp://user:password@host:587\`, or \`smtps://\` for TLS from the start) or \`SMTP_HOST\`, \`SMTP_PORT\`, \`SMTP_USER\` and \`SMTP_PASSWORD\`, plus \`MAIL_FROM\` (the sender). Any provider works; give its SPF, DKIM and DMARC records to the sender's domain so the mail arrives. Without settings nothing is sent: mails are written to \`data/mail/outbox\` as \`.eml\` files, which is what development and tests look at.
+Hooks (\`src/custom/hooks.ts\`) and custom code send mail with \`sendMail\` from \`src/kit/mail.ts\`. It reads SMTP settings from the environment: \`SMTP_URL\` (\`smtp://user:password@host:587\`, or \`smtps://\` for TLS from the start) or \`SMTP_HOST\`, \`SMTP_PORT\`, \`SMTP_USER\` and \`SMTP_PASSWORD\`, plus \`MAIL_FROM\` (the sender). Any provider works; give its SPF, DKIM and DMARC records to the sender's domain so the mail arrives. Without settings nothing is sent: mails are written to \`data/mail/outbox\` as \`.eml\` files, which is what development and tests look at. \`MAIL_MODE=outbox\` keeps them there with settings too; started with \`MAIL_MODE\` (\`outbox\`, \`testers\` where the mail server lets only testers through, or \`all\`), the app says on Import what happens to the addresses in a file.
 
 ## Limits
 
@@ -55159,7 +55159,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "LICENSES/hallmark-MIT.txt": "26d1de6b kit",
   "LICENSES/shadcn-ui.txt": "38dd653a kit",
   "LICENSES/tweakcn-Apache-2.0.txt": "dc4aedc0 kit",
-  "README.md": "25ef97a9 generated",
+  "README.md": "8c6db726 generated",
   "drizzle.config.ts": "0987fb48 kit",
   "package.json": "12aee325 generated",
   "playwright.config.ts": "5ffef2a7 kit",
@@ -55229,7 +55229,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/Dashboard.tsx": "98bcd927 kit",
   "src/kit/FieldInput.tsx": "39e40fcb kit",
   "src/kit/Filters.tsx": "0f5bfdfd kit",
-  "src/kit/ImportDialog.tsx": "d65da47a kit",
+  "src/kit/ImportDialog.tsx": "07f5864f kit",
   "src/kit/InlineRows.tsx": "5a097006 kit",
   "src/kit/Inspector.tsx": "2425cac5 kit",
   "src/kit/Landing.tsx": "c991eeed kit",
@@ -55267,11 +55267,11 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/formats.ts": "2257fcc1 kit",
   "src/kit/formula.ts": "d73c0380 kit",
   "src/kit/grounded.ts": "5513d9ac kit",
-  "src/kit/import.server.ts": "7a5a3701 kit",
+  "src/kit/import.server.ts": "889830b2 kit",
   "src/kit/import.ts": "3f48e858 kit",
   "src/kit/limit.ts": "dafa01cd kit",
   "src/kit/log.server.ts": "4d493425 kit",
-  "src/kit/mail.ts": "d005acf1 kit",
+  "src/kit/mail.ts": "6aa0d2af kit",
   "src/kit/model.ts": "4f517d82 kit",
   "src/kit/now.ts": "5ea87828 kit",
   "src/kit/origin.ts": "f7090ee4 kit",
@@ -55291,7 +55291,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "a509a677 kit",
+  "src/kit/words/en.ts": "5a6224bb kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/app-card.server.ts": "a5f24452 generated",
   "src/lib/app-card.ts": "93f0b476 generated",
@@ -55380,7 +55380,7 @@ The team page lists who has access and lets administrators invite people by emai
 Sign-up is closed (see \`selfSignUp\` under \`signIn\` in \`smithable.auth.yml\`): only invited addresses and the \`admins\` of \`smithable.auth.yml\` can sign in. Everyone else is refused at sign-in and told to ask an administrator. A demo (\`DEMO_SIGN_IN=1\`) is the exception: its "Try it as" buttons sign in demo users, who join whatever the setting says; set it only on a showcase app whose data is reset.
 ## Mail
 
-Hooks (\`src/custom/hooks.ts\`) and custom code send mail with \`sendMail\` from \`src/kit/mail.ts\`. It reads SMTP settings from the environment: \`SMTP_URL\` (\`smtp://user:password@host:587\`, or \`smtps://\` for TLS from the start) or \`SMTP_HOST\`, \`SMTP_PORT\`, \`SMTP_USER\` and \`SMTP_PASSWORD\`, plus \`MAIL_FROM\` (the sender). Any provider works; give its SPF, DKIM and DMARC records to the sender's domain so the mail arrives. Without settings nothing is sent: mails are written to \`data/mail/outbox\` as \`.eml\` files, which is what development and tests look at.
+Hooks (\`src/custom/hooks.ts\`) and custom code send mail with \`sendMail\` from \`src/kit/mail.ts\`. It reads SMTP settings from the environment: \`SMTP_URL\` (\`smtp://user:password@host:587\`, or \`smtps://\` for TLS from the start) or \`SMTP_HOST\`, \`SMTP_PORT\`, \`SMTP_USER\` and \`SMTP_PASSWORD\`, plus \`MAIL_FROM\` (the sender). Any provider works; give its SPF, DKIM and DMARC records to the sender's domain so the mail arrives. Without settings nothing is sent: mails are written to \`data/mail/outbox\` as \`.eml\` files, which is what development and tests look at. \`MAIL_MODE=outbox\` keeps them there with settings too; started with \`MAIL_MODE\` (\`outbox\`, \`testers\` where the mail server lets only testers through, or \`all\`), the app says on Import what happens to the addresses in a file.
 
 ## Limits
 
@@ -62498,7 +62498,7 @@ exports[`../../../examples/food-truck/smithable.yml > the generated files are as
   "LICENSES/hallmark-MIT.txt": "26d1de6b kit",
   "LICENSES/shadcn-ui.txt": "38dd653a kit",
   "LICENSES/tweakcn-Apache-2.0.txt": "dc4aedc0 kit",
-  "README.md": "d7d67b01 generated",
+  "README.md": "0569868e generated",
   "drizzle.config.ts": "0987fb48 kit",
   "package.json": "53253c45 generated",
   "playwright.config.ts": "5ffef2a7 kit",
@@ -62564,7 +62564,7 @@ exports[`../../../examples/food-truck/smithable.yml > the generated files are as
   "src/kit/FieldInput.tsx": "39e40fcb kit",
   "src/kit/FileInput.tsx": "5d567f82 kit",
   "src/kit/Filters.tsx": "0f5bfdfd kit",
-  "src/kit/ImportDialog.tsx": "d65da47a kit",
+  "src/kit/ImportDialog.tsx": "07f5864f kit",
   "src/kit/InlineRows.tsx": "5a097006 kit",
   "src/kit/Landing.tsx": "c991eeed kit",
   "src/kit/ModelForm.tsx": "f90ea7e8 kit",
@@ -62594,11 +62594,11 @@ exports[`../../../examples/food-truck/smithable.yml > the generated files are as
   "src/kit/format.ts": "b9e92275 kit",
   "src/kit/formats.ts": "2257fcc1 kit",
   "src/kit/formula.ts": "d73c0380 kit",
-  "src/kit/import.server.ts": "7a5a3701 kit",
+  "src/kit/import.server.ts": "889830b2 kit",
   "src/kit/import.ts": "3f48e858 kit",
   "src/kit/limit.ts": "dafa01cd kit",
   "src/kit/log.server.ts": "4d493425 kit",
-  "src/kit/mail.ts": "d005acf1 kit",
+  "src/kit/mail.ts": "6aa0d2af kit",
   "src/kit/model.ts": "4f517d82 kit",
   "src/kit/now.ts": "5ea87828 kit",
   "src/kit/origin.ts": "f7090ee4 kit",
@@ -62616,7 +62616,7 @@ exports[`../../../examples/food-truck/smithable.yml > the generated files are as
   "src/kit/uploads.ts": "4e982bfe kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "a509a677 kit",
+  "src/kit/words/en.ts": "5a6224bb kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/app-card.server.ts": "a4898189 generated",
   "src/lib/app-card.ts": "93f0b476 generated",
@@ -62699,7 +62699,7 @@ In production, set \`BETTER_AUTH_SECRET\` (at least 32 random characters, e.g. \
 People type their address and get a six-digit code by mail, good for ten minutes and five tries. Signing in and signing up are the same form; who may sign up follows the app's sign-in settings, and anyone else is told the same and gets no mail. At most five codes an hour go to one address (and twenty to one network address): someone asking for a sixth waits. The codes go out through the app's mail settings (\`SMTP_URL\` and \`MAIL_FROM\`, see "Mail"); without them, in development, they land in \`data/mail/outbox\`, and in production the sign-in page says that it cannot send mail.
 ## Mail
 
-Hooks (\`src/custom/hooks.ts\`) and custom code send mail with \`sendMail\` from \`src/kit/mail.ts\`. It reads SMTP settings from the environment: \`SMTP_URL\` (\`smtp://user:password@host:587\`, or \`smtps://\` for TLS from the start) or \`SMTP_HOST\`, \`SMTP_PORT\`, \`SMTP_USER\` and \`SMTP_PASSWORD\`, plus \`MAIL_FROM\` (the sender). Any provider works; give its SPF, DKIM and DMARC records to the sender's domain so the mail arrives. Without settings nothing is sent: mails are written to \`data/mail/outbox\` as \`.eml\` files, which is what development and tests look at.
+Hooks (\`src/custom/hooks.ts\`) and custom code send mail with \`sendMail\` from \`src/kit/mail.ts\`. It reads SMTP settings from the environment: \`SMTP_URL\` (\`smtp://user:password@host:587\`, or \`smtps://\` for TLS from the start) or \`SMTP_HOST\`, \`SMTP_PORT\`, \`SMTP_USER\` and \`SMTP_PASSWORD\`, plus \`MAIL_FROM\` (the sender). Any provider works; give its SPF, DKIM and DMARC records to the sender's domain so the mail arrives. Without settings nothing is sent: mails are written to \`data/mail/outbox\` as \`.eml\` files, which is what development and tests look at. \`MAIL_MODE=outbox\` keeps them there with settings too; started with \`MAIL_MODE\` (\`outbox\`, \`testers\` where the mail server lets only testers through, or \`all\`), the app says on Import what happens to the addresses in a file.
 
 ## Limits
 
@@ -72726,7 +72726,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "LICENSES/hallmark-MIT.txt": "26d1de6b kit",
   "LICENSES/shadcn-ui.txt": "38dd653a kit",
   "LICENSES/tweakcn-Apache-2.0.txt": "dc4aedc0 kit",
-  "README.md": "ad057e8e generated",
+  "README.md": "9393846d generated",
   "drizzle.config.ts": "0987fb48 kit",
   "package.json": "adf2eeb2 generated",
   "playwright.config.ts": "5ffef2a7 kit",
@@ -72801,7 +72801,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/FieldInput.tsx": "39e40fcb kit",
   "src/kit/FileInput.tsx": "5d567f82 kit",
   "src/kit/Filters.tsx": "0f5bfdfd kit",
-  "src/kit/ImportDialog.tsx": "d65da47a kit",
+  "src/kit/ImportDialog.tsx": "07f5864f kit",
   "src/kit/InlineRows.tsx": "5a097006 kit",
   "src/kit/Inspector.tsx": "2425cac5 kit",
   "src/kit/Landing.tsx": "c991eeed kit",
@@ -72842,12 +72842,12 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/formats.ts": "2257fcc1 kit",
   "src/kit/formula.ts": "d73c0380 kit",
   "src/kit/grounded.ts": "5513d9ac kit",
-  "src/kit/import.server.ts": "7a5a3701 kit",
+  "src/kit/import.server.ts": "889830b2 kit",
   "src/kit/import.ts": "3f48e858 kit",
   "src/kit/limit.ts": "dafa01cd kit",
   "src/kit/live.server.ts": "474834ab kit",
   "src/kit/log.server.ts": "4d493425 kit",
-  "src/kit/mail.ts": "d005acf1 kit",
+  "src/kit/mail.ts": "6aa0d2af kit",
   "src/kit/model.ts": "4f517d82 kit",
   "src/kit/now.ts": "5ea87828 kit",
   "src/kit/origin.ts": "f7090ee4 kit",
@@ -72872,7 +72872,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "a509a677 kit",
+  "src/kit/words/en.ts": "5a6224bb kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/app-card.server.ts": "eacbd913 generated",
   "src/lib/app-card.ts": "93f0b476 generated",
@@ -72960,7 +72960,7 @@ The team page lists who has access and lets administrators invite people by emai
 Sign-up is closed (see \`selfSignUp\` under \`signIn\` in \`smithable.auth.yml\`): only invited addresses and the \`admins\` of \`smithable.auth.yml\` can sign in. Everyone else is refused at sign-in and told to ask an administrator. A demo (\`DEMO_SIGN_IN=1\`) is the exception: its "Try it as" buttons sign in demo users, who join whatever the setting says; set it only on a showcase app whose data is reset.
 ## Mail
 
-Hooks (\`src/custom/hooks.ts\`) and custom code send mail with \`sendMail\` from \`src/kit/mail.ts\`. It reads SMTP settings from the environment: \`SMTP_URL\` (\`smtp://user:password@host:587\`, or \`smtps://\` for TLS from the start) or \`SMTP_HOST\`, \`SMTP_PORT\`, \`SMTP_USER\` and \`SMTP_PASSWORD\`, plus \`MAIL_FROM\` (the sender). Any provider works; give its SPF, DKIM and DMARC records to the sender's domain so the mail arrives. Without settings nothing is sent: mails are written to \`data/mail/outbox\` as \`.eml\` files, which is what development and tests look at.
+Hooks (\`src/custom/hooks.ts\`) and custom code send mail with \`sendMail\` from \`src/kit/mail.ts\`. It reads SMTP settings from the environment: \`SMTP_URL\` (\`smtp://user:password@host:587\`, or \`smtps://\` for TLS from the start) or \`SMTP_HOST\`, \`SMTP_PORT\`, \`SMTP_USER\` and \`SMTP_PASSWORD\`, plus \`MAIL_FROM\` (the sender). Any provider works; give its SPF, DKIM and DMARC records to the sender's domain so the mail arrives. Without settings nothing is sent: mails are written to \`data/mail/outbox\` as \`.eml\` files, which is what development and tests look at. \`MAIL_MODE=outbox\` keeps them there with settings too; started with \`MAIL_MODE\` (\`outbox\`, \`testers\` where the mail server lets only testers through, or \`all\`), the app says on Import what happens to the addresses in a file.
 
 Browser push (\`to: push\`) needs no settings: the app makes a key pair at its first start and keeps it with its data, so a backup keeps everyone's subscriptions. To give your own, set \`PUSH_VAPID_PUBLIC_KEY\` and \`PUSH_VAPID_PRIVATE_KEY\` (and \`PUSH_VAPID_SUBJECT\`, the contact the push services may write to; \`MAIL_FROM\` otherwise). A new pair ends every subscription: people turn notifications on again under their name.
 
@@ -82093,7 +82093,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "LICENSES/hallmark-MIT.txt": "26d1de6b kit",
   "LICENSES/shadcn-ui.txt": "38dd653a kit",
   "LICENSES/tweakcn-Apache-2.0.txt": "dc4aedc0 kit",
-  "README.md": "f34a3e57 generated",
+  "README.md": "76299176 generated",
   "drizzle.config.ts": "0987fb48 kit",
   "package.json": "f840bb3a generated",
   "playwright.config.ts": "5ffef2a7 kit",
@@ -82172,7 +82172,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/FieldInput.tsx": "39e40fcb kit",
   "src/kit/FileInput.tsx": "5d567f82 kit",
   "src/kit/Filters.tsx": "0f5bfdfd kit",
-  "src/kit/ImportDialog.tsx": "d65da47a kit",
+  "src/kit/ImportDialog.tsx": "07f5864f kit",
   "src/kit/InlineRows.tsx": "5a097006 kit",
   "src/kit/Landing.tsx": "c991eeed kit",
   "src/kit/Live.tsx": "fbaa47cd kit",
@@ -82207,12 +82207,12 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/formats.ts": "2257fcc1 kit",
   "src/kit/formula.ts": "d73c0380 kit",
   "src/kit/hours.ts": "fac9ba0f kit",
-  "src/kit/import.server.ts": "7a5a3701 kit",
+  "src/kit/import.server.ts": "889830b2 kit",
   "src/kit/import.ts": "3f48e858 kit",
   "src/kit/limit.ts": "dafa01cd kit",
   "src/kit/live.server.ts": "474834ab kit",
   "src/kit/log.server.ts": "4d493425 kit",
-  "src/kit/mail.ts": "d005acf1 kit",
+  "src/kit/mail.ts": "6aa0d2af kit",
   "src/kit/model.ts": "4f517d82 kit",
   "src/kit/now.ts": "5ea87828 kit",
   "src/kit/origin.ts": "f7090ee4 kit",
@@ -82236,7 +82236,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/uploads.ts": "4e982bfe kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "a509a677 kit",
+  "src/kit/words/en.ts": "5a6224bb kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/app-card.server.ts": "ac4195c6 generated",
   "src/lib/app-card.ts": "93f0b476 generated",
@@ -82318,7 +82318,7 @@ In production, set \`BETTER_AUTH_SECRET\` (at least 32 random characters, e.g. \
 People type their address and get a six-digit code by mail, good for ten minutes and five tries. Signing in and signing up are the same form; who may sign up follows the app's sign-in settings, and anyone else is told the same and gets no mail. At most five codes an hour go to one address (and twenty to one network address): someone asking for a sixth waits. The codes go out through the app's mail settings (\`SMTP_URL\` and \`MAIL_FROM\`, see "Mail"); without them, in development, they land in \`data/mail/outbox\`, and in production the sign-in page says that it cannot send mail.
 ## Mail
 
-Hooks (\`src/custom/hooks.ts\`) and custom code send mail with \`sendMail\` from \`src/kit/mail.ts\`. It reads SMTP settings from the environment: \`SMTP_URL\` (\`smtp://user:password@host:587\`, or \`smtps://\` for TLS from the start) or \`SMTP_HOST\`, \`SMTP_PORT\`, \`SMTP_USER\` and \`SMTP_PASSWORD\`, plus \`MAIL_FROM\` (the sender). Any provider works; give its SPF, DKIM and DMARC records to the sender's domain so the mail arrives. Without settings nothing is sent: mails are written to \`data/mail/outbox\` as \`.eml\` files, which is what development and tests look at.
+Hooks (\`src/custom/hooks.ts\`) and custom code send mail with \`sendMail\` from \`src/kit/mail.ts\`. It reads SMTP settings from the environment: \`SMTP_URL\` (\`smtp://user:password@host:587\`, or \`smtps://\` for TLS from the start) or \`SMTP_HOST\`, \`SMTP_PORT\`, \`SMTP_USER\` and \`SMTP_PASSWORD\`, plus \`MAIL_FROM\` (the sender). Any provider works; give its SPF, DKIM and DMARC records to the sender's domain so the mail arrives. Without settings nothing is sent: mails are written to \`data/mail/outbox\` as \`.eml\` files, which is what development and tests look at. \`MAIL_MODE=outbox\` keeps them there with settings too; started with \`MAIL_MODE\` (\`outbox\`, \`testers\` where the mail server lets only testers through, or \`all\`), the app says on Import what happens to the addresses in a file.
 
 ## Limits
 
@@ -87574,7 +87574,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "LICENSES/hallmark-MIT.txt": "26d1de6b kit",
   "LICENSES/shadcn-ui.txt": "38dd653a kit",
   "LICENSES/tweakcn-Apache-2.0.txt": "dc4aedc0 kit",
-  "README.md": "c693a203 generated",
+  "README.md": "308c834a generated",
   "drizzle.config.ts": "0987fb48 kit",
   "package.json": "a1c55e4d generated",
   "playwright.config.ts": "5ffef2a7 kit",
@@ -87625,7 +87625,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/FieldInput.tsx": "39e40fcb kit",
   "src/kit/FileInput.tsx": "5d567f82 kit",
   "src/kit/Filters.tsx": "0f5bfdfd kit",
-  "src/kit/ImportDialog.tsx": "d65da47a kit",
+  "src/kit/ImportDialog.tsx": "07f5864f kit",
   "src/kit/InlineRows.tsx": "5a097006 kit",
   "src/kit/Inspector.tsx": "2425cac5 kit",
   "src/kit/Landing.tsx": "c991eeed kit",
@@ -87661,11 +87661,11 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/formats.ts": "2257fcc1 kit",
   "src/kit/formula.ts": "d73c0380 kit",
   "src/kit/grounded.ts": "5513d9ac kit",
-  "src/kit/import.server.ts": "7a5a3701 kit",
+  "src/kit/import.server.ts": "889830b2 kit",
   "src/kit/import.ts": "3f48e858 kit",
   "src/kit/limit.ts": "dafa01cd kit",
   "src/kit/log.server.ts": "4d493425 kit",
-  "src/kit/mail.ts": "d005acf1 kit",
+  "src/kit/mail.ts": "6aa0d2af kit",
   "src/kit/model.ts": "4f517d82 kit",
   "src/kit/now.ts": "5ea87828 kit",
   "src/kit/origin.ts": "f7090ee4 kit",
@@ -87688,7 +87688,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "a509a677 kit",
+  "src/kit/words/en.ts": "5a6224bb kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/app-card.server.ts": "f87d436f generated",
   "src/lib/app-card.ts": "93f0b476 generated",
@@ -87775,7 +87775,7 @@ The team page lists who has access and lets administrators invite people by emai
 Sign-up is closed (see \`selfSignUp\` under \`signIn\` in \`smithable.auth.yml\`): only invited addresses and the \`admins\` of \`smithable.auth.yml\` can sign in. Everyone else is refused at sign-in and told to ask an administrator. A demo (\`DEMO_SIGN_IN=1\`) is the exception: its "Try it as" buttons sign in demo users, who join whatever the setting says; set it only on a showcase app whose data is reset.
 ## Mail
 
-Hooks (\`src/custom/hooks.ts\`) and custom code send mail with \`sendMail\` from \`src/kit/mail.ts\`. It reads SMTP settings from the environment: \`SMTP_URL\` (\`smtp://user:password@host:587\`, or \`smtps://\` for TLS from the start) or \`SMTP_HOST\`, \`SMTP_PORT\`, \`SMTP_USER\` and \`SMTP_PASSWORD\`, plus \`MAIL_FROM\` (the sender). Any provider works; give its SPF, DKIM and DMARC records to the sender's domain so the mail arrives. Without settings nothing is sent: mails are written to \`data/mail/outbox\` as \`.eml\` files, which is what development and tests look at.
+Hooks (\`src/custom/hooks.ts\`) and custom code send mail with \`sendMail\` from \`src/kit/mail.ts\`. It reads SMTP settings from the environment: \`SMTP_URL\` (\`smtp://user:password@host:587\`, or \`smtps://\` for TLS from the start) or \`SMTP_HOST\`, \`SMTP_PORT\`, \`SMTP_USER\` and \`SMTP_PASSWORD\`, plus \`MAIL_FROM\` (the sender). Any provider works; give its SPF, DKIM and DMARC records to the sender's domain so the mail arrives. Without settings nothing is sent: mails are written to \`data/mail/outbox\` as \`.eml\` files, which is what development and tests look at. \`MAIL_MODE=outbox\` keeps them there with settings too; started with \`MAIL_MODE\` (\`outbox\`, \`testers\` where the mail server lets only testers through, or \`all\`), the app says on Import what happens to the addresses in a file.
 
 ## Limits
 
@@ -94402,7 +94402,7 @@ exports[`../../../examples/painter/smithable.yml > the generated files are as re
   "LICENSES/hallmark-MIT.txt": "26d1de6b kit",
   "LICENSES/shadcn-ui.txt": "38dd653a kit",
   "LICENSES/tweakcn-Apache-2.0.txt": "dc4aedc0 kit",
-  "README.md": "d6fe9018 generated",
+  "README.md": "576863d1 generated",
   "drizzle.config.ts": "0987fb48 kit",
   "package.json": "98cc3fb3 generated",
   "playwright.config.ts": "5ffef2a7 kit",
@@ -94468,7 +94468,7 @@ exports[`../../../examples/painter/smithable.yml > the generated files are as re
   "src/kit/FieldInput.tsx": "39e40fcb kit",
   "src/kit/FileInput.tsx": "5d567f82 kit",
   "src/kit/Filters.tsx": "0f5bfdfd kit",
-  "src/kit/ImportDialog.tsx": "d65da47a kit",
+  "src/kit/ImportDialog.tsx": "07f5864f kit",
   "src/kit/InlineRows.tsx": "5a097006 kit",
   "src/kit/Landing.tsx": "c991eeed kit",
   "src/kit/LegalPage.tsx": "f9a9df1e kit",
@@ -94500,11 +94500,11 @@ exports[`../../../examples/painter/smithable.yml > the generated files are as re
   "src/kit/format.ts": "b9e92275 kit",
   "src/kit/formats.ts": "2257fcc1 kit",
   "src/kit/formula.ts": "d73c0380 kit",
-  "src/kit/import.server.ts": "7a5a3701 kit",
+  "src/kit/import.server.ts": "889830b2 kit",
   "src/kit/import.ts": "3f48e858 kit",
   "src/kit/limit.ts": "dafa01cd kit",
   "src/kit/log.server.ts": "4d493425 kit",
-  "src/kit/mail.ts": "d005acf1 kit",
+  "src/kit/mail.ts": "6aa0d2af kit",
   "src/kit/model.ts": "4f517d82 kit",
   "src/kit/now.ts": "5ea87828 kit",
   "src/kit/origin.ts": "f7090ee4 kit",
@@ -94522,7 +94522,7 @@ exports[`../../../examples/painter/smithable.yml > the generated files are as re
   "src/kit/uploads.ts": "4e982bfe kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "a509a677 kit",
+  "src/kit/words/en.ts": "5a6224bb kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/app-card.server.ts": "fa86ab68 generated",
   "src/lib/app-card.ts": "93f0b476 generated",
@@ -94601,7 +94601,7 @@ In production, set \`BETTER_AUTH_SECRET\` (at least 32 random characters, e.g. \
 People type their address and get a six-digit code by mail, good for ten minutes and five tries. Signing in and signing up are the same form; who may sign up follows the app's sign-in settings, and anyone else is told the same and gets no mail. At most five codes an hour go to one address (and twenty to one network address): someone asking for a sixth waits. The codes go out through the app's mail settings (\`SMTP_URL\` and \`MAIL_FROM\`, see "Mail"); without them, in development, they land in \`data/mail/outbox\`, and in production the sign-in page says that it cannot send mail.
 ## Mail
 
-Hooks (\`src/custom/hooks.ts\`) and custom code send mail with \`sendMail\` from \`src/kit/mail.ts\`. It reads SMTP settings from the environment: \`SMTP_URL\` (\`smtp://user:password@host:587\`, or \`smtps://\` for TLS from the start) or \`SMTP_HOST\`, \`SMTP_PORT\`, \`SMTP_USER\` and \`SMTP_PASSWORD\`, plus \`MAIL_FROM\` (the sender). Any provider works; give its SPF, DKIM and DMARC records to the sender's domain so the mail arrives. Without settings nothing is sent: mails are written to \`data/mail/outbox\` as \`.eml\` files, which is what development and tests look at.
+Hooks (\`src/custom/hooks.ts\`) and custom code send mail with \`sendMail\` from \`src/kit/mail.ts\`. It reads SMTP settings from the environment: \`SMTP_URL\` (\`smtp://user:password@host:587\`, or \`smtps://\` for TLS from the start) or \`SMTP_HOST\`, \`SMTP_PORT\`, \`SMTP_USER\` and \`SMTP_PASSWORD\`, plus \`MAIL_FROM\` (the sender). Any provider works; give its SPF, DKIM and DMARC records to the sender's domain so the mail arrives. Without settings nothing is sent: mails are written to \`data/mail/outbox\` as \`.eml\` files, which is what development and tests look at. \`MAIL_MODE=outbox\` keeps them there with settings too; started with \`MAIL_MODE\` (\`outbox\`, \`testers\` where the mail server lets only testers through, or \`all\`), the app says on Import what happens to the addresses in a file.
 
 ## Limits
 
@@ -98526,7 +98526,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "LICENSES/hallmark-MIT.txt": "26d1de6b kit",
   "LICENSES/shadcn-ui.txt": "38dd653a kit",
   "LICENSES/tweakcn-Apache-2.0.txt": "dc4aedc0 kit",
-  "README.md": "812ffdb9 generated",
+  "README.md": "dc5f9838 generated",
   "drizzle.config.ts": "0987fb48 kit",
   "package.json": "f5422993 generated",
   "playwright.config.ts": "5ffef2a7 kit",
@@ -98573,7 +98573,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/Consent.tsx": "c5ee7e50 kit",
   "src/kit/FieldInput.tsx": "39e40fcb kit",
   "src/kit/Filters.tsx": "0f5bfdfd kit",
-  "src/kit/ImportDialog.tsx": "d65da47a kit",
+  "src/kit/ImportDialog.tsx": "07f5864f kit",
   "src/kit/InlineRows.tsx": "5a097006 kit",
   "src/kit/Inspector.tsx": "2425cac5 kit",
   "src/kit/Landing.tsx": "c991eeed kit",
@@ -98607,11 +98607,11 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/formats.ts": "2257fcc1 kit",
   "src/kit/formula.ts": "d73c0380 kit",
   "src/kit/grounded.ts": "5513d9ac kit",
-  "src/kit/import.server.ts": "7a5a3701 kit",
+  "src/kit/import.server.ts": "889830b2 kit",
   "src/kit/import.ts": "3f48e858 kit",
   "src/kit/limit.ts": "dafa01cd kit",
   "src/kit/log.server.ts": "4d493425 kit",
-  "src/kit/mail.ts": "d005acf1 kit",
+  "src/kit/mail.ts": "6aa0d2af kit",
   "src/kit/model.ts": "4f517d82 kit",
   "src/kit/now.ts": "5ea87828 kit",
   "src/kit/origin.ts": "f7090ee4 kit",
@@ -98631,7 +98631,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "a509a677 kit",
+  "src/kit/words/en.ts": "5a6224bb kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/app-card.server.ts": "57b7eaca generated",
   "src/lib/app-card.ts": "93f0b476 generated",
@@ -98707,7 +98707,7 @@ The team page lists who has access and lets administrators invite people by emai
 Sign-up is closed (see \`selfSignUp\` under \`signIn\` in \`smithable.auth.yml\`): only invited addresses and the \`admins\` of \`smithable.auth.yml\` can sign in. Everyone else is refused at sign-in and told to ask an administrator. A demo (\`DEMO_SIGN_IN=1\`) is the exception: its "Try it as" buttons sign in demo users, who join whatever the setting says; set it only on a showcase app whose data is reset.
 ## Mail
 
-Hooks (\`src/custom/hooks.ts\`) and custom code send mail with \`sendMail\` from \`src/kit/mail.ts\`. It reads SMTP settings from the environment: \`SMTP_URL\` (\`smtp://user:password@host:587\`, or \`smtps://\` for TLS from the start) or \`SMTP_HOST\`, \`SMTP_PORT\`, \`SMTP_USER\` and \`SMTP_PASSWORD\`, plus \`MAIL_FROM\` (the sender). Any provider works; give its SPF, DKIM and DMARC records to the sender's domain so the mail arrives. Without settings nothing is sent: mails are written to \`data/mail/outbox\` as \`.eml\` files, which is what development and tests look at.
+Hooks (\`src/custom/hooks.ts\`) and custom code send mail with \`sendMail\` from \`src/kit/mail.ts\`. It reads SMTP settings from the environment: \`SMTP_URL\` (\`smtp://user:password@host:587\`, or \`smtps://\` for TLS from the start) or \`SMTP_HOST\`, \`SMTP_PORT\`, \`SMTP_USER\` and \`SMTP_PASSWORD\`, plus \`MAIL_FROM\` (the sender). Any provider works; give its SPF, DKIM and DMARC records to the sender's domain so the mail arrives. Without settings nothing is sent: mails are written to \`data/mail/outbox\` as \`.eml\` files, which is what development and tests look at. \`MAIL_MODE=outbox\` keeps them there with settings too; started with \`MAIL_MODE\` (\`outbox\`, \`testers\` where the mail server lets only testers through, or \`all\`), the app says on Import what happens to the addresses in a file.
 
 ## Limits
 
@@ -105838,7 +105838,7 @@ exports[`../../../examples/restaurant/smithable.yml > the generated files are as
   "LICENSES/hallmark-MIT.txt": "26d1de6b kit",
   "LICENSES/shadcn-ui.txt": "38dd653a kit",
   "LICENSES/tweakcn-Apache-2.0.txt": "dc4aedc0 kit",
-  "README.md": "5d1bdf88 generated",
+  "README.md": "38d783e1 generated",
   "drizzle.config.ts": "0987fb48 kit",
   "package.json": "c199f139 generated",
   "playwright.config.ts": "5ffef2a7 kit",
@@ -105901,7 +105901,7 @@ exports[`../../../examples/restaurant/smithable.yml > the generated files are as
   "src/kit/Consent.tsx": "c5ee7e50 kit",
   "src/kit/FieldInput.tsx": "39e40fcb kit",
   "src/kit/Filters.tsx": "0f5bfdfd kit",
-  "src/kit/ImportDialog.tsx": "d65da47a kit",
+  "src/kit/ImportDialog.tsx": "07f5864f kit",
   "src/kit/InlineRows.tsx": "5a097006 kit",
   "src/kit/Landing.tsx": "c991eeed kit",
   "src/kit/ModelForm.tsx": "f90ea7e8 kit",
@@ -105930,11 +105930,11 @@ exports[`../../../examples/restaurant/smithable.yml > the generated files are as
   "src/kit/format.ts": "b9e92275 kit",
   "src/kit/formats.ts": "2257fcc1 kit",
   "src/kit/formula.ts": "d73c0380 kit",
-  "src/kit/import.server.ts": "7a5a3701 kit",
+  "src/kit/import.server.ts": "889830b2 kit",
   "src/kit/import.ts": "3f48e858 kit",
   "src/kit/limit.ts": "dafa01cd kit",
   "src/kit/log.server.ts": "4d493425 kit",
-  "src/kit/mail.ts": "d005acf1 kit",
+  "src/kit/mail.ts": "6aa0d2af kit",
   "src/kit/model.ts": "4f517d82 kit",
   "src/kit/now.ts": "5ea87828 kit",
   "src/kit/origin.ts": "f7090ee4 kit",
@@ -105950,7 +105950,7 @@ exports[`../../../examples/restaurant/smithable.yml > the generated files are as
   "src/kit/unused-samples.ts": "860c6650 kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "a509a677 kit",
+  "src/kit/words/en.ts": "5a6224bb kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/app-card.server.ts": "4e0e6697 generated",
   "src/lib/app-card.ts": "93f0b476 generated",
@@ -106035,7 +106035,7 @@ The team page lists who has access and lets administrators invite people by emai
 Sign-up is closed (see \`selfSignUp\` under \`signIn\` in \`smithable.auth.yml\`): only invited addresses and the \`admins\` of \`smithable.auth.yml\` can sign in. Everyone else is refused at sign-in and told to ask an administrator. A demo (\`DEMO_SIGN_IN=1\`) is the exception: its "Try it as" buttons sign in demo users, who join whatever the setting says; set it only on a showcase app whose data is reset.
 ## Mail
 
-Hooks (\`src/custom/hooks.ts\`) and custom code send mail with \`sendMail\` from \`src/kit/mail.ts\`. It reads SMTP settings from the environment: \`SMTP_URL\` (\`smtp://user:password@host:587\`, or \`smtps://\` for TLS from the start) or \`SMTP_HOST\`, \`SMTP_PORT\`, \`SMTP_USER\` and \`SMTP_PASSWORD\`, plus \`MAIL_FROM\` (the sender). Any provider works; give its SPF, DKIM and DMARC records to the sender's domain so the mail arrives. Without settings nothing is sent: mails are written to \`data/mail/outbox\` as \`.eml\` files, which is what development and tests look at.
+Hooks (\`src/custom/hooks.ts\`) and custom code send mail with \`sendMail\` from \`src/kit/mail.ts\`. It reads SMTP settings from the environment: \`SMTP_URL\` (\`smtp://user:password@host:587\`, or \`smtps://\` for TLS from the start) or \`SMTP_HOST\`, \`SMTP_PORT\`, \`SMTP_USER\` and \`SMTP_PASSWORD\`, plus \`MAIL_FROM\` (the sender). Any provider works; give its SPF, DKIM and DMARC records to the sender's domain so the mail arrives. Without settings nothing is sent: mails are written to \`data/mail/outbox\` as \`.eml\` files, which is what development and tests look at. \`MAIL_MODE=outbox\` keeps them there with settings too; started with \`MAIL_MODE\` (\`outbox\`, \`testers\` where the mail server lets only testers through, or \`all\`), the app says on Import what happens to the addresses in a file.
 
 ## Limits
 
@@ -120372,7 +120372,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "LICENSES/hallmark-MIT.txt": "26d1de6b kit",
   "LICENSES/shadcn-ui.txt": "38dd653a kit",
   "LICENSES/tweakcn-Apache-2.0.txt": "dc4aedc0 kit",
-  "README.md": "be472d56 generated",
+  "README.md": "07adc3df generated",
   "drizzle.config.ts": "0987fb48 kit",
   "package.json": "80b7f102 generated",
   "playwright.config.ts": "5ffef2a7 kit",
@@ -120448,7 +120448,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/Dashboard.tsx": "98bcd927 kit",
   "src/kit/FieldInput.tsx": "39e40fcb kit",
   "src/kit/Filters.tsx": "0f5bfdfd kit",
-  "src/kit/ImportDialog.tsx": "d65da47a kit",
+  "src/kit/ImportDialog.tsx": "07f5864f kit",
   "src/kit/InlineRows.tsx": "5a097006 kit",
   "src/kit/Inspector.tsx": "2425cac5 kit",
   "src/kit/Keys.tsx": "f32c246d kit",
@@ -120488,11 +120488,11 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/formats.ts": "2257fcc1 kit",
   "src/kit/formula.ts": "d73c0380 kit",
   "src/kit/grounded.ts": "5513d9ac kit",
-  "src/kit/import.server.ts": "7a5a3701 kit",
+  "src/kit/import.server.ts": "889830b2 kit",
   "src/kit/import.ts": "3f48e858 kit",
   "src/kit/limit.ts": "dafa01cd kit",
   "src/kit/log.server.ts": "4d493425 kit",
-  "src/kit/mail.ts": "d005acf1 kit",
+  "src/kit/mail.ts": "6aa0d2af kit",
   "src/kit/mcp.server.ts": "2e063918 kit",
   "src/kit/model.ts": "4f517d82 kit",
   "src/kit/now.ts": "5ea87828 kit",
@@ -120513,7 +120513,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "a509a677 kit",
+  "src/kit/words/en.ts": "5a6224bb kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/app-card.server.ts": "944abfcc generated",
   "src/lib/app-card.ts": "93f0b476 generated",
@@ -120615,7 +120615,7 @@ The team page lists who has access and lets administrators invite people by emai
 Sign-up is closed (see \`selfSignUp\` under \`signIn\` in \`smithable.auth.yml\`): only invited addresses and the \`admins\` of \`smithable.auth.yml\` can sign in. Everyone else is refused at sign-in and told to ask an administrator. A demo (\`DEMO_SIGN_IN=1\`) is the exception: its "Try it as" buttons sign in demo users, who join whatever the setting says; set it only on a showcase app whose data is reset.
 ## Mail
 
-Hooks (\`src/custom/hooks.ts\`) and custom code send mail with \`sendMail\` from \`src/kit/mail.ts\`. It reads SMTP settings from the environment: \`SMTP_URL\` (\`smtp://user:password@host:587\`, or \`smtps://\` for TLS from the start) or \`SMTP_HOST\`, \`SMTP_PORT\`, \`SMTP_USER\` and \`SMTP_PASSWORD\`, plus \`MAIL_FROM\` (the sender). Any provider works; give its SPF, DKIM and DMARC records to the sender's domain so the mail arrives. Without settings nothing is sent: mails are written to \`data/mail/outbox\` as \`.eml\` files, which is what development and tests look at.
+Hooks (\`src/custom/hooks.ts\`) and custom code send mail with \`sendMail\` from \`src/kit/mail.ts\`. It reads SMTP settings from the environment: \`SMTP_URL\` (\`smtp://user:password@host:587\`, or \`smtps://\` for TLS from the start) or \`SMTP_HOST\`, \`SMTP_PORT\`, \`SMTP_USER\` and \`SMTP_PASSWORD\`, plus \`MAIL_FROM\` (the sender). Any provider works; give its SPF, DKIM and DMARC records to the sender's domain so the mail arrives. Without settings nothing is sent: mails are written to \`data/mail/outbox\` as \`.eml\` files, which is what development and tests look at. \`MAIL_MODE=outbox\` keeps them there with settings too; started with \`MAIL_MODE\` (\`outbox\`, \`testers\` where the mail server lets only testers through, or \`all\`), the app says on Import what happens to the addresses in a file.
 
 ## Limits
 
@@ -128479,7 +128479,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "LICENSES/hallmark-MIT.txt": "26d1de6b kit",
   "LICENSES/shadcn-ui.txt": "38dd653a kit",
   "LICENSES/tweakcn-Apache-2.0.txt": "dc4aedc0 kit",
-  "README.md": "5a2b27f0 generated",
+  "README.md": "919e3cd9 generated",
   "drizzle.config.ts": "0987fb48 kit",
   "package.json": "1bc9ee5d generated",
   "playwright.config.ts": "5ffef2a7 kit",
@@ -128544,7 +128544,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/FieldInput.tsx": "39e40fcb kit",
   "src/kit/FileInput.tsx": "5d567f82 kit",
   "src/kit/Filters.tsx": "0f5bfdfd kit",
-  "src/kit/ImportDialog.tsx": "d65da47a kit",
+  "src/kit/ImportDialog.tsx": "07f5864f kit",
   "src/kit/InlineRows.tsx": "5a097006 kit",
   "src/kit/Inspector.tsx": "2425cac5 kit",
   "src/kit/Live.tsx": "fbaa47cd kit",
@@ -128581,12 +128581,12 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/formats.ts": "2257fcc1 kit",
   "src/kit/formula.ts": "d73c0380 kit",
   "src/kit/grounded.ts": "5513d9ac kit",
-  "src/kit/import.server.ts": "7a5a3701 kit",
+  "src/kit/import.server.ts": "889830b2 kit",
   "src/kit/import.ts": "3f48e858 kit",
   "src/kit/limit.ts": "dafa01cd kit",
   "src/kit/live.server.ts": "474834ab kit",
   "src/kit/log.server.ts": "4d493425 kit",
-  "src/kit/mail.ts": "d005acf1 kit",
+  "src/kit/mail.ts": "6aa0d2af kit",
   "src/kit/model.ts": "4f517d82 kit",
   "src/kit/now.ts": "5ea87828 kit",
   "src/kit/origin.ts": "f7090ee4 kit",
@@ -128611,7 +128611,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "a509a677 kit",
+  "src/kit/words/en.ts": "5a6224bb kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/app-card.server.ts": "eb1c3b3c generated",
   "src/lib/app-card.ts": "93f0b476 generated",

@@ -5,7 +5,8 @@
 // "Stillwater Yoga <hello@stillwater.ax>". Without SMTP settings nothing leaves the machine: each
 // mail is written to DATA_DIR/mail/outbox as a .eml file, which is how development and the tests
 // see what would have been sent. In production that also happens, with a warning, so a hook
-// never fails a request over a missing mail setting.
+// never fails a request over a missing mail setting. MAIL_MODE=outbox keeps every mail there with
+// SMTP settings too (any MAIL_MODE but testers or all), and Import says so (mailMode).
 import { mkdirSync, readdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { createTransport } from "nodemailer";
@@ -35,8 +36,13 @@ const outboxDir = () => join(ownDataDir(), "mail", "outbox");
  */
 const WAITS = { connectionTimeout: 10_000, greetingTimeout: 10_000, socketTimeout: 30_000 };
 
+/** A MAIL_MODE other than testers or all (outbox, or one unknown) keeps every mail in the outbox. */
+const sends = (mode = process.env.MAIL_MODE?.trim()) =>
+  !mode || mode === "testers" || mode === "all";
+
 function smtp() {
   const env = process.env;
+  if (!sends()) return undefined;
   if (env.SMTP_URL) {
     const url = new URL(env.SMTP_URL);
     for (const [key, ms] of Object.entries(WAITS))
@@ -59,9 +65,21 @@ function smtp() {
   return undefined;
 }
 
-/** Whether mail leaves the machine: the app has SMTP settings. */
+/** Whether mail leaves the machine: the app has SMTP settings, and no MAIL_MODE that holds it. */
 export function mailConfigured(): boolean {
   return smtp() !== undefined;
+}
+
+/**
+ * The mail mode the app was started with (MAIL_MODE), for whoever imports addresses to see before
+ * they go in: "held" (kept in the outbox, nobody mailed), "testers" (only the testers its mail
+ * server lets through) or "all". Nothing when MAIL_MODE is not set; outbox, an unknown value, or an
+ * app without SMTP settings is held, and smtp() keeps those mails in the outbox.
+ */
+export function mailMode(): "held" | "testers" | "all" | undefined {
+  const mode = process.env.MAIL_MODE?.trim();
+  if (!mode) return undefined;
+  return (mode === "testers" || mode === "all") && mailConfigured() ? mode : "held";
 }
 
 /** Sends a mail, or writes it to the outbox when the app has no SMTP settings. */
