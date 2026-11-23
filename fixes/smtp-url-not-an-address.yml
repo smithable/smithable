@@ -1,0 +1,8 @@
+id: smtp-url-not-an-address
+title: An SMTP_URL that was not an address made every change that sends mail fail.
+severity: fix
+exposure: none
+introduced: unknown
+affects:
+  kit: [src/kit/mail.ts]
+migration: none

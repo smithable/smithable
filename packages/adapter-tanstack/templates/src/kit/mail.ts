@@ -47,7 +47,12 @@ function smtp() {
   const env = process.env;
   if (!sends()) return undefined;
   if (env.SMTP_URL) {
-    const url = new URL(env.SMTP_URL);
+    // An SMTP_URL that is no address sends nothing: the mail is held, as Import says, and logged.
+    const url = URL.parse(env.SMTP_URL);
+    if (!url) {
+      log.error("SMTP_URL is not an address: mail is held in the outbox");
+      return undefined;
+    }
     for (const [key, ms] of Object.entries(WAITS))
       if (!url.searchParams.has(key)) url.searchParams.set(key, String(ms));
     return url.toString();
@@ -83,12 +88,7 @@ export function mailMode(): "held" | "testers" | "all" | undefined {
   const mode = process.env.MAIL_MODE;
   if (mode === undefined) return undefined;
   if (mode !== "testers" && mode !== "all") return "held";
-  // SMTP_URL that is no address sends nothing either; the import goes on and says so.
-  try {
-    return mailConfigured() ? mode : "held";
-  } catch {
-    return "held";
-  }
+  return mailConfigured() ? mode : "held";
 }
 
 /** Sends a mail, or writes it to the outbox when the app has no SMTP settings. */

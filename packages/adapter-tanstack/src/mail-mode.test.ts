@@ -23,7 +23,7 @@ vi.mock("node:fs", () => ({
   readdirSync: () => [],
   readFileSync: () => "",
 }));
-vi.mock("../templates/src/kit/log.server", () => ({ log: { warn() {}, info() {} } }));
+vi.mock("../templates/src/kit/log.server", () => ({ log: { warn() {}, info() {}, error() {} } }));
 vi.mock("../templates/src/kit/visitor", () => ({ ownDataDir: () => "/data" }));
 
 type Kit = {
@@ -67,13 +67,20 @@ test("MAIL_MODE blank, mistyped or outbox holds the mail in the outbox though SM
   expect(m.held.every((f) => f.startsWith("/data/mail/outbox/") && f.endsWith(".eml"))).toBe(true);
 });
 
-test("MAIL_MODE testers or all sends; an SMTP_URL that is no address reads held, not an error", async () => {
-  vi.stubEnv("MAIL_MODE", "testers");
-  let k = await kit();
-  await k.sendMail(mail);
-  expect(m.smtp).toHaveLength(1);
-  expect(k.mailMode()).toBe("testers");
-  vi.stubEnv("SMTP_URL", "not an address");
-  k = await kit();
-  expect(k.mailMode()).toBe("held");
+test("MAIL_MODE testers or all sends; an SMTP_URL that is no address holds the mail, as Import says", async () => {
+  for (const mode of ["testers", "all"]) {
+    vi.stubEnv("MAIL_MODE", mode);
+    vi.stubEnv("SMTP_URL", "smtp://user:secret@smtp.example.com:587");
+    let k = await kit();
+    await k.sendMail(mail);
+    expect(m.smtp, mode).toHaveLength(1);
+    expect(k.mailMode(), mode).toBe(mode);
+    vi.stubEnv("SMTP_URL", "not an address");
+    k = await kit();
+    expect(k.mailMode(), mode).toBe("held");
+    await k.sendMail(mail);
+    expect(m.smtp, mode).toHaveLength(1);
+    m.smtp = [];
+  }
+  expect(m.held).toHaveLength(2);
 });
