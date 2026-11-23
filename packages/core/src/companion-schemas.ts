@@ -881,7 +881,7 @@ export const CONTENT_SCHEMA: JsonSchema = {
     initials: {
       title: "Initials",
       type: "string",
-      pattern: "^(?!.*[\\uFE0F\\u20E3])(?:[\\p{L}\\p{Nd}]\\p{M}*){1,2}$",
+      pattern: "^(?!.*[\\uFE0F\\u20E3])(?:[\\p{L}\\p{Nd}]\\p{M}{0,3}){1,2}$",
       description:
         "The one or two letters on the app's tile, its tab icon; nothing said, the first letters of its name's first two words (smithable validate --explain says which).",
     },
