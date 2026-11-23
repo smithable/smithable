@@ -57,6 +57,7 @@ export interface LandingFooter {
   text?: string;
   links: { label?: string; link?: string }[];
   texts?: string;
+  contactBand?: boolean;
 }
 
 /** The page frame: the app's name, a link into the app, the sections and the footer. */
@@ -121,6 +122,7 @@ function LandingLayoutView({
   const clear = onHero && !open;
   const menu = (site?.menu ?? []).filter((m) => !m.access || allows(m.access, viewer ?? null));
   const contact = site?.contact;
+  const contactBand = footer?.contactBand && contact !== undefined;
   // Columns when there is something to put in them; otherwise the one line it always had.
   const columns = menu.length > 0 || contact !== undefined;
   const named = logo ? (
@@ -313,10 +315,25 @@ function LandingLayoutView({
         )}
       </header>
       <main className="flex-1">{children}</main>
-      <footer data-part="footer" className="border-t">
+      <footer
+        data-part="footer"
+        className={cn(
+          "border-t",
+          contactBand && "bg-muted text-foreground [&_.text-muted-foreground]:text-foreground",
+        )}
+      >
         {columns ? (
           <div className="mx-auto max-w-(--landing-width) px-5 py-12 text-sm">
-            <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-3">
+            <div
+              className={cn(
+                "grid gap-10 sm:grid-cols-2 lg:grid-cols-3",
+                contactBand &&
+                  contact?.hours &&
+                  menu.length > 0 &&
+                  (footer?.text || footerLinks) &&
+                  "lg:grid-cols-4",
+              )}
+            >
               <div className="space-y-2">
                 <p className="text-base font-semibold">{appName}</p>
                 {contact?.address && <p className="text-muted-foreground">{contact.address}</p>}
@@ -340,8 +357,16 @@ function LandingLayoutView({
                     </a>
                   </p>
                 )}
-                {contact?.hours && <p className="text-muted-foreground">{contact.hours}</p>}
+                {!contactBand && contact?.hours && (
+                  <p className="text-muted-foreground">{contact.hours}</p>
+                )}
               </div>
+              {contactBand && contact?.hours && (
+                <div className="space-y-2">
+                  <h2 className="text-base font-semibold">{w.openingHours}</h2>
+                  <p className="whitespace-pre-line">{contact.hours}</p>
+                </div>
+              )}
               {menu.length > 0 && (
                 <nav aria-label={w.pages} className="space-y-2">
                   <p className="text-base font-semibold">{w.pages}</p>

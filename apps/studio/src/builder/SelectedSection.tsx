@@ -39,12 +39,14 @@ export function selectedSection(selection: Selection | undefined, spec: Spec) {
   const picked = /^section:([^.]+)\.(.+)$/.exec(selection?.concept ?? "");
   if (!picked || !spec.ir) return;
   const [, page = "", name = ""] = picked;
-  const section = spec.ir.pages
-    .find((item) => item.id === page)
-    ?.sections.find((item) => item.name === name);
+  const sections = spec.ir.pages.find((item) => item.id === page)?.sections;
+  const section =
+    sections?.find((item) => item.name === name) ??
+    (name === "@footer" ? sections?.find((item) => item.kind === "footer") : undefined);
   if (!section) return;
+  const sectionName = section.name;
   const looks = SECTION_LOOKS[section.kind] ?? {};
-  const look = (spec.ux?.pages[page]?.looks?.[name] ?? {}) as Record<string, unknown>;
+  const look = (spec.ux?.pages[page]?.looks?.[sectionName] ?? {}) as Record<string, unknown>;
   const layout = String(look.layout ?? (Array.isArray(looks.layout) ? looks.layout[0] : ""));
   // A hero's tiles are its two or three shortcuts, and its stage a list everyone sees: a layout
   // the section cannot take is not offered (T1196), unless it is the one it has.
@@ -57,11 +59,23 @@ export function selectedSection(selection: Selection | undefined, spec: Spec) {
     (value === "tiles"
       ? shortcuts >= 2 && shortcuts <= 3
       : value !== "stage" || Boolean(stagePage(ir)));
+  const landings =
+    section.kind === "footer" ? ir.pages.filter((item) => item.pattern.kind === "landing") : [];
+  const siteHome =
+    landings.find((item) => spec.auth?.public.pages.includes(item.id)) ?? landings[0];
+  const contactName = siteHome?.sections.find((item) => item.kind === "contact")?.name;
+  const contact =
+    siteHome && contactName ? spec.content?.pages[siteHome.id]?.sections?.[contactName] : undefined;
   const choices = Object.keys(KEYS).flatMap((key) => {
     const all = looks[key];
     if (!Array.isArray(all)) return [];
     if (key === "mark" && !spec.content?.logo)
       return look.mark === "logo" ? [{ key, values: ["title"], current: "logo" }] : [];
+    if (
+      section.kind === "footer" &&
+      ![contact?.address, contact?.phone, contact?.email, contact?.hours].some(Boolean)
+    )
+      return layout === "contactBand" ? [{ key, values: ["standard"], current: layout }] : [];
     const values = all.filter((value) => applies(key, String(value)));
     // A hero's picture has a side only beside its text.
     if (section.kind === "hero" && key === "image" && !["split", "inset"].includes(layout))
@@ -78,7 +92,7 @@ export function selectedSection(selection: Selection | undefined, spec: Spec) {
     const current = look[key] ?? (key === "band" ? "none" : values[0]);
     return [{ key, values: values.map(String), current: String(current) }];
   });
-  const content = spec.content?.pages[page]?.sections?.[name];
+  const content = spec.content?.pages[page]?.sections?.[sectionName];
   const itemPictures =
     section.kind === "features"
       ? (content?.items ?? []).map((item, index) => ({
@@ -90,9 +104,9 @@ export function selectedSection(selection: Selection | undefined, spec: Spec) {
       : [];
   return {
     page,
-    section: name,
+    section: sectionName,
     kind: section.kind,
-    label: selection?.label?.trim() || humanize(name),
+    label: selection?.label?.trim() || humanize(sectionName),
     choices,
     // A section with a picture of its own, and the one it has (none: the section shows its text).
     itemPictures,
@@ -102,6 +116,11 @@ export function selectedSection(selection: Selection | undefined, spec: Spec) {
 
 const named = (kind: string, key: string, value: string) =>
   (kind === "hero" && key === "layout" ? HERO_LAYOUTS[value] : undefined) ??
+  (kind === "footer" && key === "layout"
+    ? value === "contactBand"
+      ? "Contact band"
+      : "Standard footer"
+    : undefined) ??
   (key === "height" ? HEIGHTS[value] : undefined) ??
   humanize(value);
 

@@ -1332,10 +1332,18 @@ exports[`../../../examples/api/smithable.yml > file list and generated code > sr
 // spec's field names, amounts as decimal texts, times as ISO texts) and their values back, checked
 // by each model's own schema, as a form's are.
 import { BadInput } from "#/kit/api.server";
+import { isoIn } from "#/kit/zoned";
 import { projectSchema } from "#/generated/project.schema";
 import { taskSchema } from "#/generated/task.schema";
 import { noteSchema } from "#/generated/note.schema";
 
+/** A stored moment as the API gives it: with UTC's offset, and its milliseconds when it has any. */
+export function momentOut(v: unknown): string | null {
+  if (!(v instanceof Date)) return (v as string | null) ?? null;
+  const text = isoIn(v, "UTC");
+  const ms = v.getUTCMilliseconds();
+  return ms ? \`\${text.slice(0, -6)}.\${String(ms).padStart(3, "0")}\${text.slice(-6)}\` : text;
+}
 const whole = (v: unknown, field: string) => {
   if (Number.isInteger(v)) return v as number;
   throw new BadInput(\`"\${field}" must be a record's id, a whole number.\`);
@@ -1359,8 +1367,8 @@ export function projectToApi(row: Record<string, any>) {
     id: row.id as number,
     name: row.name ?? null,
     description: row.description ?? null,
-    createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
-    updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : row.updatedAt,
+    createdAt: momentOut(row.createdAt),
+    updatedAt: momentOut(row.updatedAt),
   };
 }
 
@@ -1396,8 +1404,8 @@ export function taskToApi(row: Record<string, any>) {
     dueDate: row.dueDate ?? null,
     assignee: row.assigneeId ?? null,
     details: row.details ?? null,
-    createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
-    updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : row.updatedAt,
+    createdAt: momentOut(row.createdAt),
+    updatedAt: momentOut(row.updatedAt),
   };
 }
 
@@ -1442,8 +1450,8 @@ export function noteToApi(row: Record<string, any>) {
     title: row.title ?? null,
     project: row.projectId ?? null,
     body: row.body ?? null,
-    createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
-    updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : row.updatedAt,
+    createdAt: momentOut(row.createdAt),
+    updatedAt: momentOut(row.updatedAt),
   };
 }
 
@@ -5192,10 +5200,18 @@ import { projectUi } from "./project";
 import { taskUi } from "./task";
 import { runComplete } from "./actions/complete.server";
 import { runReopen } from "./actions/reopen.server";
+import { isoIn } from "#/kit/zoned";
 import { projectSchema } from "#/generated/project.schema";
 import { taskSchema } from "#/generated/task.schema";
 import { noteSchema } from "#/generated/note.schema";
 
+/** A stored moment as the API gives it: with UTC's offset, and its milliseconds when it has any. */
+export function momentOut(v: unknown): string | null {
+  if (!(v instanceof Date)) return (v as string | null) ?? null;
+  const text = isoIn(v, "UTC");
+  const ms = v.getUTCMilliseconds();
+  return ms ? \`\${text.slice(0, -6)}.\${String(ms).padStart(3, "0")}\${text.slice(-6)}\` : text;
+}
 const whole = (v: unknown, field: string) => {
   if (Number.isInteger(v)) return v as number;
   throw new BadInput(\`"\${field}" must be a record's id, a whole number.\`);
@@ -5219,8 +5235,8 @@ export function projectToApi(row: Record<string, any>) {
     id: row.id as number,
     name: row.name ?? null,
     description: row.description ?? null,
-    createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
-    updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : row.updatedAt,
+    createdAt: momentOut(row.createdAt),
+    updatedAt: momentOut(row.updatedAt),
   };
 }
 
@@ -5256,8 +5272,8 @@ export function taskToApi(row: Record<string, any>) {
     dueDate: row.dueDate ?? null,
     assignee: row.assigneeId ?? null,
     details: row.details ?? null,
-    createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
-    updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : row.updatedAt,
+    createdAt: momentOut(row.createdAt),
+    updatedAt: momentOut(row.updatedAt),
   };
 }
 
@@ -5302,8 +5318,8 @@ export function noteToApi(row: Record<string, any>) {
     title: row.title ?? null,
     project: row.projectId ?? null,
     body: row.body ?? null,
-    createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
-    updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : row.updatedAt,
+    createdAt: momentOut(row.createdAt),
+    updatedAt: momentOut(row.updatedAt),
   };
 }
 
@@ -14089,9 +14105,9 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/generated/actions/reopen.server.ts": "6d1e193a generated",
   "src/generated/actions/reopen.ts": "3317e68c generated",
   "src/generated/activity.server.ts": "3bfe13cf generated",
-  "src/generated/api.server.ts": "d3d27b03 generated",
+  "src/generated/api.server.ts": "c927ab08 generated",
   "src/generated/app.ts": "547ab03a generated",
-  "src/generated/ask.server.ts": "4f092194 generated",
+  "src/generated/ask.server.ts": "d1d6d1d5 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/dev-door.server.ts": "4ab97120 generated",
   "src/generated/hooks.ts": "d6804a3c generated",
@@ -21949,7 +21965,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/Filters.tsx": "0f5bfdfd kit",
   "src/kit/ImportDialog.tsx": "d65da47a kit",
   "src/kit/InlineRows.tsx": "5a097006 kit",
-  "src/kit/Landing.tsx": "38a19fe5 kit",
+  "src/kit/Landing.tsx": "d1b83dac kit",
   "src/kit/LegalPage.tsx": "f9a9df1e kit",
   "src/kit/Live.tsx": "fbaa47cd kit",
   "src/kit/ModelForm.tsx": "f90ea7e8 kit",
@@ -23796,6 +23812,7 @@ import { messageUi } from "./message";
 import { postUi } from "./post";
 import { sessionUi } from "./session";
 import { runPublish } from "./actions/publish.server";
+import { instantOf, isoIn } from "#/kit/zoned";
 import { classTypeSchema } from "#/generated/class-type.schema";
 import { instructorSchema } from "#/generated/instructor.schema";
 import { sessionSchema } from "#/generated/session.schema";
@@ -23803,6 +23820,13 @@ import { bookingSchema } from "#/generated/booking.schema";
 import { postSchema } from "#/generated/post.schema";
 import { messageSchema } from "#/generated/message.schema";
 
+/** A stored moment as the API gives it: with Europe/Mariehamn's offset, and its milliseconds when it has any. */
+export function momentOut(v: unknown): string | null {
+  if (!(v instanceof Date)) return (v as string | null) ?? null;
+  const text = isoIn(v, "Europe/Mariehamn");
+  const ms = v.getUTCMilliseconds();
+  return ms ? \`\${text.slice(0, -6)}.\${String(ms).padStart(3, "0")}\${text.slice(-6)}\` : text;
+}
 const whole = (v: unknown, field: string) => {
   if (Number.isInteger(v)) return v as number;
   throw new BadInput(\`"\${field}" must be a record's id, a whole number.\`);
@@ -23811,10 +23835,25 @@ const userId = (v: unknown, field: string) => {
   if (typeof v === "string" && v.length > 0) return v;
   throw new BadInput(\`"\${field}" must be a user's id, a nonempty text.\`);
 };
+/**
+ * An ISO date and time, on a day the calendar has (JavaScript would roll 30 February over); one
+ * without an offset is a wall time in the app's zone, seconds kept.
+ */
 const moment = (v: unknown, field: string) => {
-  const d = typeof v === "string" ? new Date(v) : undefined;
+  const parts =
+    typeof v === "string"
+      ? /^(\\d{4}-\\d{2}-\\d{2})T(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(Z|[+-]\\d{2}:\\d{2})?$/.exec(v)
+      : null;
+  const at = parts ? Date.parse(parts[2] ? parts[0] : \`\${parts[0]}Z\`) : Number.NaN;
+  const day = parts ? Date.parse(\`\${parts[1]}T00:00:00Z\`) : Number.NaN;
+  const d =
+    !parts || !Number.isFinite(at) || !Number.isFinite(day) || new Date(day).toISOString().slice(0, 10) !== parts[1]
+      ? undefined
+      : parts[2]
+        ? new Date(at)
+        : new Date(instantOf(parts[0], "Europe/Mariehamn").getTime() + at - Date.parse(\`\${parts[0].slice(0, 16)}:00Z\`));
   if (d && !Number.isNaN(d.getTime())) return d;
-  throw new BadInput(\`"\${field}" must be a date and time, like "2026-10-04T09:30:00Z".\`);
+  throw new BadInput(\`"\${field}" must be a date and time, like "2026-10-04T09:30" (in Europe/Mariehamn) or "2026-10-04T09:30:00Z".\`);
 };
 
 /** The body as an object of known fields, or a refusal naming the first unknown one. */
@@ -23833,8 +23872,8 @@ export function classTypeToApi(row: Record<string, any>) {
     summary: row.summary ?? null,
     level: row.level ?? null,
     durationMinutes: row.durationMinutes ?? null,
-    createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
-    updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : row.updatedAt,
+    createdAt: momentOut(row.createdAt),
+    updatedAt: momentOut(row.updatedAt),
   };
 }
 
@@ -23872,8 +23911,8 @@ export function instructorToApi(row: Record<string, any>) {
     id: row.id as number,
     name: row.name ?? null,
     bio: row.bio ?? null,
-    createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
-    updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : row.updatedAt,
+    createdAt: momentOut(row.createdAt),
+    updatedAt: momentOut(row.updatedAt),
   };
 }
 
@@ -23905,11 +23944,11 @@ export function sessionToApi(row: Record<string, any>) {
     id: row.id as number,
     classType: row.classTypeId ?? null,
     instructor: row.instructorId ?? null,
-    startsAt: row.startsAt instanceof Date ? row.startsAt.toISOString() : (row.startsAt ?? null),
+    startsAt: momentOut(row.startsAt),
     capacity: row.capacity ?? null,
     placesLeft: row.placesLeft ?? null,
-    createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
-    updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : row.updatedAt,
+    createdAt: momentOut(row.createdAt),
+    updatedAt: momentOut(row.updatedAt),
   };
 }
 
@@ -23947,8 +23986,8 @@ export function bookingToApi(row: Record<string, any>) {
     id: row.id as number,
     session: row.sessionId ?? null,
     attendee: row.attendeeId ?? null,
-    createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
-    updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : row.updatedAt,
+    createdAt: momentOut(row.createdAt),
+    updatedAt: momentOut(row.updatedAt),
   };
 }
 
@@ -23984,8 +24023,8 @@ export function postToApi(row: Record<string, any>) {
     body: row.body ?? null,
     publishedOn: row.publishedOn ?? null,
     status: row.status ?? null,
-    createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
-    updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : row.updatedAt,
+    createdAt: momentOut(row.createdAt),
+    updatedAt: momentOut(row.updatedAt),
   };
 }
 
@@ -24030,8 +24069,8 @@ export function messageToApi(row: Record<string, any>) {
     name: row.name ?? null,
     email: row.email ?? null,
     message: row.message ?? null,
-    createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
-    updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : row.updatedAt,
+    createdAt: momentOut(row.createdAt),
+    updatedAt: momentOut(row.updatedAt),
   };
 }
 
@@ -24066,7 +24105,7 @@ export function messageFromApi(body: unknown, current?: Record<string, unknown>)
  */
 const OFFERS: Record<string, Offer & { describe: Record<string, string> }> = {
   "admin": {
-    "summary": "Stillwater Yoga: Class schedule and online booking for a small yoga studio.\\nClassType (class types): name*, summary, level* (beginner | allLevels | advanced), durationMinutes* (number). Title: name.\\nInstructor (instructors): name*, bio, portrait (picture). Title: name.\\nSession (sessions): classType* -> ClassType, instructor* -> Instructor, startsAt* (datetime), capacity* (number), placesLeft (number, computed). Title: id.\\nBooking (bookings): session* -> Session, attendee -> User. Title: id.\\nPost (posts): title*, address, summary, cover (picture), body*, publishedOn (date), status* (draft | published). Title: title.\\nMessage (messages): name*, email*, message*. Title: name.\\n* required. You act as someone with the role admin.\\nAnswer with what a tool returned; a number, a name or \\"none\\" you did not get from a tool is not an answer.",
+    "summary": "Stillwater Yoga: Class schedule and online booking for a small yoga studio.\\nClassType (class types): name*, summary, level* (beginner | allLevels | advanced), durationMinutes* (number). Title: name.\\nInstructor (instructors): name*, bio, portrait (picture). Title: name.\\nSession (sessions): classType* -> ClassType, instructor* -> Instructor, startsAt* (datetime), capacity* (number), placesLeft (number, computed). Title: id.\\nBooking (bookings): session* -> Session, attendee -> User. Title: id.\\nPost (posts): title*, address, summary, cover (picture), body*, publishedOn (date), status* (draft | published). Title: title.\\nMessage (messages): name*, email*, message*. Title: name.\\nTimes are in Europe/Mariehamn: one without an offset, like 2026-10-04T09:30, is read there, and times come back with its offset.\\n* required. You act as someone with the role admin.\\nAnswer with what a tool returned; a number, a name or \\"none\\" you did not get from a tool is not an answer.",
     "tools": [
       {
         "name": "find",
@@ -24235,7 +24274,7 @@ const OFFERS: Record<string, Offer & { describe: Record<string, string> }> = {
     }
   },
   "staff": {
-    "summary": "Stillwater Yoga: Class schedule and online booking for a small yoga studio.\\nClassType (class types): name*, summary, level* (beginner | allLevels | advanced), durationMinutes* (number). Title: name.\\nInstructor (instructors): name*, bio, portrait (picture). Title: name.\\nSession (sessions): classType* -> ClassType, instructor* -> Instructor, startsAt* (datetime), capacity* (number), placesLeft (number, computed). Title: id.\\nBooking (bookings): session* -> Session, attendee -> User. Title: id.\\nPost (posts): title*, address, summary, cover (picture), body*, publishedOn (date), status* (draft | published). Title: title.\\nMessage (messages): name*, email*, message*. Title: name.\\n* required. You act as someone with the role staff.\\nAnswer with what a tool returned; a number, a name or \\"none\\" you did not get from a tool is not an answer.",
+    "summary": "Stillwater Yoga: Class schedule and online booking for a small yoga studio.\\nClassType (class types): name*, summary, level* (beginner | allLevels | advanced), durationMinutes* (number). Title: name.\\nInstructor (instructors): name*, bio, portrait (picture). Title: name.\\nSession (sessions): classType* -> ClassType, instructor* -> Instructor, startsAt* (datetime), capacity* (number), placesLeft (number, computed). Title: id.\\nBooking (bookings): session* -> Session, attendee -> User. Title: id.\\nPost (posts): title*, address, summary, cover (picture), body*, publishedOn (date), status* (draft | published). Title: title.\\nMessage (messages): name*, email*, message*. Title: name.\\nTimes are in Europe/Mariehamn: one without an offset, like 2026-10-04T09:30, is read there, and times come back with its offset.\\n* required. You act as someone with the role staff.\\nAnswer with what a tool returned; a number, a name or \\"none\\" you did not get from a tool is not an answer.",
     "tools": [
       {
         "name": "find",
@@ -24404,7 +24443,7 @@ const OFFERS: Record<string, Offer & { describe: Record<string, string> }> = {
     }
   },
   "member": {
-    "summary": "Stillwater Yoga: Class schedule and online booking for a small yoga studio.\\nClassType (class types): name*, summary, level* (beginner | allLevels | advanced), durationMinutes* (number). Title: name.\\nInstructor (instructors): name*, bio, portrait (picture). Title: name.\\nSession (sessions): classType* -> ClassType, instructor* -> Instructor, startsAt* (datetime), capacity* (number), placesLeft (number, computed). Title: id.\\nBooking (bookings): session* -> Session, attendee -> User. Title: id.\\nPost (posts): title*, address, summary, cover (picture), body*, publishedOn (date), status* (draft | published). Title: title.\\nMessage (messages): name*, email*, message*. Title: name.\\n* required. You act as someone with the role member.\\nAnswer with what a tool returned; a number, a name or \\"none\\" you did not get from a tool is not an answer.",
+    "summary": "Stillwater Yoga: Class schedule and online booking for a small yoga studio.\\nClassType (class types): name*, summary, level* (beginner | allLevels | advanced), durationMinutes* (number). Title: name.\\nInstructor (instructors): name*, bio, portrait (picture). Title: name.\\nSession (sessions): classType* -> ClassType, instructor* -> Instructor, startsAt* (datetime), capacity* (number), placesLeft (number, computed). Title: id.\\nBooking (bookings): session* -> Session, attendee -> User. Title: id.\\nPost (posts): title*, address, summary, cover (picture), body*, publishedOn (date), status* (draft | published). Title: title.\\nMessage (messages): name*, email*, message*. Title: name.\\nTimes are in Europe/Mariehamn: one without an offset, like 2026-10-04T09:30, is read there, and times come back with its offset.\\n* required. You act as someone with the role member.\\nAnswer with what a tool returned; a number, a name or \\"none\\" you did not get from a tool is not an answer.",
     "tools": [
       {
         "name": "find",
@@ -37240,7 +37279,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/actions/publish.ts": "21bb5fc0 generated",
   "src/generated/activity.server.ts": "b8ebc789 generated",
   "src/generated/app.ts": "7320a04b generated",
-  "src/generated/ask.server.ts": "b4df25e5 generated",
+  "src/generated/ask.server.ts": "b6328eaf generated",
   "src/generated/booking.import.server.ts": "5dd23f09 generated",
   "src/generated/booking.import.ts": "19831a63 generated",
   "src/generated/booking.name.ts": "aba5786c generated",
@@ -37308,7 +37347,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/ImportDialog.tsx": "d65da47a kit",
   "src/kit/InlineRows.tsx": "5a097006 kit",
   "src/kit/Inspector.tsx": "2425cac5 kit",
-  "src/kit/Landing.tsx": "38a19fe5 kit",
+  "src/kit/Landing.tsx": "d1b83dac kit",
   "src/kit/LegalPage.tsx": "f9a9df1e kit",
   "src/kit/Live.tsx": "fbaa47cd kit",
   "src/kit/Markdown.tsx": "24e2fcd2 kit",
@@ -45253,7 +45292,7 @@ exports[`../../../examples/builder/smithable.yml > the generated files are as re
   "src/kit/Filters.tsx": "0f5bfdfd kit",
   "src/kit/ImportDialog.tsx": "d65da47a kit",
   "src/kit/InlineRows.tsx": "5a097006 kit",
-  "src/kit/Landing.tsx": "38a19fe5 kit",
+  "src/kit/Landing.tsx": "d1b83dac kit",
   "src/kit/LegalPage.tsx": "f9a9df1e kit",
   "src/kit/ModelForm.tsx": "f90ea7e8 kit",
   "src/kit/ModelTable.tsx": "5252e1d6 kit",
@@ -46763,10 +46802,18 @@ import { customerUi } from "./customer";
 import { followUpUi } from "./follow-up";
 import { orderUi } from "./order";
 
+import { instantOf, isoIn } from "#/kit/zoned";
 import { customerSchema } from "#/generated/customer.schema";
 import { orderSchema } from "#/generated/order.schema";
 import { followUpSchema } from "#/generated/follow-up.schema";
 
+/** A stored moment as the API gives it: with Europe/Mariehamn's offset, and its milliseconds when it has any. */
+export function momentOut(v: unknown): string | null {
+  if (!(v instanceof Date)) return (v as string | null) ?? null;
+  const text = isoIn(v, "Europe/Mariehamn");
+  const ms = v.getUTCMilliseconds();
+  return ms ? \`\${text.slice(0, -6)}.\${String(ms).padStart(3, "0")}\${text.slice(-6)}\` : text;
+}
 const whole = (v: unknown, field: string) => {
   if (Number.isInteger(v)) return v as number;
   throw new BadInput(\`"\${field}" must be a record's id, a whole number.\`);
@@ -46780,10 +46827,25 @@ const amount = (v: unknown, field: string) => {
   if (Number.isFinite(n)) return n;
   throw new BadInput(\`"\${field}" must be an amount, like "12.50".\`);
 };
+/**
+ * An ISO date and time, on a day the calendar has (JavaScript would roll 30 February over); one
+ * without an offset is a wall time in the app's zone, seconds kept.
+ */
 const moment = (v: unknown, field: string) => {
-  const d = typeof v === "string" ? new Date(v) : undefined;
+  const parts =
+    typeof v === "string"
+      ? /^(\\d{4}-\\d{2}-\\d{2})T(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(Z|[+-]\\d{2}:\\d{2})?$/.exec(v)
+      : null;
+  const at = parts ? Date.parse(parts[2] ? parts[0] : \`\${parts[0]}Z\`) : Number.NaN;
+  const day = parts ? Date.parse(\`\${parts[1]}T00:00:00Z\`) : Number.NaN;
+  const d =
+    !parts || !Number.isFinite(at) || !Number.isFinite(day) || new Date(day).toISOString().slice(0, 10) !== parts[1]
+      ? undefined
+      : parts[2]
+        ? new Date(at)
+        : new Date(instantOf(parts[0], "Europe/Mariehamn").getTime() + at - Date.parse(\`\${parts[0].slice(0, 16)}:00Z\`));
   if (d && !Number.isNaN(d.getTime())) return d;
-  throw new BadInput(\`"\${field}" must be a date and time, like "2026-10-04T09:30:00Z".\`);
+  throw new BadInput(\`"\${field}" must be a date and time, like "2026-10-04T09:30" (in Europe/Mariehamn) or "2026-10-04T09:30:00Z".\`);
 };
 
 /** The body as an object of known fields, or a refusal naming the first unknown one. */
@@ -46805,8 +46867,8 @@ export function customerToApi(row: Record<string, any>) {
     creditLimit: row.creditLimit == null ? null : (Number(row.creditLimit) / 100).toFixed(2),
     notes: row.notes ?? null,
     accountManager: row.accountManagerId ?? null,
-    createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
-    updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : row.updatedAt,
+    createdAt: momentOut(row.createdAt),
+    updatedAt: momentOut(row.updatedAt),
   };
 }
 
@@ -46857,9 +46919,9 @@ export function orderToApi(row: Record<string, any>) {
     total: row.total == null ? null : (Number(row.total) / 100).toFixed(2),
     shippingMethod: row.shippingMethod ?? null,
     shippingCost: row.shippingCost == null ? null : (Number(row.shippingCost) / 100).toFixed(2),
-    placedAt: row.placedAt instanceof Date ? row.placedAt.toISOString() : (row.placedAt ?? null),
-    createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
-    updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : row.updatedAt,
+    placedAt: momentOut(row.placedAt),
+    createdAt: momentOut(row.createdAt),
+    updatedAt: momentOut(row.updatedAt),
   };
 }
 
@@ -46905,8 +46967,8 @@ export function followUpToApi(row: Record<string, any>) {
     dueOn: row.dueOn ?? null,
     done: row.done ?? null,
     note: row.note ?? null,
-    createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
-    updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : row.updatedAt,
+    createdAt: momentOut(row.createdAt),
+    updatedAt: momentOut(row.updatedAt),
   };
 }
 
@@ -46944,7 +47006,7 @@ export function followUpFromApi(body: unknown, current?: Record<string, unknown>
  */
 const OFFERS: Record<string, Offer & { describe: Record<string, string> }> = {
   "admin": {
-    "summary": "Acme CRM: Lightweight CRM for a small B2B sales team.\\nCustomer (customers): name*, email, phone, segment* (smb | enterprise | government), creditLimit (money), notes, accountManager -> User. Title: name.\\nOrder (orders): number*, customer* -> Customer, status* (draft | placed | shipped | canceled), total* (money), shippingMethod* (standard | express), shippingCost (money, computed), placedAt (datetime). Title: number.\\nFollowUp (follow ups): customer* -> Customer, dueOn* (date), done (yes/no), note. Title: note.\\n* required. You act as someone with the role admin.\\nAnswer with what a tool returned; a number, a name or \\"none\\" you did not get from a tool is not an answer.",
+    "summary": "Acme CRM: Lightweight CRM for a small B2B sales team.\\nCustomer (customers): name*, email, phone, segment* (smb | enterprise | government), creditLimit (money), notes, accountManager -> User. Title: name.\\nOrder (orders): number*, customer* -> Customer, status* (draft | placed | shipped | canceled), total* (money), shippingMethod* (standard | express), shippingCost (money, computed), placedAt (datetime). Title: number.\\nFollowUp (follow ups): customer* -> Customer, dueOn* (date), done (yes/no), note. Title: note.\\nTimes are in Europe/Mariehamn: one without an offset, like 2026-10-04T09:30, is read there, and times come back with its offset.\\n* required. You act as someone with the role admin.\\nAnswer with what a tool returned; a number, a name or \\"none\\" you did not get from a tool is not an answer.",
     "tools": [
       {
         "name": "find",
@@ -47098,7 +47160,7 @@ const OFFERS: Record<string, Offer & { describe: Record<string, string> }> = {
     }
   },
   "sales": {
-    "summary": "Acme CRM: Lightweight CRM for a small B2B sales team.\\nCustomer (customers): name*, email, phone, segment* (smb | enterprise | government), creditLimit (money), notes, accountManager -> User. Title: name.\\nOrder (orders): number*, customer* -> Customer, status* (draft | placed | shipped | canceled), total* (money), shippingMethod* (standard | express), shippingCost (money, computed), placedAt (datetime). Title: number.\\nFollowUp (follow ups): customer* -> Customer, dueOn* (date), done (yes/no), note. Title: note.\\n* required. You act as someone with the role sales.\\nAnswer with what a tool returned; a number, a name or \\"none\\" you did not get from a tool is not an answer.",
+    "summary": "Acme CRM: Lightweight CRM for a small B2B sales team.\\nCustomer (customers): name*, email, phone, segment* (smb | enterprise | government), creditLimit (money), notes, accountManager -> User. Title: name.\\nOrder (orders): number*, customer* -> Customer, status* (draft | placed | shipped | canceled), total* (money), shippingMethod* (standard | express), shippingCost (money, computed), placedAt (datetime). Title: number.\\nFollowUp (follow ups): customer* -> Customer, dueOn* (date), done (yes/no), note. Title: note.\\nTimes are in Europe/Mariehamn: one without an offset, like 2026-10-04T09:30, is read there, and times come back with its offset.\\n* required. You act as someone with the role sales.\\nAnswer with what a tool returned; a number, a name or \\"none\\" you did not get from a tool is not an answer.",
     "tools": [
       {
         "name": "find",
@@ -55124,7 +55186,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/generated/actions/schedule-follow-ups.ts": "3190ea81 generated",
   "src/generated/activity.server.ts": "b375128c generated",
   "src/generated/app.ts": "4f89cb6c generated",
-  "src/generated/ask.server.ts": "08318b05 generated",
+  "src/generated/ask.server.ts": "048dd510 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/customer.import.server.ts": "6460f913 generated",
   "src/generated/customer.import.ts": "53f4b1d0 generated",
@@ -55170,7 +55232,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/ImportDialog.tsx": "d65da47a kit",
   "src/kit/InlineRows.tsx": "5a097006 kit",
   "src/kit/Inspector.tsx": "2425cac5 kit",
-  "src/kit/Landing.tsx": "38a19fe5 kit",
+  "src/kit/Landing.tsx": "d1b83dac kit",
   "src/kit/MergeDialog.tsx": "9794e745 kit",
   "src/kit/ModelForm.tsx": "f90ea7e8 kit",
   "src/kit/ModelTable.tsx": "5252e1d6 kit",
@@ -62273,7 +62335,6 @@ exports[`../../../examples/food-truck/smithable.yml > file list and generated co
   "kit: src/components/ui/table.tsx",
   "custom: src/custom/hooks.ts",
   "custom: src/custom/sections/UpcomingStops.tsx",
-  "custom: src/custom/sections/UpcomingStops.tsx",
   "custom: src/custom/styles.css",
   "kit: src/db/index.ts",
   "generated: src/db/schema.ts",
@@ -62505,7 +62566,7 @@ exports[`../../../examples/food-truck/smithable.yml > the generated files are as
   "src/kit/Filters.tsx": "0f5bfdfd kit",
   "src/kit/ImportDialog.tsx": "d65da47a kit",
   "src/kit/InlineRows.tsx": "5a097006 kit",
-  "src/kit/Landing.tsx": "38a19fe5 kit",
+  "src/kit/Landing.tsx": "d1b83dac kit",
   "src/kit/ModelForm.tsx": "f90ea7e8 kit",
   "src/kit/ModelTable.tsx": "5252e1d6 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
@@ -64473,8 +64534,21 @@ const amount = (v: unknown, field: string) => {
   if (Number.isFinite(n)) return n;
   throw new BadInput(\`"\${field}" must be an amount, like "12.50".\`);
 };
+/**
+ * An ISO date and time, on a day the calendar has (JavaScript would roll 30 February over); one
+ * without an offset is a wall time in UTC, seconds kept.
+ */
 const moment = (v: unknown, field: string) => {
-  const d = typeof v === "string" ? new Date(v) : undefined;
+  const parts =
+    typeof v === "string"
+      ? /^(\\d{4}-\\d{2}-\\d{2})T(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(Z|[+-]\\d{2}:\\d{2})?$/.exec(v)
+      : null;
+  const at = parts ? Date.parse(parts[2] ? parts[0] : \`\${parts[0]}Z\`) : Number.NaN;
+  const day = parts ? Date.parse(\`\${parts[1]}T00:00:00Z\`) : Number.NaN;
+  const d =
+    !parts || !Number.isFinite(at) || !Number.isFinite(day) || new Date(day).toISOString().slice(0, 10) !== parts[1]
+      ? undefined
+      : new Date(at);
   if (d && !Number.isNaN(d.getTime())) return d;
   throw new BadInput(\`"\${field}" must be a date and time, like "2026-10-04T09:30:00Z".\`);
 };
@@ -72681,7 +72755,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/generated/actions/send-invoice.ts": "2efd6b21 generated",
   "src/generated/activity.server.ts": "2b56b888 generated",
   "src/generated/app.ts": "74f19a10 generated",
-  "src/generated/ask.server.ts": "3ce34cf9 generated",
+  "src/generated/ask.server.ts": "991a0923 generated",
   "src/generated/business-profile.schema.ts": "7037e2dd generated",
   "src/generated/business-profile.server.ts": "cf159176 generated",
   "src/generated/business-profile.ts": "734f08c4 generated",
@@ -72730,7 +72804,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/ImportDialog.tsx": "d65da47a kit",
   "src/kit/InlineRows.tsx": "5a097006 kit",
   "src/kit/Inspector.tsx": "2425cac5 kit",
-  "src/kit/Landing.tsx": "38a19fe5 kit",
+  "src/kit/Landing.tsx": "d1b83dac kit",
   "src/kit/LegalPage.tsx": "f9a9df1e kit",
   "src/kit/Live.tsx": "fbaa47cd kit",
   "src/kit/ModelForm.tsx": "f90ea7e8 kit",
@@ -82100,7 +82174,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/Filters.tsx": "0f5bfdfd kit",
   "src/kit/ImportDialog.tsx": "d65da47a kit",
   "src/kit/InlineRows.tsx": "5a097006 kit",
-  "src/kit/Landing.tsx": "38a19fe5 kit",
+  "src/kit/Landing.tsx": "d1b83dac kit",
   "src/kit/Live.tsx": "fbaa47cd kit",
   "src/kit/ModelForm.tsx": "f90ea7e8 kit",
   "src/kit/ModelTable.tsx": "5252e1d6 kit",
@@ -87554,7 +87628,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/ImportDialog.tsx": "d65da47a kit",
   "src/kit/InlineRows.tsx": "5a097006 kit",
   "src/kit/Inspector.tsx": "2425cac5 kit",
-  "src/kit/Landing.tsx": "38a19fe5 kit",
+  "src/kit/Landing.tsx": "d1b83dac kit",
   "src/kit/ModelForm.tsx": "f90ea7e8 kit",
   "src/kit/ModelTable.tsx": "5252e1d6 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
@@ -94396,7 +94470,7 @@ exports[`../../../examples/painter/smithable.yml > the generated files are as re
   "src/kit/Filters.tsx": "0f5bfdfd kit",
   "src/kit/ImportDialog.tsx": "d65da47a kit",
   "src/kit/InlineRows.tsx": "5a097006 kit",
-  "src/kit/Landing.tsx": "38a19fe5 kit",
+  "src/kit/Landing.tsx": "d1b83dac kit",
   "src/kit/LegalPage.tsx": "f9a9df1e kit",
   "src/kit/ModelForm.tsx": "f90ea7e8 kit",
   "src/kit/ModelTable.tsx": "5252e1d6 kit",
@@ -95104,8 +95178,16 @@ import type { Offer } from "#/kit/tools";
 import { itemData } from "./item.server";
 import { itemUi } from "./item";
 
+import { isoIn } from "#/kit/zoned";
 import { itemSchema } from "#/generated/item.schema";
 
+/** A stored moment as the API gives it: with Europe/Mariehamn's offset, and its milliseconds when it has any. */
+export function momentOut(v: unknown): string | null {
+  if (!(v instanceof Date)) return (v as string | null) ?? null;
+  const text = isoIn(v, "Europe/Mariehamn");
+  const ms = v.getUTCMilliseconds();
+  return ms ? \`\${text.slice(0, -6)}.\${String(ms).padStart(3, "0")}\${text.slice(-6)}\` : text;
+}
 
 /** The body as an object of known fields, or a refusal naming the first unknown one. */
 function fieldsOf(body: unknown, known: readonly string[]): Record<string, unknown> {
@@ -95124,8 +95206,8 @@ export function itemToApi(row: Record<string, any>) {
     kind: row.kind ?? null,
     link: row.link ?? null,
     addedOn: row.addedOn ?? null,
-    createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
-    updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : row.updatedAt,
+    createdAt: momentOut(row.createdAt),
+    updatedAt: momentOut(row.updatedAt),
   };
 }
 
@@ -98465,7 +98547,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/generated/access.test.ts": "2a3af11c generated",
   "src/generated/activity.server.ts": "4ed2a764 generated",
   "src/generated/app.ts": "2da3a528 generated",
-  "src/generated/ask.server.ts": "bfe90d6d generated",
+  "src/generated/ask.server.ts": "ecb33006 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/dev-door.server.ts": "8d9bb3d1 generated",
   "src/generated/hooks.ts": "e268b462 generated",
@@ -98494,7 +98576,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/ImportDialog.tsx": "d65da47a kit",
   "src/kit/InlineRows.tsx": "5a097006 kit",
   "src/kit/Inspector.tsx": "2425cac5 kit",
-  "src/kit/Landing.tsx": "38a19fe5 kit",
+  "src/kit/Landing.tsx": "d1b83dac kit",
   "src/kit/ModelForm.tsx": "f90ea7e8 kit",
   "src/kit/ModelTable.tsx": "5252e1d6 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
@@ -105605,7 +105687,6 @@ exports[`../../../examples/restaurant/smithable.yml > file list and generated co
   "custom: src/custom/sections/RestaurantHero.tsx",
   "custom: src/custom/sections/ServiceMenu.tsx",
   "custom: src/custom/sections/VisitToday.tsx",
-  "custom: src/custom/sections/VisitToday.tsx",
   "custom: src/custom/styles.css",
   "kit: src/db/index.ts",
   "generated: src/db/schema.ts",
@@ -105822,7 +105903,7 @@ exports[`../../../examples/restaurant/smithable.yml > the generated files are as
   "src/kit/Filters.tsx": "0f5bfdfd kit",
   "src/kit/ImportDialog.tsx": "d65da47a kit",
   "src/kit/InlineRows.tsx": "5a097006 kit",
-  "src/kit/Landing.tsx": "38a19fe5 kit",
+  "src/kit/Landing.tsx": "d1b83dac kit",
   "src/kit/ModelForm.tsx": "f90ea7e8 kit",
   "src/kit/ModelTable.tsx": "5252e1d6 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
@@ -107553,17 +107634,40 @@ exports[`../../../examples/status/smithable.yml > file list and generated code >
 // spec's field names, amounts as decimal texts, times as ISO texts) and their values back, checked
 // by each model's own schema, as a form's are.
 import { BadInput } from "#/kit/api.server";
+import { instantOf, isoIn } from "#/kit/zoned";
 import { componentSchema } from "#/generated/component.schema";
 import { incidentSchema } from "#/generated/incident.schema";
 
+/** A stored moment as the API gives it: with Europe/Mariehamn's offset, and its milliseconds when it has any. */
+export function momentOut(v: unknown): string | null {
+  if (!(v instanceof Date)) return (v as string | null) ?? null;
+  const text = isoIn(v, "Europe/Mariehamn");
+  const ms = v.getUTCMilliseconds();
+  return ms ? \`\${text.slice(0, -6)}.\${String(ms).padStart(3, "0")}\${text.slice(-6)}\` : text;
+}
 const whole = (v: unknown, field: string) => {
   if (Number.isInteger(v)) return v as number;
   throw new BadInput(\`"\${field}" must be a record's id, a whole number.\`);
 };
+/**
+ * An ISO date and time, on a day the calendar has (JavaScript would roll 30 February over); one
+ * without an offset is a wall time in the app's zone, seconds kept.
+ */
 const moment = (v: unknown, field: string) => {
-  const d = typeof v === "string" ? new Date(v) : undefined;
+  const parts =
+    typeof v === "string"
+      ? /^(\\d{4}-\\d{2}-\\d{2})T(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(Z|[+-]\\d{2}:\\d{2})?$/.exec(v)
+      : null;
+  const at = parts ? Date.parse(parts[2] ? parts[0] : \`\${parts[0]}Z\`) : Number.NaN;
+  const day = parts ? Date.parse(\`\${parts[1]}T00:00:00Z\`) : Number.NaN;
+  const d =
+    !parts || !Number.isFinite(at) || !Number.isFinite(day) || new Date(day).toISOString().slice(0, 10) !== parts[1]
+      ? undefined
+      : parts[2]
+        ? new Date(at)
+        : new Date(instantOf(parts[0], "Europe/Mariehamn").getTime() + at - Date.parse(\`\${parts[0].slice(0, 16)}:00Z\`));
   if (d && !Number.isNaN(d.getTime())) return d;
-  throw new BadInput(\`"\${field}" must be a date and time, like "2026-10-04T09:30:00Z".\`);
+  throw new BadInput(\`"\${field}" must be a date and time, like "2026-10-04T09:30" (in Europe/Mariehamn) or "2026-10-04T09:30:00Z".\`);
 };
 
 /** The body as an object of known fields, or a refusal naming the first unknown one. */
@@ -107581,8 +107685,8 @@ export function componentToApi(row: Record<string, any>) {
     name: row.name ?? null,
     status: row.status ?? null,
     description: row.description ?? null,
-    createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
-    updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : row.updatedAt,
+    createdAt: momentOut(row.createdAt),
+    updatedAt: momentOut(row.updatedAt),
   };
 }
 
@@ -107618,11 +107722,11 @@ export function incidentToApi(row: Record<string, any>) {
     title: row.title ?? null,
     status: row.status ?? null,
     component: row.componentId ?? null,
-    detectedAt: row.detectedAt instanceof Date ? row.detectedAt.toISOString() : (row.detectedAt ?? null),
-    resolvedAt: row.resolvedAt instanceof Date ? row.resolvedAt.toISOString() : (row.resolvedAt ?? null),
+    detectedAt: momentOut(row.detectedAt),
+    resolvedAt: momentOut(row.resolvedAt),
     summary: row.summary ?? null,
-    createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
-    updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : row.updatedAt,
+    createdAt: momentOut(row.createdAt),
+    updatedAt: momentOut(row.updatedAt),
   };
 }
 
@@ -108231,11 +108335,11 @@ export const OPENAPI = {
           },
           "detectedAt": {
             "type": "string",
-            "format": "date-time"
+            "description": "In Europe/Mariehamn when given without an offset, like 2026-10-04T09:30; given back with that zone's offset."
           },
           "resolvedAt": {
             "type": "string",
-            "format": "date-time"
+            "description": "In Europe/Mariehamn when given without an offset, like 2026-10-04T09:30; given back with that zone's offset."
           },
           "summary": {
             "type": "string"
@@ -108517,11 +108621,11 @@ export const VISITOR_OPENAPI = {
           },
           "detectedAt": {
             "type": "string",
-            "format": "date-time"
+            "description": "In Europe/Mariehamn when given without an offset, like 2026-10-04T09:30; given back with that zone's offset."
           },
           "resolvedAt": {
             "type": "string",
-            "format": "date-time"
+            "description": "In Europe/Mariehamn when given without an offset, like 2026-10-04T09:30; given back with that zone's offset."
           },
           "summary": {
             "type": "string"
@@ -109138,11 +109242,11 @@ export const OPENAPI_BY_ROLE: ReadonlyMap<string, unknown> = new Map([
               },
               "detectedAt": {
                 "type": "string",
-                "format": "date-time"
+                "description": "In Europe/Mariehamn when given without an offset, like 2026-10-04T09:30; given back with that zone's offset."
               },
               "resolvedAt": {
                 "type": "string",
-                "format": "date-time"
+                "description": "In Europe/Mariehamn when given without an offset, like 2026-10-04T09:30; given back with that zone's offset."
               },
               "summary": {
                 "type": "string"
@@ -109769,11 +109873,11 @@ export const OPENAPI_BY_ROLE: ReadonlyMap<string, unknown> = new Map([
               },
               "detectedAt": {
                 "type": "string",
-                "format": "date-time"
+                "description": "In Europe/Mariehamn when given without an offset, like 2026-10-04T09:30; given back with that zone's offset."
               },
               "resolvedAt": {
                 "type": "string",
-                "format": "date-time"
+                "description": "In Europe/Mariehamn when given without an offset, like 2026-10-04T09:30; given back with that zone's offset."
               },
               "summary": {
                 "type": "string"
@@ -109868,19 +109972,42 @@ import { maintenanceUi } from "./maintenance";
 import { runIdentified } from "./actions/identified.server";
 import { runMonitoring } from "./actions/monitoring.server";
 import { runResolve } from "./actions/resolve.server";
+import { instantOf, isoIn } from "#/kit/zoned";
 import { componentSchema } from "#/generated/component.schema";
 import { incidentSchema } from "#/generated/incident.schema";
 import { incidentUpdateSchema } from "#/generated/incident-update.schema";
 import { maintenanceSchema } from "#/generated/maintenance.schema";
 
+/** A stored moment as the API gives it: with Europe/Mariehamn's offset, and its milliseconds when it has any. */
+export function momentOut(v: unknown): string | null {
+  if (!(v instanceof Date)) return (v as string | null) ?? null;
+  const text = isoIn(v, "Europe/Mariehamn");
+  const ms = v.getUTCMilliseconds();
+  return ms ? \`\${text.slice(0, -6)}.\${String(ms).padStart(3, "0")}\${text.slice(-6)}\` : text;
+}
 const whole = (v: unknown, field: string) => {
   if (Number.isInteger(v)) return v as number;
   throw new BadInput(\`"\${field}" must be a record's id, a whole number.\`);
 };
+/**
+ * An ISO date and time, on a day the calendar has (JavaScript would roll 30 February over); one
+ * without an offset is a wall time in the app's zone, seconds kept.
+ */
 const moment = (v: unknown, field: string) => {
-  const d = typeof v === "string" ? new Date(v) : undefined;
+  const parts =
+    typeof v === "string"
+      ? /^(\\d{4}-\\d{2}-\\d{2})T(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(Z|[+-]\\d{2}:\\d{2})?$/.exec(v)
+      : null;
+  const at = parts ? Date.parse(parts[2] ? parts[0] : \`\${parts[0]}Z\`) : Number.NaN;
+  const day = parts ? Date.parse(\`\${parts[1]}T00:00:00Z\`) : Number.NaN;
+  const d =
+    !parts || !Number.isFinite(at) || !Number.isFinite(day) || new Date(day).toISOString().slice(0, 10) !== parts[1]
+      ? undefined
+      : parts[2]
+        ? new Date(at)
+        : new Date(instantOf(parts[0], "Europe/Mariehamn").getTime() + at - Date.parse(\`\${parts[0].slice(0, 16)}:00Z\`));
   if (d && !Number.isNaN(d.getTime())) return d;
-  throw new BadInput(\`"\${field}" must be a date and time, like "2026-10-04T09:30:00Z".\`);
+  throw new BadInput(\`"\${field}" must be a date and time, like "2026-10-04T09:30" (in Europe/Mariehamn) or "2026-10-04T09:30:00Z".\`);
 };
 
 /** The body as an object of known fields, or a refusal naming the first unknown one. */
@@ -109898,8 +110025,8 @@ export function componentToApi(row: Record<string, any>) {
     name: row.name ?? null,
     status: row.status ?? null,
     description: row.description ?? null,
-    createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
-    updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : row.updatedAt,
+    createdAt: momentOut(row.createdAt),
+    updatedAt: momentOut(row.updatedAt),
   };
 }
 
@@ -109935,11 +110062,11 @@ export function incidentToApi(row: Record<string, any>) {
     title: row.title ?? null,
     status: row.status ?? null,
     component: row.componentId ?? null,
-    detectedAt: row.detectedAt instanceof Date ? row.detectedAt.toISOString() : (row.detectedAt ?? null),
-    resolvedAt: row.resolvedAt instanceof Date ? row.resolvedAt.toISOString() : (row.resolvedAt ?? null),
+    detectedAt: momentOut(row.detectedAt),
+    resolvedAt: momentOut(row.resolvedAt),
     summary: row.summary ?? null,
-    createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
-    updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : row.updatedAt,
+    createdAt: momentOut(row.createdAt),
+    updatedAt: momentOut(row.updatedAt),
   };
 }
 
@@ -109982,11 +110109,11 @@ export function incidentUpdateToApi(row: Record<string, any>) {
   return {
     id: row.id as number,
     incident: row.incidentId ?? null,
-    at: row.at instanceof Date ? row.at.toISOString() : (row.at ?? null),
+    at: momentOut(row.at),
     status: row.status ?? null,
     message: row.message ?? null,
-    createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
-    updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : row.updatedAt,
+    createdAt: momentOut(row.createdAt),
+    updatedAt: momentOut(row.updatedAt),
   };
 }
 
@@ -110024,11 +110151,11 @@ export function maintenanceToApi(row: Record<string, any>) {
     id: row.id as number,
     title: row.title ?? null,
     component: row.componentId ?? null,
-    startsAt: row.startsAt instanceof Date ? row.startsAt.toISOString() : (row.startsAt ?? null),
-    endsAt: row.endsAt instanceof Date ? row.endsAt.toISOString() : (row.endsAt ?? null),
+    startsAt: momentOut(row.startsAt),
+    endsAt: momentOut(row.endsAt),
     description: row.description ?? null,
-    createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
-    updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : row.updatedAt,
+    createdAt: momentOut(row.createdAt),
+    updatedAt: momentOut(row.updatedAt),
   };
 }
 
@@ -110069,7 +110196,7 @@ export function maintenanceFromApi(body: unknown, current?: Record<string, unkno
  */
 const OFFERS: Record<string, Offer & { describe: Record<string, string> }> = {
   "admin": {
-    "summary": "Northwind Status: Is it working? The state of our services, live.\\nComponent (components): name*, status* (operational | degraded | down | maintenance), description. Title: name.\\nIncident (incidents): title*, status* (investigating | identified | monitoring | resolved), component -> Component, detectedAt* (datetime), resolvedAt (datetime), summary. Title: title.\\nIncidentUpdate (incident updates): incident* -> Incident, at* (datetime), status* (investigating | identified | monitoring | resolved), message*. Title: message.\\nMaintenance (maintenances): title*, component -> Component, startsAt* (datetime), endsAt* (datetime), description. Title: title.\\n* required. You act as someone with the role admin.\\nAnswer with what a tool returned; a number, a name or \\"none\\" you did not get from a tool is not an answer.",
+    "summary": "Northwind Status: Is it working? The state of our services, live.\\nComponent (components): name*, status* (operational | degraded | down | maintenance), description. Title: name.\\nIncident (incidents): title*, status* (investigating | identified | monitoring | resolved), component -> Component, detectedAt* (datetime), resolvedAt (datetime), summary. Title: title.\\nIncidentUpdate (incident updates): incident* -> Incident, at* (datetime), status* (investigating | identified | monitoring | resolved), message*. Title: message.\\nMaintenance (maintenances): title*, component -> Component, startsAt* (datetime), endsAt* (datetime), description. Title: title.\\nTimes are in Europe/Mariehamn: one without an offset, like 2026-10-04T09:30, is read there, and times come back with its offset.\\n* required. You act as someone with the role admin.\\nAnswer with what a tool returned; a number, a name or \\"none\\" you did not get from a tool is not an answer.",
     "tools": [
       {
         "name": "find",
@@ -110228,7 +110355,7 @@ const OFFERS: Record<string, Offer & { describe: Record<string, string> }> = {
     }
   },
   "staff": {
-    "summary": "Northwind Status: Is it working? The state of our services, live.\\nComponent (components): name*, status* (operational | degraded | down | maintenance), description. Title: name.\\nIncident (incidents): title*, status* (investigating | identified | monitoring | resolved), component -> Component, detectedAt* (datetime), resolvedAt (datetime), summary. Title: title.\\nIncidentUpdate (incident updates): incident* -> Incident, at* (datetime), status* (investigating | identified | monitoring | resolved), message*. Title: message.\\nMaintenance (maintenances): title*, component -> Component, startsAt* (datetime), endsAt* (datetime), description. Title: title.\\n* required. You act as someone with the role staff.\\nAnswer with what a tool returned; a number, a name or \\"none\\" you did not get from a tool is not an answer.",
+    "summary": "Northwind Status: Is it working? The state of our services, live.\\nComponent (components): name*, status* (operational | degraded | down | maintenance), description. Title: name.\\nIncident (incidents): title*, status* (investigating | identified | monitoring | resolved), component -> Component, detectedAt* (datetime), resolvedAt (datetime), summary. Title: title.\\nIncidentUpdate (incident updates): incident* -> Incident, at* (datetime), status* (investigating | identified | monitoring | resolved), message*. Title: message.\\nMaintenance (maintenances): title*, component -> Component, startsAt* (datetime), endsAt* (datetime), description. Title: title.\\nTimes are in Europe/Mariehamn: one without an offset, like 2026-10-04T09:30, is read there, and times come back with its offset.\\n* required. You act as someone with the role staff.\\nAnswer with what a tool returned; a number, a name or \\"none\\" you did not get from a tool is not an answer.",
     "tools": [
       {
         "name": "find",
@@ -114704,7 +114831,7 @@ import { runResolve } from "./actions/resolve.server";
  */
 const OFFERS: Record<string, Offer & { describe: Record<string, string> }> = {
   "admin": {
-    "summary": "Northwind Status: Is it working? The state of our services, live.\\nComponent (components): name*, status* (operational | degraded | down | maintenance), description. Title: name.\\nIncident (incidents): title*, status* (investigating | identified | monitoring | resolved), component -> Component, detectedAt* (datetime), resolvedAt (datetime), summary. Title: title.\\nActions: resolve (Incident, when status is investigating or identified or monitoring).\\n* required. You act as someone with the role admin.\\nAnswer with what a tool returned; a number, a name or \\"none\\" you did not get from a tool is not an answer.",
+    "summary": "Northwind Status: Is it working? The state of our services, live.\\nComponent (components): name*, status* (operational | degraded | down | maintenance), description. Title: name.\\nIncident (incidents): title*, status* (investigating | identified | monitoring | resolved), component -> Component, detectedAt* (datetime), resolvedAt (datetime), summary. Title: title.\\nActions: resolve (Incident, when status is investigating or identified or monitoring).\\nTimes are in Europe/Mariehamn: one without an offset, like 2026-10-04T09:30, is read there, and times come back with its offset.\\n* required. You act as someone with the role admin.\\nAnswer with what a tool returned; a number, a name or \\"none\\" you did not get from a tool is not an answer.",
     "tools": [
       {
         "name": "find",
@@ -114825,7 +114952,7 @@ const OFFERS: Record<string, Offer & { describe: Record<string, string> }> = {
       },
       {
         "name": "add",
-        "description": "Add a record. Amounts as decimal texts (\\"12.50\\"), dates as ISO texts. A refusal says why, in the app's words.",
+        "description": "Add a record. Amounts as decimal texts (\\"12.50\\"), dates as ISO texts. A time without an offset is in Europe/Mariehamn. A refusal says why, in the app's words.",
         "inputSchema": {
           "type": "object",
           "required": [
@@ -114852,7 +114979,7 @@ const OFFERS: Record<string, Offer & { describe: Record<string, string> }> = {
       },
       {
         "name": "change",
-        "description": "Change a record: only the fields given.",
+        "description": "Change a record: only the fields given. A time without an offset is in Europe/Mariehamn.",
         "inputSchema": {
           "type": "object",
           "required": [
@@ -114940,7 +115067,7 @@ const OFFERS: Record<string, Offer & { describe: Record<string, string> }> = {
     }
   },
   "staff": {
-    "summary": "Northwind Status: Is it working? The state of our services, live.\\nComponent (components): name*, status* (operational | degraded | down | maintenance), description. Title: name.\\nIncident (incidents): title*, status* (investigating | identified | monitoring | resolved), component -> Component, detectedAt* (datetime), resolvedAt (datetime), summary. Title: title.\\nActions: resolve (Incident, when status is investigating or identified or monitoring).\\n* required. You act as someone with the role staff.\\nAnswer with what a tool returned; a number, a name or \\"none\\" you did not get from a tool is not an answer.",
+    "summary": "Northwind Status: Is it working? The state of our services, live.\\nComponent (components): name*, status* (operational | degraded | down | maintenance), description. Title: name.\\nIncident (incidents): title*, status* (investigating | identified | monitoring | resolved), component -> Component, detectedAt* (datetime), resolvedAt (datetime), summary. Title: title.\\nActions: resolve (Incident, when status is investigating or identified or monitoring).\\nTimes are in Europe/Mariehamn: one without an offset, like 2026-10-04T09:30, is read there, and times come back with its offset.\\n* required. You act as someone with the role staff.\\nAnswer with what a tool returned; a number, a name or \\"none\\" you did not get from a tool is not an answer.",
     "tools": [
       {
         "name": "find",
@@ -115061,7 +115188,7 @@ const OFFERS: Record<string, Offer & { describe: Record<string, string> }> = {
       },
       {
         "name": "add",
-        "description": "Add a record. Amounts as decimal texts (\\"12.50\\"), dates as ISO texts. A refusal says why, in the app's words.",
+        "description": "Add a record. Amounts as decimal texts (\\"12.50\\"), dates as ISO texts. A time without an offset is in Europe/Mariehamn. A refusal says why, in the app's words.",
         "inputSchema": {
           "type": "object",
           "required": [
@@ -115088,7 +115215,7 @@ const OFFERS: Record<string, Offer & { describe: Record<string, string> }> = {
       },
       {
         "name": "change",
-        "description": "Change a record: only the fields given.",
+        "description": "Change a record: only the fields given. A time without an offset is in Europe/Mariehamn.",
         "inputSchema": {
           "type": "object",
           "required": [
@@ -115176,7 +115303,7 @@ const OFFERS: Record<string, Offer & { describe: Record<string, string> }> = {
     }
   },
   "visitor": {
-    "summary": "Northwind Status: Is it working? The state of our services, live.\\nComponent (components): name*, status* (operational | degraded | down | maintenance), description. Title: name.\\nIncident (incidents): title*, status* (investigating | identified | monitoring | resolved), component -> Component, detectedAt* (datetime), resolvedAt (datetime), summary. Title: title.\\n* required. You act as a visitor, without a key.\\nAnswer with what a tool returned; a number, a name or \\"none\\" you did not get from a tool is not an answer.",
+    "summary": "Northwind Status: Is it working? The state of our services, live.\\nComponent (components): name*, status* (operational | degraded | down | maintenance), description. Title: name.\\nIncident (incidents): title*, status* (investigating | identified | monitoring | resolved), component -> Component, detectedAt* (datetime), resolvedAt (datetime), summary. Title: title.\\nTimes are in Europe/Mariehamn: one without an offset, like 2026-10-04T09:30, is read there, and times come back with its offset.\\n* required. You act as a visitor, without a key.\\nAnswer with what a tool returned; a number, a name or \\"none\\" you did not get from a tool is not an answer.",
     "tools": [
       {
         "name": "find",
@@ -120272,9 +120399,9 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/generated/actions/resolve.server.ts": "a2a5449e generated",
   "src/generated/actions/resolve.ts": "ff4366e0 generated",
   "src/generated/activity.server.ts": "dc01d286 generated",
-  "src/generated/api.server.ts": "edc266dd generated",
+  "src/generated/api.server.ts": "612331e0 generated",
   "src/generated/app.ts": "c7fc730f generated",
-  "src/generated/ask.server.ts": "c57aa2a0 generated",
+  "src/generated/ask.server.ts": "b733e4d9 generated",
   "src/generated/component.import.server.ts": "25ae311e generated",
   "src/generated/component.import.ts": "53644553 generated",
   "src/generated/component.schema.ts": "8a49641f generated",
@@ -120300,7 +120427,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/generated/maintenance.schema.ts": "80ec6842 generated",
   "src/generated/maintenance.server.ts": "fa0d4501 generated",
   "src/generated/maintenance.ts": "e16bc0e1 generated",
-  "src/generated/mcp.server.ts": "247e37bf generated",
+  "src/generated/mcp.server.ts": "f9a1b714 generated",
   "src/generated/my-time.ts": "c315432b generated",
   "src/generated/pages.ts": "bf2f0857 generated",
   "src/generated/roles.ts": "6b44c69a generated",
@@ -120325,7 +120452,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/InlineRows.tsx": "5a097006 kit",
   "src/kit/Inspector.tsx": "2425cac5 kit",
   "src/kit/Keys.tsx": "f32c246d kit",
-  "src/kit/Landing.tsx": "38a19fe5 kit",
+  "src/kit/Landing.tsx": "d1b83dac kit",
   "src/kit/Markdown.tsx": "24e2fcd2 kit",
   "src/kit/MarkdownFormatted.tsx": "300ef9a1 kit",
   "src/kit/ModelForm.tsx": "f90ea7e8 kit",
@@ -122207,9 +122334,17 @@ import { startWorkAsks } from "./actions/start-work";
 import { runClose } from "./actions/close.server";
 import { closeAsks } from "./actions/close";
 import { runReopen } from "./actions/reopen.server";
+import { isoIn } from "#/kit/zoned";
 import { supportCaseSchema } from "#/generated/support-case.schema";
 import { messageSchema } from "#/generated/message.schema";
 
+/** A stored moment as the API gives it: with Europe/Mariehamn's offset, and its milliseconds when it has any. */
+export function momentOut(v: unknown): string | null {
+  if (!(v instanceof Date)) return (v as string | null) ?? null;
+  const text = isoIn(v, "Europe/Mariehamn");
+  const ms = v.getUTCMilliseconds();
+  return ms ? \`\${text.slice(0, -6)}.\${String(ms).padStart(3, "0")}\${text.slice(-6)}\` : text;
+}
 const whole = (v: unknown, field: string) => {
   if (Number.isInteger(v)) return v as number;
   throw new BadInput(\`"\${field}" must be a record's id, a whole number.\`);
@@ -122237,8 +122372,8 @@ export function supportCaseToApi(row: Record<string, any>) {
     priority: row.priority ?? null,
     assignee: row.assigneeId ?? null,
     body: row.body ?? null,
-    createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
-    updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : row.updatedAt,
+    createdAt: momentOut(row.createdAt),
+    updatedAt: momentOut(row.updatedAt),
   };
 }
 
@@ -122285,8 +122420,8 @@ export function messageToApi(row: Record<string, any>) {
     agent: row.agentId ?? null,
     fromEmail: row.fromEmail ?? null,
     supportCase: row.supportCaseId ?? null,
-    createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
-    updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : row.updatedAt,
+    createdAt: momentOut(row.createdAt),
+    updatedAt: momentOut(row.updatedAt),
   };
 }
 
@@ -128375,7 +128510,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/generated/actions/start-work.ts": "2fdc7c64 generated",
   "src/generated/activity.server.ts": "958f7815 generated",
   "src/generated/app.ts": "50242584 generated",
-  "src/generated/ask.server.ts": "8e379833 generated",
+  "src/generated/ask.server.ts": "b033dbac generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/dev-door.server.ts": "3782a982 generated",
   "src/generated/hooks.ts": "1260830e generated",

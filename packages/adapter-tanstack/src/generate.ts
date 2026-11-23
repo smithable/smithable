@@ -1241,7 +1241,7 @@ const SECTION_GENERATORS: SectionGenerator[] = [
               ir,
               auth,
               ux,
-              viewEntries(ir, options.content).some((o) => o.when.model === model.name),
+              viewEntries(ir, options.content).map((o) => o.when.model),
             ),
           ),
           // A record as its document, read by its page and by a mail that sends it (record-documents.md §5).
@@ -1445,8 +1445,10 @@ const SECTION_GENERATORS: SectionGenerator[] = [
                 ),
               ]
             : []),
+          // A component two sections share is created once, by the first of them.
           ...page.sections.flatMap((s) =>
-            s.component
+            s.component &&
+            ctx.ir.pages.flatMap((p) => p.sections).find((x) => x.component === s.component) === s
               ? [custom(`src/custom/sections/${s.component}.tsx`, customSectionStub(s.component))]
               : [],
           ),
