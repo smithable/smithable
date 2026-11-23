@@ -1317,12 +1317,12 @@ function checkOutgoingTexts(
       const quiet = entry.list ? ["link", "by", "count", "date"] : ["link", "by", "pay"];
       if (!quiet.includes(path)) any = true;
       // The link is the recipient's alone: a subject is shown in lists and notices, the text is not.
-      if (path === "view" && key === "subject") {
+      if ((path === "view" || path === "pay") && key === "subject") {
         ctx.error(
           value,
-          "view-in-subject",
-          `${where}: "{view}" is a link for the mail's text, not its subject.`,
-          "Move {view} into the text.",
+          `${path}-in-subject`,
+          `${where}: "{${path}}" is a link for the mail's text, not its subject.`,
+          `Move {${path}} into the text.`,
         );
         continue;
       }
@@ -1477,11 +1477,22 @@ export function placeholderProblem(
   };
   if (second === undefined) {
     if (first === "title" || first === "link") return undefined;
-    // The pay link (payments.md §4.1) is planned and not built: a mail would go out without it.
-    if (first === "pay")
-      return bad(
-        `"{pay}" would be the address where a ${model.name} is paid without an account, and that page is not built yet: link to the record ({link}) instead.`,
-      );
+    // The pay link (payments.md §4.1): one record's page where someone without an account pays it,
+    // by the model's payments entry (a model has one), when it pays an existing record.
+    if (first === "pay") {
+      const paying = ir.payments.find((p) => p.on === model.name);
+      if (!paying || paying.when === "created")
+        return bad(
+          `"{pay}" links to the page where a ${model.name} is paid, and no payments entry pays an existing ${model.name}.`,
+        );
+      if (entry.list)
+        return bad(`"{pay}" links to one record's payment, and this mail lists several.`);
+      if ("event" in entry.when && entry.when.event === "deleted")
+        return bad(`"{pay}" links to a ${model.name}'s payment, and a deleted one is not paid.`);
+      return entry.to === "mail"
+        ? undefined
+        : bad(`"{pay}" is a link for a mail's recipients, and this entry sends no mail.`);
+    }
     // The link to a copy of what was sent (record-documents.md §5), for one record's mail.
     if (first === "view") {
       if (!documentOf(model.name, ir))

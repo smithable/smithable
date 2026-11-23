@@ -270,19 +270,32 @@ test("the summary's words", () => {
   );
 });
 
-test("{pay} is refused until the pay link is built, on a model paid for or not", () => {
-  const text = `${spec}  overdue:\n    when: Invoice changed\n    where: { status: overdue }\n    to: mail\n    recipient: admin\n  lineAdded:\n    when: Line created\n    to: mail\n    recipient: admin\n`;
-  const ir = validateSpec({ path: "smithable.yml", text }).ir;
-  if (!ir) throw new Error("no IR");
-  const check = (content: string) =>
-    validateContent(
+test("{pay} is a record mail's link, on a model whose payments entry pays an existing record", () => {
+  const outgoing = `  overdue:\n    when: Invoice changed\n    where: { status: overdue }\n    to: mail\n    recipient: admin\n  lineAdded:\n    when: Line created\n    to: mail\n    recipient: admin\n  orderReady:\n    when: Order changed\n    to: mail\n    recipient: admin\n  invoiceGone:\n    when: Invoice deleted\n    to: mail\n    recipient: admin\n  invoicePush:\n    when: Invoice changed\n    to: push\n    recipient: admin\n`;
+  const check = (specText: string, content: string) => {
+    const ir = validateSpec({ path: "smithable.yml", text: specText }).ir;
+    if (!ir) throw new Error("no IR");
+    return validateContent(
       { path: "smithable.content.yml", text: `smithableContent: 0.1\n${content}` },
       ir,
-    ).diagnostics.map((d) => d.message);
-  for (const entry of ["overdue", "lineAdded"])
-    expect(check(`outgoing:\n  ${entry}:\n    text: "Pay here: {pay}"\n`)).toContainEqual(
-      expect.stringContaining("that page is not built yet"),
-    );
+    ).diagnostics.map((d) => `${d.code}: ${d.message}`);
+  };
+  const text = `${spec}${outgoing}`;
+  const pay = (entry: string, key = "text") =>
+    check(text, `outgoing:\n  ${entry}:\n    ${key}: "Pay here: {pay}"\n`);
+  // The invoice is paid by invoicePayment, a condition: its mail may hold the link.
+  expect(pay("overdue")).toEqual([]);
+  // A line is paid by nothing; an order only to be created; a deleted invoice not at all.
+  expect(pay("lineAdded")).toContainEqual(
+    expect.stringContaining("no payments entry pays an existing Line"),
+  );
+  expect(pay("orderReady")).toContainEqual(
+    expect.stringContaining("no payments entry pays an existing Order"),
+  );
+  expect(pay("invoiceGone")).toContainEqual(expect.stringContaining("a deleted one is not paid"));
+  expect(pay("invoicePush")).toContainEqual(expect.stringContaining("this entry sends no mail"));
+  // The link is the recipient's: never in a subject.
+  expect(pay("overdue", "subject")).toContainEqual(expect.stringMatching(/^pay-in-subject: /));
 });
 
 test("the context file names the provider; validate notes a missing one", () => {
