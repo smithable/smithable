@@ -15,7 +15,7 @@ const loadStops = createServerFn().handler(async () => {
   const rows = await stopData.list(await currentViewer());
   const checkedAt = now();
   const stops = upcomingStops(rows, checkedAt).map(
-    ({ id, place, address, startsAt, endsAt, directionsUrl, menuOverride }) => ({
+    ({ id, place, address, startsAt, endsAt, directionsUrl, menuOverride, photo }) => ({
       id,
       place,
       address,
@@ -23,6 +23,12 @@ const loadStops = createServerFn().handler(async () => {
       endsAt: new Date(endsAt).toISOString(),
       directionsUrl,
       menuOverride,
+      photo: photo && {
+        src: `/files/stop/${id}/photo?v=${photo.file.slice(-29, -5)}`,
+        alt: photo.alt,
+        width: photo.width,
+        height: photo.height,
+      },
     }),
   );
   const nextEnd = stops.reduce(
@@ -45,6 +51,16 @@ function StopCard({ stop }: { stop: Stops[number] }) {
     <li className="space-y-2 py-5">
       <h3 className="wrap-break-word font-heading text-xl font-semibold">{stop.place}</h3>
       {stop.address && <address className="wrap-break-word not-italic">{stop.address}</address>}
+      {stop.photo && (
+        <img
+          src={stop.photo.src}
+          alt={stop.photo.alt}
+          width={stop.photo.width}
+          height={stop.photo.height}
+          loading="lazy"
+          className="aspect-video w-full max-w-md rounded-lg object-cover"
+        />
+      )}
       <p className="text-muted-foreground">
         <time dateTime={stop.startsAt}>{dateText(start, { weekday: "long", time: true })}</time>
         {" – "}
