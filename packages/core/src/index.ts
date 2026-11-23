@@ -172,6 +172,7 @@ export {
   WEEKDAYS,
   type Weekday,
 } from "./hours.js";
+export { appInitials, initialsForm, initialsOf } from "./initials.js";
 export type * from "./ir.js";
 export {
   ACCESS_OPERATIONS,

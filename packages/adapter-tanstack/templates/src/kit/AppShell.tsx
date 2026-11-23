@@ -249,11 +249,11 @@ function AppName({
       />
       {/* In the sidebar a long name wraps; on a phone's one line it is cut, and named in full on hover. */}
       <span className={wrap ? "min-w-0" : "min-w-0 truncate"} title={wrap ? undefined : appName}>
-        {appName}
+        <span data-part="wordmark">{appName}</span>
       </span>
     </span>
   ) : (
-    appName
+    <span data-part="wordmark">{appName}</span>
   );
   if (!start) return name;
   return (

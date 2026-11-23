@@ -1723,6 +1723,22 @@ test("setLogo sets the app's mark, keeps its alt on a new file, and an empty src
   expect(removed.ok && removed.files.content).toBe(bare.content);
 });
 
+test("setInitials puts one or two letters on the tile, refuses three, and none goes back to the rule", () => {
+  expect(applyOperation(files, "setInitials", { initials: "ABC" })).toMatchObject({ ok: false });
+  // Already by rule: nothing to go back to.
+  expect(applyOperation(files, "setInitials", {})).toMatchObject({ ok: false });
+  const set = applyOperation(files, "setInitials", { initials: "AC" });
+  expect(set).toMatchObject({ ok: true, description: "Put AC on the app's tile" });
+  if (!set.ok) throw new Error(set.message);
+  expect(set.files.content).toMatch(/^initials: AC$/m);
+  const changed = applyOperation({ ...files, ...set.files }, "setInitials", { initials: "CR" });
+  if (!changed.ok) throw new Error(changed.message);
+  expect(changed.files.content).toMatch(/^initials: CR$/m);
+  // Undone: the file as it was, byte for byte.
+  const removed = applyOperation({ ...files, ...changed.files }, "setInitials", { initials: "" });
+  expect(removed.ok && removed.files.content).toBe(files.content);
+});
+
 test("editSpec with a path sets one part of a file, checked as a whole; null takes it away", () => {
   const set = applyOperation(files, "editSpec", {
     path: ["app", "timezone"],
