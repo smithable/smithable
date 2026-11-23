@@ -128,6 +128,15 @@ test("each rule broken is named (section-film.md §2)", () => {
     "File size: it spends 5.3 Mbit/s; a film spends at most 5 Mbit/s on average.",
   ]);
   expect(first({ noData: true })).toEqual(["Format: it has no film data (mdat) after its index."]);
+  // A data box with only its header holds no film; an empty one beside a full one is no problem.
+  expect(first({ data: 0 })).toEqual(["Format: it has no film data (mdat) after its index."]);
+  const full = mp4();
+  const empty = box("mdat");
+  expect(readFilm(join8(full, empty)).problems).toEqual([]);
+  expect(
+    readFilm(join8(full.subarray(0, full.length - 1008), empty, full.subarray(full.length - 1008)))
+      .problems,
+  ).toEqual([]);
   expect(first({ secondCodec: "hvc1" })).toEqual([
     expect.stringMatching(/^Format: its picture is hvc1/),
   ]);

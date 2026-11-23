@@ -59,7 +59,8 @@ export function readFilm(bytes: Uint8Array): FilmReading {
         .map((o) => text(bytes, ftyp.start + o))
     : [];
   const moov = top.findIndex((x) => x.type === "moov");
-  const mdat = top.findIndex((x) => x.type === "mdat");
+  // The first data box that holds any film; a header with nothing in it is no film.
+  const mdat = top.findIndex((x) => x.type === "mdat" && x.end > x.start);
   if (!brands.some((brand) => MP4_BRANDS.test(brand)) || moov < 0)
     return {
       problems: ["Format: it is not an MP4 file; save the film as MP4 with H.264 picture."],
