@@ -764,20 +764,27 @@ export function paymentsOf(
 
 /** Whether a record is paid for by an entry: a payment that came as asked, and not refunded. */
 export function paidFor(tx: Tx, entry: string, record: number): boolean {
-  return (
-    tx
-      .select({ id: payments.id })
-      .from(payments)
-      .where(
-        and(
-          eq(payments.entry, entry),
-          eq(payments.record, record),
-          inArray(payments.status, ["paid", "refunding"]),
-          or(isNull(payments.note), notInArray(payments.note, [...UNASKED])),
-        ),
-      )
-      .get() !== undefined
-  );
+  return paidWith(tx, entry, record) !== undefined;
+}
+
+/** The payment that paid a record through an entry, as it was made: its amount, currency and description. */
+export function paidWith(tx: Tx, entry: string, record: number) {
+  return tx
+    .select({
+      amount: payments.amount,
+      currency: payments.currency,
+      description: payments.description,
+    })
+    .from(payments)
+    .where(
+      and(
+        eq(payments.entry, entry),
+        eq(payments.record, record),
+        inArray(payments.status, ["paid", "refunding"]),
+        or(isNull(payments.note), notInArray(payments.note, [...UNASKED])),
+      ),
+    )
+    .get();
 }
 
 /**
