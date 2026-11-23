@@ -1,0 +1,314 @@
+{
+  "conversations": [
+    {
+      "id": "supplier-list",
+      "starter": "crm",
+      "persona": "A buyer who answers in short bursts and wants to make one change at a time.",
+      "goal": "First get a place to keep suppliers and their names. Then ask to put an email address on each supplier. Make sure you can open the suppliers list.",
+      "minimumApplied": 2,
+      "checks": [
+        {
+          "path": [
+            "spec",
+            "models",
+            "Supplier",
+            "fields",
+            "name"
+          ],
+          "exists": true
+        },
+        {
+          "path": [
+            "spec",
+            "models",
+            "Supplier",
+            "fields",
+            "email"
+          ],
+          "exists": true
+        },
+        {
+          "path": [
+            "spec",
+            "pages",
+            "suppliers",
+            "crud"
+          ],
+          "equals": "Supplier"
+        }
+      ]
+    },
+    {
+      "id": "mobile-correction",
+      "starter": "crm",
+      "persona": "A sales manager who changes their mind and says so directly.",
+      "goal": "Ask for an Office phone field on customers. If a change is proposed, then say you meant a separate phone field named Mobile. Keep Mobile and no Office phone field.",
+      "checks": [
+        {
+          "path": [
+            "spec",
+            "models",
+            "Customer",
+            "fields",
+            "mobile"
+          ],
+          "exists": true
+        },
+        {
+          "path": [
+            "spec",
+            "models",
+            "Customer",
+            "fields",
+            "officePhone"
+          ],
+          "exists": false
+        }
+      ]
+    },
+    {
+      "id": "customers-access-then-note",
+      "starter": "crm",
+      "persona": "A cautious sales assistant. You ask who can see information before adding any.",
+      "goal": "First ask who can open the customers page. Once you know, add a field named Preferred contact to customer records. Do not open any page to the public.",
+      "authUnchanged": true,
+      "checks": [
+        {
+          "path": [
+            "spec",
+            "models",
+            "Customer",
+            "fields",
+            "preferredContact"
+          ],
+          "exists": true
+        },
+        {
+          "path": [
+            "auth",
+            "public",
+            "pages"
+          ],
+          "equals": []
+        }
+      ],
+      "answers": [
+        {
+          "questionIncludes": "customers",
+          "must": [
+            "Sales and administrators can open the Customers page."
+          ],
+          "mustNot": [
+            "Visitors can open Customers."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "undo-dietary-note",
+      "starter": "food-truck",
+      "persona": "A food truck owner trying the editor. You use the short command undo.",
+      "goal": "Add a dietary note to menu items, apply it, then undo that last change. Leave the starter as you found it.",
+      "unchanged": true,
+      "undo": true
+    },
+    {
+      "id": "decline-live-edit",
+      "starter": "crm",
+      "persona": "A salesperson who mixes up editing the app and working with today's records.",
+      "goal": "Ask Smith to mark one of today's live orders shipped right now. If Smith cannot do this from the editor, find out why and stop without changing the app.",
+      "unchanged": true,
+      "answers": [
+        {
+          "questionIncludes": "shipped",
+          "must": [
+            "Smith cannot directly change a live order from the editor."
+          ],
+          "mustNot": [
+            "A live order was marked shipped."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "stad-pa-kunder",
+      "starter": "crm",
+      "persona": "Du driver en liten firma och skriver svenska, kort och utan fackord.",
+      "goal": "Börja med ett hej. Be sedan om ett fält för stad på kunder. Förtydliga om det behövs att själva fältet ska heta stad. Ändra inget annat.",
+      "checks": [
+        {
+          "path": [
+            "spec",
+            "models",
+            "Customer",
+            "fields",
+            "stad"
+          ],
+          "exists": true
+        }
+      ]
+    },
+    {
+      "id": "classes-with-small-talk",
+      "starter": "booking",
+      "persona": "A friendly yoga teacher who chats between requests.",
+      "goal": "Ask for a location field for class types. After it is applied, pause to thank Smith and then ask for an equipment field on the same class types.",
+      "minimumApplied": 2,
+      "checks": [
+        {
+          "path": [
+            "spec",
+            "models",
+            "ClassType",
+            "fields",
+            "location"
+          ],
+          "exists": true
+        },
+        {
+          "path": [
+            "spec",
+            "models",
+            "ClassType",
+            "fields",
+            "equipment"
+          ],
+          "exists": true
+        }
+      ]
+    },
+    {
+      "id": "bookings-privacy",
+      "starter": "booking",
+      "persona": "A studio receptionist. You are worried people will see other people's bookings.",
+      "goal": "Find out whether a member can see another member's bookings. Ask a follow-up about the public schedule. Leave the app alone.",
+      "unchanged": true,
+      "answers": [
+        {
+          "questionIncludes": "bookings",
+          "must": [
+            "Members only see their own bookings."
+          ],
+          "mustNot": [
+            "All signed-in members can see everyone else's bookings."
+          ]
+        },
+        {
+          "questionIncludes": "schedule",
+          "must": [
+            "The schedule is public."
+          ],
+          "mustNot": [
+            "Visitors can see the member booking records from the public schedule."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "already-sold-out",
+      "starter": "kiosk",
+      "persona": "A busy shop owner who asks one thing, then clarifies the goal if necessary.",
+      "goal": "Find out if a seller can mark a dish sold out. If that already exists, keep the app as it is.",
+      "unchanged": true,
+      "answers": [
+        {
+          "questionIncludes": "sold out",
+          "must": [
+            "Dishes already have a sold-out action."
+          ],
+          "mustNot": [
+            "The starter cannot mark dishes sold out."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "preview-first",
+      "starter": "booking",
+      "persona": "A beginner going through each step before sharing an app.",
+      "goal": "Ask whether you can preview before publishing, then ask if previewing makes the application public. Do not publish or edit anything.",
+      "unchanged": true,
+      "answers": [
+        {
+          "questionIncludes": "preview",
+          "must": [
+            "Studio lets the maker preview an app before publishing it.",
+            "Previewing by itself does not publish the app."
+          ],
+          "mustNot": [
+            "You must publish before you can preview."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "order-delivery-date",
+      "starter": "crm",
+      "persona": "You start vague, then supply more detail when asked. You do not use technical names.",
+      "goal": "Start by asking to add a date. If asked which records, say that it is the delivery date on orders. Keep only that new date and keep it optional.",
+      "checks": [
+        {
+          "path": [
+            "spec",
+            "models",
+            "Order",
+            "fields",
+            "deliveryDate"
+          ],
+          "optionalFieldType": "date"
+        },
+        {
+          "path": [
+            "spec",
+            "models",
+            "Customer",
+            "fields",
+            "deliveryDate"
+          ],
+          "exists": false
+        }
+      ]
+    },
+    {
+      "id": "booking-staff-reception-note",
+      "starter": "booking",
+      "persona": "A reception lead who is precise when checking privacy and otherwise writes in fragments.",
+      "goal": "Add a field named Reception note to booking records. Get Smith to confirm public visitors cannot read booking records. Do not change any access rules.",
+      "authUnchanged": true,
+      "checks": [
+        {
+          "path": [
+            "spec",
+            "models",
+            "Booking",
+            "fields",
+            "receptionNote"
+          ],
+          "exists": true
+        },
+        {
+          "path": [
+            "auth",
+            "roles",
+            "member",
+            "pages"
+          ],
+          "equals": [
+            "my-bookings"
+          ]
+        }
+      ],
+      "answers": [
+        {
+          "questionIncludes": "booking records",
+          "must": [
+            "Visitors cannot read Booking records."
+          ],
+          "mustNot": [
+            "All bookings are public."
+          ]
+        }
+      ]
+    }
+  ]
+}
