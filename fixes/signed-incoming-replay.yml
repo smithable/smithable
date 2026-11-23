@@ -1,0 +1,8 @@
+id: signed-incoming-replay
+title: A signed call from another service was known by a header its signature leaves out, so a replay with a new header was acted on again.
+severity: security
+exposure: Someone who had caught a signed call could have sent it again with a new Idempotency-Key and had it acted on a second time, within its time window, or at any time where only the body is signed.
+introduced: unknown
+affects:
+  features: [section:incoming]
+migration: none

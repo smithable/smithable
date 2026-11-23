@@ -27,6 +27,11 @@ incoming:
   paymentReceived:
     custom: true
     signed: sha256
+  deployDone:
+    create: Incident
+    set: { title: "{name}", detectedAt: NOW() }
+    id: "{event.id}"
+    signed: sha256
   support:
     mail: true
     create: Request
@@ -131,6 +136,12 @@ test("a custom, signed call: an HMAC of the body, and a stub of the project's ow
   // Signed with neither an id nor a signed time: the signature of the body is its id, so a
   // replay is a repeat whatever Idempotency-Key it comes with.
   expect(route).toContain("const key = `sig:${given}`;");
+  expect(route).not.toContain('request.headers.get("idempotency-key")');
+});
+
+test("signed with an id: the id is the call's, and a body without it is known by its signature", () => {
+  const route = file("src/routes/incoming/deployDone.ts")?.content ?? "";
+  expect(route).toContain('const key = fill("{event.id}", body) || `sig:${given}`;');
   expect(route).not.toContain('request.headers.get("idempotency-key")');
 });
 
