@@ -23796,6 +23796,7 @@ import { messageUi } from "./message";
 import { postUi } from "./post";
 import { sessionUi } from "./session";
 import { runPublish } from "./actions/publish.server";
+import { instantOf, isoIn } from "#/kit/zoned";
 import { classTypeSchema } from "#/generated/class-type.schema";
 import { instructorSchema } from "#/generated/instructor.schema";
 import { sessionSchema } from "#/generated/session.schema";
@@ -23811,10 +23812,20 @@ const userId = (v: unknown, field: string) => {
   if (typeof v === "string" && v.length > 0) return v;
   throw new BadInput(\`"\${field}" must be a user's id, a nonempty text.\`);
 };
+/** A date and time; one without an offset is a wall time in the app's zone, seconds kept. */
 const moment = (v: unknown, field: string) => {
-  const d = typeof v === "string" ? new Date(v) : undefined;
+  const wall =
+    typeof v === "string" &&
+    /^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}(:\\d{2}(\\.\\d+)?)?$/.test(v) &&
+    Number.isFinite(Date.parse(\`\${v}Z\`));
+  const d =
+    typeof v !== "string"
+      ? undefined
+      : wall
+        ? new Date(instantOf(v, "Europe/Mariehamn").getTime() + Date.parse(\`\${v}Z\`) - Date.parse(\`\${v.slice(0, 16)}:00Z\`))
+        : new Date(v);
   if (d && !Number.isNaN(d.getTime())) return d;
-  throw new BadInput(\`"\${field}" must be a date and time, like "2026-10-04T09:30:00Z".\`);
+  throw new BadInput(\`"\${field}" must be a date and time, like "2026-10-04T09:30" (in Europe/Mariehamn) or "2026-10-04T09:30:00Z".\`);
 };
 
 /** The body as an object of known fields, or a refusal naming the first unknown one. */
@@ -23905,7 +23916,7 @@ export function sessionToApi(row: Record<string, any>) {
     id: row.id as number,
     classType: row.classTypeId ?? null,
     instructor: row.instructorId ?? null,
-    startsAt: row.startsAt instanceof Date ? row.startsAt.toISOString() : (row.startsAt ?? null),
+    startsAt: row.startsAt instanceof Date ? isoIn(row.startsAt, "Europe/Mariehamn") : (row.startsAt ?? null),
     capacity: row.capacity ?? null,
     placesLeft: row.placesLeft ?? null,
     createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
@@ -24066,7 +24077,7 @@ export function messageFromApi(body: unknown, current?: Record<string, unknown>)
  */
 const OFFERS: Record<string, Offer & { describe: Record<string, string> }> = {
   "admin": {
-    "summary": "Stillwater Yoga: Class schedule and online booking for a small yoga studio.\\nClassType (class types): name*, summary, level* (beginner | allLevels | advanced), durationMinutes* (number). Title: name.\\nInstructor (instructors): name*, bio, portrait (picture). Title: name.\\nSession (sessions): classType* -> ClassType, instructor* -> Instructor, startsAt* (datetime), capacity* (number), placesLeft (number, computed). Title: id.\\nBooking (bookings): session* -> Session, attendee -> User. Title: id.\\nPost (posts): title*, address, summary, cover (picture), body*, publishedOn (date), status* (draft | published). Title: title.\\nMessage (messages): name*, email*, message*. Title: name.\\n* required. You act as someone with the role admin.\\nAnswer with what a tool returned; a number, a name or \\"none\\" you did not get from a tool is not an answer.",
+    "summary": "Stillwater Yoga: Class schedule and online booking for a small yoga studio.\\nClassType (class types): name*, summary, level* (beginner | allLevels | advanced), durationMinutes* (number). Title: name.\\nInstructor (instructors): name*, bio, portrait (picture). Title: name.\\nSession (sessions): classType* -> ClassType, instructor* -> Instructor, startsAt* (datetime), capacity* (number), placesLeft (number, computed). Title: id.\\nBooking (bookings): session* -> Session, attendee -> User. Title: id.\\nPost (posts): title*, address, summary, cover (picture), body*, publishedOn (date), status* (draft | published). Title: title.\\nMessage (messages): name*, email*, message*. Title: name.\\nTimes are in Europe/Mariehamn: one without an offset, like 2026-10-04T09:30, is read there, and times come back with its offset.\\n* required. You act as someone with the role admin.\\nAnswer with what a tool returned; a number, a name or \\"none\\" you did not get from a tool is not an answer.",
     "tools": [
       {
         "name": "find",
@@ -24235,7 +24246,7 @@ const OFFERS: Record<string, Offer & { describe: Record<string, string> }> = {
     }
   },
   "staff": {
-    "summary": "Stillwater Yoga: Class schedule and online booking for a small yoga studio.\\nClassType (class types): name*, summary, level* (beginner | allLevels | advanced), durationMinutes* (number). Title: name.\\nInstructor (instructors): name*, bio, portrait (picture). Title: name.\\nSession (sessions): classType* -> ClassType, instructor* -> Instructor, startsAt* (datetime), capacity* (number), placesLeft (number, computed). Title: id.\\nBooking (bookings): session* -> Session, attendee -> User. Title: id.\\nPost (posts): title*, address, summary, cover (picture), body*, publishedOn (date), status* (draft | published). Title: title.\\nMessage (messages): name*, email*, message*. Title: name.\\n* required. You act as someone with the role staff.\\nAnswer with what a tool returned; a number, a name or \\"none\\" you did not get from a tool is not an answer.",
+    "summary": "Stillwater Yoga: Class schedule and online booking for a small yoga studio.\\nClassType (class types): name*, summary, level* (beginner | allLevels | advanced), durationMinutes* (number). Title: name.\\nInstructor (instructors): name*, bio, portrait (picture). Title: name.\\nSession (sessions): classType* -> ClassType, instructor* -> Instructor, startsAt* (datetime), capacity* (number), placesLeft (number, computed). Title: id.\\nBooking (bookings): session* -> Session, attendee -> User. Title: id.\\nPost (posts): title*, address, summary, cover (picture), body*, publishedOn (date), status* (draft | published). Title: title.\\nMessage (messages): name*, email*, message*. Title: name.\\nTimes are in Europe/Mariehamn: one without an offset, like 2026-10-04T09:30, is read there, and times come back with its offset.\\n* required. You act as someone with the role staff.\\nAnswer with what a tool returned; a number, a name or \\"none\\" you did not get from a tool is not an answer.",
     "tools": [
       {
         "name": "find",
@@ -24404,7 +24415,7 @@ const OFFERS: Record<string, Offer & { describe: Record<string, string> }> = {
     }
   },
   "member": {
-    "summary": "Stillwater Yoga: Class schedule and online booking for a small yoga studio.\\nClassType (class types): name*, summary, level* (beginner | allLevels | advanced), durationMinutes* (number). Title: name.\\nInstructor (instructors): name*, bio, portrait (picture). Title: name.\\nSession (sessions): classType* -> ClassType, instructor* -> Instructor, startsAt* (datetime), capacity* (number), placesLeft (number, computed). Title: id.\\nBooking (bookings): session* -> Session, attendee -> User. Title: id.\\nPost (posts): title*, address, summary, cover (picture), body*, publishedOn (date), status* (draft | published). Title: title.\\nMessage (messages): name*, email*, message*. Title: name.\\n* required. You act as someone with the role member.\\nAnswer with what a tool returned; a number, a name or \\"none\\" you did not get from a tool is not an answer.",
+    "summary": "Stillwater Yoga: Class schedule and online booking for a small yoga studio.\\nClassType (class types): name*, summary, level* (beginner | allLevels | advanced), durationMinutes* (number). Title: name.\\nInstructor (instructors): name*, bio, portrait (picture). Title: name.\\nSession (sessions): classType* -> ClassType, instructor* -> Instructor, startsAt* (datetime), capacity* (number), placesLeft (number, computed). Title: id.\\nBooking (bookings): session* -> Session, attendee -> User. Title: id.\\nPost (posts): title*, address, summary, cover (picture), body*, publishedOn (date), status* (draft | published). Title: title.\\nMessage (messages): name*, email*, message*. Title: name.\\nTimes are in Europe/Mariehamn: one without an offset, like 2026-10-04T09:30, is read there, and times come back with its offset.\\n* required. You act as someone with the role member.\\nAnswer with what a tool returned; a number, a name or \\"none\\" you did not get from a tool is not an answer.",
     "tools": [
       {
         "name": "find",
@@ -37240,7 +37251,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/actions/publish.ts": "21bb5fc0 generated",
   "src/generated/activity.server.ts": "b8ebc789 generated",
   "src/generated/app.ts": "7320a04b generated",
-  "src/generated/ask.server.ts": "b4df25e5 generated",
+  "src/generated/ask.server.ts": "38fa8601 generated",
   "src/generated/booking.import.server.ts": "5dd23f09 generated",
   "src/generated/booking.import.ts": "19831a63 generated",
   "src/generated/booking.name.ts": "aba5786c generated",
@@ -46763,6 +46774,7 @@ import { customerUi } from "./customer";
 import { followUpUi } from "./follow-up";
 import { orderUi } from "./order";
 
+import { instantOf, isoIn } from "#/kit/zoned";
 import { customerSchema } from "#/generated/customer.schema";
 import { orderSchema } from "#/generated/order.schema";
 import { followUpSchema } from "#/generated/follow-up.schema";
@@ -46780,10 +46792,20 @@ const amount = (v: unknown, field: string) => {
   if (Number.isFinite(n)) return n;
   throw new BadInput(\`"\${field}" must be an amount, like "12.50".\`);
 };
+/** A date and time; one without an offset is a wall time in the app's zone, seconds kept. */
 const moment = (v: unknown, field: string) => {
-  const d = typeof v === "string" ? new Date(v) : undefined;
+  const wall =
+    typeof v === "string" &&
+    /^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}(:\\d{2}(\\.\\d+)?)?$/.test(v) &&
+    Number.isFinite(Date.parse(\`\${v}Z\`));
+  const d =
+    typeof v !== "string"
+      ? undefined
+      : wall
+        ? new Date(instantOf(v, "Europe/Mariehamn").getTime() + Date.parse(\`\${v}Z\`) - Date.parse(\`\${v.slice(0, 16)}:00Z\`))
+        : new Date(v);
   if (d && !Number.isNaN(d.getTime())) return d;
-  throw new BadInput(\`"\${field}" must be a date and time, like "2026-10-04T09:30:00Z".\`);
+  throw new BadInput(\`"\${field}" must be a date and time, like "2026-10-04T09:30" (in Europe/Mariehamn) or "2026-10-04T09:30:00Z".\`);
 };
 
 /** The body as an object of known fields, or a refusal naming the first unknown one. */
@@ -46857,7 +46879,7 @@ export function orderToApi(row: Record<string, any>) {
     total: row.total == null ? null : (Number(row.total) / 100).toFixed(2),
     shippingMethod: row.shippingMethod ?? null,
     shippingCost: row.shippingCost == null ? null : (Number(row.shippingCost) / 100).toFixed(2),
-    placedAt: row.placedAt instanceof Date ? row.placedAt.toISOString() : (row.placedAt ?? null),
+    placedAt: row.placedAt instanceof Date ? isoIn(row.placedAt, "Europe/Mariehamn") : (row.placedAt ?? null),
     createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
     updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : row.updatedAt,
   };
@@ -46944,7 +46966,7 @@ export function followUpFromApi(body: unknown, current?: Record<string, unknown>
  */
 const OFFERS: Record<string, Offer & { describe: Record<string, string> }> = {
   "admin": {
-    "summary": "Acme CRM: Lightweight CRM for a small B2B sales team.\\nCustomer (customers): name*, email, phone, segment* (smb | enterprise | government), creditLimit (money), notes, accountManager -> User. Title: name.\\nOrder (orders): number*, customer* -> Customer, status* (draft | placed | shipped | canceled), total* (money), shippingMethod* (standard | express), shippingCost (money, computed), placedAt (datetime). Title: number.\\nFollowUp (follow ups): customer* -> Customer, dueOn* (date), done (yes/no), note. Title: note.\\n* required. You act as someone with the role admin.\\nAnswer with what a tool returned; a number, a name or \\"none\\" you did not get from a tool is not an answer.",
+    "summary": "Acme CRM: Lightweight CRM for a small B2B sales team.\\nCustomer (customers): name*, email, phone, segment* (smb | enterprise | government), creditLimit (money), notes, accountManager -> User. Title: name.\\nOrder (orders): number*, customer* -> Customer, status* (draft | placed | shipped | canceled), total* (money), shippingMethod* (standard | express), shippingCost (money, computed), placedAt (datetime). Title: number.\\nFollowUp (follow ups): customer* -> Customer, dueOn* (date), done (yes/no), note. Title: note.\\nTimes are in Europe/Mariehamn: one without an offset, like 2026-10-04T09:30, is read there, and times come back with its offset.\\n* required. You act as someone with the role admin.\\nAnswer with what a tool returned; a number, a name or \\"none\\" you did not get from a tool is not an answer.",
     "tools": [
       {
         "name": "find",
@@ -47098,7 +47120,7 @@ const OFFERS: Record<string, Offer & { describe: Record<string, string> }> = {
     }
   },
   "sales": {
-    "summary": "Acme CRM: Lightweight CRM for a small B2B sales team.\\nCustomer (customers): name*, email, phone, segment* (smb | enterprise | government), creditLimit (money), notes, accountManager -> User. Title: name.\\nOrder (orders): number*, customer* -> Customer, status* (draft | placed | shipped | canceled), total* (money), shippingMethod* (standard | express), shippingCost (money, computed), placedAt (datetime). Title: number.\\nFollowUp (follow ups): customer* -> Customer, dueOn* (date), done (yes/no), note. Title: note.\\n* required. You act as someone with the role sales.\\nAnswer with what a tool returned; a number, a name or \\"none\\" you did not get from a tool is not an answer.",
+    "summary": "Acme CRM: Lightweight CRM for a small B2B sales team.\\nCustomer (customers): name*, email, phone, segment* (smb | enterprise | government), creditLimit (money), notes, accountManager -> User. Title: name.\\nOrder (orders): number*, customer* -> Customer, status* (draft | placed | shipped | canceled), total* (money), shippingMethod* (standard | express), shippingCost (money, computed), placedAt (datetime). Title: number.\\nFollowUp (follow ups): customer* -> Customer, dueOn* (date), done (yes/no), note. Title: note.\\nTimes are in Europe/Mariehamn: one without an offset, like 2026-10-04T09:30, is read there, and times come back with its offset.\\n* required. You act as someone with the role sales.\\nAnswer with what a tool returned; a number, a name or \\"none\\" you did not get from a tool is not an answer.",
     "tools": [
       {
         "name": "find",
@@ -55124,7 +55146,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/generated/actions/schedule-follow-ups.ts": "3190ea81 generated",
   "src/generated/activity.server.ts": "b375128c generated",
   "src/generated/app.ts": "4f89cb6c generated",
-  "src/generated/ask.server.ts": "08318b05 generated",
+  "src/generated/ask.server.ts": "b6e7987c generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/customer.import.server.ts": "6460f913 generated",
   "src/generated/customer.import.ts": "53f4b1d0 generated",
@@ -107553,6 +107575,7 @@ exports[`../../../examples/status/smithable.yml > file list and generated code >
 // spec's field names, amounts as decimal texts, times as ISO texts) and their values back, checked
 // by each model's own schema, as a form's are.
 import { BadInput } from "#/kit/api.server";
+import { instantOf, isoIn } from "#/kit/zoned";
 import { componentSchema } from "#/generated/component.schema";
 import { incidentSchema } from "#/generated/incident.schema";
 
@@ -107560,10 +107583,20 @@ const whole = (v: unknown, field: string) => {
   if (Number.isInteger(v)) return v as number;
   throw new BadInput(\`"\${field}" must be a record's id, a whole number.\`);
 };
+/** A date and time; one without an offset is a wall time in the app's zone, seconds kept. */
 const moment = (v: unknown, field: string) => {
-  const d = typeof v === "string" ? new Date(v) : undefined;
+  const wall =
+    typeof v === "string" &&
+    /^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}(:\\d{2}(\\.\\d+)?)?$/.test(v) &&
+    Number.isFinite(Date.parse(\`\${v}Z\`));
+  const d =
+    typeof v !== "string"
+      ? undefined
+      : wall
+        ? new Date(instantOf(v, "Europe/Mariehamn").getTime() + Date.parse(\`\${v}Z\`) - Date.parse(\`\${v.slice(0, 16)}:00Z\`))
+        : new Date(v);
   if (d && !Number.isNaN(d.getTime())) return d;
-  throw new BadInput(\`"\${field}" must be a date and time, like "2026-10-04T09:30:00Z".\`);
+  throw new BadInput(\`"\${field}" must be a date and time, like "2026-10-04T09:30" (in Europe/Mariehamn) or "2026-10-04T09:30:00Z".\`);
 };
 
 /** The body as an object of known fields, or a refusal naming the first unknown one. */
@@ -107618,8 +107651,8 @@ export function incidentToApi(row: Record<string, any>) {
     title: row.title ?? null,
     status: row.status ?? null,
     component: row.componentId ?? null,
-    detectedAt: row.detectedAt instanceof Date ? row.detectedAt.toISOString() : (row.detectedAt ?? null),
-    resolvedAt: row.resolvedAt instanceof Date ? row.resolvedAt.toISOString() : (row.resolvedAt ?? null),
+    detectedAt: row.detectedAt instanceof Date ? isoIn(row.detectedAt, "Europe/Mariehamn") : (row.detectedAt ?? null),
+    resolvedAt: row.resolvedAt instanceof Date ? isoIn(row.resolvedAt, "Europe/Mariehamn") : (row.resolvedAt ?? null),
     summary: row.summary ?? null,
     createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
     updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : row.updatedAt,
@@ -108231,11 +108264,11 @@ export const OPENAPI = {
           },
           "detectedAt": {
             "type": "string",
-            "format": "date-time"
+            "description": "In Europe/Mariehamn when given without an offset, like 2026-10-04T09:30; given back with that zone's offset."
           },
           "resolvedAt": {
             "type": "string",
-            "format": "date-time"
+            "description": "In Europe/Mariehamn when given without an offset, like 2026-10-04T09:30; given back with that zone's offset."
           },
           "summary": {
             "type": "string"
@@ -108517,11 +108550,11 @@ export const VISITOR_OPENAPI = {
           },
           "detectedAt": {
             "type": "string",
-            "format": "date-time"
+            "description": "In Europe/Mariehamn when given without an offset, like 2026-10-04T09:30; given back with that zone's offset."
           },
           "resolvedAt": {
             "type": "string",
-            "format": "date-time"
+            "description": "In Europe/Mariehamn when given without an offset, like 2026-10-04T09:30; given back with that zone's offset."
           },
           "summary": {
             "type": "string"
@@ -109138,11 +109171,11 @@ export const OPENAPI_BY_ROLE: ReadonlyMap<string, unknown> = new Map([
               },
               "detectedAt": {
                 "type": "string",
-                "format": "date-time"
+                "description": "In Europe/Mariehamn when given without an offset, like 2026-10-04T09:30; given back with that zone's offset."
               },
               "resolvedAt": {
                 "type": "string",
-                "format": "date-time"
+                "description": "In Europe/Mariehamn when given without an offset, like 2026-10-04T09:30; given back with that zone's offset."
               },
               "summary": {
                 "type": "string"
@@ -109769,11 +109802,11 @@ export const OPENAPI_BY_ROLE: ReadonlyMap<string, unknown> = new Map([
               },
               "detectedAt": {
                 "type": "string",
-                "format": "date-time"
+                "description": "In Europe/Mariehamn when given without an offset, like 2026-10-04T09:30; given back with that zone's offset."
               },
               "resolvedAt": {
                 "type": "string",
-                "format": "date-time"
+                "description": "In Europe/Mariehamn when given without an offset, like 2026-10-04T09:30; given back with that zone's offset."
               },
               "summary": {
                 "type": "string"
@@ -109868,6 +109901,7 @@ import { maintenanceUi } from "./maintenance";
 import { runIdentified } from "./actions/identified.server";
 import { runMonitoring } from "./actions/monitoring.server";
 import { runResolve } from "./actions/resolve.server";
+import { instantOf, isoIn } from "#/kit/zoned";
 import { componentSchema } from "#/generated/component.schema";
 import { incidentSchema } from "#/generated/incident.schema";
 import { incidentUpdateSchema } from "#/generated/incident-update.schema";
@@ -109877,10 +109911,20 @@ const whole = (v: unknown, field: string) => {
   if (Number.isInteger(v)) return v as number;
   throw new BadInput(\`"\${field}" must be a record's id, a whole number.\`);
 };
+/** A date and time; one without an offset is a wall time in the app's zone, seconds kept. */
 const moment = (v: unknown, field: string) => {
-  const d = typeof v === "string" ? new Date(v) : undefined;
+  const wall =
+    typeof v === "string" &&
+    /^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}(:\\d{2}(\\.\\d+)?)?$/.test(v) &&
+    Number.isFinite(Date.parse(\`\${v}Z\`));
+  const d =
+    typeof v !== "string"
+      ? undefined
+      : wall
+        ? new Date(instantOf(v, "Europe/Mariehamn").getTime() + Date.parse(\`\${v}Z\`) - Date.parse(\`\${v.slice(0, 16)}:00Z\`))
+        : new Date(v);
   if (d && !Number.isNaN(d.getTime())) return d;
-  throw new BadInput(\`"\${field}" must be a date and time, like "2026-10-04T09:30:00Z".\`);
+  throw new BadInput(\`"\${field}" must be a date and time, like "2026-10-04T09:30" (in Europe/Mariehamn) or "2026-10-04T09:30:00Z".\`);
 };
 
 /** The body as an object of known fields, or a refusal naming the first unknown one. */
@@ -109935,8 +109979,8 @@ export function incidentToApi(row: Record<string, any>) {
     title: row.title ?? null,
     status: row.status ?? null,
     component: row.componentId ?? null,
-    detectedAt: row.detectedAt instanceof Date ? row.detectedAt.toISOString() : (row.detectedAt ?? null),
-    resolvedAt: row.resolvedAt instanceof Date ? row.resolvedAt.toISOString() : (row.resolvedAt ?? null),
+    detectedAt: row.detectedAt instanceof Date ? isoIn(row.detectedAt, "Europe/Mariehamn") : (row.detectedAt ?? null),
+    resolvedAt: row.resolvedAt instanceof Date ? isoIn(row.resolvedAt, "Europe/Mariehamn") : (row.resolvedAt ?? null),
     summary: row.summary ?? null,
     createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
     updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : row.updatedAt,
@@ -109982,7 +110026,7 @@ export function incidentUpdateToApi(row: Record<string, any>) {
   return {
     id: row.id as number,
     incident: row.incidentId ?? null,
-    at: row.at instanceof Date ? row.at.toISOString() : (row.at ?? null),
+    at: row.at instanceof Date ? isoIn(row.at, "Europe/Mariehamn") : (row.at ?? null),
     status: row.status ?? null,
     message: row.message ?? null,
     createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
@@ -110024,8 +110068,8 @@ export function maintenanceToApi(row: Record<string, any>) {
     id: row.id as number,
     title: row.title ?? null,
     component: row.componentId ?? null,
-    startsAt: row.startsAt instanceof Date ? row.startsAt.toISOString() : (row.startsAt ?? null),
-    endsAt: row.endsAt instanceof Date ? row.endsAt.toISOString() : (row.endsAt ?? null),
+    startsAt: row.startsAt instanceof Date ? isoIn(row.startsAt, "Europe/Mariehamn") : (row.startsAt ?? null),
+    endsAt: row.endsAt instanceof Date ? isoIn(row.endsAt, "Europe/Mariehamn") : (row.endsAt ?? null),
     description: row.description ?? null,
     createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
     updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : row.updatedAt,
@@ -110069,7 +110113,7 @@ export function maintenanceFromApi(body: unknown, current?: Record<string, unkno
  */
 const OFFERS: Record<string, Offer & { describe: Record<string, string> }> = {
   "admin": {
-    "summary": "Northwind Status: Is it working? The state of our services, live.\\nComponent (components): name*, status* (operational | degraded | down | maintenance), description. Title: name.\\nIncident (incidents): title*, status* (investigating | identified | monitoring | resolved), component -> Component, detectedAt* (datetime), resolvedAt (datetime), summary. Title: title.\\nIncidentUpdate (incident updates): incident* -> Incident, at* (datetime), status* (investigating | identified | monitoring | resolved), message*. Title: message.\\nMaintenance (maintenances): title*, component -> Component, startsAt* (datetime), endsAt* (datetime), description. Title: title.\\n* required. You act as someone with the role admin.\\nAnswer with what a tool returned; a number, a name or \\"none\\" you did not get from a tool is not an answer.",
+    "summary": "Northwind Status: Is it working? The state of our services, live.\\nComponent (components): name*, status* (operational | degraded | down | maintenance), description. Title: name.\\nIncident (incidents): title*, status* (investigating | identified | monitoring | resolved), component -> Component, detectedAt* (datetime), resolvedAt (datetime), summary. Title: title.\\nIncidentUpdate (incident updates): incident* -> Incident, at* (datetime), status* (investigating | identified | monitoring | resolved), message*. Title: message.\\nMaintenance (maintenances): title*, component -> Component, startsAt* (datetime), endsAt* (datetime), description. Title: title.\\nTimes are in Europe/Mariehamn: one without an offset, like 2026-10-04T09:30, is read there, and times come back with its offset.\\n* required. You act as someone with the role admin.\\nAnswer with what a tool returned; a number, a name or \\"none\\" you did not get from a tool is not an answer.",
     "tools": [
       {
         "name": "find",
@@ -110228,7 +110272,7 @@ const OFFERS: Record<string, Offer & { describe: Record<string, string> }> = {
     }
   },
   "staff": {
-    "summary": "Northwind Status: Is it working? The state of our services, live.\\nComponent (components): name*, status* (operational | degraded | down | maintenance), description. Title: name.\\nIncident (incidents): title*, status* (investigating | identified | monitoring | resolved), component -> Component, detectedAt* (datetime), resolvedAt (datetime), summary. Title: title.\\nIncidentUpdate (incident updates): incident* -> Incident, at* (datetime), status* (investigating | identified | monitoring | resolved), message*. Title: message.\\nMaintenance (maintenances): title*, component -> Component, startsAt* (datetime), endsAt* (datetime), description. Title: title.\\n* required. You act as someone with the role staff.\\nAnswer with what a tool returned; a number, a name or \\"none\\" you did not get from a tool is not an answer.",
+    "summary": "Northwind Status: Is it working? The state of our services, live.\\nComponent (components): name*, status* (operational | degraded | down | maintenance), description. Title: name.\\nIncident (incidents): title*, status* (investigating | identified | monitoring | resolved), component -> Component, detectedAt* (datetime), resolvedAt (datetime), summary. Title: title.\\nIncidentUpdate (incident updates): incident* -> Incident, at* (datetime), status* (investigating | identified | monitoring | resolved), message*. Title: message.\\nMaintenance (maintenances): title*, component -> Component, startsAt* (datetime), endsAt* (datetime), description. Title: title.\\nTimes are in Europe/Mariehamn: one without an offset, like 2026-10-04T09:30, is read there, and times come back with its offset.\\n* required. You act as someone with the role staff.\\nAnswer with what a tool returned; a number, a name or \\"none\\" you did not get from a tool is not an answer.",
     "tools": [
       {
         "name": "find",
@@ -114704,7 +114748,7 @@ import { runResolve } from "./actions/resolve.server";
  */
 const OFFERS: Record<string, Offer & { describe: Record<string, string> }> = {
   "admin": {
-    "summary": "Northwind Status: Is it working? The state of our services, live.\\nComponent (components): name*, status* (operational | degraded | down | maintenance), description. Title: name.\\nIncident (incidents): title*, status* (investigating | identified | monitoring | resolved), component -> Component, detectedAt* (datetime), resolvedAt (datetime), summary. Title: title.\\nActions: resolve (Incident, when status is investigating or identified or monitoring).\\n* required. You act as someone with the role admin.\\nAnswer with what a tool returned; a number, a name or \\"none\\" you did not get from a tool is not an answer.",
+    "summary": "Northwind Status: Is it working? The state of our services, live.\\nComponent (components): name*, status* (operational | degraded | down | maintenance), description. Title: name.\\nIncident (incidents): title*, status* (investigating | identified | monitoring | resolved), component -> Component, detectedAt* (datetime), resolvedAt (datetime), summary. Title: title.\\nActions: resolve (Incident, when status is investigating or identified or monitoring).\\nTimes are in Europe/Mariehamn: one without an offset, like 2026-10-04T09:30, is read there, and times come back with its offset.\\n* required. You act as someone with the role admin.\\nAnswer with what a tool returned; a number, a name or \\"none\\" you did not get from a tool is not an answer.",
     "tools": [
       {
         "name": "find",
@@ -114825,7 +114869,7 @@ const OFFERS: Record<string, Offer & { describe: Record<string, string> }> = {
       },
       {
         "name": "add",
-        "description": "Add a record. Amounts as decimal texts (\\"12.50\\"), dates as ISO texts. A refusal says why, in the app's words.",
+        "description": "Add a record. Amounts as decimal texts (\\"12.50\\"), dates as ISO texts. A time without an offset is in Europe/Mariehamn. A refusal says why, in the app's words.",
         "inputSchema": {
           "type": "object",
           "required": [
@@ -114852,7 +114896,7 @@ const OFFERS: Record<string, Offer & { describe: Record<string, string> }> = {
       },
       {
         "name": "change",
-        "description": "Change a record: only the fields given.",
+        "description": "Change a record: only the fields given. A time without an offset is in Europe/Mariehamn.",
         "inputSchema": {
           "type": "object",
           "required": [
@@ -114940,7 +114984,7 @@ const OFFERS: Record<string, Offer & { describe: Record<string, string> }> = {
     }
   },
   "staff": {
-    "summary": "Northwind Status: Is it working? The state of our services, live.\\nComponent (components): name*, status* (operational | degraded | down | maintenance), description. Title: name.\\nIncident (incidents): title*, status* (investigating | identified | monitoring | resolved), component -> Component, detectedAt* (datetime), resolvedAt (datetime), summary. Title: title.\\nActions: resolve (Incident, when status is investigating or identified or monitoring).\\n* required. You act as someone with the role staff.\\nAnswer with what a tool returned; a number, a name or \\"none\\" you did not get from a tool is not an answer.",
+    "summary": "Northwind Status: Is it working? The state of our services, live.\\nComponent (components): name*, status* (operational | degraded | down | maintenance), description. Title: name.\\nIncident (incidents): title*, status* (investigating | identified | monitoring | resolved), component -> Component, detectedAt* (datetime), resolvedAt (datetime), summary. Title: title.\\nActions: resolve (Incident, when status is investigating or identified or monitoring).\\nTimes are in Europe/Mariehamn: one without an offset, like 2026-10-04T09:30, is read there, and times come back with its offset.\\n* required. You act as someone with the role staff.\\nAnswer with what a tool returned; a number, a name or \\"none\\" you did not get from a tool is not an answer.",
     "tools": [
       {
         "name": "find",
@@ -115061,7 +115105,7 @@ const OFFERS: Record<string, Offer & { describe: Record<string, string> }> = {
       },
       {
         "name": "add",
-        "description": "Add a record. Amounts as decimal texts (\\"12.50\\"), dates as ISO texts. A refusal says why, in the app's words.",
+        "description": "Add a record. Amounts as decimal texts (\\"12.50\\"), dates as ISO texts. A time without an offset is in Europe/Mariehamn. A refusal says why, in the app's words.",
         "inputSchema": {
           "type": "object",
           "required": [
@@ -115088,7 +115132,7 @@ const OFFERS: Record<string, Offer & { describe: Record<string, string> }> = {
       },
       {
         "name": "change",
-        "description": "Change a record: only the fields given.",
+        "description": "Change a record: only the fields given. A time without an offset is in Europe/Mariehamn.",
         "inputSchema": {
           "type": "object",
           "required": [
@@ -115176,7 +115220,7 @@ const OFFERS: Record<string, Offer & { describe: Record<string, string> }> = {
     }
   },
   "visitor": {
-    "summary": "Northwind Status: Is it working? The state of our services, live.\\nComponent (components): name*, status* (operational | degraded | down | maintenance), description. Title: name.\\nIncident (incidents): title*, status* (investigating | identified | monitoring | resolved), component -> Component, detectedAt* (datetime), resolvedAt (datetime), summary. Title: title.\\n* required. You act as a visitor, without a key.\\nAnswer with what a tool returned; a number, a name or \\"none\\" you did not get from a tool is not an answer.",
+    "summary": "Northwind Status: Is it working? The state of our services, live.\\nComponent (components): name*, status* (operational | degraded | down | maintenance), description. Title: name.\\nIncident (incidents): title*, status* (investigating | identified | monitoring | resolved), component -> Component, detectedAt* (datetime), resolvedAt (datetime), summary. Title: title.\\nTimes are in Europe/Mariehamn: one without an offset, like 2026-10-04T09:30, is read there, and times come back with its offset.\\n* required. You act as a visitor, without a key.\\nAnswer with what a tool returned; a number, a name or \\"none\\" you did not get from a tool is not an answer.",
     "tools": [
       {
         "name": "find",
@@ -120272,9 +120316,9 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/generated/actions/resolve.server.ts": "a2a5449e generated",
   "src/generated/actions/resolve.ts": "ff4366e0 generated",
   "src/generated/activity.server.ts": "dc01d286 generated",
-  "src/generated/api.server.ts": "edc266dd generated",
+  "src/generated/api.server.ts": "5989aa6c generated",
   "src/generated/app.ts": "c7fc730f generated",
-  "src/generated/ask.server.ts": "c57aa2a0 generated",
+  "src/generated/ask.server.ts": "a4039a27 generated",
   "src/generated/component.import.server.ts": "25ae311e generated",
   "src/generated/component.import.ts": "53644553 generated",
   "src/generated/component.schema.ts": "8a49641f generated",
@@ -120300,7 +120344,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/generated/maintenance.schema.ts": "80ec6842 generated",
   "src/generated/maintenance.server.ts": "fa0d4501 generated",
   "src/generated/maintenance.ts": "e16bc0e1 generated",
-  "src/generated/mcp.server.ts": "247e37bf generated",
+  "src/generated/mcp.server.ts": "f9a1b714 generated",
   "src/generated/my-time.ts": "c315432b generated",
   "src/generated/pages.ts": "bf2f0857 generated",
   "src/generated/roles.ts": "6b44c69a generated",

@@ -224,6 +224,20 @@ export function assistantOffer(
   const addable = kinds.filter((k) => k.may.add).map((k) => k.model);
   const changeable = kinds.filter((k) => k.may.change).map((k) => k.model);
   const deletable = kinds.filter((k) => k.may.delete).map((k) => k.model);
+  // What a time means, when an offered kind holds one and the app has a time zone (T1307): a
+  // caller's model would otherwise guess the offset.
+  const zone = ir.app.timezone;
+  const moments =
+    zone &&
+    kinds.some((k) =>
+      ir.models
+        .find((m) => m.name === k.model)
+        ?.fields.some((f) => f.type.kind === "scalar" && f.type.name === "datetime"),
+    )
+      ? `Times are in ${zone}: one without an offset, like 2026-10-04T09:30, is read there, and times come back with its offset.`
+      : "";
+  // The tools say it short, for a client that does not show the summary.
+  const zoneNote = moments ? ` A time without an offset is in ${zone}.` : "";
   // Kinds with a trash (docs/design/trash.md): find looks in it, run restores from it.
   const trashing = deletable.filter((m) => ir.models.find((x) => x.name === m)?.trash);
   const kind = (names: string[]) => ({ type: "string", enum: names });
@@ -302,8 +316,7 @@ export function assistantOffer(
   if (addable.length)
     tools.push({
       name: "add",
-      description:
-        'Add a record. Amounts as decimal texts ("12.50"), dates as ISO texts. A refusal says why, in the app\'s words.',
+      description: `Add a record. Amounts as decimal texts ("12.50"), dates as ISO texts.${zoneNote} A refusal says why, in the app's words.`,
       inputSchema: {
         type: "object",
         required: ["kind", "values"],
@@ -314,7 +327,7 @@ export function assistantOffer(
   if (changeable.length)
     tools.push({
       name: "change",
-      description: "Change a record: only the fields given.",
+      description: `Change a record: only the fields given.${zoneNote}`,
       inputSchema: {
         type: "object",
         required: ["kind", "id", "values"],
@@ -486,6 +499,7 @@ export function assistantOffer(
         `${ir.app.name}${ir.app.description ? `: ${ir.app.description}` : ""}`,
         ...lines,
         ...actionLine,
+        ...(moments ? [moments] : []),
         `* required. You act as ${who}.`,
         // An answer stands on what the tools said (docs/design/ask-checks.md §2).
         ANSWER_RULE,
