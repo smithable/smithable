@@ -57,6 +57,7 @@ export interface LandingFooter {
   text?: string;
   links: { label?: string; link?: string }[];
   texts?: string;
+  contactBand?: boolean;
 }
 
 /** The page frame: the app's name, a link into the app, the sections and the footer. */
@@ -121,6 +122,7 @@ function LandingLayoutView({
   const clear = onHero && !open;
   const menu = (site?.menu ?? []).filter((m) => !m.access || allows(m.access, viewer ?? null));
   const contact = site?.contact;
+  const contactBand = footer?.contactBand && contact !== undefined;
   // Columns when there is something to put in them; otherwise the one line it always had.
   const columns = menu.length > 0 || contact !== undefined;
   const named = logo ? (
@@ -134,10 +136,12 @@ function LandingLayoutView({
         height={28}
         className="size-7 shrink-0 rounded-[4px] object-contain"
       />
-      <span className="min-w-0 truncate">{appName}</span>
+      <span data-part="wordmark" className="min-w-0 truncate">
+        {appName}
+      </span>
     </>
   ) : (
-    appName
+    <span data-part="wordmark">{appName}</span>
   );
   // With a mark, a row of the two; either way a long name ends in an ellipsis instead of
   // pushing the header wider.
@@ -313,10 +317,25 @@ function LandingLayoutView({
         )}
       </header>
       <main className="flex-1">{children}</main>
-      <footer data-part="footer" className="border-t">
+      <footer
+        data-part="footer"
+        className={cn(
+          "border-t",
+          contactBand && "bg-muted text-foreground [&_.text-muted-foreground]:text-foreground",
+        )}
+      >
         {columns ? (
           <div className="mx-auto max-w-(--landing-width) px-5 py-12 text-sm">
-            <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-3">
+            <div
+              className={cn(
+                "grid gap-10 sm:grid-cols-2 lg:grid-cols-3",
+                contactBand &&
+                  contact?.hours &&
+                  menu.length > 0 &&
+                  (footer?.text || footerLinks) &&
+                  "lg:grid-cols-4",
+              )}
+            >
               <div className="space-y-2">
                 <p className="text-base font-semibold">{appName}</p>
                 {contact?.address && <p className="text-muted-foreground">{contact.address}</p>}
@@ -340,8 +359,16 @@ function LandingLayoutView({
                     </a>
                   </p>
                 )}
-                {contact?.hours && <p className="text-muted-foreground">{contact.hours}</p>}
+                {!contactBand && contact?.hours && (
+                  <p className="text-muted-foreground">{contact.hours}</p>
+                )}
               </div>
+              {contactBand && contact?.hours && (
+                <div className="space-y-2">
+                  <h2 className="text-base font-semibold">{w.openingHours}</h2>
+                  <p className="whitespace-pre-line">{contact.hours}</p>
+                </div>
+              )}
               {menu.length > 0 && (
                 <nav aria-label={w.pages} className="space-y-2">
                   <p className="text-base font-semibold">{w.pages}</p>
@@ -428,6 +455,38 @@ type Banded = {
   band?: Band;
 };
 
+/** The minimum veil keeps white type legible even over white pixels. */
+function SectionBackdrop({ image }: { image: LandingImage }) {
+  return (
+    <>
+      {/* Not marked: a picture under a scrim, like the photo hero (AiMark.tsx). */}
+      <img
+        src={image.src}
+        srcSet={image.srcSet}
+        sizes={image.srcSet && "100vw"}
+        alt={image.alt}
+        loading="lazy"
+        className="absolute inset-0 -z-20 size-full object-cover"
+      />
+      <div
+        aria-hidden
+        className="absolute inset-0 -z-10 bg-linear-to-t from-black/90 via-black/75 to-black/70 sm:bg-linear-to-r sm:rtl:bg-linear-to-l"
+      />
+    </>
+  );
+}
+
+function pictureFrame(image?: LandingImage) {
+  return image
+    ? {
+        "data-band": undefined,
+        "data-section-photo": "",
+        style: { backgroundColor: "black" },
+        className:
+          "relative isolate mx-auto my-(--section-gap) max-w-(--landing-width) overflow-hidden rounded-lg px-5 py-10 text-white sm:py-12 [&_p]:text-current",
+      }
+    : {};
+}
 /** A section's frame: its box (open, or boxed by the theme), or a band across the width. */
 const frame = (band: Band, padding: string) => ({
   "data-band": band === "none" ? undefined : band,
@@ -461,6 +520,7 @@ function Eyebrow({ texts, children }: { texts?: string; children: string }) {
 
 function SectionView({
   texts,
+  background,
   band = "none",
   eyebrow,
   id,
@@ -476,6 +536,7 @@ function SectionView({
   text?: string;
   children: React.ReactNode;
   texts?: string;
+  background?: LandingImage;
   /** A short line over the title, e.g. what the section is ("Popular dishes"). */
   eyebrow?: string;
 }) {
@@ -485,7 +546,9 @@ function SectionView({
       aria-labelledby={title ? `${id}-title` : undefined}
       data-layout={layout}
       {...frame(band, "py-10 sm:py-12")}
+      {...pictureFrame(background)}
     >
+      {background && <SectionBackdrop image={background} />}
       {eyebrow && <Eyebrow texts={texts}>{eyebrow}</Eyebrow>}
       {title && (
         <h2
@@ -515,6 +578,7 @@ function SectionView({
 /** A text section: a heading and paragraphs (a blank line between them in the content file). */
 function TextSectionView({
   texts,
+  background,
   band = "none",
   eyebrow,
   id,
@@ -525,6 +589,7 @@ function TextSectionView({
   title?: string;
   text?: string;
   texts?: string;
+  background?: LandingImage;
   /** A short line over the title, e.g. what the section is ("Our story"). */
   eyebrow?: string;
 }) {
@@ -533,7 +598,9 @@ function TextSectionView({
       {...sectionHooks(texts)}
       aria-labelledby={title ? `${id}-title` : undefined}
       {...frame(band, "py-10")}
+      {...pictureFrame(background)}
     >
+      {background && <SectionBackdrop image={background} />}
       {eyebrow && <Eyebrow texts={texts}>{eyebrow}</Eyebrow>}
       {title && (
         <h2
@@ -578,6 +645,7 @@ function HeroView({
   texts,
   eyebrow,
   title,
+  logoMark,
   subtitle,
   link,
   secondLink,
@@ -592,6 +660,7 @@ function HeroView({
   stage,
 }: {
   title: string;
+  logoMark?: string;
   subtitle?: string;
   link?: LandingLink;
   /** A second button beside the first, an outline one. */
@@ -710,9 +779,17 @@ function HeroView({
       )}
       <h1
         className="max-w-3xl text-[calc(2.25rem*var(--heading-scale))] leading-tight font-(--heading-weight) tracking-(--heading-tracking) [text-transform:var(--heading-case,none)] sm:text-[calc(3rem*var(--heading-scale))] lg:text-[calc(3.75rem*var(--heading-scale))]"
-        {...mark(texts, "title")}
+        {...(logoMark ? {} : mark(texts, "title"))}
       >
-        {title}
+        {logoMark ? (
+          <>
+            {/* Not marked: the app logo, like the mark in the header. */}
+            <img src={logoMark} alt="" className="h-auto max-h-40 max-w-full object-contain" />
+            <span className="sr-only">{title}</span>
+          </>
+        ) : (
+          title
+        )}
       </h1>
       {subtitle && (
         <p className="mt-6 max-w-2xl text-lg text-muted-foreground" {...mark(texts, "subtitle")}>
@@ -1165,6 +1242,7 @@ const GALLERY_COLUMNS = {
 
 function FeaturesView({
   texts,
+  background,
   band = "none",
   eyebrow,
   title,
@@ -1174,19 +1252,45 @@ function FeaturesView({
 }: Banded & {
   title?: string;
   text?: string;
-  items: { title?: string; text?: string }[];
+  items: { title?: string; text?: string; image?: LandingImage }[];
   /** Items side by side on wide screens: 2 to 6. */
   columns?: 2 | 3 | 4 | 5 | 6;
   texts?: string;
+  background?: LandingImage;
   /** A short line over the title, e.g. what the section is ("Why us"). */
   eyebrow?: string;
 }) {
   return (
-    <Section id="features" texts={texts} band={band} eyebrow={eyebrow} title={title} text={text}>
+    <Section
+      id="features"
+      texts={texts}
+      band={band}
+      eyebrow={eyebrow}
+      title={title}
+      text={text}
+      background={background}
+    >
       <ul className={cn("grid gap-4", CARD_COLUMNS[columns])}>
         {items.map((item, i) => (
           <li key={item.title ?? item.text}>
-            <Card className="h-full space-y-2 p-card">
+            <Card
+              className={cn(
+                "h-full space-y-2 p-card",
+                background && "border-white/30 bg-black/75 text-white",
+              )}
+            >
+              {item.image && (
+                <AiMarked generated={item.image.generated} kind={item.image.kind}>
+                  <img
+                    src={item.image.src}
+                    alt={item.image.alt}
+                    srcSet={item.image.srcSet}
+                    sizes={item.image.srcSet && "(min-width: 768px) 33vw, 100vw"}
+                    loading="lazy"
+                    className="aspect-video w-full rounded-md object-cover"
+                  />
+                </AiMarked>
+              )}
               {item.title && (
                 <h3 className="text-lg font-semibold" {...mark(texts, `items.${i}.title`)}>
                   {item.title}
@@ -1713,7 +1817,8 @@ function FaqView({
 
 function CallToActionView({
   texts,
-  band = "none",
+  background,
+  band: givenBand = "none",
   title,
   text,
   link,
@@ -1722,9 +1827,12 @@ function CallToActionView({
   text?: string;
   link?: LandingLink;
   texts?: string;
+  background?: LandingImage;
 }) {
+  const band = background ? "primary" : givenBand;
   return (
-    <section {...sectionHooks(texts)} {...frame(band, "py-12")}>
+    <section {...sectionHooks(texts)} {...frame(band, "py-12")} {...pictureFrame(background)}>
+      {background && <SectionBackdrop image={background} />}
       {/* On the primary band the band is its box: the words on it, the button inverse. */}
       <div
         className={

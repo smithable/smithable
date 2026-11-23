@@ -15,6 +15,7 @@ models:
       startsAt: datetime!
       endsAt: datetime!
       directionsUrl: url
+      photo: picture
       menuOverride: text
       status: { type: draft | confirmed | cancelled, default: draft }
   MenuItem:
@@ -59,8 +60,13 @@ pages:
   menu:
     sections:
       menu: { records: MenuItem, filters: [category] }
+  where:
+    landing:
+      hero:
+      stops: { custom: UpcomingStops }
   catering:
-    sections:
+    landing:
+      hero:
       contact: { form: CateringEnquiry }
   stops:
     crud: Stop
@@ -77,4 +83,4 @@ pages:
     actions: [contacted, booked, closed]
   team: { users: manage }
 
-navigation: [menu, catering, stops, menu-items, enquiries, team]
+navigation: [menu, where, catering, stops, menu-items, enquiries, team]

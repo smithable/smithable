@@ -1,11 +1,14 @@
 import {
   type AuthIR,
+  appInitials,
   emptyContent,
   emptyUx,
   formatsOf,
+  hexOf,
   isUpload,
   kebab,
   partSections,
+  resolveLook,
   type SpecIR,
   storesFiles,
   translationMap,
@@ -661,12 +664,27 @@ export const app: AppUi = ${literal(app)};
 `;
 }
 
-/** A simple icon with the app's initial, in the theme's primary color. */
-function favicon(ir: SpecIR): string {
-  const initial = (ir.app.name.match(/[A-Za-z0-9]/)?.[0] ?? "A").toUpperCase();
+/**
+ * The app's tile (app-logo.md §0): its one or two initials on the theme's light-mode primary, a
+ * fifth of the side round at the corners. One palette for both modes: a favicon cannot follow the
+ * mode a visitor picks inside the app. Its letters take their direction from themselves, so two
+ * right-to-left initials stand in their own order; a name with no letter gives the tile alone.
+ */
+export function favicon(
+  ir: SpecIR,
+  options: Pick<GenerateOptions, "ux" | "themes" | "content">,
+): string {
+  const { light } = resolveLook(options.ux ?? emptyUx(), options.themes).tokens;
+  const letters = appInitials(ir.app.name, options.content?.initials).replace(
+    /[&<>]/g,
+    (c) => `&#${c.charCodeAt(0)};`,
+  );
+  const two = [...letters.matchAll(/[\p{L}\p{N}]\p{M}*/gu)].length > 1;
+  const text = letters
+    ? `\n  <text x="16" y="${two ? 21 : 22}" text-anchor="middle" style="unicode-bidi:plaintext" font-family="system-ui, sans-serif" font-size="${two ? 14 : 18}" font-weight="700" fill="${hexOf(light["primary-foreground"])}">${letters}</text>`
+    : "";
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  <rect width="32" height="32" rx="7" fill="#3b5bdb"/>
-  <text x="16" y="22" text-anchor="middle" font-family="system-ui, sans-serif" font-size="18" font-weight="700" fill="#fff">${initial}</text>
+  <rect width="32" height="32" rx="6.4" fill="${hexOf(light.primary)}"/>${text}
 </svg>
 `;
 }
@@ -827,12 +845,12 @@ const SECTION_GENERATORS: SectionGenerator[] = [
       custom("src/custom/styles.css", CUSTOM_STYLES),
       generated("smithable.lock", smithableLock(ir, options)),
       generated("README.md", readme(ir, false, auth)),
-      generated("public/favicon.svg", favicon(ir)),
+      generated("public/favicon.svg", favicon(ir, options)),
       // Browser push (notifications.md §4): the worker, the manifest and the server functions.
       ...(pushEntries(ir, auth).length
         ? [
             generated("public/sw.js", SERVICE_WORKER),
-            generated("public/manifest.webmanifest", manifest(ir)),
+            generated("public/manifest.webmanifest", manifest(ir, options.content)),
             generated("src/generated/push.ts", pushModule(ir, auth)),
           ]
         : []),
@@ -1241,7 +1259,7 @@ const SECTION_GENERATORS: SectionGenerator[] = [
               ir,
               auth,
               ux,
-              viewEntries(ir, options.content).some((o) => o.when.model === model.name),
+              viewEntries(ir, options.content).map((o) => o.when.model),
             ),
           ),
           // A record as its document, read by its page and by a mail that sends it (record-documents.md §5).
@@ -1445,8 +1463,10 @@ const SECTION_GENERATORS: SectionGenerator[] = [
                 ),
               ]
             : []),
+          // A component two sections share is created once, by the first of them.
           ...page.sections.flatMap((s) =>
-            s.component
+            s.component &&
+            ctx.ir.pages.flatMap((p) => p.sections).find((x) => x.component === s.component) === s
               ? [custom(`src/custom/sections/${s.component}.tsx`, customSectionStub(s.component))]
               : [],
           ),

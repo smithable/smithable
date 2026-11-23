@@ -67,7 +67,9 @@ test("each section kind takes its own looks, checked by name and value", () => {
   expect(messages).toContain(
     '"layout" of the look of hero on page "home" is one of split, centered, plain, cover, photo, inset, stage, tiles.',
   );
-  expect(messages.join()).toContain('Unknown key "layout" in the look of footer');
+  expect(messages).toContain(
+    '"layout" of the look of footer on page "home" is one of standard, contactBand.',
+  );
   expect(messages).toContain('home has no section named "nope".');
   const notLanding = validateUx(
     {

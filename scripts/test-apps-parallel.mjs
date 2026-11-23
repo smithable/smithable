@@ -10,7 +10,7 @@ import { spawn } from "node:child_process";
 import { readdirSync } from "node:fs";
 import { cpus } from "node:os";
 import { join } from "node:path";
-import { refused } from "./ports.mjs";
+import { appBases } from "./ports.mjs";
 
 const repo = new URL("..", import.meta.url).pathname;
 // The examples named on the command line, or every example (scripts/gate.sh names the ones a
@@ -22,15 +22,8 @@ const examples = process.argv.slice(2).length
       .map((e) => e.name);
 
 // Ten ports per example from the base (TEST_APPS_PORT, default 4400), so two checkouts testing
-// at the same time can keep apart. An example whose ports (test-apps.mjs adds 0, 100, 200 and
-// 300) would include one Node's fetch refuses takes the next ten instead.
-const OFFSETS = [0, 100, 200, 300];
-let next = Number(process.env.TEST_APPS_PORT ?? 4400);
-const ports = examples.map(() => {
-  while (OFFSETS.some((offset) => refused(next + offset))) next += 10;
-  next += 10;
-  return next - 10;
-});
+// at the same time can keep apart (appBases in ports.mjs, which gate-ports.mjs checks too).
+const ports = appBases(Number(process.env.TEST_APPS_PORT ?? 4400), examples.length);
 
 const children = new Set();
 for (const signal of ["SIGINT", "SIGTERM", "SIGHUP"])

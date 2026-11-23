@@ -10,6 +10,7 @@ import {
   sectionTakesPicture,
 } from "../content.js";
 import type { YamlEditor, YamlValue } from "../edit.js";
+import { initialsForm } from "../initials.js";
 import type { SpecIR } from "../ir.js";
 import { humanize, plural } from "../naming.js";
 import { type AnyOperation, type Operation, OperationError, refTo } from "../operation.js";
@@ -330,6 +331,7 @@ function emptyTranslation(content: string, language: string, ir: SpecIR): string
     language: _l,
     languages: _ls,
     logo: _logo,
+    initials: _initials,
     ...texts
   } = (parse(content) ?? {}) as Record<string, unknown>;
   const tree = blank(texts) as Record<string, unknown>;
@@ -461,6 +463,46 @@ const setLogo: Operation<{ src?: string; alt?: string }> = {
 };
 
 /**
+ * The one or two letters on the app's tile, its favicon (docs/design/app-logo.md §0), when not the
+ * ones by rule. None goes back to the rule.
+ */
+const setInitials: Operation<{ initials?: string }> = {
+  name: "setInitials",
+  summary:
+    'The one or two letters on the app\'s tile, its tab icon ("" goes back to the first letters of its first two words).',
+  schema: {
+    type: "object",
+    additionalProperties: false,
+    properties: {
+      initials: {
+        type: "string",
+        description: "One or two letters or digits, e.g. SY; none goes back to the rule.",
+      },
+    },
+  },
+  positional: ["initials"],
+  describe: ({ initials }) =>
+    initials ? `Put ${initials} on the app's tile` : "Put the app's initials by rule on its tile",
+  destructive: () => false,
+  apply({ content }, { initials }) {
+    const given = initials?.trim();
+    if (!given) {
+      if (!content.has(["initials"]))
+        throw new OperationError("The app's initials are by rule already.");
+      content.remove(["initials"]);
+      return [];
+    }
+    if (!initialsForm(given))
+      throw new OperationError(
+        `"${given}" is not one or two letters or digits: give the initials, e.g. SY.`,
+      );
+    if (content.has(["initials"])) content.set(["initials"], given);
+    else content.add([], "initials", given);
+    return [];
+  },
+};
+
+/**
  * A landing section's own picture (a hero's, a media-and-text section's): another file under
  * public/images/, or none. A new file is not known to be made by an AI nor to have smaller copies,
  * so the mark, kind and widths go; the alt stays unless given. No src removes the picture, in
@@ -479,7 +521,7 @@ const setSectionPicture: Operation<{
   name: "setSectionPicture",
   sets: ["smithable.content.yml:pages.*.*.image", "smithable.content.yml:pages.*.*.items"],
   summary:
-    "Set a landing section's picture (a hero or media-and-text section, or a gallery's item by its place) to a file under public/images/, with what it shows; no src removes it (a gallery's whole item).",
+    "Set a landing section's picture (a hero, media-and-text, text, call to action or features section, or a gallery or features item by its place) to a file under public/images/, with what it shows; no src removes it (only a gallery loses the whole item).",
   schema: {
     type: "object",
     required: ["page", "section"],
@@ -501,7 +543,7 @@ const setSectionPicture: Operation<{
       item: {
         type: "integer",
         minimum: 0,
-        description: "A gallery's picture by its place, from 0.",
+        description: "A gallery or features picture by its place, from 0.",
       },
       was: {
         type: "string",
@@ -530,14 +572,14 @@ const setSectionPicture: Operation<{
     const languages = (content.get(["languages"]) as string[] | undefined) ?? [];
     const items = ["pages", page, section, "items"];
     if (item !== undefined) {
-      if (found.kind !== "gallery")
+      if (found.kind !== "gallery" && found.kind !== "features")
         throw new OperationError(
-          `Only a gallery's pictures are given by their place; ${section} is a ${found.kind} section.`,
+          `Only a gallery or features section's pictures are given by their place; ${section} is a ${found.kind} section.`,
         );
       const list = content.get(items);
       if (!Array.isArray(list) || item >= list.length)
         throw new OperationError(`The ${section} section has no picture ${item + 1}.`);
-      if (src === undefined) {
+      if (src === undefined && found.kind === "gallery") {
         // The item goes, its caption with it, in every language file that has it.
         content.removeItem(items, item);
         if (list.length === 1) content.removeAndPrune(items, 0);
@@ -759,5 +801,6 @@ export const contentOperations: AnyOperation[] = [
   addLanguage,
   removeLanguage,
   setLogo,
+  setInitials,
   setAssistantTexts,
 ];

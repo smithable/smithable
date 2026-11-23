@@ -284,6 +284,7 @@ test("a companion file is helped from its own schema, with the spec's names", ()
     "faq",
     "callToAction",
     "news",
+    "footer",
   ]);
   expect(home("smithableUx: 0.1\npages:\n  home:\n    sections:\n      hero:\n        ‸")).toEqual(
     expect.arrayContaining(["layout", "image"]),
@@ -294,6 +295,9 @@ test("a companion file is helped from its own schema, with the spec's names", ()
   expect(
     home("smithableUx: 0.1\npages:\n  home:\n    sections:\n      faq:\n        layout: ‸"),
   ).toEqual(["accordion", "list"]);
+  expect(
+    home("smithableUx: 0.1\npages:\n  home:\n    sections:\n      footer:\n        layout: ‸"),
+  ).toEqual(["standard", "contactBand"]);
   // The content file: models and their fields as keys.
   const content = (marked: string) => {
     const offset = marked.indexOf("‸");

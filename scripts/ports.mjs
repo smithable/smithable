@@ -17,3 +17,20 @@ export function checkPorts(what, ports) {
   );
   process.exit(1);
 }
+
+/** What test-apps.mjs adds to an example's base port for its servers. */
+export const APP_OFFSETS = [0, 100, 200, 300];
+
+/**
+ * Each example's base port in a run of test-apps-parallel: ten apart from `base`, and an example
+ * whose ports would include a refused one takes the next ten instead. A run of fewer examples uses
+ * the first of these.
+ */
+export function appBases(base, count) {
+  let next = base;
+  return Array.from({ length: count }, () => {
+    while (APP_OFFSETS.some((offset) => refused(next + offset))) next += 10;
+    next += 10;
+    return next - 10;
+  });
+}

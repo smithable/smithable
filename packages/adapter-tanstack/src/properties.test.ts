@@ -51,6 +51,10 @@ function generate(files: ProjectFiles) {
   });
 }
 
+/** The paths a generation gives more than once. */
+const twice = (files: { path: string }[]) =>
+  files.map((f) => f.path).filter((p, i, all) => all.indexOf(p) !== i);
+
 /** The names the spec has, for arguments that name something, with a few it does not have. */
 function names(ir: SpecIR, auth: AuthIR) {
   const fields = ir.models.flatMap((m) => m.fields);
@@ -169,6 +173,7 @@ describe.each(examples)("%s", (example) => {
       fc.assert(
         fc.property(steps, (seq) => {
           let files = start;
+          const ops: string[] = [];
           for (const numbers of seq) {
             let i = 0;
             const pick = () => numbers[i++ % numbers.length] as number;
@@ -176,6 +181,7 @@ describe.each(examples)("%s", (example) => {
             const { ir, auth } = irOf(files);
             const args = argsFor(op, ir, names(ir, auth), pick);
             const result = applyOperation(files, op.name, args as never);
+            if (result.ok) ops.push(`${op.name} ${JSON.stringify(args)}`);
             if (!result.ok) {
               expect(result.message.length, `${op.name} refused without a reason`).toBeGreaterThan(
                 0,
@@ -185,7 +191,12 @@ describe.each(examples)("%s", (example) => {
             applied++;
             files = { ...files, ...result.files };
           }
-          if (files !== start) expect(generate(files)).toEqual(generate(files));
+          if (files !== start) {
+            const made = generate(files);
+            expect(made).toEqual(generate(files));
+            // Each file once: the CLI writes and counts a path given twice only once (T1082).
+            expect(twice(made), `after ${ops.join(", ")}`).toEqual([]);
+          }
         }),
         // More with FC_RUNS=400 to hunt; a gate's few dozen keep the suite quick.
         fcOptions(40),
@@ -194,6 +205,7 @@ describe.each(examples)("%s", (example) => {
       expect(applied).toBeGreaterThan(0);
       // Nothing an operation did reached the files it started from.
       expect(generate(start)).toEqual(before);
+      expect(twice(before)).toEqual([]);
     },
     180_000 * SCALE,
   );

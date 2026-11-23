@@ -228,6 +228,16 @@ try {
   let stderr = "";
   claude.stderr.on("data", (d) => (stderr += d));
   const calls = new Map();
+  // The schedule shows seven days from today: a class later than that is shown from its own day.
+  const showSchedule = async (at) => {
+    const dayOf = (t) =>
+      new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Mariehamn" }).format(new Date(t));
+    const day = dayOf(at ?? Date.now());
+    const ahead = (Date.parse(day) - Date.parse(dayOf(Date.now()))) / 86400000;
+    const from = ahead >= 7 ? `from=${day}&` : "";
+    await page.evaluate((q) => window.show(`/schedule?${q}t=${Date.now()}`), from);
+    await app.getByText(/Yin/).first().waitFor({ timeout: 60000 });
+  };
   for await (const line of createInterface({ input: claude.stdout })) {
     if (!line.trim()) continue;
     lines.push(mask(line));
@@ -260,18 +270,13 @@ try {
           if (input.kind === "Session") added = record;
         } else if (ok) shown = text.length > 90 ? `${text.slice(0, 87)}…` : text;
         await page.evaluate(([id, o, t]) => window.answer(id, o, t), [part.tool_use_id, ok, shown]);
-        if (added && name === "add" && input.kind === "Session") {
-          moment("the class is added", "The app adds it: it is in the schedule");
-          // The schedule shows seven days from today: a class later than that is shown from its own day.
-          const dayOf = (at) =>
-            new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Mariehamn" }).format(new Date(at));
-          const day = dayOf(input.values?.startsAt ?? Date.now());
-          const ahead = (Date.parse(day) - Date.parse(dayOf(Date.now()))) / 86400000;
-          const from = ahead >= 7 ? `from=${day}&` : "";
-          await page.evaluate((q) => window.show(`/schedule?${q}t=${Date.now()}`), from);
-          await app.getByText(/Yin/).first().waitFor({ timeout: 60000 });
+        // Every write that went through is shown at once, so the schedule never lags behind the answer.
+        if (ok && added && name !== "find") {
+          const first = name === "add" && input.kind === "Session";
+          if (first) moment("the class is added", "The app adds it: it is in the schedule");
+          await showSchedule(input.values?.startsAt ?? added.startsAt);
           await hold(1500);
-          await shot("added");
+          if (first) await shot("added");
         }
         if (!ok && name === "change" && input.kind === "Instructor") {
           refused = text;

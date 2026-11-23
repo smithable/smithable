@@ -45,8 +45,11 @@ for (const value of Object.values(UX_CAPABILITIES)) {
     }
 }
 for (const [kind, looks] of Object.entries(SECTION_LOOKS)) {
+  // A footer band is a page choice. A theme cannot opt the page into it.
+  if (kind === "footer") continue;
   const finite = Object.fromEntries(
-    Object.entries(looks ?? {}).filter(([, values]) => Array.isArray(values)),
+    // A hero can use the app's logo only by a choice on that section.
+    Object.entries(looks ?? {}).filter(([key, values]) => key !== "mark" && Array.isArray(values)),
   );
   if (Object.keys(finite).length) sections[kind] = finite as DefaultTree;
 }

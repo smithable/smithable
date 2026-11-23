@@ -655,7 +655,8 @@ const section: JsonSchema = {
     ),
     image: {
       type: "object",
-      description: "A hero's picture: { src: /images/hero.webp, alt: what it shows }.",
+      description:
+        "A section picture, including a background behind text, an invitation or features: { src: images/hero.webp, alt: what it shows }.",
       additionalProperties: false,
       dependencies: {
         kept: { required: ["generated"], properties: { generated: { const: true } } },
@@ -766,7 +767,8 @@ const section: JsonSchema = {
           answer: { type: "string" },
           image: {
             type: "object",
-            description: "A gallery picture: { src: images/…, alt: what it shows }.",
+            description:
+              "A gallery or feature card picture: { src: images/…, alt: what it shows }.",
             additionalProperties: false,
             dependencies: {
               kept: { required: ["generated"], properties: { generated: { const: true } } },
@@ -875,6 +877,13 @@ export const CONTENT_SCHEMA: JsonSchema = {
         alt: { type: "string", description: "What the mark shows." },
         generated: { type: "boolean", description: "Made by an AI (a mark is never badged)." },
       },
+    },
+    initials: {
+      title: "Initials",
+      type: "string",
+      pattern: "^(?!.*[\\uFE0F\\u20E3])(?:[\\p{L}\\p{Nd}]\\p{M}{0,3}){1,2}$",
+      description:
+        "The one or two letters on the app's tile, its tab icon; nothing said, the first letters of its name's first two words (smithable validate --explain says which).",
     },
     models: {
       title: "Kinds of record",

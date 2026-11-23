@@ -10,11 +10,16 @@ tones:
 pages:
   home:
     sections:
+      hero: { layout: split, image: right }
       gallery: { columns: 2, band: muted }
   menu:
     frame: site
+  where:
+    sections:
+      hero: { layout: split, image: right }
   catering:
-    frame: site
+    sections:
+      hero: { layout: split, image: right }
   stops:
     table: { columns: [place, startsAt, endsAt, status], sort: startsAt }
   enquiries:
