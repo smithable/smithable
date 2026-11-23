@@ -89,6 +89,9 @@ test("a time without an offset is the app's wall time, and is given back with th
     "2026-11-28 10:00",
     "2026-11-28",
     "2026-11-28T25:00",
+    "2026-11-28T24:00",
+    "2026-11-28T24:00Z",
+    "2026-11-28T10:60",
   ])
     expect(() => moment(wrong, "startsAt")).toThrow(
       '"startsAt" must be a date and time, like "2026-10-04T09:30" (in Europe/Mariehamn) or "2026-10-04T09:30:00Z".',
