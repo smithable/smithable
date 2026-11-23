@@ -159,6 +159,14 @@ test("a link planted in a scratch folder makes the write or the taking back fail
     dirs.push(linked);
     expect(() => takeBack(join(tree, "uploads"), linked)).toThrow();
     expect(readdirSync(linked)).toEqual([]);
+    // A tree deeper than any app's uploads is refused rather than held open folder by folder.
+    let deep = join(tree, "deep");
+    for (let i = 0; i < 34; i++) deep = join(deep, "d");
+    mkdirSync(deep, { recursive: true });
+    const deepTaken = mkdtempSync(join(tmpdir(), "smithable-scratch-test-"));
+    dirs.push(deepTaken);
+    rmSync(join(tree, "uploads"));
+    expect(() => takeBack(tree, deepTaken)).toThrow("more than 32 folders deep");
   }
   // A folder swapped for a link to this process's own: its files are not the project's.
   if (process.platform !== "linux" || process.getuid?.() === 0) return;

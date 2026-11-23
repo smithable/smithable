@@ -292,18 +292,18 @@ export function copyBack(from: string, to: string): void {
  * files only, each file as `copyBack` copies it (a link or another user's file is refused). Each
  * folder is held open while it is read, and on Linux its entries are reached through it
  * (/proc/self/fd/N, as openat would), so a folder swapped for a link once opened still shows only
- * its own entries; a folder below `from` must be the project user's. `opened` is for tests.
+ * its own entries; a folder below `from` must be the project user's, at most 32 deep. `from`
+ * is this process's own scratch folder. With a project user, only Linux can pin a folder this way,
+ * so elsewhere it is refused. `opened` is for tests.
  */
 export function takeBack(from: string, to: string, opened?: (dir: string) => void): void {
-  takeFolder(from, to, false, opened);
+  if (projectUser() && process.platform !== "linux")
+    throw new Error("Taking a child's files back needs Linux where a project user is set.");
+  takeFolder(from, to, 0, opened);
 }
 
-function takeFolder(
-  from: string,
-  to: string,
-  below: boolean,
-  opened?: (dir: string) => void,
-): void {
+function takeFolder(from: string, to: string, depth: number, opened?: (dir: string) => void): void {
+  if (depth > 32) throw new Error(`${from} is more than 32 folders deep.`);
   const fd = openSync(
     from,
     constants.O_RDONLY | (constants.O_DIRECTORY ?? 0) | (constants.O_NOFOLLOW ?? 0),
@@ -311,16 +311,15 @@ function takeFolder(
   try {
     const stat = fstatSync(fd);
     const owner = projectUser()?.uid ?? process.getuid?.() ?? stat.uid;
-    if (!stat.isDirectory() || (below && stat.uid !== owner))
+    if (!stat.isDirectory() || (depth > 0 && stat.uid !== owner))
       throw new Error(`${from} is not a folder the child made.`);
+    if (depth > 0) mkdirSync(to);
     opened?.(from);
     const here = process.platform === "linux" ? `/proc/self/fd/${fd}` : from;
     for (const entry of readdirSync(here)) {
       const [a, b] = [join(here, entry), join(to, entry)];
-      if (lstatSync(a).isDirectory()) {
-        mkdirSync(b);
-        takeFolder(a, b, true, opened);
-      } else copyBack(a, b);
+      if (lstatSync(a).isDirectory()) takeFolder(a, b, depth + 1, opened);
+      else copyBack(a, b);
     }
   } finally {
     closeSync(fd);
