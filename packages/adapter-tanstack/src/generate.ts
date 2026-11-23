@@ -1241,7 +1241,7 @@ const SECTION_GENERATORS: SectionGenerator[] = [
               ir,
               auth,
               ux,
-              viewEntries(ir, options.content).some((o) => o.when.model === model.name),
+              viewEntries(ir, options.content).map((o) => o.when.model),
             ),
           ),
           // A record as its document, read by its page and by a mail that sends it (record-documents.md §5).
