@@ -1,7 +1,7 @@
 // End-to-end test of Smithable Studio (M9): on a new CRM, `smithable studio` runs the app's
 // preview and the Studio app; a real browser makes the M3-M5 changes in both modes.
 // Run after `pnpm build`: `pnpm test:studio`.
-import { spawn, spawnSync } from "node:child_process";
+import { spawn as spawnChild, spawnSync } from "node:child_process";
 import {
   appendFileSync,
   cpSync,
@@ -178,6 +178,29 @@ spawnSync(
   ],
   { cwd: dir },
 );
+/**
+ * Every detached child's process group (Studio, the waiting runs, the theme lab), stopped when
+ * this check ends however it ends: an uncaught error left Studio and its preview on the gate's
+ * ports, and the next gate failed on them (T1317). Groups already stopped are passed over.
+ */
+const groups = new Set();
+const spawn = (...args) => {
+  const child = spawnChild(...args);
+  if (args.at(-1)?.detached && child.pid) groups.add(child.pid);
+  return child;
+};
+process.on("exit", () => {
+  for (const pid of groups)
+    try {
+      process.kill(-pid);
+    } catch {}
+});
+for (const [signal, code] of [
+  ["SIGHUP", 129],
+  ["SIGINT", 130],
+  ["SIGTERM", 143],
+])
+  process.on(signal, () => process.exit(code));
 // A stand-in model, so describing a change works without a real one.
 const model = await startFakeModel();
 const server = spawn("node", [cli, "studio", dir, "--port", String(port)], {

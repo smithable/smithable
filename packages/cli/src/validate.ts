@@ -13,6 +13,7 @@ import {
   formatDiagnostic,
   formatsOf,
   hasErrors,
+  initialsOf,
   LANGUAGES,
   modelAccess,
   PEOPLE_FILE,
@@ -335,7 +336,9 @@ export function validate(
     } else io.out("\nNothing was left to the rules; the spec says it all.\n");
   }
   if (explain && shown.auth) {
-    io.out(`\n${explainSpec(shown.ir, shown.auth, shown.ux, content?.language)}`);
+    io.out(
+      `\n${explainSpec(shown.ir, shown.auth, shown.ux, content?.language, content?.initials)}`,
+    );
     io.out(
       `${badgeExplained(isDirectory(target) ? target : dirname(target), shown.ux?.aiBadge)}\n`,
     );
@@ -445,7 +448,13 @@ function count(n: number, noun: string): string {
  * field, where its unique values are unique, what a conversation reads from it, and who may run
  * each action. The same functions the generated app is built from, so this is what it does.
  */
-export function explainSpec(ir: SpecIR, auth: AuthIR, ux?: UxIR, language?: string): string {
+export function explainSpec(
+  ir: SpecIR,
+  auth: AuthIR,
+  ux?: UxIR,
+  language?: string,
+  initials?: string,
+): string {
   const lines: string[] = [];
   for (const fact of ux?.inherited?.used ?? [])
     lines.push(`${fact.path.join(".")}: ${fact.value} (theme ${fact.theme} default)`);
@@ -460,6 +469,12 @@ export function explainSpec(ir: SpecIR, auth: AuthIR, ux?: UxIR, language?: stri
   // How the app writes times, dates, weeks and numbers (docs/design/formats.md §3).
   for (const [key, chosen] of Object.entries(formatsOf(ir.app, language)))
     lines.push(`${key}: ${chosen.value} (${chosen.reason || key})`);
+  // The letters on the app's tile, its favicon (app-logo.md §0).
+  lines.push(
+    initials
+      ? `initials: ${initials} (initials in smithable.content.yml)`
+      : `initials: ${initialsOf(ir.app.name) || "none"} (by rule: the first letters of the name's first two words; initials in smithable.content.yml says otherwise)`,
+  );
   const scope = (s: UniqueScope | undefined) => (s === "owner" ? "per owner" : "in the whole app");
   for (const model of ir.models) {
     lines.push(

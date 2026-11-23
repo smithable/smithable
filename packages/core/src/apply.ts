@@ -18,6 +18,7 @@ import { checkJson, type SpecPlugin } from "./plugin.js";
 import { renameReferences } from "./rename.js";
 import type { JsonSchema } from "./section.js";
 import { accessOperations } from "./sections/access-operations.js";
+import { formulaExampleOperations } from "./sections/formula-example-operations.js";
 import { ruleOperations } from "./sections/rule-operations.js";
 import { specOperations } from "./sections/spec-operations.js";
 import { SECTIONS, validateSpec } from "./spec.js";
@@ -31,6 +32,7 @@ import type { Verification } from "./verification.js";
  */
 export const OPERATIONS: readonly AnyOperation[] = [
   ...ruleOperations,
+  ...formulaExampleOperations,
   ...accessOperations,
   ...specOperations,
   ...COMPANIONS.flatMap((c) => c.operations),

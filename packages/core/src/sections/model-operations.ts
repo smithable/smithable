@@ -144,7 +144,7 @@ function baseType(type: string): string {
 }
 
 /** Where a field lives (a calculator's under its page); smithable.content.yml keys texts the same way. */
-function fieldPath(m: string, f: string, ir?: SpecIR) {
+export function fieldPath(m: string, f: string, ir?: SpecIR) {
   return ir && isCalculator(ir, m)
     ? ["pages", m, "calculator", "fields", f]
     : ["models", m, "fields", f];

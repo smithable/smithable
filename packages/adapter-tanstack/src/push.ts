@@ -1,7 +1,7 @@
 // Browser push in a generated app (docs/design/notifications.md §4): the service worker that shows
 // a push, the web app manifest (an iPhone shows pushes only for an app on its home screen), and
 // the server functions the Notifications part under the person's name calls.
-import { type AuthIR, humanize, type SpecIR } from "@smithable/core";
+import { type AuthIR, type ContentIR, humanize, type SpecIR } from "@smithable/core";
 import { pushEntries, smsEntries } from "./outgoing.js";
 import { HEADER, literal } from "./shared.js";
 
@@ -34,15 +34,26 @@ self.addEventListener("notificationclick", (event) => {
 });
 `;
 
-/** The web app manifest: the app's name and icon, opened as an app of its own. */
-export function manifest(ir: SpecIR): string {
+/**
+ * The web app manifest: the app's name and icons, opened as an app of its own. An app with a
+ * logo lists it after the tile: of icons equally fit a browser takes the last, so an installed
+ * app carries the picture its tab does (app-logo.md §0).
+ */
+export function manifest(ir: SpecIR, content?: ContentIR): string {
+  const logo = content?.logo?.src;
+  const type = logo?.endsWith(".svg")
+    ? "image/svg+xml"
+    : `image/${logo?.split(".").at(-1)?.replace("jpg", "jpeg")}`;
   return `${JSON.stringify(
     {
       name: ir.app.name,
       short_name: ir.app.name.slice(0, 12),
       start_url: "/",
       display: "standalone",
-      icons: [{ src: "/favicon.svg", sizes: "any", type: "image/svg+xml" }],
+      icons: [
+        { src: "/favicon.svg", sizes: "any", type: "image/svg+xml" },
+        ...(logo ? [{ src: `/${logo}`, sizes: "any", type }] : []),
+      ],
     },
     null,
     2,

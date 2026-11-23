@@ -48,6 +48,32 @@ test("a sample the library marks fit for a hero may be the hero", () => {
   );
 });
 
+test("the hero's picture is not also a record's sample in the same app (T1055)", () => {
+  const harbour = {
+    ...entry("harbour-boats", "sample", ["sample", "harbour", "boat"]),
+    uses: ["hero"],
+  };
+  const ferry = entry("ferry-boat", "sample", ["sample", "ferry", "boat"]);
+  const ir = validateSpec({
+    path: "smithable.yml",
+    text: `smithable: 0.1
+app: { name: Harbour Boats }
+models:
+  Boat:
+    fields: { name: string!, photo: picture }
+pages:
+  boats: { crud: Boat }
+`,
+  }).ir;
+  if (!ir) throw new Error("invalid");
+  const picked = pickPictures([...index, harbour, ferry], {
+    description: "Boat rentals in the harbour",
+    ir,
+  });
+  expect(picked.hero?.id).toBe("harbour-boats");
+  expect(picked.models.Boat?.map((e) => e.id)).toEqual(["ferry-boat"]);
+});
+
 test("the models' names and fields count: a marketplace of items gets second-hand samples", () => {
   const ir = validateSpec({
     path: "smithable.yml",
@@ -257,15 +283,17 @@ const marks: PictureEntry[] = [
   entry("logo-star", "logo", ["logo", "mark", "abstract", "bold"]),
 ];
 
-test("a mark that fits wins, and no fitting mark still gives an abstract one", () => {
+test("a mark that fits wins, and a description no mark fits gets none (app-logo.md §4)", () => {
   expect(pickPictures(marks, { description: "A yoga studio's classes" }).logo?.id).toBe(
     "logo-lotus",
   );
   expect(pickPictures(marks, { description: "Our garden club's plots" }).logo?.id).toBe(
     "logo-leaf",
   );
-  const none = pickPictures(marks, { description: "Quarterly compliance filings" }).logo;
-  expect(none?.tags).toContain("abstract");
+  // The wordmark and tile are its identity: no abstract mark by the hash (2026-11-20).
+  const none = pickPictures(marks, { description: "Quarterly compliance filings" });
+  expect(none.logo).toBeUndefined();
+  expect(none.misses.logo).toBe(true);
   expect(pickPictures(index, { description: "A café" }).logo).toBeUndefined();
   // A starter's monogram is its own name's letter: never another app's mark.
   const monogram = entry("logo-mono-northwind-c", "logo", ["logo", "monogram", "monogram-status"]);

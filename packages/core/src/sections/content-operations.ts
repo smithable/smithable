@@ -10,6 +10,7 @@ import {
   sectionTakesPicture,
 } from "../content.js";
 import type { YamlEditor, YamlValue } from "../edit.js";
+import { initialsForm } from "../initials.js";
 import type { SpecIR } from "../ir.js";
 import { humanize, plural } from "../naming.js";
 import { type AnyOperation, type Operation, OperationError, refTo } from "../operation.js";
@@ -330,6 +331,7 @@ function emptyTranslation(content: string, language: string, ir: SpecIR): string
     language: _l,
     languages: _ls,
     logo: _logo,
+    initials: _initials,
     ...texts
   } = (parse(content) ?? {}) as Record<string, unknown>;
   const tree = blank(texts) as Record<string, unknown>;
@@ -456,6 +458,46 @@ const setLogo: Operation<{ src?: string; alt?: string }> = {
     const text = alt?.trim() || (typeof had === "string" ? had : `The ${ir.app.name} logo`);
     if (content.has(["logo"])) content.set(["logo"], { src, alt: text });
     else content.add([], "logo", { src, alt: text });
+    return [];
+  },
+};
+
+/**
+ * The one or two letters on the app's tile, its favicon (docs/design/app-logo.md §0), when not the
+ * ones by rule. None goes back to the rule.
+ */
+const setInitials: Operation<{ initials?: string }> = {
+  name: "setInitials",
+  summary:
+    'The one or two letters on the app\'s tile, its tab icon ("" goes back to the first letters of its first two words).',
+  schema: {
+    type: "object",
+    additionalProperties: false,
+    properties: {
+      initials: {
+        type: "string",
+        description: "One or two letters or digits, e.g. SY; none goes back to the rule.",
+      },
+    },
+  },
+  positional: ["initials"],
+  describe: ({ initials }) =>
+    initials ? `Put ${initials} on the app's tile` : "Put the app's initials by rule on its tile",
+  destructive: () => false,
+  apply({ content }, { initials }) {
+    const given = initials?.trim();
+    if (!given) {
+      if (!content.has(["initials"]))
+        throw new OperationError("The app's initials are by rule already.");
+      content.remove(["initials"]);
+      return [];
+    }
+    if (!initialsForm(given))
+      throw new OperationError(
+        `"${given}" is not one or two letters or digits: give the initials, e.g. SY.`,
+      );
+    if (content.has(["initials"])) content.set(["initials"], given);
+    else content.add([], "initials", given);
     return [];
   },
 };
@@ -762,5 +804,6 @@ export const contentOperations: AnyOperation[] = [
   addLanguage,
   removeLanguage,
   setLogo,
+  setInitials,
   setAssistantTexts,
 ];

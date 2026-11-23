@@ -333,15 +333,23 @@ test("a picture the texts name but the project does not have is left out", async
   expect(readFileSync(join(dir, "smithable.content.yml"), "utf8")).toBe("smithableContent: 0.1\n");
 });
 
-test("every drafted app gets a mark: the content file's logo and public/images/logo.webp", async () => {
+test("a drafted app whose description a mark fits gets it: the content file's logo and public/images/logo.webp", async () => {
+  const star = {
+    id: "logo-star",
+    kind: "logo",
+    url: "https://x/logo/star.webp",
+    alt: "A star",
+    tags: ["logo", "abstract"],
+  };
   const marks = [
     ...index,
+    star,
     {
-      id: "logo-star",
+      id: "logo-loaf",
       kind: "logo",
-      url: "https://x/logo/star.webp",
-      alt: "A star",
-      tags: ["logo", "abstract"],
+      url: "https://x/logo/loaf.webp",
+      alt: "A loaf",
+      tags: ["logo", "bakery", "bread"],
     },
   ];
   const ir = validateSpec({
@@ -362,7 +370,19 @@ test("every drafted app gets a mark: the content file's logo and public/images/l
   expect(written.map((w) => w.file)).toEqual(["logo.webp"]);
   expect(out.join("")).toContain("Pictures from the Smithable image library: logo.webp");
   const text = files["smithable.content.yml"] ?? "";
-  expect(text).toContain("logo:\n  src: images/logo.webp\n  alt: A star");
+  expect(text).toContain("logo:\n  src: images/logo.webp\n  alt: A loaf");
+  // No mark fits: no logo, and the app shows its wordmark and initials (app-logo.md §4).
+  const none: Record<string, string> = {};
+  const unfit = await addLibraryPictures({
+    description: "a bakery's loaves",
+    ir,
+    files: none,
+    io: { out: () => {}, err: () => {} } as never,
+    fetchFn: fakeFetch,
+    index: [...index, star],
+  });
+  expect(unfit.map((w) => w.file)).not.toContain("logo.webp");
+  expect(none["smithable.content.yml"] ?? "").not.toContain("logo:");
   expect(validateContent({ path: "smithable.content.yml", text }, ir).diagnostics).toEqual([]);
   // A logo the texts already name is kept.
   const own: Record<string, string> = {

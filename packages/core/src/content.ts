@@ -11,6 +11,7 @@ import {
   readString,
 } from "./context.js";
 import { type Diagnostic, hasErrors } from "./diagnostics.js";
+import { initialsForm } from "./initials.js";
 import { channelsOf, type ModelIR, type OutgoingIR, type SpecIR, USER_MODEL } from "./ir.js";
 import { capitalize, humanize, plural } from "./naming.js";
 import { patternInfo } from "./patterns.js";
@@ -41,6 +42,8 @@ export interface ContentIR {
   translations?: Partial<Record<Language, ContentIR>>;
   /** The app's mark, before its name in the shell and the landing header, and its tab icon. */
   logo?: ContentImage;
+  /** The one or two letters on the app's tile (its favicon), when not the ones by rule (initials.ts). */
+  initials?: string;
   models: Record<string, ModelContent>;
   pages: Record<string, PageContent>;
   menus: Record<string, { label?: string }>;
@@ -295,7 +298,8 @@ export function textPaths(content: ContentIR): Map<string, string> {
         if (!notText(key, inner, at.split(".").at(-1))) walk(inner, at ? `${at}.${key}` : key);
   };
   for (const [key, value] of Object.entries(content))
-    if (!["language", "languages", "translations", "logo"].includes(key)) walk(value, key);
+    if (!["language", "languages", "translations", "logo", "initials"].includes(key))
+      walk(value, key);
   return paths;
 }
 
@@ -421,7 +425,7 @@ export function validateContent(
     allowed: [
       "smithableContent",
       // A language file holds the texts only: the app's languages and its mark are the content file's.
-      ...(translation ? [] : ["language", "languages", "logo"]),
+      ...(translation ? [] : ["language", "languages", "logo", "initials"]),
       "models",
       "pages",
       "menus",
@@ -484,6 +488,16 @@ export function validateContent(
         );
       else if (!alt) ctx.error(value, "logo-alt", '"logo" needs "alt": what the mark shows.');
       else content.logo = { src, alt, ...(generated ? { generated } : {}) };
+    }
+    if (key === "initials") {
+      const initials = readString(ctx, value, '"initials"');
+      if (initials && !initialsForm(initials))
+        ctx.error(
+          value,
+          "initials-form",
+          '"initials" is one or two letters (or digits), e.g. SY; nothing said, the first letters of the app\'s first two words.',
+        );
+      else if (initials) content.initials = initials;
     }
     if (key === "consent")
       content.consent = readTexts(ctx, value, '"consent"', ["text", "accept", "decline"]);

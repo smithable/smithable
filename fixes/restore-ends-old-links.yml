@@ -1,0 +1,8 @@
+id: restore-ends-old-links
+title: A record put in the trash before sent links ended with their record kept those links, and restoring the record opened them again.
+severity: security
+exposure: Someone holding a link sent for such a record could open the record's copy again after it was restored, until the link expired.
+introduced: unknown
+affects:
+  kit: [src/kit/view.server.ts]
+migration: none
