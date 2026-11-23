@@ -67,19 +67,27 @@ const WRITES_ITSELF: Record<string, string> = {
 };
 
 const WRITE =
-  /^(writeFileSync|appendFileSync|mkdirSync|rmSync|unlinkSync|cpSync|copyFileSync|renameSync|symlinkSync|linkSync|utimesSync|truncateSync|ftruncateSync|openSync|writeSync|writevSync|createWriteStream|writeFile|appendFile|rm|mkdir|cp|copyFile|rename|unlink|symlink|link|truncate|open)$/;
+  /^(writeFileSync|appendFileSync|mkdirSync|mkdtempSync|rmSync|rmdirSync|unlinkSync|cpSync|copyFileSync|renameSync|symlinkSync|linkSync|utimesSync|lutimesSync|futimesSync|truncateSync|ftruncateSync|chmodSync|fchmodSync|lchmodSync|chownSync|fchownSync|lchownSync|openSync|writeSync|writevSync|createWriteStream|WriteStream|writeFile|appendFile|mkdir|mkdtemp|rm|rmdir|cp|copyFile|rename|unlink|symlink|link|utimes|lutimes|truncate|chmod|lchmod|chown|lchown|open|write|writev|promises|default)$/;
 
 /**
- * Whether a module's own code may write files: it imports a writing function of node:fs (by its
- * name, also under another one), or the whole module (`* as fs`, a default import, `import()`),
- * whose every function it may call. A child's code in a string (`require("fs")` sent to a
- * container) is not this process's.
+ * Whether a module's own code may write files: it imports or re-exports a writing function of
+ * node:fs (by its name, also under another one, `promises` and `default` included), or the whole
+ * module (`* as fs`, a default import, `import()`, `getBuiltinModule`, a `createRequire`d require), whose
+ * every function it may call. A child's code in a string (`require("fs")` sent to a container) is
+ * not this process's. It errs on the side of finding a writer: a module that only reads through a
+ * whole-module import is listed with that reason.
  */
-function writesFiles(text: string): boolean {
-  const fs = String.raw`"(?:node:)?fs(?:\/promises)?"`;
+function writesFiles(source: string): boolean {
+  const text = source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  const fs = String.raw`["'\`](?:node:)?fs(?:\/promises)?["'\`]`;
   if (new RegExp(String.raw`\bimport\s*\(\s*${fs}`).test(text)) return true;
+  if (new RegExp(String.raw`\bgetBuiltinModule\s*\(\s*${fs}`).test(text)) return true;
+  // A require of its own (createRequire) loading node:fs; `require("fs")` alone is a child's code.
+  if (new RegExp(String.raw`\bcreateRequire\s*\([^)]*\)\s*\(\s*${fs}`).test(text)) return true;
+  if (/\bcreateRequire\b/.test(text) && new RegExp(String.raw`\brequire\s*\(\s*${fs}`).test(text))
+    return true;
   for (const m of text.matchAll(
-    new RegExp(String.raw`^import\s+(?!type\b)([^;]*?)\s+from\s*${fs}`, "gm"),
+    new RegExp(String.raw`^\s*(?:import|export)(?!\s+type\b)\s*([^;]*?)\s*from\s*${fs}`, "gm"),
   )) {
     const clause = m[1] ?? "";
     const named = /\{([^}]*)\}/.exec(clause);
@@ -90,8 +98,8 @@ function writesFiles(text: string): boolean {
         .trim()
     )
       return true;
-    const names = (named?.[1] ?? "").split(",").map((n) => n.trim());
-    if (names.some((n) => !n.startsWith("type ") && WRITE.test(n.split(/\s+as\s+/)[0] ?? "")))
+    const names = (named?.[1] ?? "").split(",").map((n) => n.trim().replace(/^["']|["']$/g, ""));
+    if (names.some((n) => !n.startsWith("type ") && WRITE.test(n.split(/["']?\s+as\s+/)[0] ?? "")))
       return true;
   }
   return false;
@@ -99,7 +107,7 @@ function writesFiles(text: string): boolean {
 
 test("every module that writes files itself is placed, with its reason", () => {
   const here = new URL(".", import.meta.url).pathname;
-  const writers = readdirSync(here)
+  const writers = readdirSync(here, { recursive: true, encoding: "utf8" })
     .filter((f) => f.endsWith(".ts") && !f.endsWith(".test.ts"))
     .filter((f) => writesFiles(readFileSync(join(here, f), "utf8")));
   expect(writers.sort()).toEqual(Object.keys(WRITES_ITSELF).sort());
@@ -115,6 +123,18 @@ test("a module that writes is found however it imports node:fs", () => {
     'import { open } from "node:fs/promises";',
     'import {\n  openSync,\n  readSync,\n} from "node:fs";',
     'const fs = await import("node:fs");',
+    "import { writeFileSync } from 'node:fs';",
+    "const fs = await import('fs');",
+    'import { promises as fsp } from "node:fs";',
+    'import { default as fs } from "node:fs";',
+    'import { mkdtempSync, chmodSync } from "node:fs";',
+    'import {\n  // a note\n  writeFileSync,\n} from "node:fs";',
+    '  import{writeFileSync}from"node:fs";',
+    'export { writeFileSync } from "node:fs";',
+    'export * from "node:fs";',
+    'const fs = process.getBuiltinModule("node:fs");',
+    'const require = createRequire(import.meta.url);\nconst fs = require("node:fs");',
+    'const fs = createRequire(import.meta.url)("node:fs");',
   ])
     expect(writesFiles(text), text).toBe(true);
   for (const text of [
@@ -122,6 +142,7 @@ test("a module that writes is found however it imports node:fs", () => {
     'import type { Stats } from "node:fs";',
     'import { type WriteStream, readFileSync } from "node:fs";',
     'const code = `const fs=require("fs");fs.rmSync("/data/x")`;',
+    'const require = createRequire(import.meta.url);\nconst plugin = require("./plugin.js");',
   ])
     expect(writesFiles(text), text).toBe(false);
 });
