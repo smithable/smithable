@@ -34,10 +34,14 @@ export function encode(value: unknown): string {
     if (raw instanceof Uint8Array) return { $bytes: Buffer.from(raw).toString("base64") };
     if (v instanceof Map) return { $map: [...v.entries()] };
     if (v instanceof Set) return { $set: [...v] };
-    // Any record, by the entries JSON will write (an undefined one is left out).
+    // Any record goes on as the entries JSON would write, each read once (a getter too).
     if (v && typeof v === "object" && !Array.isArray(v)) {
-      const kept = Object.entries(v).filter(([, x]) => x !== undefined);
-      if (kept.length === 1 && TAGS.has(kept[0]?.[0] as string)) return { $object: kept };
+      const kept = Object.entries(v).filter(
+        ([, x]) => x !== undefined && typeof x !== "function" && typeof x !== "symbol",
+      );
+      return kept.length === 1 && TAGS.has(kept[0]?.[0] as string)
+        ? { $object: kept }
+        : Object.fromEntries(kept);
     }
     return v === undefined && Array.isArray(this) ? { $undefined: true } : v;
   });
