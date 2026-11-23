@@ -1,7 +1,7 @@
 smithable: 0.1
 app:
   name: Kiosken
-  description: A harbour food truck where people order ahead and pick up.
+  description: Food truck pickup.
   currency: EUR
   timezone: Europe/Mariehamn
 
@@ -35,12 +35,25 @@ models:
       quantity: int! = 1
       unitPrice: money!                        # the dish's price when ordered
       amount: { type: money, formula: quantity * unitPrice }
-  Stop:                                        # where the truck stands when
+  Stop:
     fields:
       place: string!
-      day: date!
-      hours: string!                           # as written: "11:00-14:00"
-      note: text
+      address: string
+      startsAt: datetime!
+      endsAt: datetime!
+      directionsUrl: url
+      photo: picture
+      menuOverride: text
+      status: { type: draft | confirmed | cancelled, default: draft }
+  CateringEnquiry:
+    fields:
+      name: string!
+      email: email!
+      eventDate: date
+      guests: { type: int, min: 1 }
+      message: text!
+      status: { type: new | contacted | booked | closed, default: new, by: app }
+      followUpOn: { type: date, default: TODAY(), by: app }
 
 pages:
   menu:
@@ -62,15 +75,28 @@ pages:
     actions: [soldOut, backOn]
   stops:
     crud: Stop
+    filters: [startsAt, status]
+    sortable: [startsAt]
   where:
     landing:
       hero: { shortcuts: [menu, stops] }   # the menu and the week, as the hero's tiles
-      stops: { records: Stop, limit: 7 }
+      stops: { custom: UpcomingStops }
+      gallery: {}
       footer: {}
+  catering:
+    landing:
+      hero:
+      contact: { form: CateringEnquiry }
+  enquiries:
+    crud: CateringEnquiry
+    filters: [status]
+    defaultFilter: { status: [new, contacted] }
+    sortable: [followUpOn]
+    actions: [contacted, booked, closed]
   team:
     users: manage
 
-navigation: [orders, dishes, stops, team]
+navigation: [orders, dishes, stops, enquiries, team]
 
 actions:
   soldOut:
@@ -103,6 +129,19 @@ actions:
     when: { status: [new, accepted] }
     set: { status: declined, reason: }
     intent: "The order cannot be made: say why."
+
+  contacted:
+    on: CateringEnquiry
+    when: { status: new }
+    set: { status: contacted, followUpOn: 'DATEADD(TODAY(), 3, "day")' }
+  booked:
+    on: CateringEnquiry
+    when: { status: contacted }
+    set: { status: booked }
+  closed:
+    on: CateringEnquiry
+    when: { status: [new, contacted, booked] }
+    set: { status: closed }
 
 outgoing:
   orderPlaced:   { when: Order created, to: [mail, push], recipient: staff }   # staff hear of each order (Johan 2026-11-07)

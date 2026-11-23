@@ -16,8 +16,7 @@ export type Kind =
   | "barbers"
   | "restaurant"
   | "builder"
-  | "painter"
-  | "food-truck";
+  | "painter";
 
 export interface Question {
   about: "kind" | "audience" | "visitors" | "languages";
@@ -122,8 +121,6 @@ cue(
 cue("builder", 2, "renovation renovations enquiry enquiries plumber electrician roofer");
 cue("painter", 4, "painter painters painting decorator decorators");
 cue("painter", 2, "facade facades repaint repainting wallpaper");
-cue("food-truck", 4, "catering cater");
-cue("food-truck", 2, "food-truck truck");
 
 // Who it is for. "My" and "our" say whose it is, which is the app's audience only for an app
 // that looks inward (my clients, our pipeline): "my shop" and "our workshops" are a business
@@ -183,7 +180,7 @@ const NOT = set("nothing not no never without");
 // Words for the people of a team are who uses it, never a thing it keeps.
 const NOT_THINGS = set("team colleague staff member");
 // Shapes that face outward: who signs in and what is seen are never taken from "my" or "our".
-const OUTWARD = new Set<string>(["booking", "marketplace", "status", "restaurant", "food-truck"]);
+const OUTWARD = new Set<string>(["booking", "marketplace", "status", "restaurant"]);
 
 // Things people keep records of, by the word they use (singular).
 const THING = set(`customer client contact company lead deal follow-up invoice payment quote
@@ -292,12 +289,15 @@ export function readDescription(given: string): Reading {
   words.forEach((word, i) => {
     const w = stem(word);
     const as: string[] = [];
-    if (cateringTruck && w === "food" && /^truck$/i.test(words[i + 1] ?? "")) as.push("generic");
+    if (
+      cateringTruck &&
+      ((w === "food" && /^truck$/i.test(words[i + 1] ?? "")) || /^cater(?:ing)?$/.test(w))
+    )
+      as.push("generic");
     if (inClause.has(i)) as.push("clause");
     // "Books" are things one reads; "book" and "booking" are what one does.
     const cues = /^books$/i.test(word) ? [] : (KIND[w] ?? []);
     for (const [kind, weight] of cues) {
-      if (kind === "food-truck" && !cateringTruck) continue;
       votes.set(kind, (votes.get(kind) ?? 0) + weight);
       as.push(`${kind} +${weight}`);
     }
@@ -446,7 +446,10 @@ export function readDescription(given: string): Reading {
   // Who signs in. People from outside who do something themselves sign up; a group that works
   // together is invited; a status page is written by its team. "My" and "our" count only for a
   // shape that looks inward.
-  const outward = reading.kind === undefined || OUTWARD.has(reading.kind);
+  const outward =
+    reading.kind === undefined ||
+    OUTWARD.has(reading.kind) ||
+    (reading.kind === "kiosk" && cateringTruck);
   if (outsiders) reading.audience = "members";
   else if (who.team) reading.audience = "team";
   else if (reading.kind === "status") reading.audience = "team";
@@ -458,8 +461,7 @@ export function readDescription(given: string): Reading {
   // Nothing said about being seen: closed, when it looks inward or a group that works together
   // uses it. A status page may be either, and a place to book or to post is for others: asked.
   if (reading.visitors === undefined && reading.kind !== undefined && reading.kind !== "status") {
-    const inward = !OUTWARD.has(reading.kind);
-    if (reading.api || (inward && reading.audience) || (who.team > 0 && !outsiders))
+    if (reading.api || (!outward && reading.audience) || (who.team > 0 && !outsiders))
       reading.visitors = "nothing";
   }
 

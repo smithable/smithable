@@ -52,10 +52,29 @@ const SHOTS = {
     ["cases", "list", "admin"],
     ["cases", 8, "admin", true], // a question about a price: a sign-in trouble read as a fault of the app itself
   ],
-  // Where the truck is this week, under its evening photo, and the orders as staff see them.
+  // The next stop, the staff orders, the catering form and the ordering menu.
   kiosk: [
-    ["where", "list", "visitor", true],
+    [
+      "where",
+      "list",
+      "visitor",
+      true,
+      async (page, dir) => {
+        const Database = createRequire(join(dir, "package.json"))("better-sqlite3");
+        const db = new Database(join(dir, "data/db/app.db"));
+        const tomorrow = Date.now() + 86_400_000;
+        const starts = new Date(tomorrow).setUTCHours(10, 0, 0, 0);
+        db.prepare(
+          "UPDATE stops SET starts_at = ?, ends_at = ?, directions_url = ?, status = 'confirmed' WHERE place = 'Harbour market'",
+        ).run(starts, starts + 10_800_000, "https://example.com/map");
+        db.close();
+        await page.reload();
+        await page.getByRole("heading", { name: "Harbour market" }).waitFor();
+      },
+    ],
     ["orders", "list", "admin"],
+    ["catering", "list", "visitor", true],
+    ["menu", "list", "visitor", true],
   ],
   // The free times a customer chooses from, and the shop's day with a column per barber (the
   // starter has no appointments: today's few are written first).
@@ -146,29 +165,6 @@ const SHOTS = {
     ["jobs", "list", "visitor"],
     ["jobs", 6, "visitor", true],
     ["home", "list", "visitor", true],
-  ],
-  "food-truck": [
-    [
-      "home",
-      "list",
-      "visitor",
-      true,
-      async (page, dir) => {
-        const Database = createRequire(join(dir, "package.json"))("better-sqlite3");
-        const db = new Database(join(dir, "data/db/app.db"));
-        const tomorrow = Date.now() + 86_400_000;
-        const starts = new Date(tomorrow).setUTCHours(10, 0, 0, 0);
-        db.prepare(
-          "UPDATE stops SET starts_at = ?, ends_at = ?, directions_url = ?, status = 'confirmed' WHERE place = 'Harbour market'",
-        ).run(starts, starts + 10_800_000, "https://example.com/map");
-        db.close();
-        await page.reload();
-        await page.getByRole("heading", { name: "Harbour market" }).waitFor();
-      },
-    ],
-    ["catering", "list", "visitor", true],
-    ["where", "list", "visitor", true],
-    ["menu", "list", "visitor", true],
   ],
   api: [
     ["admin", "tasks", "admin"],
