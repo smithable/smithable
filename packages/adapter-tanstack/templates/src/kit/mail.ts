@@ -36,9 +36,12 @@ const outboxDir = () => join(ownDataDir(), "mail", "outbox");
  */
 const WAITS = { connectionTimeout: 10_000, greetingTimeout: 10_000, socketTimeout: 30_000 };
 
-/** A MAIL_MODE other than testers or all (outbox, or one unknown) keeps every mail in the outbox. */
-const sends = (mode = process.env.MAIL_MODE?.trim()) =>
-  !mode || mode === "testers" || mode === "all";
+/**
+ * MAIL_MODE unset sends as before. testers or all send too; any other value, a blank or mistyped
+ * one included (outbox, " all"), keeps every mail in the outbox: an unclear setting fails closed.
+ */
+const sends = (mode = process.env.MAIL_MODE) =>
+  mode === undefined || mode === "testers" || mode === "all";
 
 function smtp() {
   const env = process.env;
@@ -77,9 +80,15 @@ export function mailConfigured(): boolean {
  * app without SMTP settings is held, and smtp() keeps those mails in the outbox.
  */
 export function mailMode(): "held" | "testers" | "all" | undefined {
-  const mode = process.env.MAIL_MODE?.trim();
-  if (!mode) return undefined;
-  return (mode === "testers" || mode === "all") && mailConfigured() ? mode : "held";
+  const mode = process.env.MAIL_MODE;
+  if (mode === undefined) return undefined;
+  if (mode !== "testers" && mode !== "all") return "held";
+  // SMTP_URL that is no address sends nothing either; the import goes on and says so.
+  try {
+    return mailConfigured() ? mode : "held";
+  } catch {
+    return "held";
+  }
 }
 
 /** Sends a mail, or writes it to the outbox when the app has no SMTP settings. */
@@ -109,9 +118,12 @@ export async function sendMail(mail: Mail): Promise<void> {
   writeFileSync(join(outboxDir(), `.${name}.tmp`), info.message as Buffer);
   renameSync(join(outboxDir(), `.${name}.tmp`), join(outboxDir(), name));
   if (process.env.NODE_ENV === "production")
-    log.warn("A mail was not sent: no SMTP settings (SMTP_URL, or SMTP_HOST and the others)", {
-      kept: outboxDir(),
-    });
+    log.warn(
+      sends()
+        ? "A mail was not sent: no SMTP settings (SMTP_URL, or SMTP_HOST and the others)"
+        : "A mail was held in the outbox: MAIL_MODE is neither testers nor all",
+      { kept: outboxDir() },
+    );
 }
 
 /** The mails in the outbox, oldest first, as tests read them: the headers and the text body. */

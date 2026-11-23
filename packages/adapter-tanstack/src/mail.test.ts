@@ -43,7 +43,7 @@ test("MAIL_MODE holds mail unless it is testers or all, and Import says which mo
   expect(mail).toMatch(
     /function smtp\(\) \{\n {2}const env = process\.env;\n {2}if \(!sends\(\)\) return undefined;/,
   );
-  expect(mail).toContain('!mode || mode === "testers" || mode === "all"');
+  expect(mail).toContain('mode === undefined || mode === "testers" || mode === "all"');
   expect(mail).toContain("export function mailMode()");
   // The import's preview carries it, and the panel shows its sentence.
   expect(file("src/kit/import.server.ts")).toContain("const mail = mailMode();");
