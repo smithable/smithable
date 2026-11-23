@@ -158,16 +158,16 @@ function fixtureAlternatives(field: FieldIR): string | undefined {
   return `Array.from({ length: existing.length + 1 }, (_, i) => ${first} + i * ${direction})`;
 }
 
-/**
- * A Vitest file that proves the effective access for every model and role, through the
- * same data functions the app uses, against the test database.
- */
 /** A model whose test values carry a stored file (a required picture or document): sent through a data function, it comes with its sender's receipt. */
 const sendsFiles = (model: ModelIR) =>
   model.fields.some(
     (f) => isUpload(f) && !f.formula && (f.required || f.unique) && f.name !== model.ownedBy,
   );
 
+/**
+ * A Vitest file that proves the effective access for every model and role, through the
+ * same data functions the app uses, against the test database.
+ */
 export function accessTestSource(
   ir: SpecIR,
   auth: AuthIR,
@@ -229,7 +229,7 @@ export function accessTestSource(
     const fixture = groups.length
       ? `
   const existing = db.select().from(${table}).all()${model.trash ? ".filter((row) => row.deletedAt === null)" : ""};
-  const fixture = distinctFixture(${baseValues}, values, existing, ${literal(groups)}, { ${alternatives.join(", ")} });
+  const fixture = distinctFixture(${baseValues}, values, existing, ${literal(groups)}, { ${alternatives.join(", ")} }, allowed);
   if (!fixture) return undefined;`
       : "";
     const make = groups.length ? `tryInsert${model.name}` : `insert${model.name}`;
@@ -246,7 +246,7 @@ function insert${model.name}(owner: string | null, values: Record<string, unknow
 ${usesN ? "  const n = next();\n" : ""}  return { ${entries.join(", ")} } as const;
 }
 
-function ${make}(owner: string | null, values: Record<string, unknown> = {}) {${settled.includes(model.name) ? "\n  settle(owner);" : ""}${fixture}
+function ${make}(owner: string | null, values: Record<string, unknown> = {}${groups.length ? ", allowed: Record<string, readonly unknown[]> = {}" : ""}) {${settled.includes(model.name) ? "\n  settle(owner);" : ""}${fixture}
   return db
     .insert(${table})
     .values(${groups.length ? "fixture" : baseValues})
@@ -596,8 +596,16 @@ ${tests.join("\n\n")}
       const compound = Boolean(model.unique?.length);
       singletonMergeChecks ||=
         compound && roles.some((role) => role !== null && allowed.roles.includes(role));
+      // Keep the read condition while allowing the second row to use another permitted key.
+      const permitted = Object.entries(access.read.where ?? {}).filter(
+        ([key, wanted]) =>
+          Array.isArray(wanted) &&
+          wanted.length > 1 &&
+          model.unique?.some(({ fields }) => fields.includes(key)),
+      );
+      const extra = permitted.length ? `, ${literal(Object.fromEntries(permitted))}` : "";
       const pairOf = (owner: string) =>
-        `    const one = insert${model.name}(${owner}, ${values});\n    const two = ${compound ? "tryInsert" : "insert"}${model.name}(${owner}, ${values});\n`;
+        `    const one = insert${model.name}(${owner}, ${values});\n    const two = ${compound ? "tryInsert" : "insert"}${model.name}(${owner}, ${values}${extra});\n`;
       describes.push(`describe(${JSON.stringify(`the ${action.name} action`)}, () => {
 ${roles
   .map((role) => {
@@ -847,9 +855,11 @@ function distinctFixture<T extends Record<string, unknown>>(
   existing: Record<string, unknown>[],
   groups: string[][],
   alternatives: Record<string, readonly unknown[]>,
+  allowed: Record<string, readonly unknown[]> = {},
 ): T | undefined {
   const candidate: Record<string, unknown> = { ...values };
-  const choices = Object.entries(alternatives).filter(([key]) => !(key in fixed));
+  const choices = Object.entries({ ...alternatives, ...allowed })
+    .filter(([key]) => !(key in fixed) || key in allowed);
   const scalar = (value: unknown) => value instanceof Date ? value.getTime() : value;
   const used = () => groups.some((keys) =>
     keys.every((key) => candidate[key] != null) &&

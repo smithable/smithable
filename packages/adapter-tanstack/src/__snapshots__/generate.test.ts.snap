@@ -99154,9 +99154,11 @@ function distinctFixture<T extends Record<string, unknown>>(
   existing: Record<string, unknown>[],
   groups: string[][],
   alternatives: Record<string, readonly unknown[]>,
+  allowed: Record<string, readonly unknown[]> = {},
 ): T | undefined {
   const candidate: Record<string, unknown> = { ...values };
-  const choices = Object.entries(alternatives).filter(([key]) => !(key in fixed));
+  const choices = Object.entries({ ...alternatives, ...allowed })
+    .filter(([key]) => !(key in fixed) || key in allowed);
   const scalar = (value: unknown) => value instanceof Date ? value.getTime() : value;
   const used = () => groups.some((keys) =>
     keys.every((key) => candidate[key] != null) &&
@@ -99249,9 +99251,9 @@ function serviceHourValues(_owner: string | null) {
   return { weekday: "monday", service: "lunch", hours: \`ServiceHour hours \${n}\` } as const;
 }
 
-function tryInsertServiceHour(owner: string | null, values: Record<string, unknown> = {}) {
+function tryInsertServiceHour(owner: string | null, values: Record<string, unknown> = {}, allowed: Record<string, readonly unknown[]> = {}) {
   const existing = db.select().from(schema.serviceHours).all();
-  const fixture = distinctFixture({ ...serviceHourValues(owner), ...values, ownerId: owner }, values, existing, [["weekday", "service", "hours"]], { weekday: ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"], service: ["lunch", "dinner"] });
+  const fixture = distinctFixture({ ...serviceHourValues(owner), ...values, ownerId: owner }, values, existing, [["weekday", "service", "hours"]], { weekday: ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"], service: ["lunch", "dinner"] }, allowed);
   if (!fixture) return undefined;
   return db
     .insert(schema.serviceHours)
@@ -105859,7 +105861,7 @@ exports[`../../../examples/restaurant/smithable.yml > the generated files are as
   "src/db/index.ts": "ba378d34 kit",
   "src/db/schema.ts": "97d5231d generated",
   "src/db/seed.ts": "5c4bd419 generated",
-  "src/generated/access.test.ts": "869a1b93 generated",
+  "src/generated/access.test.ts": "ba79057d generated",
   "src/generated/activity.server.ts": "1c3531e4 generated",
   "src/generated/app.ts": "460919da generated",
   "src/generated/custom.ts": "5801b2b0 generated",

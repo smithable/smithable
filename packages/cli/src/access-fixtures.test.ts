@@ -16,13 +16,10 @@ pages:
   hours: { crud: ServiceHour }
 `;
 
-function source(text = spec) {
+function source(text = spec, authText = "smithableAuth: 0.1\nsignIn: none\n") {
   const parsed = validateSpec({ path: "smithable.yml", text });
   if (!parsed.ir) throw new Error(JSON.stringify(parsed.diagnostics));
-  const { auth } = validateAuth(
-    { path: "smithable.auth.yml", text: "smithableAuth: 0.1\nsignIn: none\n" },
-    parsed.ir,
-  );
+  const { auth } = validateAuth({ path: "smithable.auth.yml", text: authText }, parsed.ir);
   if (!auth) throw new Error("Invalid test auth");
   const generated = generateApp(parsed.ir, { smithableVersion: "0.0.0", auth }).find(
     (file) => file.path === "src/generated/access.test.ts",
@@ -47,6 +44,7 @@ test("the second and later fixtures use an unused pair of choice values", () => 
     existing: Row[],
     groups: string[][],
     alternatives: Record<string, string[]>,
+    allowed?: Record<string, string[]>,
   ) => Row | undefined;
   const row = { weekday: "monday", service: "lunch" };
   const groups = [["weekday", "service"]];
@@ -67,6 +65,10 @@ test("the second and later fixtures use an unused pair of choice values", () => 
   expect(
     choose(row, { weekday: "monday" }, existing.slice(0, 2), groups, alternatives),
   ).toBeUndefined();
+  expect(choose(row, row, [row], groups, alternatives, { weekday: ["monday", "tuesday"] })).toEqual(
+    { weekday: "tuesday", service: "lunch" },
+  );
+  expect(choose(row, row, [row], groups, alternatives, { weekday: ["monday"] })).toBeUndefined();
 });
 
 test("access checks use separate fixtures when the only compound value fits just one row", () => {
@@ -83,4 +85,23 @@ test("access checks use separate fixtures when the only compound value fits just
   );
   expect(generated).toContain("const two = tryInsertServiceHour(");
   expect(generated).toContain("runMergeHours(viewer, [one.id]");
+});
+
+test("generated merge fixtures can vary only among permitted compound-key values", () => {
+  const conditional = spec
+    .replace("monday | tuesday", "monday | tuesday | wednesday")
+    .replace("    unique:", "    trash: true\n    unique:")
+    .concat("actions:\n  mergeHours: { merge: ServiceHour }\n");
+  const generated = source(
+    conditional,
+    `smithableAuth: 0.1
+signIn: none
+public:
+  read:
+    - ServiceHour: { where: { weekday: [monday, tuesday], service: lunch } }
+`,
+  );
+  expect(generated).toMatch(
+    /const two = tryInsertServiceHour\([^\n]+, \{ weekday: \["monday", "tuesday"\] \}\);/,
+  );
 });
