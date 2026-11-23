@@ -1,5 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
+import { and, eq, gt } from "drizzle-orm";
 import { useEffect, useState } from "react";
+import { stops as stopTable } from "#/db/schema";
 import { app } from "#/generated/app";
 import type { CustomSectionProps } from "#/generated/custom";
 import { stopData } from "#/generated/stop.server";
@@ -12,8 +14,11 @@ import { currentViewer } from "#/lib/viewer.server";
 import { upcomingStops } from "./schedule";
 
 const loadStops = createServerFn().handler(async () => {
-  const rows = await stopData.list(await currentViewer());
   const checkedAt = now();
+  const rows = await stopData.list(
+    await currentViewer(),
+    and(eq(stopTable.status, "confirmed"), gt(stopTable.endsAt, checkedAt)),
+  );
   const stops = upcomingStops(rows, checkedAt).map(
     ({ id, place, address, startsAt, endsAt, directionsUrl, menuOverride, photo }) => ({
       id,

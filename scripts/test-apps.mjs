@@ -4066,7 +4066,8 @@ async function kioskScheduleFlow(dir, base) {
         menu_override = 'Smoky bean flatbread €10', status = 'confirmed' WHERE place = 'Harbour market';
         INSERT INTO stops (place, starts_at, ends_at, directions_url, menu_override, status, created_at, updated_at) VALUES
         ('Sunday square', ${Date.parse("2026-11-22T09:00Z")}, ${Date.parse("2026-11-22T13:00Z")}, NULL, NULL, 'confirmed', unixepoch() * 1000, unixepoch() * 1000),
-        ('Private draft', ${Date.parse("2026-11-23T09:00Z")}, ${Date.parse("2026-11-23T13:00Z")}, NULL, NULL, 'draft', unixepoch() * 1000, unixepoch() * 1000)`,
+        ('Private draft', ${Date.parse("2026-11-23T09:00Z")}, ${Date.parse("2026-11-23T13:00Z")}, NULL, NULL, 'draft', unixepoch() * 1000, unixepoch() * 1000),
+        ('Cancelled fixture', ${Date.parse("2026-11-24T09:00Z")}, ${Date.parse("2026-11-24T13:00Z")}, NULL, NULL, 'cancelled', unixepoch() * 1000, unixepoch() * 1000)`,
     );
     const venues = page
       .getByRole("region", { name: "Upcoming stops" })
@@ -4087,6 +4088,13 @@ async function kioskScheduleFlow(dir, base) {
       const image = document.querySelector('img[src^="/files/stop/"]');
       return image?.complete && image.naturalWidth > 0;
     });
+
+    await open(page, `${base}/stops`);
+    await page.getByText("Sunday square", { exact: true }).first().waitFor();
+    for (const place of ["Private draft", "Cancelled fixture"]) {
+      if (await page.getByText(place, { exact: true }).count())
+        throw new Error(`the public Stops page shows ${place}`);
+    }
 
     await showAt("2026-11-21T13:00:00.000Z");
     await page.getByRole("heading", { name: "Sunday square" }).waitFor();
