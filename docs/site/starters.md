@@ -98,6 +98,8 @@ See it live: coming soon.
 
 ![The kiosk starter, Kiosken: the public stop schedule under an evening photo of the truck](starters/kiosk-1.webp)
 ![The orders as the staff see them, with their status and Accept](starters/kiosk-2.webp)
+![The public catering enquiry form beside a garden-event photo](starters/kiosk-3.webp)
+![The ordering menu with pictured dishes, grouped by section](starters/kiosk-4.webp)
 
 For a food truck, a café's takeaway or a bakery's pre-orders. Visitors open the menu, grouped by section with a picture and price for each dish, add what they want, and send it with their name and phone; the order gets a number they can say at the hatch. The prices are read again on the server, a dish sold out in the meantime is refused, and outside the opening hours the menu says when it opens. Staff see today's orders, accept, mark them ready and collected, or decline with a reason; the customer is mailed when the order is accepted and when it is ready, if they gave an email. Marking a dish sold out and back is one button.
 
