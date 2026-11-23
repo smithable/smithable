@@ -2221,6 +2221,11 @@ function MediaTextView({
     ...(image ? [{ image, caption }] : []),
     ...(items ?? []),
   ];
+  // Lazy images can use their rendered width; the fallback allows for the desktop overlap.
+  const collageSizes =
+    pictures.length < 2
+      ? "auto, 100vw"
+      : `auto, (min-width: 640px) calc(${Math.ceil(100 / pictures.length)}vw + 1rem), 50vw`;
   const show = (index: number) => setOpen((index + pictures.length) % pictures.length);
   return (
     <section
@@ -2291,7 +2296,7 @@ function MediaTextView({
                         src={photo.src}
                         alt={photo.alt}
                         srcSet={photo.srcSet}
-                        sizes={photo.srcSet && "(min-width: 640px) 33vw, 50vw"}
+                        sizes={photo.srcSet && collageSizes}
                         loading="lazy"
                         {...mediaSize(aspect)}
                         className={cn("block w-full", mediaClasses({ fit, aspect, focal }))}
