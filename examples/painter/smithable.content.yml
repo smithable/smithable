@@ -39,10 +39,15 @@ pages:
       title: Paint that stands the sea air
       subtitle: Facades, roofs, windows and rooms, painted with the right paint for the surface and the weather. Look through our work and ask for a quote on one like yours.
       button: See our work
+      image:
+        src: images/hero/hero-farm-b.webp
+        alt: A red farmhouse and barn by a field of grain under a wide sky
+        generated: true
+        kind: ai-realistic
     latest:
       eyebrow: Recent work
-      title: Jobs
-      text: Pick a surface, indoors or out, and open a job to ask for a quote on something like it.
+      title: Recent painting projects
+      text: Open a project for its pictures, the work involved and a quote for yours.
     features:
       eyebrow: What we paint
       title: The surface decides the paint
@@ -55,6 +60,21 @@ pages:
           text: Old windows taken out, puttied and painted in the workshop over winter, then put back in spring.
         - title: Rooms indoors
           text: Walls, ceilings and floors, with the furniture covered and the room clean at the end of each day.
+    gallery:
+      title: Paint and finish
+      items:
+        - caption: A bright interior after work
+          image:
+            src: images/samples/hero-home-b.webp
+            alt: A bright living room with a sofa, rug, bookshelf and large windows
+            generated: true
+            kind: ai-realistic
+        - caption: Rolling a sage green accent wall
+          image:
+            src: images/samples/service-painting-b.webp
+            alt: A freshly painted green wall with a roller and an open tin of the same paint
+            generated: true
+            kind: ai-realistic
     testimonials:
       eyebrow: What clients say
       title: In their words

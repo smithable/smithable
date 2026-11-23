@@ -3997,20 +3997,75 @@ async function marketplaceFlow(dir, base) {
 async function painterFlow(dir, base) {
   const browser = await chromium.launch();
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+  const loaded = async (picture) => {
+    await picture.scrollIntoViewIfNeeded();
+    await picture.evaluate((image) => image.decode());
+  };
   try {
+    await open(page, base);
+    await loaded(
+      page.getByRole("img", {
+        name: "A red farmhouse and barn by a field of grain under a wide sky",
+        exact: true,
+      }),
+    );
+    const projects = page.getByRole("region", { name: "Recent painting projects", exact: true });
+    const covers = projects.locator('img[src^="/files/job/"]');
+    await loaded(covers.first());
+    if ((await covers.count()) !== 6)
+      throw new Error("the landing grid should show six project covers");
+    const project = projects
+      .locator("figure")
+      .filter({ has: page.locator('img[src^="/files/job/"]') })
+      .first()
+      .getByRole("link");
+    const title = await project.innerText();
+    const cover = await covers.first().getAttribute("alt");
+    await project.click();
+    await page.waitForURL(`${base}/jobs/*`);
+    await page.getByRole("heading", { name: title, exact: true }).first().waitFor();
+    await loaded(page.getByRole("img", { name: cover, exact: true }).first());
+
+    const [interior] = query(
+      dir,
+      "SELECT id FROM jobs WHERE title = 'Living room and hall refresh'",
+    );
+    await open(page, `${base}/jobs/${interior.id}`);
+    await loaded(
+      page
+        .getByRole("img", {
+          name: "A bright apartment living room with a balcony door",
+          exact: true,
+        })
+        .first(),
+    );
+    await page.getByRole("button", { name: "Picture 2 of 2", exact: true }).click();
+    await loaded(
+      page
+        .getByRole("img", {
+          name: "A freshly painted green wall with a roller and an open tin of the same paint",
+          exact: true,
+        })
+        .first(),
+    );
+    await page.getByRole("button", { name: "Send enquiry", exact: true }).waitFor();
+
+    // A painter who removes the sample images can still show and link to text-only projects.
+    write(dir, "UPDATE jobs SET photos = NULL");
     for (const path of ["/jobs", "/"]) {
       await open(page, `${base}${path}`);
-      // The landing shows six of the seven jobs, so wait for any of them.
       await page
         .getByText(
-          /^(Red farmhouse|Tin roof|Twelve windows|Yellow cladding|Staircase|Living room|Pine floor)/,
+          /^(Red farmhouse|Painted eaves|Window surrounds|Yellow cladding|Green door|Living room|Street-facing trim|Pale timber floor)/,
         )
         .first()
         .waitFor();
-      const slots = await page.locator('[data-part="placeholder"]').count();
-      if (slots) throw new Error(`${path} shows ${slots} empty picture slots`);
+      if (await page.locator('[data-part="placeholder"]').count())
+        throw new Error(`${path} shows empty picture slots`);
     }
-    console.log("  ✓ painter: jobs without photos show as text cards, with no empty picture slot");
+    console.log(
+      "  ✓ painter: the landing grid covers link to pictured projects, and text-only jobs still work",
+    );
     await signInAs(page, base, "admin");
     await open(page, `${base}/enquiries/1`);
     await page.getByRole("button", { name: "Mark contacted", exact: true }).click();
