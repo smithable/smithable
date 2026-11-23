@@ -118625,7 +118625,7 @@ export const Route = createFileRoute("/incoming/chatCommand")({
         // The service's setup check: it sends a value and wants it back, nothing else.
         const check = at(body, "challenge");
         if (check) return new Response(check, { status: 200, headers: { "content-type": "text/plain" } });
-        // A call seen in the last day is answered as received and not acted on again; signed, its id is the signed one, never a header the signature leaves out.
+        // A call seen in the last day is answered as received and not acted on again; signed, its id is what is signed, never a header the signature leaves out.
         const key = \`sig:\${given}\`;
         // The id is taken before anything is done, in one statement: a second delivery of it, even at the same
         // moment, finds it taken (the index is unique) and is answered as received; one older than a day is forgotten.
@@ -120548,7 +120548,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/routes/incidents/$id.tsx": "bf4ecf44 generated",
   "src/routes/incidents/index.tsx": "7c4beb6e generated",
   "src/routes/incidents/new.tsx": "a9f07576 generated",
-  "src/routes/incoming/chatCommand.ts": "49882a06 generated",
+  "src/routes/incoming/chatCommand.ts": "a2f3f35d generated",
   "src/routes/index.tsx": "82ce7233 generated",
   "src/routes/maintenance/$id.tsx": "0ad33c2b generated",
   "src/routes/maintenance/index.tsx": "cf3eb42f generated",

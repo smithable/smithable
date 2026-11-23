@@ -128,8 +128,10 @@ test("a custom, signed call: an HMAC of the body, and a stub of the project's ow
   const stub = file("src/custom/incoming/payment-received.ts");
   expect(stub?.zone).toBe("custom");
   expect(stub?.content).toContain("export async function handle(body: unknown, caller: Viewer)");
-  // Signed, with neither an id nor a signed time: nothing signed tells two calls apart, so the header does.
-  expect(route).toContain('const key = request.headers.get("idempotency-key") ?? "";');
+  // Signed with neither an id nor a signed time: the signature of the body is its id, so a
+  // replay is a repeat whatever Idempotency-Key it comes with.
+  expect(route).toContain("const key = `sig:${given}`;");
+  expect(route).not.toContain('request.headers.get("idempotency-key")');
 });
 
 test("a chat tool's command: a form body, a signature of the time and the body, the time checked, the setup check echoed", () => {

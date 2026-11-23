@@ -134,28 +134,16 @@ function signedCode(text: string): string {
 }
 
 /**
- * A signed call's own id, as code, or "": the value `id` names in the body, or the signature over
- * a signed time. The signed text always takes the body, so both are the service's, and a header
- * the signature leaves out (Idempotency-Key) cannot stand in for them: a replay with another
- * header is still a repeat.
+ * The id a call is known by for a day, as code. A signed call's is what is signed, since the signed
+ * text always takes the body: the value `id` names in it, or, where that is missing or not named,
+ * the signature itself (of the body, with the time where one is signed). A header the signature
+ * leaves out (Idempotency-Key) never stands in for it: a replay with another header is still a
+ * repeat. An unsigned call's is the header, else what the entry names.
  */
-function signedKey(incoming: IncomingIR, stamp: string | undefined): string {
-  if (!incoming.signed) return "";
-  if (incoming.id) return `fill(${JSON.stringify(incoming.id)}, body)`;
-  return stamp ? "`sig:${given}`" : "";
-}
-
-/** The id a call is known by for a day, as code: the signed one first, else the header, else what the entry names. */
-function dedupeKey(incoming: IncomingIR, stamp: string | undefined): string {
-  const signed = signedKey(incoming, stamp);
-  if (signed) return signed;
-  const own = incoming.id
-    ? `fill(${JSON.stringify(incoming.id)}, body)`
-    : incoming.mail
-      ? "mailKey(body as Mail)"
-      : stamp
-        ? "`sig:${given}`"
-        : '""';
+function dedupeKey(incoming: IncomingIR): string {
+  const named = incoming.id ? `fill(${JSON.stringify(incoming.id)}, body)` : "";
+  if (incoming.signed) return named ? `${named} || \`sig:\${given}\`` : "`sig:${given}`";
+  const own = named || (incoming.mail ? "mailKey(body as Mail)" : '""');
   return `request.headers.get("idempotency-key") ?? ${own}`;
 }
 
@@ -413,8 +401,8 @@ ${
         if (check) return new Response(check, { status: 200, headers: { "content-type": "text/plain" } });`
     : ""
 }
-        // A call seen in the last day is answered as received and not acted on again${incoming.mail && !incoming.id ? "; a mail's id is its Message-ID" : ""}${signedKey(incoming, stamp) ? "; signed, its id is the signed one, never a header the signature leaves out" : ""}.
-        const key = ${dedupeKey(incoming, stamp)};
+        // A call seen in the last day is answered as received and not acted on again${incoming.mail && !incoming.id ? "; a mail's id is its Message-ID" : ""}${incoming.signed ? "; signed, its id is what is signed, never a header the signature leaves out" : ""}.
+        const key = ${dedupeKey(incoming)};
         // The id is taken before anything is done, in one statement: a second delivery of it, even at the same
         // moment, finds it taken (the index is unique) and is answered as received; one older than a day is forgotten.
         // The time written is this call's mark on the row: only the call that holds it may give it back.
