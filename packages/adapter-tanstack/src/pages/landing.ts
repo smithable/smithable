@@ -770,10 +770,25 @@ ${loaded ? "  const data = Route.useLoaderData();\n" : ""}${
  */
 function homeForSite(ir: SpecIR, auth: AuthIR) {
   const landings = ir.pages.filter((p) => p.pattern.kind === "landing");
-  return landings.find((p) => auth.public.pages.includes(p.id)) ?? landings[0];
+  return publicLanding(ir, auth) ?? landings[0];
 }
 
-function siteContact(home: PageIR | undefined, t: Texts) {
+/**
+ * The first landing page visitors may open (any, in an app with no sign-in): the only one the
+ * site's shared texts are taken from.
+ */
+function publicLanding(ir: SpecIR, auth: AuthIR) {
+  return ir.pages.find(
+    (p) => p.pattern.kind === "landing" && (!hasSignIn(auth) || auth.public.pages.includes(p.id)),
+  );
+}
+
+/**
+ * The contact details for the whole site's frame, which every public page carries: from a landing
+ * visitors may open, never from one only some may (the menu's home link keeps its fallback).
+ */
+function siteContact(ir: SpecIR, auth: AuthIR, t: Texts) {
+  const home = publicLanding(ir, auth);
   const section =
     home?.pattern.kind === "landing"
       ? home.pattern.sections.find((s) => s.kind === "contact")
@@ -792,7 +807,7 @@ function contactFooterEnabled(ir: SpecIR, auth: AuthIR, ux: UxIR, t: Texts, page
   return (
     !!footer &&
     ux.pages[page.id]?.looks?.[footer.name]?.layout === "contactBand" &&
-    Object.keys(siteContact(homeForSite(ir, auth), t)).length > 0
+    Object.keys(siteContact(ir, auth, t)).length > 0
   );
 }
 
@@ -823,7 +838,7 @@ export function siteModule(ir: SpecIR, t: Texts, auth: AuthIR, ux: UxIR): string
   const legal = ir.pages
     .filter((p) => p.pattern.kind === "legal" && auth.public.pages.includes(p.id))
     .map((p) => ({ to: p.route, label: code(t.pageTitleOf(p.id)) }));
-  const contact = siteContact(home, t);
+  const contact = siteContact(ir, auth, t);
   return `${HEADER}import type { LandingSite } from "#/kit/Landing";${guarded ? '\nimport { pageAccess } from "#/generated/pages";' : ""}
 
 /** The public site's frame: the pages visitors may open, and how to reach the business. */
