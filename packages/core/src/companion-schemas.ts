@@ -693,6 +693,26 @@ const section: JsonSchema = {
           minItems: 1,
           maxItems: 6,
         },
+        film: {
+          type: "object",
+          description:
+            "A hero's short silent loop over its picture (an MP4 under public/images/, 3 to 12 seconds, at most 5 MB); the picture shows first and for anyone who gets no film. Set it with setSectionFilm.",
+          additionalProperties: false,
+          required: ["src"],
+          properties: {
+            // FILM_SRC in content.ts: no empty or dot-led part, so no way out of images/.
+            src: { type: "string", pattern: "^images/([\\w-][\\w.-]*/)*[\\w-][\\w.-]*\\.mp4$" },
+            generated: {
+              type: "boolean",
+              description: "Made by an AI: its own origin, not the picture's.",
+            },
+            kind: {
+              enum: [...PICTURE_KINDS],
+              description:
+                "What the film is, as a picture's kind: the badge follows it while it plays.",
+            },
+          },
+        },
       },
     },
     tiles: {

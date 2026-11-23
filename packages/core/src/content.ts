@@ -152,12 +152,23 @@ export interface ContentImage {
    * picture and a phone a small one.
    */
   widths?: number[];
+  /** A short silent loop over the picture (section-film.md): a hero's only. */
+  film?: ContentFilm;
+}
+
+/** A film over a picture: its file under public/images/ and its own origin, as a picture's. */
+export interface ContentFilm {
+  src: string;
+  generated?: true;
+  kind?: PictureKind;
 }
 
 /** A picture's file, relative to the app's public/ folder. */
 export const IMAGE_SRC = /^images\/([\w-][\w.-]*\/)*[\w-][\w.-]*\.(webp|avif|jpe?g|png)$/;
 /** A mark's file: a picture's, or an SVG (a maker's own logo usually is one). */
 export const LOGO_SRC = /^images\/([\w-][\w.-]*\/)*[\w-][\w.-]*\.(webp|avif|jpe?g|png|svg)$/;
+/** A film's file: an MP4 under public/images/; its bytes are the host's to check (section-film.md §2). */
+export const FILM_SRC = /^images\/([\w-][\w.-]*\/)*[\w-][\w.-]*\.mp4$/;
 
 /** Whether a kind of section shows one picture of its own (a hero, a media-and-text section). */
 export const sectionTakesPicture = (kind: string) => SECTION_TEXTS[kind]?.image === true;
@@ -890,7 +901,7 @@ function readPage(ctx: ParseContext, node: ParsedNode | null, id: string, ir: Sp
     }
     const image = known.find((e) => e.key === "image");
     if (image) {
-      const read = readImage(ctx, image.value, `the image of ${partWhere}`);
+      const read = readImage(ctx, image.value, `the image of ${partWhere}`, kind === "hero");
       if (read) section.image = read;
     }
     // A tiles hero's tiles, by its shortcuts' pages: each a label and a picture.
@@ -961,7 +972,9 @@ function readPicture(
   node: ParsedNode | null,
   where: string,
   sized = true,
+  film = false,
 ): {
+  film?: ParsedNode | null;
   src?: string;
   alt?: string;
   generated?: true;
@@ -972,8 +985,15 @@ function readPicture(
 } {
   // A mark is shown small: one file.
   const entries = checkKeys(ctx, mapEntries(ctx, node, where) ?? [], where, {
-    allowed: ["src", "alt", "generated", ...(sized ? ["kind", "kept", "width", "widths"] : [])],
+    allowed: [
+      "src",
+      "alt",
+      "generated",
+      ...(sized ? ["kind", "kept", "width", "widths"] : []),
+      ...(film ? ["film"] : []),
+    ],
   });
+  const reel = entries.find((e) => e.key === "film");
   const flag = entries.find((e) => e.key === "generated");
   const keep = entries.find((e) => e.key === "kept");
   const sort = entries.find((e) => e.key === "kind");
@@ -985,7 +1005,9 @@ function readPicture(
     node,
     where,
     ["src", "alt"],
-    entries.filter((e) => e !== flag && e !== keep && e !== sort && e !== own && e !== copies),
+    entries.filter(
+      (e) => e !== flag && e !== keep && e !== sort && e !== own && e !== copies && e !== reel,
+    ),
   );
   const width = own && readWidths(ctx, own.value, where, false)?.[0];
   const widths = copies && readWidths(ctx, copies.value, where, true);
@@ -1020,6 +1042,7 @@ function readPicture(
     );
   return {
     ...texts,
+    ...(reel ? { film: reel.value } : {}),
     ...(generated ? { generated: true as const } : {}),
     ...(kept && generated ? { kept: true as const } : {}),
     ...(kind ? { kind } : {}),
@@ -1081,8 +1104,16 @@ function readImage(
   ctx: ParseContext,
   node: ParsedNode | null,
   where: string,
+  filmed = false,
 ): ContentImage | undefined {
-  const { src, alt, generated, kept, kind, width, widths } = readPicture(ctx, node, where);
+  const { src, alt, generated, kept, kind, width, widths, film } = readPicture(
+    ctx,
+    node,
+    where,
+    true,
+    // A language file's picture says what it shows only, and a film has no words.
+    filmed && !ctx.emptyTexts,
+  );
   // In a language file a picture says what it shows only: its file is the content file's.
   if (ctx.emptyTexts) return { alt: alt ?? "" } as ContentImage;
   if (!src || !IMAGE_SRC.test(src)) {
@@ -1109,7 +1140,50 @@ function readImage(
     ...(kind ? { kind } : {}),
     ...(width ? { width } : {}),
     ...(widths ? { widths } : {}),
+    ...(film !== undefined ? optional("film", readFilm(ctx, film, `the film of ${where}`)) : {}),
   };
+}
+
+const optional = <K extends string, V>(key: K, value: V | undefined) =>
+  (value === undefined ? {} : { [key]: value }) as Partial<Record<K, V>>;
+
+/**
+ * A film over a picture: `{ src: images/<file>.mp4, generated?, kind? }`. Only its name is checked
+ * here; the host reads its bytes (section-film.md §2).
+ */
+function readFilm(ctx: ParseContext, node: ParsedNode | null, where: string) {
+  const entries = checkKeys(ctx, mapEntries(ctx, node, where) ?? [], where, {
+    allowed: ["src", "generated", "kind"],
+  });
+  const flag = entries.find((e) => e.key === "generated");
+  const sort = entries.find((e) => e.key === "kind");
+  const kind = sort && readPictureKind(ctx, sort.value, where);
+  const generated = flag && readBoolean(ctx, flag.value, `"generated" of ${where}`) === true;
+  const { src } = readTexts(
+    ctx,
+    node,
+    where,
+    ["src"],
+    entries.filter((e) => e !== flag && e !== sort),
+  );
+  if (kind && (kind === "photograph") === Boolean(generated))
+    ctx.error(
+      sort?.value ?? null,
+      "invalid-value",
+      `"kind" of ${where} must agree with "generated": a photograph is not made by an AI, and an AI's film says "generated: true".`,
+    );
+  if (!src || !FILM_SRC.test(src)) {
+    ctx.error(
+      node,
+      "invalid-value",
+      `"src" of ${where} must be an MP4 file in the app's public/images/ folder, e.g. images/hero.mp4.`,
+    );
+    return undefined;
+  }
+  const film: ContentFilm = { src };
+  if (generated) film.generated = true;
+  if (kind) film.kind = kind;
+  return film;
 }
 
 /**

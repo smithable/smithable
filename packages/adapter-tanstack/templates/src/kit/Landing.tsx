@@ -658,6 +658,7 @@ function HeroView({
   height,
   facts = [],
   stage,
+  film,
 }: {
   title: string;
   logoMark?: string;
@@ -703,6 +704,11 @@ function HeroView({
   };
   /** The picture's side in a split hero on wide screens. */
   imageSide?: "left" | "right";
+  /**
+   * The picture's film (section-film.md), drawn over it: framed where the picture is shown whole
+   * (split, inset), across the section otherwise. Only an app with a film fills it.
+   */
+  film?: (framed: boolean) => React.ReactNode;
   texts?: string;
   /** A short line over the title, e.g. who the app is for ("For small studios"). */
   eyebrow?: string;
@@ -744,6 +750,20 @@ function HeroView({
   );
   // Without a picture every look is plain.
   const shown = image ? layout : "plain";
+  // A picture shown whole carries its film in a frame of its own corners; its mark gives way to
+  // the film's while the film plays (section-film.md §3).
+  const framedFilm = (picture: React.ReactNode, corners: string, side?: string) =>
+    film ? (
+      <span className={cn("relative block overflow-hidden", corners, side)}>
+        {picture}
+        {film(true)}
+      </span>
+    ) : (
+      picture
+    );
+  // The mark is the wrapper's last child (AiMark.tsx).
+  const markGives = film && "not-print:[&:has(video[data-playing])>:last-child]:hidden";
+  const across = film?.(false);
   // The second button: an outline one, in the hero's own text color on a picture or a wash.
   const second = secondLink && (
     <Link
@@ -853,6 +873,7 @@ function HeroView({
           data-hero=""
           data-height={height}
           data-layout="cover"
+          data-shortcuts={film && shortcutList ? "" : undefined}
           className="relative isolate overflow-hidden"
         >
           {/* Not marked: the hero under its wash or veil (AiMark.tsx). */}
@@ -866,6 +887,7 @@ function HeroView({
             fetchPriority="high"
             className="absolute inset-0 -z-10 size-full object-cover"
           />
+          {across}
           {wash === "dark" ? (
             <div
               aria-hidden
@@ -936,6 +958,7 @@ function HeroView({
               fetchPriority="high"
               className="absolute inset-0 -z-10 size-full object-cover"
             />
+            {across}
             <div
               aria-hidden
               className="absolute inset-0 -z-10 bg-linear-to-t from-black/90 via-black/60 to-black/10"
@@ -1010,6 +1033,7 @@ function HeroView({
         data-hero=""
         data-height={height}
         data-layout="photo"
+        data-shortcuts={film && shortcutList ? "" : undefined}
         className="relative isolate flex min-h-[26rem] items-end overflow-hidden sm:min-h-[38rem] lg:min-h-[80vh] lg:items-center"
       >
         {/* Not marked: the hero under its wash or veil (AiMark.tsx). */}
@@ -1023,6 +1047,7 @@ function HeroView({
           fetchPriority="high"
           className="absolute inset-0 -z-10 size-full object-cover"
         />
+        {across}
         <div
           aria-hidden
           className={
@@ -1054,6 +1079,7 @@ function HeroView({
         data-hero=""
         data-height={height}
         data-layout="centered"
+        data-shortcuts={film && shortcutList ? "" : undefined}
         className="relative isolate overflow-hidden"
       >
         {/* Not marked: the hero under its wash or veil (AiMark.tsx). */}
@@ -1067,6 +1093,7 @@ function HeroView({
           fetchPriority="high"
           className="absolute inset-0 -z-10 size-full object-cover"
         />
+        {across}
         <div aria-hidden className="absolute inset-0 -z-10 bg-black/60" />
         <div
           className={cn(
@@ -1142,17 +1169,20 @@ function HeroView({
             imageSide === "right" ? "lg:order-2" : "",
           )}
         >
-          <AiMarked generated={image.generated} kind={image.kind} full>
-            <img
-              src={image.src}
-              alt={image.alt}
-              srcSet={image.srcSet}
-              sizes={image.srcSet && "(min-width: 1024px) 42vw, 100vw"}
-              width={960}
-              height={1200}
-              fetchPriority="high"
-              className="aspect-[4/3] w-full rounded-[var(--picture-radius,var(--radius-lg))] object-cover lg:aspect-[4/5]"
-            />
+          <AiMarked generated={image.generated} kind={image.kind} full className={markGives}>
+            {framedFilm(
+              <img
+                src={image.src}
+                alt={image.alt}
+                srcSet={image.srcSet}
+                sizes={image.srcSet && "(min-width: 1024px) 42vw, 100vw"}
+                width={960}
+                height={1200}
+                fetchPriority="high"
+                className="aspect-[4/3] w-full rounded-[var(--picture-radius,var(--radius-lg))] object-cover lg:aspect-[4/5]"
+              />,
+              "rounded-[var(--picture-radius,var(--radius-lg))]",
+            )}
           </AiMarked>
         </div>
         <div className="lg:col-span-7">{text}</div>
@@ -1180,21 +1210,25 @@ function HeroView({
         generated={image.generated}
         kind={image.kind}
         full
-        className={cn(imageSide === "right" && "lg:order-2")}
+        className={cn(imageSide === "right" && "lg:order-2", markGives)}
       >
-        <img
-          src={image.src}
-          alt={image.alt}
-          srcSet={image.srcSet}
-          sizes={image.srcSet && "(min-width: 1024px) 50vw, 100vw"}
-          width={1200}
-          height={800}
-          fetchPriority="high"
-          className={cn(
-            "aspect-[3/2] w-full rounded-[var(--picture-radius,var(--radius-xl))] border-(length:--picture-frame) object-cover",
-            imageSide === "right" && "lg:order-2",
-          )}
-        />
+        {framedFilm(
+          <img
+            src={image.src}
+            alt={image.alt}
+            srcSet={image.srcSet}
+            sizes={image.srcSet && "(min-width: 1024px) 50vw, 100vw"}
+            width={1200}
+            height={800}
+            fetchPriority="high"
+            className={cn(
+              "aspect-[3/2] w-full rounded-[var(--picture-radius,var(--radius-xl))] border-(length:--picture-frame) object-cover",
+              imageSide === "right" && "lg:order-2",
+            )}
+          />,
+          "rounded-[var(--picture-radius,var(--radius-xl))]",
+          imageSide === "right" ? "lg:order-2" : undefined,
+        )}
       </AiMarked>
       {text}
       {/* After the picture too (it moves to the right with order-2), across both columns. */}

@@ -2,6 +2,7 @@ import { parse, stringify } from "yaml";
 import {
   ASSISTANT_TEXTS,
   derivedTexts,
+  FILM_SRC,
   IMAGE_SRC,
   LANGUAGES,
   LOGO_SRC,
@@ -638,6 +639,64 @@ const setSectionPicture: Operation<{
 };
 
 /**
+ * A hero's film (section-film.md): a short silent loop over its picture. Only the name is checked
+ * here; the host reads the file's bytes. A new picture drops the film (setSectionPicture), since it
+ * was made to play over the old one.
+ */
+const setSectionFilm: Operation<{ page: string; section: string; src?: string }> = {
+  name: "setSectionFilm",
+  sets: ["smithable.content.yml:pages.*.*.image.film"],
+  summary:
+    "Set a hero's film, a short silent loop over its picture (an MP4 under public/images/); no src removes it. The picture stays and shows first.",
+  schema: {
+    type: "object",
+    required: ["page", "section"],
+    additionalProperties: false,
+    properties: {
+      page: refTo({ ref: "page", label: "Page" }, { description: "The page, e.g. home." }),
+      section: refTo(
+        { ref: "section", page: "page", label: "Section" },
+        { description: "The hero, e.g. hero." },
+      ),
+      src: {
+        type: "string",
+        description: "The file, e.g. images/hero.mp4; none removes the film.",
+      },
+    },
+  },
+  positional: ["page", "section", "src"],
+  describe: ({ page, section, src }) =>
+    src
+      ? `Play ${src} over the picture of the ${section} section of ${page}`
+      : `Remove the film of the ${section} section of ${page}`,
+  destructive: () => false,
+  apply({ content }, { page, section, src }, ir) {
+    const found = ir.pages.find((p) => p.id === page)?.sections.find((s) => s.name === section);
+    if (!found) throw new OperationError(`The ${page} page has no section named "${section}".`);
+    if (found.kind !== "hero")
+      throw new OperationError(`Only a hero takes a film; ${section} is a ${found.kind} section.`);
+    const film = ["pages", page, section, "image", "film"];
+    if (src === undefined) {
+      if (!content.has(film)) throw new OperationError(`The ${section} section has no film.`);
+      content.removeAndPrune(film, 0);
+      return [];
+    }
+    if (typeof content.get(["pages", page, section, "image", "src"]) !== "string")
+      throw new OperationError(
+        `The ${section} section has no picture: a film plays over one, so set the picture first.`,
+      );
+    if (!FILM_SRC.test(src))
+      throw new OperationError(
+        `"${src}" is not an MP4 file under public/images/: give it as images/<file>.mp4.`,
+      );
+    // The owner's file: the origin of the film there before says nothing of it.
+    if (content.has(film)) content.set(film, { src });
+    else put(content, film, { src });
+    return [];
+  },
+};
+
+/**
  * The release review's Keep (picture-kinds.md §6): the owner keeps a picture an AI made where it
  * presents their work, a hero's or a section's (a gallery's by its place), and is not asked again
  * until another picture takes its place. Written on the picture in the content file, so undo takes
@@ -798,6 +857,7 @@ export const contentOperations: AnyOperation[] = [
   setTexts,
   setItems,
   setSectionPicture,
+  setSectionFilm,
   keepPicture,
   nameRecords,
   setLanguage,
