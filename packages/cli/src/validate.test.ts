@@ -74,6 +74,14 @@ test("validate --explain says what a hero's buttons open, by rule or as written"
   expect(invoicing.stdout).toContain("home hero: button opens overview; no second button");
 });
 
+test("validate --explain says the tile's initials and where they come from (app-logo.md §0)", async () => {
+  const io = captureIo();
+  expect(await run(["validate", join(examples, "kiosk"), "--explain"], io)).toBe(0);
+  expect(io.stdout).toContain(
+    "initials: K (by rule: the first letters of the name's first two words; initials in smithable.content.yml says otherwise)",
+  );
+});
+
 test("validate --explain says which sections' pictures are the owner's work (T1175)", async () => {
   const restaurant = captureIo();
   expect(await run(["validate", join(examples, "restaurant"), "--explain"], restaurant)).toBe(0);

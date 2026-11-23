@@ -136,10 +136,12 @@ function LandingLayoutView({
         height={28}
         className="size-7 shrink-0 rounded-[4px] object-contain"
       />
-      <span className="min-w-0 truncate">{appName}</span>
+      <span data-part="wordmark" className="min-w-0 truncate">
+        {appName}
+      </span>
     </>
   ) : (
-    appName
+    <span data-part="wordmark">{appName}</span>
   );
   // With a mark, a row of the two; either way a long name ends in an ellipsis instead of
   // pushing the header wider.

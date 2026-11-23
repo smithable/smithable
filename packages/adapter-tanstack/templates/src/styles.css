@@ -232,6 +232,14 @@
        text column, a card) then grows past its column instead of breaking the word. */
     overflow-wrap: anywhere;
   }
+  /* The app's name is its mark (app-logo.md §0): set in the heading face, a little tight, in the
+     theme's heading weight and case (700 and as written where a theme says nothing). */
+  [data-part="wordmark"] {
+    font-family: var(--font-heading, inherit);
+    font-weight: var(--heading-weight, 700);
+    text-transform: var(--heading-case, none);
+    letter-spacing: -0.02em;
+  }
   [data-kit="model-table"] td {
     font-variant-numeric: var(--table-numbers, normal);
   }

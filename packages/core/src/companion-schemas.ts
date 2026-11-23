@@ -878,6 +878,13 @@ export const CONTENT_SCHEMA: JsonSchema = {
         generated: { type: "boolean", description: "Made by an AI (a mark is never badged)." },
       },
     },
+    initials: {
+      title: "Initials",
+      type: "string",
+      pattern: "^(?!.*[\\uFE0F\\u20E3])(?:[\\p{L}\\p{Nd}]\\p{M}*){1,2}$",
+      description:
+        "The one or two letters on the app's tile, its tab icon; nothing said, the first letters of its name's first two words (smithable validate --explain says which).",
+    },
     models: {
       title: "Kinds of record",
       type: "object",
