@@ -1,4 +1,4 @@
-import { validateContent, validateSpec } from "@smithable/core";
+import { applyOperation, validateContent, validateSpec, validateUx } from "@smithable/core";
 import { expect, test } from "vitest";
 import { picturesToReview } from "./release-review.js";
 
@@ -37,11 +37,11 @@ test("the release review lists the hero's and the work sections' generated pictu
   if (!ir) throw new Error("invalid spec");
   const read = validateContent({ path: "smithable.content.yml", text: content }, ir);
   expect(read.diagnostics.filter((d) => d.severity === "error")).toEqual([]);
-  expect(picturesToReview(ir, read.content)).toEqual([
+  expect(picturesToReview(ir, read.content, undefined)).toEqual([
     { page: "home", section: "hero", src: "images/hero.webp", alt: "A roof" },
     { page: "home", section: "jobs", item: 1, src: "images/jobs/made.webp", alt: "A roof" },
   ]);
-  expect(picturesToReview(ir, undefined)).toEqual([]);
+  expect(picturesToReview(ir, undefined, undefined)).toEqual([]);
   // A picture the owner kept is not asked about again.
   const kept = validateContent(
     {
@@ -52,5 +52,43 @@ test("the release review lists the hero's and the work sections' generated pictu
     },
     ir,
   );
-  expect(picturesToReview(ir, kept.content).map((p) => p.src)).toEqual(["images/jobs/made.webp"]);
+  expect(picturesToReview(ir, kept.content, undefined).map((p) => p.src)).toEqual([
+    "images/jobs/made.webp",
+  ]);
+});
+
+test("a work collage asks to keep a generated extra picture only while shown", () => {
+  const withWork = spec.replace("about: { mediaText: }", "about: { mediaText:, pictures: work }");
+  const { ir } = validateSpec({ path: "smithable.yml", text: withWork });
+  if (!ir) throw new Error("invalid spec");
+  const withExtra = content + `      items:\n        - image: ${made("images/about-extra.webp")}\n`;
+  const visible = (text: string) =>
+    validateContent({ path: "smithable.content.yml", text }, ir).content;
+  const ux = validateUx(
+    {
+      path: "smithable.ux.yml",
+      text: "smithableUx: 0.1\npages: { home: { sections: { about: { layout: collage } } } }\n",
+    },
+    ir,
+  ).ux;
+  expect(ux).toBeDefined();
+  expect(
+    picturesToReview(ir, visible(withExtra), undefined).map((picture) => picture.src),
+  ).not.toContain("images/about-extra.webp");
+  expect(picturesToReview(ir, visible(withExtra), ux)).toContainEqual({
+    page: "home",
+    section: "about",
+    item: 0,
+    src: "images/about-extra.webp",
+    alt: "A roof",
+  });
+  const kept = applyOperation({ spec: withWork, content: withExtra }, "keepPicture", {
+    page: "home",
+    section: "about",
+    item: 0,
+  });
+  if (!kept.ok || !kept.files.content) throw new Error("Cannot keep extra picture");
+  expect(
+    picturesToReview(ir, visible(kept.files.content), ux).map((picture) => picture.src),
+  ).not.toContain("images/about-extra.webp");
 });

@@ -5931,6 +5931,11 @@ exports[`valid specs > ../../../examples/painter/smithable.yml 1`] = `
             "name": "features",
           },
           {
+            "kind": "gallery",
+            "name": "gallery",
+            "pictures": "work",
+          },
+          {
             "kind": "testimonials",
             "name": "testimonials",
           },
@@ -5964,6 +5969,11 @@ exports[`valid specs > ../../../examples/painter/smithable.yml 1`] = `
         {
           "kind": "features",
           "name": "features",
+        },
+        {
+          "kind": "gallery",
+          "name": "gallery",
+          "pictures": "work",
         },
         {
           "kind": "testimonials",

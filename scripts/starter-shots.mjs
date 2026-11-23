@@ -160,10 +160,11 @@ const SHOTS = {
     ["projects", 1, "visitor", true],
     ["enquiries", "list", "admin"],
   ],
-  // The jobs by surface as a visitor sees them, and one job with its quote request.
+  // The pictured jobs, a project with two pictures and an enquiry, then the landing portfolio.
   painter: [
     ["jobs", "list", "visitor"],
-    ["jobs", 1, "visitor", true],
+    ["jobs", 6, "visitor", true],
+    ["home", "list", "visitor", true],
   ],
   api: [
     ["admin", "tasks", "admin"],

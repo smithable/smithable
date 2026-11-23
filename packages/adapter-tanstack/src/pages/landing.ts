@@ -271,7 +271,13 @@ export function landingRoute(
           }${
             own.image
               ? `
-          image={{ src: ${JSON.stringify(`/${own.image.src}`)}, alt: ${JSON.stringify(own.image.alt)}${own.image.generated ? ", generated: true" : ""}${own.image.kind ? `, kind: ${JSON.stringify(own.image.kind)}` : ""}${srcSetOf(own.image) ? `, srcSet: ${JSON.stringify(srcSetOf(own.image))}` : ""} }}`
+          image={{ src: ${JSON.stringify(`/${own.image.src}`)}, alt: ${JSON.stringify(own.image.alt)}${own.image.generated ? ", generated: true" : ""}${own.image.kind ? `, kind: ${JSON.stringify(own.image.kind)}` : ""}${srcSetOf(own.image) ? `, srcSet: ${JSON.stringify(srcSetOf(own.image))}` : ""} }}${
+            own.image.film
+              ? (imports.add("#/kit/Film", "Film"),
+                `
+          film={(framed) => <Film src=${attr(`/${own.image.film.src}`)}${own.image.film.generated ? " generated" : ""}${own.image.film.kind ? ` kind=${attr(own.image.film.kind)}` : ""} framed={framed} />}`)
+              : ""
+          }`
               : ""
           }${
             section.shortcuts?.length
@@ -529,11 +535,19 @@ export function landingRoute(
         ];
       }
       case "mediaText": {
-        if (!own.title && !own.text && !own.image) return [];
+        const extra =
+          given.layout === "collage"
+            ? (own.items ?? []).flatMap(({ image }) =>
+                typeof image === "object" && !Array.isArray(image)
+                  ? [{ image: picture(image) }]
+                  : [],
+              )
+            : [];
+        if (!own.title && !own.text && !own.image && !extra.length) return [];
         imports.add("#/kit/Landing", "MediaText");
         return [
           `${open("MediaText")}
-          id=${attr(section.name)}${own.title ? `\n          title=${attr(own.title)}` : ""}${own.text ? `\n          text=${attr(own.text)}` : ""}${own.caption ? `\n          caption=${attr(own.caption)}` : ""}${own.image ? `\n          image={${literal(picture(own.image))}}` : ""}${section.button ? `\n          link=${link(routeOf(section.button), own.button ?? t.pageTitleOf(section.button))}` : ""}
+          id=${attr(section.name)}${own.title ? `\n          title=${attr(own.title)}` : ""}${own.text ? `\n          text=${attr(own.text)}` : ""}${own.caption ? `\n          caption=${attr(own.caption)}` : ""}${own.image ? `\n          image={${literal(picture(own.image))}}` : ""}${extra.length ? `\n          items={${literal(extra)}}` : ""}${section.button ? `\n          link=${link(routeOf(section.button), own.button ?? t.pageTitleOf(section.button))}` : ""}
         />`,
         ];
       }

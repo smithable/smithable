@@ -89,6 +89,10 @@ exports[`every kit component's hooks, as they are 1`] = `
     "data-part="amount"",
     "data-part="radios"",
   ],
+  "src/kit/Film.tsx": [
+    "data-part="film"",
+    "data-part="film-pause"",
+  ],
   "src/kit/Filters.tsx": [
     "data-kit="filters"",
     "data-part="saved-tabs"",

@@ -227,6 +227,8 @@ export const w = {
   more: "More",
   moreArticles: "More articles",
   moreBelow: "More below",
+  pauseFilm: "Pause the film",
+  playFilm: "Play the film",
   movedToTrash: (title: string) => `“${title}” is in the trash.`,
   moveToTrash: "Move to trash",
   // Deleting a record that others point to (docs/design/delete-together.md).
