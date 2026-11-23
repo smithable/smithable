@@ -648,11 +648,13 @@ export function landingRoute(
   };
   const footerSection = sections.find((s) => s.kind === "footer");
   const footerTexts = footerSection ? text(footerSection.name) : undefined;
+  const contactBand = contactFooterEnabled(ir, auth, ux, t, page);
   const footer = footerSection
     ? ` footer={${literal({
         ...(footerTexts?.text ? { text: footerTexts.text } : {}),
         links: footerTexts?.items ?? [],
         texts: `pages.${page.id}.${footerSection.name}`,
+        ...(contactBand ? { contactBand: true } : {}),
       })}}`
     : "";
   if (framed === "parts") {
@@ -758,9 +760,36 @@ ${loaded ? "  const data = Route.useLoaderData();\n" : ""}${
  * visitors may open, in the spec's order) and the contact details of the landing page's contact
  * section, for the header and the footer.
  */
-export function siteModule(ir: SpecIR, t: Texts, auth: AuthIR, ux: UxIR): string {
+function homeForSite(ir: SpecIR, auth: AuthIR) {
   const landings = ir.pages.filter((p) => p.pattern.kind === "landing");
-  const home = landings.find((p) => auth.public.pages.includes(p.id)) ?? landings[0];
+  return landings.find((p) => auth.public.pages.includes(p.id)) ?? landings[0];
+}
+
+function siteContact(home: PageIR | undefined, t: Texts) {
+  const section =
+    home?.pattern.kind === "landing"
+      ? home.pattern.sections.find((s) => s.kind === "contact")
+      : undefined;
+  const texts = home && section ? t.section(home.id, section.name) : undefined;
+  return Object.fromEntries(
+    (["address", "phone", "email", "hours"] as const).flatMap((key) =>
+      texts?.[key] ? [[key, texts[key] as string]] : [],
+    ),
+  );
+}
+
+function contactFooterEnabled(ir: SpecIR, auth: AuthIR, ux: UxIR, t: Texts, page: PageIR) {
+  if (page.pattern.kind !== "landing") return false;
+  const footer = page.sections.find((section) => section.kind === "footer");
+  return (
+    !!footer &&
+    ux.pages[page.id]?.looks?.[footer.name]?.layout === "contactBand" &&
+    Object.keys(siteContact(homeForSite(ir, auth), t)).length > 0
+  );
+}
+
+export function siteModule(ir: SpecIR, t: Texts, auth: AuthIR, ux: UxIR): string {
+  const home = homeForSite(ir, auth);
   // With the pages in the site frame (page-sections.md §4): one visitors may not open is in the
   // menu of those who may.
   const inSite = (p: PageIR) => ux.pages[p.id]?.frame === "site";
@@ -786,16 +815,7 @@ export function siteModule(ir: SpecIR, t: Texts, auth: AuthIR, ux: UxIR): string
   const legal = ir.pages
     .filter((p) => p.pattern.kind === "legal" && auth.public.pages.includes(p.id))
     .map((p) => ({ to: p.route, label: code(t.pageTitleOf(p.id)) }));
-  const section =
-    home?.pattern.kind === "landing"
-      ? home.pattern.sections.find((s) => s.kind === "contact")
-      : undefined;
-  const texts = home && section ? t.section(home.id, section.name) : undefined;
-  const contact = Object.fromEntries(
-    (["address", "phone", "email", "hours"] as const).flatMap((k) =>
-      texts?.[k] ? [[k, texts[k] as string]] : [],
-    ),
-  );
+  const contact = siteContact(home, t);
   return `${HEADER}import type { LandingSite } from "#/kit/Landing";${guarded ? '\nimport { pageAccess } from "#/generated/pages";' : ""}
 
 /** The public site's frame: the pages visitors may open, and how to reach the business. */
