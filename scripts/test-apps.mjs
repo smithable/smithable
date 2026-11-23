@@ -8924,12 +8924,8 @@ for (const [index, example] of examples.entries()) {
         () => demoVisitorsFlow(dir, port + 400),
       );
 
-    // A door secret as a host would give one: a production build still has no door (A 180). The
-    // crm runs as a host runs a held copy, MAIL_MODE=outbox, and its import says so (T1325).
-    let stop = await serve(dir, port, "production", {
-      DEV_DOOR_SECRET: DOOR_SECRET,
-      ...(example === "crm" ? { MAIL_MODE: "outbox" } : {}),
-    });
+    // A door secret as a host would give one: a production build still has no door (A 180).
+    let stop = await serve(dir, port, "production", { DEV_DOOR_SECRET: DOOR_SECRET });
     try {
       const base = `http://localhost:${port}`;
       const { ir } = validateSpec({
@@ -10109,6 +10105,8 @@ test("the session cookie's name and attributes", async () => {
       ...(example === "kiosk"
         ? { NODE_EXTRA_CA_CERTS: pushCertificate().cert, PAYMENTS_HOLD_CHECK_SECONDS: "2" }
         : {}),
+      // The crm runs as a host runs a held copy, MAIL_MODE=outbox, and its import says so (T1325).
+      ...(example === "crm" ? { MAIL_MODE: "outbox" } : {}),
     });
     try {
       const base = `http://localhost:${port + 100}`;
