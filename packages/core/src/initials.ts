@@ -11,7 +11,8 @@ const EMOJI = /[\u{FE0F}\u{20E3}]/u;
 /** At most this many marks on a letter: a tile has room for a few, not for hundreds. */
 const MARKS = 3;
 /** Of an upper case, its first letter that is no modifier (ŉ upper-cases to ʼN: N) and its marks. */
-const UPPER = /(?!\p{Lm})[\p{L}\p{Nd}]\p{M}*/u;
+const UPPER = /(?!\p{Lm})[\p{L}\p{Nd}]\p{M}{0,3}/u;
+const OWN = /^\p{M}{0,3}/u;
 
 /** The first letter of a word, upper-cased without a locale: of the upper case, only its first
  * letter and the marks on it are kept (ß gives S, ǰ gives J̌, ŉ gives N), the word's own marks
@@ -20,7 +21,7 @@ function first(word: string): string | undefined {
   for (const [, base = "", marks = ""] of word.matchAll(LETTERS)) {
     if (EMOJI.test(marks)) continue;
     const [letter = base, ...on] = Array.from(
-      (UPPER.exec(base.toUpperCase())?.[0] ?? base) + marks,
+      (UPPER.exec(base.toUpperCase())?.[0] ?? base) + (OWN.exec(marks)?.[0] ?? ""),
     );
     return letter + on.slice(0, MARKS).join("");
   }

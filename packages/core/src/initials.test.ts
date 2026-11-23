@@ -23,6 +23,8 @@ test("the initials by rule: the first letters of the first two words that have o
   // A letter keeps its combining marks, three at most.
   expect(initialsOf("école normale")).toBe("ÉN");
   expect(initialsOf(`e${"\u0301".repeat(200)}x`)).toBe("E\u0301\u0301\u0301");
+  // The marks the upper case brings count toward the three: ǰ with three acutes.
+  expect(initialsOf("ǰ\u0301\u0301\u0301")).toBe("J\u030C\u0301\u0301");
   // A modifier letter at the front of an upper case is passed over: ŉ upper-cases to ʼN.
   expect(initialsOf("ŉ works")).toBe("NW");
   // A name without spaces in a script without case: one, as written.
