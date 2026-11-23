@@ -53,6 +53,8 @@ export interface PaymentEntry {
   release: (tx: Tx, record: number) => void;
   /** The record as stored, read in a transaction (a refund's condition checked again there). */
   read: (tx: Tx, record: number) => Record<string, unknown> | undefined;
+  /** Pay for an existing record: the amount it asks for now, or undefined when it no longer fits `when`. */
+  due?: (tx: Tx, record: number) => number | undefined;
   /** After a held record's payment is recorded: the app's own afterCreate, which waited for it. */
   after?: (record: number) => Promise<void>;
 }
@@ -760,35 +762,44 @@ export function paymentsOf(
   };
 }
 
+/** Whether a record is paid for by an entry: a payment that came as asked, and not refunded. */
+export function paidFor(tx: Tx, entry: string, record: number): boolean {
+  return (
+    tx
+      .select({ id: payments.id })
+      .from(payments)
+      .where(
+        and(
+          eq(payments.entry, entry),
+          eq(payments.record, record),
+          inArray(payments.status, ["paid", "refunding"]),
+          or(isNull(payments.note), notInArray(payments.note, [...UNASKED])),
+        ),
+      )
+      .get() !== undefined
+  );
+}
+
 /**
  * Starts paying for an existing record (§4.1): the record read as the viewer may (the caller
  * passes it), checked against its entry's condition and that it is not paid, its amount read here,
  * the pending Payment written (or the one there found), bound to this browser, and the provider's
- * page asked.
+ * page asked. A pay link passes the amount it was made for: the record must still ask exactly
+ * that, checked again in the transaction that writes the pending Payment.
  */
 export async function startPayment(
   entryName: string,
   row: Record<string, unknown> & { id: number },
   description: string,
+  bound?: number,
 ): Promise<string> {
   const entry = PAYMENT_ENTRIES[entryName];
   if (!entry?.when || !fits(entry.when, row)) throw new BadInput(w.paymentGone);
-  const amount = Math.round(Number(row[entry.amount] ?? 0));
+  const amount = bound ?? Math.round(Number(row[entry.amount] ?? 0));
   if (!(amount > 0)) throw new BadInput(w.paymentGone);
   const id = db.transaction((tx) => {
-    const paid = tx
-      .select({ id: payments.id })
-      .from(payments)
-      .where(
-        and(
-          eq(payments.entry, entryName),
-          eq(payments.record, row.id),
-          inArray(payments.status, ["paid", "refunding"]),
-          or(isNull(payments.note), notInArray(payments.note, [...UNASKED])),
-        ),
-      )
-      .get();
-    if (paid) throw new BadInput(w.paymentGone);
+    if (bound !== undefined && entry.due?.(tx, row.id) !== bound) throw new BadInput(w.paymentGone);
+    if (paidFor(tx, entryName, row.id)) throw new BadInput(w.paymentGone);
     // A pending one for another amount (the record changed since) is given up for a new one.
     const pending = tx
       .select()

@@ -59,11 +59,12 @@ export function traceThrough(through: string): void {
 
 /**
  * The address and path as the access line keeps them: a query's names, never its values, and
- * never a sent document's link (/d/<token>, record-documents.md §5).
+ * never a sent document's link (/d/<token>, record-documents.md §5) or a pay link (/p/<token>,
+ * payments.md §4.1).
  */
 export function loggedPath(url: URL): string {
   const names = [...new Set(url.searchParams.keys())];
-  const path = url.pathname.replace(/^\/d\/[^/]+/, "/d/…");
+  const path = url.pathname.replace(/^\/([dp])\/[^/]+/, (_, kind) => `/${kind}/…`);
   return names.length ? `${path}?${names.join("&")}` : path;
 }
 

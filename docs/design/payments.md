@@ -225,9 +225,17 @@ payments: { provider: mollie }       # stripe | mollie | fake
    page of the app that shows the description and the amount and a Pay button, nothing else of
    the record. The link carries a random token (stored as a hash, as keys are) bound to the entry
    and the record; it works while the record fits `when`, is unpaid and keeps the amount the link
-   was made for, and ends after 60 days. The page is behind the kit's limiter. **Not built yet:**
-   core refuses `{pay}` in an outgoing text until the token, its page and expiry exist; the token
-   will be of kind `pay` in the token table record-documents.md §5 adds.
+   was made for, and ends after 60 days. The page is behind the kit's limiter. Each recipient gets
+   a link of their own, a row of kind `pay` in the token table record-documents.md §5 adds (its
+   `entry`, `model`, `recordId` and `amount`; no copy). The page is `/p/<token>`, out of
+   search engines, caches and the next site's Referer, with no frame; a wrong, ended or withdrawn
+   link, a view link's token and a record gone or in the trash all answer the same 404, and the
+   token is compared by its hash in constant time. The amount bound is the one the record asks
+   for when the mail is written, worked-out amounts included; Pay checks it again in the write
+   transaction that makes the pending Payment, and a link whose record no longer fits or asks
+   for another amount says it no longer works. Trashing or deleting the record ends its links.
+   The entry a `{pay}` pays through is found by the spec's shape alone, the one entry that pays
+   an existing record of the mail's model, and `validate --explain` names it.
 2. **The server function.** A same-origin call, checked as every server function is. It reads
    the record (as the viewer, or with the link's token), checks `when` and that the record is not
    paid, reads the amount, and in one write transaction writes the held record (for `created`)

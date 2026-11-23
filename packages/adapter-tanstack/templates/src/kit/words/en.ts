@@ -804,6 +804,9 @@ export const w = {
   paymentDecline: "Decline",
   paymentUnavailable: "Payment is not possible right now. Please try again.",
   paymentGone: "This payment is no longer open.",
+  /** The page a pay link opens (payments.md §4.1). */
+  payLinkEnded: "This link no longer works. Ask the sender for a new one.",
+  payLinkViews: "views of a payment link",
   refundRefused:
     "The payment provider refused the refund. Try again later, or refund at the provider.",
   refundPending: "The payment provider has not answered yet. The refund is asked again by itself.",

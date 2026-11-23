@@ -1,6 +1,6 @@
 import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { privacyReviews } from "@smithable/adapter-tanstack";
+import { payLinksExplained, privacyReviews } from "@smithable/adapter-tanstack";
 import {
   ASK_FILE,
   type AskIR,
@@ -347,6 +347,7 @@ export function validate(
     io.out(
       `\n${explainSpec(shown.ir, shown.auth, shown.ux, content?.language, content?.initials)}`,
     );
+    for (const line of payLinksExplained(shown.ir, content)) io.out(`${line}\n`);
     io.out(
       `${badgeExplained(isDirectory(target) ? target : dirname(target), shown.ux?.aiBadge)}\n`,
     );

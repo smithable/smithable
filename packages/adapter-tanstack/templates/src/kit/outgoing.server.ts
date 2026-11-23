@@ -62,15 +62,19 @@ export interface Happening {
    * address stands where the texts say {view}, made when the mail to them is queued.
    */
   view?: (email: string) => string;
+  /** The link to pay for the record (payments.md §4.1), one per recipient, where the texts say {pay}. */
+  pay?: (email: string) => string;
 }
 
 /** Where a mail's text says {view}, until each recipient's own address is put in its place. */
 export const VIEW_MARK = "\u0000view\u0000";
+/** Where a mail's text says {pay}, likewise. */
+export const PAY_MARK = "\u0000pay\u0000";
 
-/** What a push or a text says of a mail with {view}: nothing where the link would stand. */
+/** What a push or a text says of a mail with {view} or {pay}: nothing where a link would stand. */
 export function unviewed(happening: Happening): Happening {
-  const { view: _view, ...rest } = happening;
-  const without = (s: string) => s.split(VIEW_MARK).join("");
+  const { view: _view, pay: _pay, ...rest } = happening;
+  const without = (s: string) => s.split(VIEW_MARK).join("").split(PAY_MARK).join("");
   return {
     ...rest,
     subject: without(rest.subject),
@@ -255,9 +259,13 @@ export function queueMail(
     if (!viewer && !person.id) continue;
     if (!own && viewer && (person.id === viewer.id || key === viewer.email.toLowerCase())) continue;
     sent.add(key);
-    // Each recipient's own link to the sent copy, where the texts say {view}.
+    // Each recipient's own links: to the sent copy where the texts say {view}, to pay where {pay}.
     const address = happening.view?.(email);
-    const at = (s: string) => (address === undefined ? s : s.split(VIEW_MARK).join(address));
+    const paying = happening.pay?.(email);
+    const at = (s: string) => {
+      const viewed = address === undefined ? s : s.split(VIEW_MARK).join(address);
+      return paying === undefined ? viewed : viewed.split(PAY_MARK).join(paying);
+    };
     const id = thread ? messageId() : undefined;
     const queued = tx
       .insert(outgoingMail)

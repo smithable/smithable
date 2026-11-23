@@ -63,14 +63,14 @@ export function paymentsServerModule(ir: SpecIR, provider: string): string {
       usesFits = true;
       if (amount.formula) withFormulas.add(model);
     }
+    // The amount the record asks for now: a worked-out one read with what it is worked out from.
+    const now = amount.formula
+      ? `${withFormulasName(model)}(tx.query.${tableNames(model).table}.findFirst({ where: eq(${table}.id, record)${lists.length ? `, with: { ${lists.map((l) => `${l}: true`).join(", ")} }` : ""} }).sync() ?? before)`
+      : "before";
     const asks = when
       ? `
       if (!fits(${JSON.stringify(when)}, before)) return "the record no longer asks";
-      const now = ${
-        amount.formula
-          ? `${withFormulasName(model)}(tx.query.${tableNames(model).table}.findFirst({ where: eq(${table}.id, record)${lists.length ? `, with: { ${lists.map((l) => `${l}: true`).join(", ")} }` : ""} }).sync() ?? before)`
-          : "before"
-      };
+      const now = ${now};
       if (Math.round(Number(now.${dataKey(amount)} ?? 0)) !== amount) return "amount differs";`
       : "";
     return `  ${p.name}: {
@@ -109,6 +109,16 @@ export function paymentsServerModule(ir: SpecIR, provider: string): string {
     read(tx, record) {
       return tx.select().from(${table}).where(eq(${table}.id, record)).get();
     },${
+      when
+        ? `
+    due(tx, record) {
+      const before = tx.select().from(${table}).where(eq(${table}.id, record)).get();
+      if (!before || !fits(${JSON.stringify(when)}, before)) return undefined;
+      const now = ${now};
+      return Math.round(Number(now.${dataKey(amount)} ?? 0));
+    },`
+        : ""
+    }${
       created && model.heldByPayment
         ? `
     async after(record) {
@@ -155,7 +165,7 @@ export const payToCreate = (ir: SpecIR, model: ModelIR) =>
  * src/generated/payments.ts: the server functions of the return page and the fake provider's
  * page. Each answers the browser that started the payment only (a cookie bound to the Payment).
  */
-export function paymentsFunctions(ir: SpecIR, t: Texts): string {
+export function paymentsFunctions(ir: SpecIR, t: Texts, links = false): string {
   // Each entry's record, read as the viewer may (its access and its condition of reading), and
   // what the payer sees at the provider.
   const readers = ir.payments.map((p) => {
@@ -172,7 +182,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { getRequestHeaders } from "@tanstack/react-start/server";
 import { z } from "zod";
 import { AccessDenied, type Viewer } from "#/kit/access";
-import { writeAllowed } from "#/kit/limit";
+import { ${links ? "viewAllowed, viewMissed, " : ""}writeAllowed } from "#/kit/limit";${links ? '\nimport { w } from "#/kit/words";' : ""}
 import { currentViewer } from "#/lib/viewer.server";
 
 const id = z.number().int().positive();
@@ -204,7 +214,41 @@ export const payRecord = createServerFn({ method: "POST" })
     return startPayment(data.entry, row, DESCRIBE[data.entry]?.(row) ?? "");
   });
 
-/** The Payments page's rows, for admins and the refund roles (§3.3). */
+${
+  links
+    ? `/**
+ * What a pay link opens (§4.1), or null: the same for a wrong, an ended and a withdrawn link.
+ * Whatever is sent reaches the limiter, cut short: only a 43-character token opens a link.
+ */
+export const payLinkPage = createServerFn()
+  .validator((token: unknown) => (typeof token === "string" ? token.slice(0, 100) : ""))
+  .handler(async ({ data: token }) => {
+    const headers = getRequestHeaders();
+    viewAllowed(headers, undefined, w.payLinkViews);
+    const { payLinkShown } = await import("#/kit/pay-link.server");
+    const shown = payLinkShown(token, DESCRIBE);
+    if (!shown) viewMissed(headers);
+    return shown;
+  });
+
+/** Pay through a pay link (§4.1): on to the provider's page, for whoever holds the link. */
+export const payWithLink = createServerFn({ method: "POST" })
+  .validator((token: unknown) => (typeof token === "string" ? token.slice(0, 100) : ""))
+  .handler(async ({ data: token }) => {
+    const headers = getRequestHeaders();
+    writeAllowed(await currentViewer(), headers);
+    viewAllowed(headers, undefined, w.payLinkViews);
+    const { payByLink, payLinkShown } = await import("#/kit/pay-link.server");
+    if (!payLinkShown(token, DESCRIBE)) {
+      viewMissed(headers);
+      throw new AccessDenied(false);
+    }
+    return payByLink(token, DESCRIBE);
+  });
+
+`
+    : ""
+}/** The Payments page's rows, for admins and the refund roles (§3.3). */
 export const listPayments = createServerFn()
   .validator(z.enum(["pending", "paid", "failed", "refunding", "refunded"]).optional())
   .handler(async ({ data: status }) => {
@@ -284,6 +328,44 @@ export const fakeEvent = createServerFn({ method: "POST" })
     });
     return { body, signature: fakeSign(body) };
   });
+`;
+}
+
+/**
+ * The page a pay link opens (§4.1): the description and the amount and a Pay button, for whoever
+ * holds the link; kept out of search engines, caches and the next site's Referer.
+ */
+export function payLinkRoute(): string {
+  return `${HEADER}import { createFileRoute, notFound } from "@tanstack/react-router";
+import { app } from "#/generated/app";
+import { payLinkPage, payWithLink } from "#/generated/payments";
+import { PayLink } from "#/kit/PayLink";
+
+export const Route = createFileRoute("/p/$token")({
+  loader: async ({ params }) => {
+    const shown = await payLinkPage({ data: params.token });
+    if (!shown) throw notFound();
+    return shown;
+  },
+  headers: () => ({
+    "Cache-Control": "private, no-store",
+    "Referrer-Policy": "no-referrer",
+    "X-Robots-Tag": "noindex",
+  }),
+  head: () => ({
+    meta: [
+      { title: app.name },
+      { name: "robots", content: "noindex" },
+      { name: "referrer", content: "no-referrer" },
+    ],
+  }),
+  component: PayLinkRoute,
+});
+
+function PayLinkRoute() {
+  const { token } = Route.useParams();
+  return <PayLink shown={Route.useLoaderData()} pay={() => payWithLink({ data: token })} />;
+}
 `;
 }
 

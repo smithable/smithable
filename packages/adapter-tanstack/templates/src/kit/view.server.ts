@@ -3,9 +3,11 @@
 // action's own transaction, and gives each recipient a link of their own to that copy: a random
 // token, kept only as its hash. The page behind the link reads the copy alone, never the live
 // record. A link ends after its days, when its record goes to the trash or is removed, or when
-// someone withdraws it; an ended link stays ended.
-import { createHash, randomBytes } from "node:crypto";
-import { and, desc, eq, gt, inArray, isNull, lte } from "drizzle-orm";
+// someone withdraws it; an ended link stays ended. A mail whose text says {pay} gives each
+// recipient a link of the same kind to pay for the record (payments.md §4.1), bound to the payments
+// entry, the record and the amount, ended the same ways.
+import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
+import { and, desc, eq, gt, inArray, isNull, lte, or } from "drizzle-orm";
 import { db } from "#/db";
 import { recordLinks, sentDocuments } from "#/db/schema";
 import { Conflict, type Viewer } from "./access";
@@ -77,6 +79,79 @@ export function viewLinks(
   };
 }
 
+/** Days a pay link stays open (payments.md §4.1). */
+const PAY_DAYS = 60;
+
+/**
+ * The pay links of one send (payments.md §4.1): each recipient a token of their own, bound to the
+ * payments entry, the record and the amount it asks for now. A retry of the mail's delivery sends
+ * the same text, so the same link.
+ */
+export function payLinks(
+  tx: Pick<typeof db, "insert">,
+  viewer: Viewer | null,
+  send: { entry: string; payment: string; model: string; record: number; amount: number },
+): (email: string) => string {
+  return (email) => {
+    const token = randomBytes(32).toString("base64url");
+    const until = new Date(Date.now() + PAY_DAYS * DAY);
+    tx.insert(recordLinks)
+      .values({
+        kind: "pay",
+        tokenHash: hashOf(token),
+        entry: send.payment,
+        model: send.model,
+        recordId: send.record,
+        amount: Math.round(send.amount),
+        to: email,
+        until,
+      })
+      .run();
+    audit(tx, viewer, {
+      action: "pay link made",
+      model: send.model,
+      record: send.record,
+      details: { entry: send.entry, to: email, until: until.toISOString() },
+    });
+    const at = base();
+    return at ? `${at.replace(/\/$/, "")}/p/${token}` : `/p/${token}`;
+  };
+}
+
+/**
+ * What a pay token is bound to, or null: a wrong token, an ended link and a link of another kind
+ * are alike. Whether the record still asks for that amount is the caller's to check.
+ */
+export function openPay(
+  token: string,
+): { entry: string; model: string; record: number; amount: number } | null {
+  if (!/^[A-Za-z0-9_-]{43}$/.test(token)) return null;
+  const hash = hashOf(token);
+  const found = db
+    .select({
+      hash: recordLinks.tokenHash,
+      entry: recordLinks.entry,
+      model: recordLinks.model,
+      record: recordLinks.recordId,
+      amount: recordLinks.amount,
+    })
+    .from(recordLinks)
+    .where(
+      and(
+        eq(recordLinks.tokenHash, hash),
+        eq(recordLinks.kind, "pay"),
+        isNull(recordLinks.endedAt),
+        gt(recordLinks.until, new Date()),
+      ),
+    )
+    .get();
+  // Found by its hash; compared again in constant time, as a key is.
+  const same = found !== undefined && timingSafeEqual(Buffer.from(found.hash), Buffer.from(hash));
+  return same && found.entry && found.model && found.record !== null && found.amount !== null
+    ? { entry: found.entry, model: found.model, record: found.record, amount: found.amount }
+    : null;
+}
+
 /**
  * The copy a token opens, or null: a wrong token, an ended or withdrawn link, and a link of
  * another kind are alike. Reading changes nothing.
@@ -144,7 +219,7 @@ export function sentOf(model: string, record: number, q: Pick<typeof db, "select
 }
 
 /**
- * Ends every open link to a record's copies, for good: why is "withdrawn", "trashed" or "removed".
+ * Ends every open link to a record's copies and every pay link to it, for good: why is "withdrawn", "trashed" or "removed".
  * With madeBefore, only those made by then: a restore ends what its trash should have ended (a
  * record trashed before trashing ended its links).
  */
@@ -162,13 +237,17 @@ export function endLinks(
     .where(and(eq(sentDocuments.model, model), eq(sentDocuments.recordId, record)))
     .all()
     .map((c) => c.id);
-  if (!copies.length) return 0;
+  const paying = and(
+    eq(recordLinks.kind, "pay"),
+    eq(recordLinks.model, model),
+    eq(recordLinks.recordId, record),
+  );
   const ended = tx
     .update(recordLinks)
     .set({ endedAt: new Date(), ended: why })
     .where(
       and(
-        inArray(recordLinks.documentId, copies),
+        copies.length ? or(inArray(recordLinks.documentId, copies), paying) : paying,
         isNull(recordLinks.endedAt),
         madeBefore && lte(recordLinks.createdAt, madeBefore),
       ),
@@ -180,9 +259,18 @@ export function endLinks(
   return ended;
 }
 
-/** Removes a record's sent copies (their links go with them), with the record itself. */
+/** Removes a record's sent copies (their links go with them) and its pay links, with the record itself. */
 export function removeCopies(tx: Writer, model: string, record: number): void {
   tx.delete(sentDocuments)
     .where(and(eq(sentDocuments.model, model), eq(sentDocuments.recordId, record)))
+    .run();
+  tx.delete(recordLinks)
+    .where(
+      and(
+        eq(recordLinks.kind, "pay"),
+        eq(recordLinks.model, model),
+        eq(recordLinks.recordId, record),
+      ),
+    )
     .run();
 }
