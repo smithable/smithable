@@ -128,6 +128,8 @@ test("a custom, signed call: an HMAC of the body, and a stub of the project's ow
   const stub = file("src/custom/incoming/payment-received.ts");
   expect(stub?.zone).toBe("custom");
   expect(stub?.content).toContain("export async function handle(body: unknown, caller: Viewer)");
+  // Signed, with neither an id nor a signed time: nothing signed tells two calls apart, so the header does.
+  expect(route).toContain('const key = request.headers.get("idempotency-key") ?? "";');
 });
 
 test("a chat tool's command: a form body, a signature of the time and the body, the time checked, the setup check echoed", () => {
@@ -145,8 +147,10 @@ test("a chat tool's command: a form body, a signature of the time and the body, 
   expect(route).toContain(
     'if (/^application\\/json\\b/i.test(request.headers.get("content-type") ?? "")) {',
   );
-  // Without an id of its own, a signed call's signature is its id: a replay within the window is a repeat.
-  expect(route).toContain('const key = request.headers.get("idempotency-key") ?? `sig:${given}`;');
+  // Without an id of its own, a signed call's signature is its id: a replay within the window is a
+  // repeat, whatever Idempotency-Key it comes with (the signature leaves headers out).
+  expect(route).toContain("const key = `sig:${given}`;");
+  expect(route).not.toContain('request.headers.get("idempotency-key")');
   expect(route).toContain('const check = at(body, "challenge");');
   expect(route).toContain('"content-type": "text/plain"');
   expect(route).toContain('title: fill("{text}", body),');

@@ -133,6 +133,32 @@ function signedCode(text: string): string {
   return `\`${code}\``;
 }
 
+/**
+ * A signed call's own id, as code, or "": the value `id` names in the body, or the signature over
+ * a signed time. The signed text always takes the body, so both are the service's, and a header
+ * the signature leaves out (Idempotency-Key) cannot stand in for them: a replay with another
+ * header is still a repeat.
+ */
+function signedKey(incoming: IncomingIR, stamp: string | undefined): string {
+  if (!incoming.signed) return "";
+  if (incoming.id) return `fill(${JSON.stringify(incoming.id)}, body)`;
+  return stamp ? "`sig:${given}`" : "";
+}
+
+/** The id a call is known by for a day, as code: the signed one first, else the header, else what the entry names. */
+function dedupeKey(incoming: IncomingIR, stamp: string | undefined): string {
+  const signed = signedKey(incoming, stamp);
+  if (signed) return signed;
+  const own = incoming.id
+    ? `fill(${JSON.stringify(incoming.id)}, body)`
+    : incoming.mail
+      ? "mailKey(body as Mail)"
+      : stamp
+        ? "`sig:${given}`"
+        : '""';
+  return `request.headers.get("idempotency-key") ?? ${own}`;
+}
+
 export function incomingRoute(incoming: IncomingIR, ir: SpecIR, t: Texts): string {
   const model = incoming.create ? modelNamed(ir, incoming.create) : undefined;
   const n = model ? names(model, t) : undefined;
@@ -387,8 +413,8 @@ ${
         if (check) return new Response(check, { status: 200, headers: { "content-type": "text/plain" } });`
     : ""
 }
-        // A call seen in the last day is answered as received and not acted on again${incoming.mail && !incoming.id ? "; a mail's id is its Message-ID" : ""}.
-        const key = request.headers.get("idempotency-key") ?? ${incoming.id ? `fill(${JSON.stringify(incoming.id)}, body)` : incoming.mail ? "mailKey(body as Mail)" : stamp ? "`sig:${given}`" : '""'};
+        // A call seen in the last day is answered as received and not acted on again${incoming.mail && !incoming.id ? "; a mail's id is its Message-ID" : ""}${signedKey(incoming, stamp) ? "; signed, its id is the signed one, never a header the signature leaves out" : ""}.
+        const key = ${dedupeKey(incoming, stamp)};
         // The id is taken before anything is done, in one statement: a second delivery of it, even at the same
         // moment, finds it taken (the index is unique) and is answered as received; one older than a day is forgotten.
         // The time written is this call's mark on the row: only the call that holds it may give it back.
