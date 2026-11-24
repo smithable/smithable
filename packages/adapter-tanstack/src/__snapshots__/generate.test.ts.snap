@@ -50529,7 +50529,7 @@ type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
  */
 function withFormulaDefaults<T extends Record<string, unknown>>(given: T): T {
   const values: Record<string, unknown> = { ...given };
-  if (values.placedAt === undefined) values.placedAt = orderDefaults.placedAt(values);
+  if (values.placedAt === undefined) values.placedAt = new Date(orderDefaults.placedAt(values));
   return values as T;
 }
 
@@ -55240,7 +55240,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/generated/order.import.server.ts": "afc9f15e generated",
   "src/generated/order.import.ts": "efdb6114 generated",
   "src/generated/order.schema.ts": "0a39b791 generated",
-  "src/generated/order.server.ts": "1eb61143 generated",
+  "src/generated/order.server.ts": "58022464 generated",
   "src/generated/order.ts": "739e757f generated",
   "src/generated/pages.ts": "93284445 generated",
   "src/generated/roles.ts": "1cc6979a generated",
