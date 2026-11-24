@@ -560,7 +560,7 @@ const setSectionPicture: Operation<{
         additionalProperties: false,
         properties: {
           width: { type: "integer", minimum: 100, maximum: 4000 },
-          widths: { type: "array", items: { type: "integer", minimum: 100, maximum: 4000 } },
+          widths: { type: "array", items: { type: "integer", minimum: 1 } },
         },
         "x-host": true,
       },
@@ -704,14 +704,16 @@ const setSectionPicture: Operation<{
  * `width`, the others narrowest first as `widths`.
  */
 function renditionOf({ width, widths = [] }: { width: number; widths?: number[] }) {
-  const all = [...new Set([width, ...widths])]
-    .filter((w) => Number.isInteger(w) && w >= 100 && w <= 4000)
-    .sort((a, b) => a - b);
-  const largest = all.pop();
-  if (!largest) throw new OperationError("The stored file's record names no rendition.");
-  // A content file lists at most six copies (readWidths); the widest are kept.
-  const copies = all.slice(-6);
-  return { width: largest, ...(copies.length ? { widths: copies } : {}) };
+  // The largest copy names the file the page shows, so it is never swapped for a smaller one.
+  if (!Number.isInteger(width) || width < 100 || width > 4000)
+    throw new OperationError("The stored file's largest copy must be 100 to 4000 pixels wide.");
+  // A smaller copy outside the content file's range is left out; at most six, the widest, are kept
+  // (readWidths).
+  const copies = [...new Set(widths)]
+    .filter((w) => Number.isInteger(w) && w >= 100 && w < width)
+    .sort((a, b) => a - b)
+    .slice(-6);
+  return { width, ...(copies.length ? { widths: copies } : {}) };
 }
 
 /**

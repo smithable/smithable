@@ -113,6 +113,6 @@ test("a loss that is no field's says so without inventing one (T1454)", async ()
       },
     ),
   ).toBe(1);
-  expect(io.stderr).toContain("what it replaces is lost; undo brings it back.");
+  expect(io.stderr).toContain("what it takes away is lost; undo brings it back.");
   expect(io.stderr).not.toContain("undefined");
 });

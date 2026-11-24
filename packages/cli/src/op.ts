@@ -1242,7 +1242,7 @@ function dataImpact(dir: string, effects: Effect[], args: Record<string, unknown
   // An operation that loses something other than a field's values (a section's kind, a language,
   // a timer) names it in its own description; no field is invented for it.
   if (typeof model !== "string" || typeof field !== "string")
-    return "what it replaces is lost; undo brings it back.";
+    return "what it takes away is lost; undo brings it back.";
   const { table, column } = columnOf(model, field, removed?.storage === "reference");
   const counts = countValues(dir, table, column);
   const values = counts
