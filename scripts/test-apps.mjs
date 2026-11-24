@@ -4061,6 +4061,30 @@ async function painterFlow(dir, base) {
     );
     await page.getByRole("button", { name: "Send enquiry", exact: true }).waitFor();
 
+    // open: picture: a card's picture opens whole, steps to the next record's, and closes.
+    await open(page, `${base}/jobs`);
+    const cardCovers = page.locator('[data-kit="model-table"] [data-part="cover"]');
+    await cardCovers.first().waitFor();
+    if ((await cardCovers.count()) < 2)
+      throw new Error("/jobs has fewer than two pictures to open");
+    const firstName = (await cardCovers.first().getAttribute("aria-label"))?.replace(/^Open /, "");
+    await cardCovers.first().click();
+    const shownWhole = page.locator("dialog[open] figure");
+    await loaded(shownWhole.locator("img"));
+    const caption = shownWhole.locator("figcaption");
+    if (!(await caption.textContent())?.includes(firstName ?? "\u0000"))
+      throw new Error(
+        `/jobs opened a picture captioned "${await caption.textContent()}", not "${firstName}"`,
+      );
+    await page.getByRole("button", { name: "Next picture", exact: true }).click();
+    await page.waitForFunction(
+      (name) => !document.querySelector("dialog[open] figcaption")?.textContent?.includes(name),
+      firstName,
+    );
+    await loaded(shownWhole.locator("img"));
+    await page.getByRole("button", { name: "Close", exact: true }).click();
+    await page.locator("dialog[open]").waitFor({ state: "detached" });
+
     // One job without pictures among pictured ones keeps the cards even with a placeholder; a
     // filter that leaves only that job shows a text card, never an empty slot.
     write(dir, "UPDATE jobs SET photos = NULL WHERE surface = 'roof'");
