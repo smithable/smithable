@@ -51,6 +51,7 @@ import { type Io, tool } from "./io.js";
 import { lookContext } from "./look-context.js";
 import { mintLookTicket } from "./look-ticket.js";
 import { mcpServer } from "./mcp.js";
+import { hostedMediaSource, mediaSyncer } from "./media-cache.js";
 import { milestones, nameMilestone } from "./milestones.js";
 import { modelUsage } from "./model-usage.js";
 import { openQuestions } from "./new.js";
@@ -714,7 +715,16 @@ export async function studio(
       await new Promise((r) => setTimeout(r, 300));
     }
   };
-  const changed = (data: unknown) => void settled().then(() => send("changed", data));
+  // The project's stored pictures, fetched in a hosted workspace (media-storage.md §4): each one
+  // cached is asked for again at start, and what a change puts in use is in place before the
+  // preview reloads. Locally there is no source.
+  const mediaSource = hostedMediaSource();
+  const media = mediaSource ? mediaSyncer(dir, mediaSource, (line) => io.err(line)) : undefined;
+  void media?.sync(true);
+  const changed = (data: unknown) =>
+    void settled()
+      .then(() => media?.sync())
+      .then(() => send("changed", data));
   // The sample users (sample-users.md §4–§6), acting in the preview through its door.
   const people = sampleRunner({
     door: doorAt(localPreview, doorSecret, previewHeaders),
@@ -810,7 +820,7 @@ export async function studio(
     if (installed() !== packagesBefore) {
       stopApp();
       startApp();
-      send("changed", {});
+      void Promise.resolve(media?.sync()).then(() => send("changed", {}));
       return;
     }
     reopenDatabase(dir);

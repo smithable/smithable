@@ -51,6 +51,7 @@ import {
 import { readFilm, sizeProblems } from "./film-check.js";
 import { hostedLevel, levelWarnings } from "./hosted-level.js";
 import type { Io } from "./io.js";
+import { mediaFindings } from "./media-cache.js";
 import { INK_WASH_GREYSCALE_CUTOFF, inkWashTreatment } from "./picture-recolour.js";
 import { badgeExplained, readRecords, sha256 } from "./picture-style.js";
 import { loadPlugins } from "./plugins.js";
@@ -312,7 +313,12 @@ export function validate(
       found,
     );
     const films = ir && path ? filmFindings(dirname(path), content) : [];
-    if (ir && path) found.push(...privacyFindings(path, ir, auth, content, ux), ...films);
+    if (ir && path)
+      found.push(
+        ...privacyFindings(path, ir, auth, content, ux),
+        ...mediaFindings(dirname(path)),
+        ...films,
+      );
     const valid = Boolean(ir) && films.length === 0;
     io.out(`${JSON.stringify({ valid, diagnostics: found }, null, 2)}\n`);
     return valid ? 0 : 1;
@@ -322,6 +328,8 @@ export function validate(
   if (!ir) return 1;
   // Warnings after loading, from validate alone: the privacy page's completeness and review.
   for (const d of privacyFindings(path, ir, auth, content, ux)) io.err(`${formatDiagnostic(d)}\n`);
+  // A stored picture whose files are not here shows its frame (media-storage.md §3): a warning.
+  for (const d of mediaFindings(dirname(path))) io.err(`${formatDiagnostic(d)}\n`);
   // A film's bytes, read as Studio reads them at upload (section-film.md §2): one placed by hand
   // that breaks a rule fails the check.
   const films = filmFindings(dirname(path), content);

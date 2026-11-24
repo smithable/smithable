@@ -26,6 +26,7 @@ const WRITES_ITSELF: Record<string, string> = {
   "import.ts": "inside asProject",
   "ink-wash-worker.ts": "the prepared offer in Studio's private scratch folder",
   "managed.ts": "its own scratch folder (wx)",
+  "media-cache.ts": "inside asProject, under public/media only",
   "new.ts": "a new folder, or the folder beside the project a replacement is made in",
   "old-version.ts":
     "the old version's worktree in the CLI's cache; its record goes through changeTree",

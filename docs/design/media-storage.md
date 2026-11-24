@@ -112,8 +112,10 @@ construct in both: a name for fixed files the service made):
 - **The download** is the service's: it puts in `public/media/` the files of the assets the
   downloaded revision names (by `mediaInUse`, assembled fresh from the service's storage, never
   from a workspace's cache) after checking the project's right to each, and `media-hashes.json` at
-  the root beside them. The downloaded app builds and runs offline as it is. The engine has no
-  export of its own to change.
+  the root beside them: `{"<asset>": {"<variant>": "<sha256 hex>"}}`, keys sorted. The downloaded
+  app builds and runs offline as it is. The engine has no export of its own to change; the service
+  reads the list from `smithable media in-use --json` run on a checkout of the revision, as names
+  only.
 
 ## 4 Fetching renditions: the host's call
 
