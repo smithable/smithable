@@ -818,10 +818,9 @@ export async function studio(
    */
   const restored = (packagesBefore: string) => {
     if (installed() !== packagesBefore) {
-      void media?.sync();
       stopApp();
       startApp();
-      send("changed", {});
+      void Promise.resolve(media?.sync()).then(() => send("changed", {}));
       return;
     }
     reopenDatabase(dir);

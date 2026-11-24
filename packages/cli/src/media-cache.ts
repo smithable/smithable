@@ -80,11 +80,26 @@ export function hostedMediaSource(
       if (!ASSET_ID.test(asset) || !VARIANT.test(variant)) return undefined;
       const answer = await ask(`/media/${asset}/${variant}`);
       if (!answer) return undefined;
-      if (Number(answer.headers.get("content-length") ?? 0) > MAX_BYTES)
-        throw new Error(`${asset}/${variant} is larger than a rendition can be.`);
-      const bytes = new Uint8Array(await answer.arrayBuffer());
-      if (bytes.length > MAX_BYTES)
-        throw new Error(`${asset}/${variant} is larger than a rendition can be.`);
+      const tooLarge = () => new Error(`${asset}/${variant} is larger than a rendition can be.`);
+      if (Number(answer.headers.get("content-length") ?? 0) > MAX_BYTES) throw tooLarge();
+      // Counted as it comes, so an answer without a length is cut off at the limit.
+      const parts: Uint8Array[] = [];
+      let size = 0;
+      const reader = answer.body?.getReader();
+      for (let part = await reader?.read(); part && !part.done; part = await reader?.read()) {
+        size += part.value.length;
+        if (size > MAX_BYTES) {
+          await reader?.cancel();
+          throw tooLarge();
+        }
+        parts.push(part.value);
+      }
+      const bytes = new Uint8Array(size);
+      let at = 0;
+      for (const p of parts) {
+        bytes.set(p, at);
+        at += p.length;
+      }
       return { bytes, sha256: answer.headers.get("x-media-sha256") ?? "" };
     },
   };
@@ -103,16 +118,30 @@ const isLink = (path: string) => {
   }
 };
 
-/** The cached renditions, by valid id; a link or a stray name is not counted. */
-function cachedMediaHere(dir: string): Record<string, string[]> {
+/** `public/media` when it and `public` are folders of the tree, not links; else none. */
+function mediaFolder(dir: string): string | undefined {
   const media = join(dir, "public", "media");
-  if (!existsSync(media) || !lstatSync(media).isDirectory()) return {};
-  const found: Record<string, string[]> = {};
+  for (const path of [join(dir, "public"), media])
+    if (!existsSync(path) || !lstatSync(path).isDirectory()) return undefined;
+  return media;
+}
+
+/**
+ * The cached renditions, by valid id; a link or a stray name is not counted. With `hashes`, each
+ * file's hash (a recheck), else "".
+ */
+function cachedMediaHere(dir: string, hashes = false): Record<string, Record<string, string>> {
+  const media = mediaFolder(dir);
+  if (!media) return {};
+  const found: Record<string, Record<string, string>> = {};
   for (const asset of readdirSync(media)) {
     if (!ASSET_ID.test(asset) || !lstatSync(join(media, asset)).isDirectory()) continue;
-    found[asset] = readdirSync(join(media, asset)).filter(
-      (name) => VARIANT.test(name) && lstatSync(join(media, asset, name)).isFile(),
-    );
+    found[asset] = {};
+    for (const name of readdirSync(join(media, asset))) {
+      const path = join(media, asset, name);
+      if (!VARIANT.test(name) || !lstatSync(path).isFile()) continue;
+      found[asset][name] = hashes ? sha256(readFileSync(path)) : "";
+    }
   }
   return found;
 }
@@ -137,12 +166,13 @@ function placeMediaHere(
   renameSync(temporary, join(media, asset, variant));
 }
 
-/** Takes one stored file's renditions out of the cache. */
-function dropMediaHere(dir: string, asset: string): void {
-  if (!ASSET_ID.test(asset)) throw new Error("Not a media name.");
-  const media = join(dir, "public", "media");
-  if (!existsSync(media) || !lstatSync(media).isDirectory()) return;
-  rmSync(join(media, asset), { recursive: true, force: true });
+/** Takes one stored file's renditions, or one rendition, out of the cache, through no link. */
+function dropMediaHere(dir: string, asset: string, variant?: string): void {
+  if (!ASSET_ID.test(asset) || (variant !== undefined && !VARIANT.test(variant)))
+    throw new Error("Not a media name.");
+  const media = mediaFolder(dir);
+  if (!media) return;
+  rmSync(join(media, asset, variant ?? ""), { recursive: true, force: true });
 }
 
 export const cachedMedia = asProject("cachedMedia", cachedMediaHere);
@@ -176,21 +206,31 @@ export async function syncMedia(
   { recheck = false }: { recheck?: boolean } = {},
 ): Promise<MediaSync> {
   const done: MediaSync = { written: [], removed: [], missing: [] };
-  const cached = cachedMedia(dir);
+  const cached = cachedMedia(dir, recheck);
   const records = new Map<string, Promise<Record<string, string> | undefined>>();
   const record = (asset: string) => {
     if (!records.has(asset)) records.set(asset, source.record(asset));
     return records.get(asset) as Promise<Record<string, string> | undefined>;
   };
   if (recheck)
-    for (const asset of Object.keys(cached))
-      if (ASSET_ID.test(asset) && !(await record(asset))) {
+    for (const [asset, files] of Object.entries(cached)) {
+      const hashes = ASSET_ID.test(asset) ? await record(asset) : undefined;
+      if (!hashes) {
         dropMedia(dir, asset);
         delete cached[asset];
         done.removed.push(asset);
+        continue;
       }
+      // A rendition the record no longer lists, or whose file is not the recorded one, goes too.
+      for (const [variant, hash] of Object.entries(files))
+        if (hashes[variant] !== hash) {
+          dropMedia(dir, asset, variant);
+          delete files[variant];
+          done.removed.push(`${asset}/${variant}`);
+        }
+    }
   for (const { asset, variants } of mediaInUse({ content: contentOf(dir) })) {
-    const have = new Set(cached[asset] ?? []);
+    const have = new Set(Object.keys(cached[asset] ?? {}));
     const wanted = variants.filter((v) => !have.has(v));
     if (!wanted.length) continue;
     const hashes = await record(asset);
@@ -217,11 +257,16 @@ export async function syncMedia(
 export function mediaSyncer(dir: string, source: MediaSource, say: (line: string) => void) {
   let tail: Promise<void> = Promise.resolve();
   let queued: { recheck: boolean; done: Promise<void> } | undefined;
-  const run = async (recheck: boolean): Promise<void> => {
+  // A recheck that failed is owed: the next sync is one, whatever it was asked as.
+  let owed = false;
+  const run = async (asked: boolean): Promise<void> => {
+    const recheck = asked || owed;
     try {
       const { missing } = await syncMedia(dir, source, { recheck });
+      owed = false;
       if (missing.length) say(`Stored pictures not available: ${missing.join(", ")}.\n`);
     } catch (error) {
+      owed = recheck;
       say(`Stored pictures could not be fetched: ${(error as Error).message}\n`);
     }
   };

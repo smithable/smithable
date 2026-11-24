@@ -263,3 +263,46 @@ test("§3 media in-use prints core's list as JSON and nothing else; none is []",
   expect(mediaInUseCommand(folder("smithable-not-a-project-"), outside)).toBe(1);
   expect(outside.stdout).toBe("");
 });
+
+test("§4 a recheck takes out a cached file that is not its record's, and never goes through a link at public", async () => {
+  const dir = project(hero(ID));
+  mkdirSync(join(dir, "public/media", ID), { recursive: true });
+  writeFileSync(join(dir, "public/media", ID, "w480.webp"), "changed");
+  writeFileSync(join(dir, "public/media", ID, "w1600.webp"), "large");
+  const { source: s } = source({ [`${ID}/w480.webp`]: "small", [`${ID}/w1600.webp`]: "large" });
+  const done = await syncMedia(dir, s, { recheck: true });
+  expect(done.removed).toEqual([`${ID}/w480.webp`]);
+  expect(done.written).toEqual([`${ID}/w480.webp`]);
+  expect(readFileSync(join(dir, "public/media", ID, "w480.webp"), "utf8")).toBe("small");
+  // public itself a link: nothing is read or taken out through it.
+  const linked = project(hero(ID));
+  const outside = folder("smithable-media-outside-");
+  mkdirSync(join(outside, "media", OTHER), { recursive: true });
+  writeFileSync(join(outside, "media", OTHER, "w480.webp"), "o");
+  symlinkSync(outside, join(linked, "public"));
+  const none = await syncMedia(linked, source({}).source, { recheck: true });
+  expect(none.removed).toEqual([]);
+  expect(existsSync(join(outside, "media", OTHER, "w480.webp"))).toBe(true);
+});
+
+test("§4 a recheck that failed is owed: the next sync rechecks", async () => {
+  const dir = project(hero(ID));
+  mkdirSync(join(dir, "public/media", OTHER), { recursive: true });
+  writeFileSync(join(dir, "public/media", OTHER, "w480.webp"), "o");
+  let down = true;
+  const { source: s } = source({ [`${ID}/w480.webp`]: "small", [`${ID}/w1600.webp`]: "large" });
+  const flaky: MediaSource = {
+    ...s,
+    record: async (asset) => {
+      if (down) throw new Error("The service answered 503.");
+      return s.record(asset);
+    },
+  };
+  const said: string[] = [];
+  const { sync } = mediaSyncer(dir, flaky, (line) => said.push(line));
+  await sync(true);
+  expect(said.join("")).toContain("503");
+  down = false;
+  await sync();
+  expect(existsSync(join(dir, "public/media", OTHER))).toBe(false);
+});
