@@ -977,7 +977,8 @@ function HeroView({
                 >
                   <Link
                     to={s.to}
-                    className="group relative isolate flex h-full min-h-40 items-end overflow-hidden rounded-[var(--radius-xl)] outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    data-link-card={s.image ? "" : undefined}
+                    className="relative isolate flex h-full min-h-40 items-end overflow-hidden rounded-[var(--radius-xl)] outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   >
                     {s.image ? (
                       // A tile is a card: an AI's picture carries the small mark, over its scrim.
@@ -994,7 +995,8 @@ function HeroView({
                           width={800}
                           height={600}
                           loading="lazy"
-                          className="size-full object-cover transition group-hover:scale-105"
+                          data-link-card-image=""
+                          className="size-full object-cover"
                         />
                         <span
                           aria-hidden
@@ -1422,10 +1424,10 @@ function RecordCardsView({
   // an icon then) and another card shown has one, so the cards stay even; a model without
   // pictures, or a section of records without any, keeps text cards.
   const pictured = cards.some((card) => card.picture);
-  const picture = (card: CardItem, className: string) =>
-    !card.picture ? (
-      icon && pictured && <PicturePlaceholder icon={icon} className={className} />
-    ) : (
+  const picture = (card: CardItem, className: string, linkImage = false) => {
+    if (!card.picture)
+      return icon && pictured && <PicturePlaceholder icon={icon} className={className} />;
+    const image = (
       <AiMarked generated={card.picture.generated} kind={card.picture.kind} className="shrink-0">
         <img
           src={card.picture.src}
@@ -1433,10 +1435,13 @@ function RecordCardsView({
           width={card.picture.width}
           height={card.picture.height}
           loading="lazy"
+          data-link-card-image={linkImage ? "" : undefined}
           className={className}
         />
       </AiMarked>
     );
+    return linkImage ? <div className="shrink-0 overflow-hidden">{image}</div> : image;
+  };
   const details = (card: CardItem) => (
     <>
       {card.amount && <p className="text-lg font-semibold tabular-nums">{card.amount}</p>}
@@ -1600,12 +1605,13 @@ function RecordCardsView({
           {cards.map((card) => (
             <li key={card.key}>
               <Card
+                data-link-card={card.href && card.picture ? "" : undefined}
                 className={cn(
                   "relative flex h-full flex-col gap-2 overflow-hidden",
                   card.href && "hover:bg-hover",
                 )}
               >
-                {picture(card, "aspect-[3/2] w-full object-cover")}
+                {picture(card, "aspect-[3/2] w-full object-cover", Boolean(card.href))}
                 <div className="flex flex-1 flex-col gap-2 p-card">
                   <h3 className="text-lg font-semibold">{heading(card)}</h3>
                   {details(card)}

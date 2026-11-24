@@ -129,6 +129,14 @@
     animation-duration: 500ms;
     animation-timing-function: var(--motion-ease);
   }
+  @media (prefers-reduced-motion: no-preference) and (any-hover: hover) and (any-pointer: fine) {
+    [data-link-card] [data-link-card-image] {
+      transition: scale 300ms ease;
+    }
+    [data-link-card]:is(:hover, :focus-visible, :has(a:focus-visible)) [data-link-card-image] {
+      scale: 1.04;
+    }
+  }
   /* A landing page's content width (its `width` in the ux file sets it on the page): 72rem unsaid. */
   :root {
     --landing-width: 72rem;
