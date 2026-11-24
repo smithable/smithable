@@ -10,9 +10,12 @@ tones:
 pages:
   home:
     sections:
-      latest: { band: muted }
+      hero: { layout: photo }
+      latest: { layout: grid, columns: 3, band: muted }
+      gallery: { columns: 2 }
   jobs:
     table: { view: cards, sort: year }
+    record: { pictures: top }
   enquiries:
     table:
       columns: [name, job, status, followUpOn]

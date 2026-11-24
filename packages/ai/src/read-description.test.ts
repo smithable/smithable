@@ -90,12 +90,12 @@ test("words are compared in the singular", () => {
   ]);
 });
 
-test("catering distinguishes a food truck schedule from takeaway orders and a restaurant", () => {
+test("food truck schedules and takeaway orders share kiosk while restaurants stay distinct", () => {
   expect(
     readDescription(
       "A public food truck site for visitors to browse stops, with catering and staff we invite.",
     ),
-  ).toMatchObject({ kind: "food-truck", things: ["stop"] });
+  ).toMatchObject({ kind: "kiosk", things: ["stop"] });
   expect(
     readDescription("A food truck taking pre-orders for pickup, with catering and staff we invite.")
       .kind,

@@ -234,6 +234,8 @@ export const w = {
   more: "Mer",
   moreArticles: "Fler artiklar",
   moreBelow: "Mer längre ned",
+  pauseFilm: "Pausa filmen",
+  playFilm: "Spela filmen",
   movedToTrash: (title: string) => `”${title}” ligger i papperskorgen.`,
   moveToTrash: "Flytta till papperskorgen",
   moveAllToTrash: "Flytta allt till papperskorgen",
@@ -763,6 +765,8 @@ export const w = {
   paymentDecline: "Avböj",
   paymentUnavailable: "Betalning går inte just nu. Försök igen.",
   paymentGone: "Den här betalningen är inte längre öppen.",
+  payLinkEnded: "Länken fungerar inte längre. Be avsändaren om en ny.",
+  payLinkViews: "visningar av en betalningslänk",
   refundRefused:
     "Betaltjänsten nekade återbetalningen. Försök igen senare, eller återbetala hos betaltjänsten.",
   refundPending: "Betaltjänsten har inte svarat än. Återbetalningen begärs igen av sig själv.",

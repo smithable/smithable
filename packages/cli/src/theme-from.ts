@@ -149,6 +149,9 @@ const FONT_MATCHES: [string, RegExp][] = [
   ["Inter", /inter|ui-sans-serif|system-ui|-apple-system|sf pro|geist|ibm plex|montserrat/i],
 ];
 
+export const matchSiteFont = (name: string | null | undefined) =>
+  FONT_MATCHES.find(([, pattern]) => name && pattern.test(name))?.[0];
+
 const L = (hex: string) => rgbToOklch(hexToRgb(hex));
 const isDark = (hex: string) => L(hex)[0] < 0.5;
 
@@ -234,11 +237,9 @@ export function themeFromLook(
   const source = base ?? (other as Look);
   if (source.radius == null) notes.push("No buttons, cards or fields to read corners from; 8px.");
   const family = source.bodyFont;
-  const match = (name: string | null) =>
-    FONT_MATCHES.find(([, pattern]) => name && pattern.test(name))?.[0];
-  const font = match(family);
+  const font = matchSiteFont(family);
   // Headings in another font of their own, such as Fraunces over a sans body, keep it.
-  const heading = match(source.headingFont);
+  const heading = matchSiteFont(source.headingFont);
   const headingFont = heading && heading !== (font ?? "Inter") ? heading : undefined;
   if (!font && family)
     notes.push(

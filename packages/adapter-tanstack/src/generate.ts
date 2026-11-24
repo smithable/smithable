@@ -51,9 +51,12 @@ import { hasKeys, keysModule, keysTestSource } from "./keys.js";
 import { mergeActionModule, mergeActionServer } from "./merge.js";
 import { named, nameModule } from "./names.js";
 import {
+  linkEntries,
+  linkedModels,
   liveModels,
   liveRoute,
   outgoingModule,
+  payEntries,
   pushEntries,
   smsEntries,
   viewEntries,
@@ -66,7 +69,12 @@ import { PAGE_GENERATORS, pageRoutes } from "./pages/index.js";
 import { siteModule } from "./pages/landing.js";
 import { privacyFacts, privacyFingerprint } from "./pages/legal.js";
 import { indexRoute, pagesModule, robotsRoute, rootRoute, sitemapRoute } from "./pages/root.js";
-import { paymentRoutes, paymentsFunctions, paymentsServerModule } from "./payments.js";
+import {
+  payLinkRoute,
+  paymentRoutes,
+  paymentsFunctions,
+  paymentsServerModule,
+} from "./payments.js";
 import { manifest, pushModule, SERVICE_WORKER, smsModule } from "./push.js";
 import { reviewed, reviewRolesModule, reviewServerModule } from "./review.js";
 import { schemaModule, seedModule } from "./schema.js";
@@ -865,7 +873,10 @@ const SECTION_GENERATORS: SectionGenerator[] = [
               "src/generated/payments.server.ts",
               paymentsServerModule(ir, options.paymentProvider ?? "fake"),
             ),
-            generated("src/generated/payments.ts", paymentsFunctions(ir, t)),
+            generated(
+              "src/generated/payments.ts",
+              paymentsFunctions(ir, t, payEntries(ir, options.content).length > 0),
+            ),
             ...paymentRoutes(options.paymentProvider ?? "fake").map((r) =>
               generated(r.path, r.content),
             ),
@@ -912,7 +923,10 @@ const SECTION_GENERATORS: SectionGenerator[] = [
           options.content?.consent,
           options.content?.assistant,
           themeOf(ux, options.themes).modes,
-          viewEntries(ir, options.content).length ? ["/d"] : [],
+          [
+            ...(viewEntries(ir, options.content).length ? ["/d"] : []),
+            ...(payEntries(ir, options.content).length ? ["/p"] : []),
+          ],
         ),
       ),
       ...(viewEntries(ir, options.content).length
@@ -924,6 +938,10 @@ const SECTION_GENERATORS: SectionGenerator[] = [
               ]),
             ),
           ]
+        : []),
+      // A pay link's page (payments.md §4.1), for whoever holds the link.
+      ...(payEntries(ir, options.content).length
+        ? [generated("src/routes/p.$token.tsx", payLinkRoute())]
         : []),
       generated("src/routes/robots[.]txt.ts", robotsRoute(ir, auth)),
       ...(auth.public.pages.length
@@ -1054,9 +1072,19 @@ const SECTION_GENERATORS: SectionGenerator[] = [
         used: ({ ir }) => ir.outgoing.length > 0,
       },
       {
-        // A sent document's link (record-documents.md §5): the copies, the links, the page.
-        files: ["src/kit/view.server.ts", "src/kit/SentDocuments.tsx"],
+        // A sent document's link (record-documents.md §5) and a pay link (payments.md §4.1).
+        files: ["src/kit/view.server.ts"],
+        used: ({ ir, options }) => linkEntries(ir, options.content).length > 0,
+      },
+      {
+        // A record's sent documents, beside it.
+        files: ["src/kit/SentDocuments.tsx"],
         used: ({ ir, options }) => viewEntries(ir, options.content).length > 0,
+      },
+      {
+        // A pay link's page.
+        files: ["src/kit/pay-link.server.ts", "src/kit/PayLink.tsx"],
+        used: ({ ir, options }) => payEntries(ir, options.content).length > 0,
       },
       {
         // Live in the app (notifications.md §3): the stream, the banner, the chime.
@@ -1088,6 +1116,14 @@ const SECTION_GENERATORS: SectionGenerator[] = [
         // Texts (notifications.md §5): the sender, the person's number and choices.
         files: ["src/kit/sms.server.ts", "src/kit/SmsChoices.tsx"],
         used: ({ ir, auth }) => smsEntries(ir, auth).length > 0,
+      },
+      {
+        // A hero's film (section-film.md): only an app with one gets the code that plays it.
+        files: ["src/kit/Film.tsx"],
+        used: ({ options }) =>
+          Object.values(options.content?.pages ?? {}).some((page) =>
+            Object.values(page.sections ?? {}).some((section) => section.image?.film),
+          ),
       },
       {
         // "Contact the owner" on a record's page (marketplace.md §2.4).
@@ -1253,14 +1289,7 @@ const SECTION_GENERATORS: SectionGenerator[] = [
             : []),
           generated(
             `${base}.server.ts`,
-            dataModule(
-              model,
-              t,
-              ir,
-              auth,
-              ux,
-              viewEntries(ir, options.content).map((o) => o.when.model),
-            ),
+            dataModule(model, t, ir, auth, ux, linkedModels(ir, options.content)),
           ),
           // A record as its document, read by its page and by a mail that sends it (record-documents.md §5).
           ...ir.pages
@@ -1292,8 +1321,8 @@ const SECTION_GENERATORS: SectionGenerator[] = [
   {
     key: "actions",
     files: ({ ir, t, auth, options }) => {
-      // The models whose mails send a link to a copy: a merge or split that trashes one ends them.
-      const sending = viewEntries(ir, options.content).map((o) => o.when.model);
+      // The models whose records may hold links: a merge or split that trashes one ends them.
+      const sending = linkedModels(ir, options.content);
       // A standard action is generated whole; a custom one gets a stub to implement, once.
       return ir.actions.flatMap((action) =>
         action.custom

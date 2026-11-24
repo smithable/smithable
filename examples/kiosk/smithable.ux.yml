@@ -6,6 +6,8 @@ theme:
   brand: { primary: "#b0402f", background: "#e8a33d" }   # the red a notch quieter; the string lights' amber: cream in light, a warm deep brown in dark
 
 tones:
+  Stop.status: { draft: neutral, confirmed: success, cancelled: neutral }
+  CateringEnquiry.status: { new: warning, booked: success, closed: neutral }
   Order.status: { new: warning, accepted: warning, ready: success, collected: neutral, declined: danger }   # accepted is work in progress; collected, done, stays quiet
 
 pages:
@@ -13,7 +15,9 @@ pages:
     width: wide
     sections:
       hero: { layout: tiles }          # the evening photo large, the menu and the week as tiles beside it
-      stops: { layout: week, band: muted }   # the week as columns of days, each stop under its day
+  catering:
+    sections:
+      hero: { layout: split, image: right }
   orders:
     table:
       columns: [number, name, status, wanted, total]
@@ -22,3 +26,5 @@ pages:
     table: { view: cards }             # dishes are pictures and prices, not rows
   stops:
     table: { view: cards }
+  enquiries:
+    table: { columns: [name, eventDate, guests, status, followUpOn], sort: followUpOn, actions: menu }

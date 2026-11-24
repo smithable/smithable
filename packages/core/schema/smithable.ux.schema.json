@@ -486,9 +486,10 @@
                     "layout": {
                       "enum": [
                         "split",
-                        "stacked"
+                        "stacked",
+                        "collage"
                       ],
-                      "description": "One of split, stacked; the first is the default."
+                      "description": "One of split, stacked, collage; the first is the default."
                     },
                     "image": {
                       "enum": [

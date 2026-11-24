@@ -1,6 +1,7 @@
 import { expect, test } from "vitest";
 import {
   columnOf,
+  copyKeptColumns,
   dropTakenColumn,
   dropTakenTables,
   dropTakenTablesSql,
@@ -199,6 +200,42 @@ test("a reference added to an existing table names its table quoted", () => {
   ).toBe(
     "ALTER TABLE `rows` ADD `group_id` integer REFERENCES `values`(id);--> statement-breakpoint\nCREATE TABLE `x` (`a` integer, FOREIGN KEY (`a`) REFERENCES `values`(`id`));",
   );
+});
+
+test("a rebuilt table copies only the columns it had: the ones added with it start empty (T1012)", () => {
+  const before = JSON.stringify({
+    tables: { record_links: { columns: { id: {}, kind: {}, document_id: {} } } },
+  });
+  const sql =
+    'CREATE TABLE `__new_record_links` (`id` integer, `kind` text, `document_id` integer, `entry` text);--> statement-breakpoint\nINSERT INTO `__new_record_links`("id", "kind", "document_id", "entry") SELECT "id", "kind", "document_id", "entry" FROM `record_links`;--> statement-breakpoint\nINSERT INTO `__new_others`("id", "x") SELECT "id", "x" FROM `others`;';
+  expect(copyKeptColumns(sql, before)).toBe(
+    sql.replace(
+      'INSERT INTO `__new_record_links`("id", "kind", "document_id", "entry") SELECT "id", "kind", "document_id", "entry"',
+      'INSERT INTO `__new_record_links`("id", "kind", "document_id") SELECT "id", "kind", "document_id"',
+    ),
+  );
+});
+
+test("a column renamed earlier in the same migration is copied, not left out (T1012)", () => {
+  const before = JSON.stringify({
+    tables: { notes: { columns: { id: {}, entry: {}, title: {} } } },
+  });
+  const sql =
+    'ALTER TABLE `notes` RENAME COLUMN `entry` TO `label`;--> statement-breakpoint\nALTER TABLE `others` RENAME COLUMN `a` TO `extra`;--> statement-breakpoint\nCREATE TABLE `__new_notes` (`id` integer, `label` text, `title` text, `extra` text);--> statement-breakpoint\nINSERT INTO `__new_notes`("id", "label", "title", "extra") SELECT "id", "label", "title", "extra" FROM `notes`;';
+  // label is entry renamed: kept. extra was renamed on another table only: left out.
+  expect(copyKeptColumns(sql, before)).toBe(
+    sql.replace(
+      'INSERT INTO `__new_notes`("id", "label", "title", "extra") SELECT "id", "label", "title", "extra"',
+      'INSERT INTO `__new_notes`("id", "label", "title") SELECT "id", "label", "title"',
+    ),
+  );
+});
+
+test("a copy that would keep no column, or a table the snapshot lacks, stays as drizzle-kit wrote it (T1012)", () => {
+  const before = JSON.stringify({ tables: { notes: { columns: { old: {} } } } });
+  const sql =
+    'INSERT INTO `__new_notes`("id", "label") SELECT "id", "label" FROM `notes`;--> statement-breakpoint\nINSERT INTO `__new_others`("id") SELECT "id" FROM `others`;';
+  expect(copyKeptColumns(sql, before)).toBe(sql);
 });
 
 const renameFixture = () =>

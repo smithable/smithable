@@ -8,6 +8,7 @@ import {
   emptyUx,
   FILES_MAX,
   type FieldIR,
+  fieldsUsed,
   humanize,
   isFile,
   isFiles,
@@ -597,6 +598,26 @@ function localized<U extends { label: string; pluralLabel: string; fields: objec
   } as unknown as U;
 }
 
+/**
+ * Fields with a formula default, each after the defaulted fields its formula reads, so a default
+ * computed from another (dueOn from issuedOn) is filled after it. A cycle keeps the spec's order.
+ */
+function defaultOrder(fields: FieldIR[]): FieldIR[] {
+  const placed: FieldIR[] = [];
+  let left = [...fields];
+  while (left.length) {
+    const ready = left.filter((f) =>
+      fieldsUsed(f.defaultFormula as NonNullable<FieldIR["defaultFormula"]>).every(
+        (name) => name === f.name || !left.some((o) => o.name === name),
+      ),
+    );
+    const next = ready.length ? ready : left;
+    placed.push(...next);
+    left = left.filter((f) => !next.includes(f));
+  }
+  return placed;
+}
+
 export function dataModule(
   model: ModelIR,
   t: Texts,
@@ -613,6 +634,14 @@ export function dataModule(
     .map((p) => p.pattern)
     .find((p): p is PatternOf<"order"> => p.kind === "order" && p.into === model.name);
   const formulas = hasFormulas(model);
+  // Each field with a formula default, filled by checkCreate when the values leave it out, one
+  // after another so a default that reads another (dueOn from issuedOn) sees it filled.
+  const formulaDefaults = defaultOrder(
+    model.fields.filter((f) => f.defaultFormula && !f.formula),
+  ).map(
+    (f) =>
+      `  if (values.${dataKey(f)} === undefined) values.${dataKey(f)} = ${defaultsName(model)}.${f.name}(values);`,
+  );
   const signedIn = hasSignIn(auth);
   const owner = ownerKey(model);
   // A data page lists the model's newest records only: its list takes a limit.
@@ -1316,7 +1345,7 @@ export function dataModule(
    * references, its rules, its capacity and time. create() and an action that adds one call it.
    */
   checkCreate(${capacity || occ ? "tx" : "_tx"}: Tx, ${createViewer ? "viewer" : "_viewer"}: Viewer | null, given: ${n.settableValues}${orderLine ? `, ${refs.length ? "known" : "_known"}: readonly string[] = []` : ""}): ${n.settableValues} {
-    ${uploadFields.length || sideRule("values") ? "let" : "const"} values = ${withoutSystem(model, "given")};
+    ${uploadFields.length || sideRule("values") ? "let" : "const"} values = ${formulaDefaults.length ? `withFormulaDefaults(${withoutSystem(model, "given")})` : withoutSystem(model, "given")};
 ${createBody}
     return values;
   },
@@ -1995,10 +2024,25 @@ ${occ ? occupiesImports() : ""}${unmerge ? unmergeImports(ir, model, t, sending)
   .join(
     "",
   )}import { ${[...(labelledKinds.has(model) ? [n.ui] : []), ...(sided ? [n.ours] : [])].map((x) => `${x}, `).join("")}type ${n.settableValues} } from "./${kebab(model.name)}";
-${formulas ? `import { ${withFormulasName(model)} } from "./${kebab(model.name)}.formulas";\n` : ""}${counted.length ? 'import { nextInSequence } from "#/kit/sequence.server";\n' : ""}${trashing ? 'import "./trash.server";\n' : ""}${ir.timers.length ? 'import "./timers.server";\n' : ""}
+${formulas ? `import { ${[...(formulaDefaults.length ? [defaultsName(model)] : []), withFormulasName(model)].join(", ")} } from "./${kebab(model.name)}.formulas";\n` : ""}${counted.length ? 'import { nextInSequence } from "#/kit/sequence.server";\n' : ""}${trashing ? 'import "./trash.server";\n' : ""}${ir.timers.length ? 'import "./timers.server";\n' : ""}
 /** A transaction, as the write checks and the group's functions are called inside one. */
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
-${usedBy}${missingReference}${rootInTrash}${unmerge}${occ ? occupiesHelpers(model, ir, occ) : ""}
+${
+  formulaDefaults.length
+    ? `
+/**
+ * A formula default (\`default: TODAY()\`) for a field the values leave out: a form fills it in before
+ * it is sent, but a visitor's form that does not ask it, a field the app fills, an action that adds
+ * a record and custom code leave it to the server. A value given, null too, is kept.
+ */
+function withFormulaDefaults<T extends Record<string, unknown>>(given: T): T {
+  const values: Record<string, unknown> = { ...given };
+${formulaDefaults.join("\n")}
+  return values as T;
+}
+`
+    : ""
+}${usedBy}${missingReference}${rootInTrash}${unmerge}${occ ? occupiesHelpers(model, ir, occ) : ""}
 ${
   model.review
     ? `/**

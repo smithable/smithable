@@ -2,7 +2,7 @@
 
 The photographs in samples/ are real ones, dedicated to the public domain (CC0) by their authors on
 Wikimedia Commons, so nothing is owed and nothing needs to be shown. They are listed here with their
-source for anyone who asks. hero.webp and logo.webp were made with an image model for Smithable (CC0).
+source for anyone who asks. hero.webp was made with an image model for Smithable (CC0).
 
 - samples/market-armchair-1.webp: https://commons.wikimedia.org/wiki/File:MC_%E6%BE%B3%E9%96%80_Macau_%E5%96%9C%E4%BE%86%E7%99%BB%E9%85%92%E5%BA%97_Sheraton_Grand_Macao_%E5%AE%A2%E6%88%BF_hotel_room_%E7%81%B0%E8%89%B2_%E6%A2%B3%E5%8C%96%E6%A4%85_armchair_sofa_n_%E5%95%A1%E8%89%B2%E6%9C%A8%E8%A3%BD%E8%8C%B6%E5%B9%BE_brown_wooden_tea_table_%E6%97%A9%E4%B8%8A_morning_November_2023_R12S_03.jpg (Bita RmJohnson Liuosa, CC0, fetched 2026-10-25)
 - samples/market-books-1.webp: https://commons.wikimedia.org/wiki/File:Old_Books_01.JPG (Ch. Maderthoner, CC0, fetched 2026-10-25)

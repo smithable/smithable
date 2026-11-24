@@ -27,7 +27,7 @@ The entries are filled in from the merged pull requests at each release. A fix t
 ### Fixes
 
 - A signed call to a generated app's incoming address is known by what is signed (the id its entry names, else the signature), never by the Idempotency-Key header the signature leaves out, so a replay with a new header is not acted on again (`fixes/signed-incoming-replay.yml`).
-
+- Linked card images in generated apps zoom slightly on hover and keyboard focus when the device supports hover and reduced motion is off (`fixes/link-card-image-motion.yml`).
 - Generated apps can build and run a record action that asks for an app-filled field, such as a follow-up date (`fixes/app-filled-action-inputs.yml`).
 - Generated apps keep the sign-out and site menu buttons inside a narrow landing header by shortening the app name as needed (`fixes/landing-header-phone-actions.yml`).
 - Generated apps: on a phone, a landing page's header puts its "Open …" link in the site menu when there is one, and otherwise lets it shorten, so a long app name no longer makes the page scroll sideways (`fixes/landing-header-phone-width.yml`).
@@ -62,6 +62,10 @@ The entries are filled in from the merged pull requests at each release. A fix t
 - Text from the spec is written into the generated apps' code as text wherever it goes: comments, strings, template literals, the page's markup and the README's commands (`fixes/spec-text-in-code.yml`).
 
 - The generated apps' sign-in library, better-auth, moves from 1.7.15 to 1.7.18 for its published security fixes (`fixes/better-auth-1-7-18.yml`), with tailwind 4.3.5.
+
+### The spec
+
+- A record's mail may hold `{pay}`: a link of each recipient's own to a page where someone without an account pays the record, through the payments entry that pays an existing record of the mail's model (`validate --explain` names it). The page shows the entry's description and the amount bound when the mail was written, nothing else of the record, and works for 60 days while the record fits, is unpaid and asks for that amount (docs/design/payments.md §4.1).
 
 ### The engine
 

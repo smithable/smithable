@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import {
+  copyKeptColumns,
   dropTakenColumn,
   dropTakenTablesSql,
   generateApp,
@@ -332,7 +333,8 @@ function migrate(
     );
   }
   const name = migration ? ["--name", migration.name] : [];
-  // The new migration, if any, with its references quoted (quoteReferences).
+  // The new migration, if any, with its references quoted (quoteReferences) and a rebuilt table
+  // copying only the columns it had (copyKeptColumns).
   const newest = () => {
     try {
       return latestMigration(dir);
@@ -345,7 +347,9 @@ function migrate(
   let tag = newest();
   if (tag && tag !== before) {
     const file = join(dir, "drizzle", `${tag}.sql`);
-    writeTreeFile(file, quoteReferences(treeText(file)));
+    const from = before && join(dir, "drizzle", "meta", `${before.slice(0, 4)}_snapshot.json`);
+    const sql = quoteReferences(treeText(file));
+    writeTreeFile(file, from && existsSync(from) ? copyKeptColumns(sql, treeText(from)) : sql);
   }
   // Records holding a choice value that goes get the new one: in the new migration, or in one of
   // its own when the schema did not change (a choice is stored as text).

@@ -7,6 +7,7 @@ import { dirname, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import {
   choiceValueSql,
+  copyKeptColumns,
   dropTakenColumn,
   dropTakenTables,
   goneFirst,
@@ -149,7 +150,9 @@ export async function createMigration(
     const statements: string[] = [];
     let base = JSON.stringify(prev);
     const diff = async (from: string, to: Snapshot) =>
-      (await api.generateSQLiteMigration(JSON.parse(from) as Snapshot, to)).map(quoteReferences);
+      (await api.generateSQLiteMigration(JSON.parse(from) as Snapshot, to)).map((s) =>
+        copyKeptColumns(quoteReferences(s), from),
+      );
     const first = base;
     for (const m of inTurn(migration.models ?? [], undefined, (name) => inSnapshot(first, name))) {
       // A newer model on the name goes first (an older version applied).

@@ -106,7 +106,7 @@
     },
     {
       "id": "undo-dietary-note",
-      "starter": "food-truck",
+      "starter": "kiosk",
       "persona": "A food truck owner trying the editor. You use the short command undo.",
       "goal": "Add a dietary note to menu items, apply it, then undo that last change. Leave the starter as you found it.",
       "unchanged": true,

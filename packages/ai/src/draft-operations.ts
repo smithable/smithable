@@ -75,6 +75,7 @@ Order: setApp (name, one-sentence description, currency, timezone); addModel for
 When a starter is given, it is the example of shape and naming for this kind of app: reuse its models, fields, pages, standard actions (those with "on"; never its custom ones), roles and access that fit the description, under the same names, leave out what does not fit, and add what the description needs. The app already starts with the starter's default access. A role opens only the pages and adds only the records its grants name, and changes or deletes only its own records unless granted "write" or "delete" on a model: grant as the starter does, and as the description says. The starter's app name, its people, places and texts are sample content: never reuse them.
 Use a logo instead of the visible hero title only when the description or the source's layout calls for it: setSectionLook with key mark and value logo. Use pictures behind text, call to action, or features sections, or on features items, only when the description or source's layout calls for that treatment and the input provides a known app-relative picture file. Never guess an image path or attach a picture from an unrelated section.
 Select a footer's contact band with setSectionLook, key layout and value contactBand, only when the description asks for a footer with contact details or opening hours, or the source has that footer shape. Enter those details once in the landing page's contact section, so the footer can use them.
+Use the collage layout of a mediaText section only when the description calls for an overlapping set of pictures or the source has that arrangement. Place known local pictures with setSectionPicture: the main image first, then extra images starting at item 0, with alternative text for each. Never invent a file path.
 Fields, in addModel's "fields" object, are name: type, written exactly as: <type>, then "!" when required, then "unique" when unique, then "= value" for a default. Types: string, text (long), markdown (formatted long text), int, decimal, money, bool, date, datetime, email, phone, url, picture (one stored picture), pictures (up to ten), file (one stored document: a PDF, an Office file), files (up to ten; attachments); choices as "draft | sent | paid" (the FIRST value is the default; never write "=" with choices); a reference as another model's name, "Customer!" when required; "Order[]" lists the records of another model that refer to this one (that model needs exactly one reference back). Examples: "string!", "email! unique", "int! = 12", "money", "low | normal | high", "Customer!", "Order[]". A number held within bounds ("priority 1 to 5", "stars 1-5", "at least 18") is the long form { "type": "int!", "min": 1, "max": 5, "default": 3 } (the default as its own key there, never "=" in "type"); so is a text with a longest length. A value worked out from the record's other fields, never entered, is a computed field, written as an object instead of a string: "amount": { "type": "money", "formula": "quantity * unitPrice" } ("= …" in the string is a default, set once). Rules on a record are keys of the long form too: a field the app fills, never in the form ("agent": { "type": "User", "by": "app", "default": "ME()" }, ME() being who makes the record); one fixed once the record is in a state ("priority": { "type": "int!", "locked": { "status": "closed" } }; "locked": true for set once); one required while it is ("assignee": { "type": "User", "required": { "status": "inProgress" } }). A condition names a choice field's value (or a list of them) or a yes/no field's true or false. Model names are PascalCase, field and page names camelCase or kebab-case. Every model already has id, owner (the user who created the record), createdAt and updatedAt: never declare them; "User" is the people who sign in, never a model of your own (refer to it as a type, e.g. "assignee: User").
 Language: everything a person reads is written in one language, the description's (or the one you are told): the app's name and description, the landing page's texts, and, when that language is not English, a label for every model (setText with path [models, <Model>, label] and [models, <Model>, pluralLabel]), field ([models, <Model>, fields, <field>, label]), choice value ([models, <Model>, fields, <field>, values, <value>]), action ([actions, <action>, label]) and page ([pages, <page>, title]); never one action or choice left in English beside the others. Model, field and choice names themselves stay English identifiers; a page's name becomes its address, so it may be a word of that language written with plain letters (boka-nu). When the description is in a language the app kit has words in (setLanguage), setLanguage with it comes first, so the app's own words (Save, Cancel, the sign-in page) are in that language too; it is already applied when "Applied so far" lists it.
 Where the description leaves the app's shape open and you chose (who signs in, what is public, what a record holds, a page's purpose), say so in "assumptions": at most four, each with the part of the app it concerns (app, pages, roles, visitors, signedIn), the question in the description's language, what you chose as "chosen", and up to three other answers as "options", each a thing a person could pick instead. Nothing the description settles goes there.
@@ -680,11 +681,20 @@ export function visitorFlaws(files: ProjectFiles): string[] {
   return flawsOf(files).map((d) => d.message);
 }
 
-function flawsOf(files: ProjectFiles): { code: string; message: string }[] {
+function flawsOf(files: ProjectFiles, requireLanding = false): { code: string; message: string }[] {
   const ir = validateSpec({ path: "smithable.yml", text: files.spec }).ir;
   if (!ir) return [];
   const english = untranslated(files);
   return [
+    ...(requireLanding && !ir.pages.some((page) => page.pattern.kind === "landing")
+      ? [
+          {
+            code: "missing-landing",
+            message:
+              "The imported website needs a landing page with the source home page's content.",
+          },
+        ]
+      : []),
     ...validateAuth({ path: "smithable.auth.yml", text: files.auth ?? "" }, ir).diagnostics.filter(
       (d) => d.severity === "warning" && VISITOR_FLAWS.has(d.code),
     ),
@@ -740,6 +750,18 @@ const EXPOSES = new Set(["public-personal-data", "visitors-read-drafts"]);
 const weigh = (flaws: { code: string }[]) =>
   flaws.reduce((n, f) => n + (EXPOSES.has(f.code) ? 100 : 1), 0);
 
+/** Requirements shared by the two drafting modes for a full website import. */
+export function websiteDraftProblem(
+  files: Pick<ProjectFiles, "spec" | "auth">,
+): string | undefined {
+  const ir = validateSpec({ path: "smithable.yml", text: files.spec }).ir;
+  if (!ir?.pages.some((page) => page.pattern.kind === "landing"))
+    return "The website draft has no landing page.";
+  const { diagnostics } = validateAuth({ path: "smithable.auth.yml", text: files.auth ?? "" }, ir);
+  if (diagnostics.some(({ code }) => EXPOSES.has(code)))
+    return "The website draft would expose private records to visitors.";
+}
+
 const toProject = (files: SpecFiles): ProjectFiles => ({
   spec: files["smithable.yml"] ?? "",
   auth: files["smithable.auth.yml"],
@@ -780,6 +802,7 @@ export async function draftProjectByOperations(options: {
   description: string;
   language?: Language;
   preserveSourceCopy?: boolean;
+  fullWebsiteImport?: boolean;
   providers: Provider[];
   /** The closest starter (clarify's choice): the example of shape, and the access default. */
   starter?: { name: string; files: SpecFiles };
@@ -820,7 +843,11 @@ export async function draftProjectByOperations(options: {
     const language = options.language ?? textLanguage(options.description);
     if (language && language !== "en")
       files = applyAll(files, done, [{ op: "setLanguage", args: { language } }]).files;
-    let prompt = `${options.attempt ? `(${options.attempt}.) ` : ""}Description: ${options.description}${languageNote(options.description, language)}${done.length ? `\n\nApplied so far (do not repeat them):\n${JSON.stringify(done)}` : ""}${shape}`;
+    const wording = languageNote(options.description, language, options.preserveSourceCopy);
+    const landing = options.fullWebsiteImport
+      ? "\nThe result needs a landing page with the source home page's content. Start it with addLandingPage."
+      : "";
+    let prompt = `${options.attempt ? `(${options.attempt}.) ` : ""}Description: ${options.description}${wording}${landing}${done.length ? `\n\nApplied so far (do not repeat them):\n${JSON.stringify(done)}` : ""}${shape}`;
     let round = 0;
     let assumptions: Assumption[] = [];
     let refused: { step: Step; message: string }[] = [];
@@ -836,9 +863,12 @@ export async function draftProjectByOperations(options: {
     // added last, when the app has its texts: its file lists every one, to be filled in.
     const others = otherLanguages(options.description, language ?? "en");
     const draftOf = (dropped: string[]): Draft & { operations?: Step[] } => {
+      const selected = best?.files ?? files;
+      const failure = options.fullWebsiteImport && websiteDraftProblem(selected);
+      if (failure) return { kind: "failed", message: failure, usage };
       const steps = [...(best ? done.slice(0, best.count) : done)];
       const chosen = applyAll(
-        best?.files ?? files,
+        selected,
         steps,
         others.map((other) => ({ op: "addLanguage", args: { language: other } })),
       ).files;
@@ -905,9 +935,13 @@ export async function draftProjectByOperations(options: {
         ];
         if (done.length > 0) {
           files = mended(files, done);
-          const found = flawsOf(files);
-          if (!best || weigh(found) < best.score)
-            best = { files, count: done.length, score: weigh(found) };
+          const found = flawsOf(files, options.fullWebsiteImport);
+          const score = weigh(found);
+          const eligible =
+            !options.fullWebsiteImport ||
+            !found.some(({ code }) => code === "missing-landing" || EXPOSES.has(code));
+          if (eligible && (!best || score < best.score))
+            best = { files, count: done.length, score };
           const flaws = last ? [] : found.map((f) => f.message);
           if (critique && round === 1) {
             // The critique: the spec the draft became and what the checks find, to mend once.
@@ -917,14 +951,14 @@ export async function draftProjectByOperations(options: {
               .filter(([, text]) => text.trim())
               .map(([name, text]) => `${name}:\n\`\`\`yaml\n${text.trim()}\n\`\`\``)
               .join("\n");
-            prompt = `Description: ${options.description}${languageNote(options.description)}\n\nApplied so far (do not repeat them):\n${JSON.stringify(done)}\n\nThe app they made:\n${spec}\n\nThe checks find: ${flaws.length ? `\n${flaws.map((f) => `- ${f}`).join("\n")}` : "nothing wrong."}\n\nRead the app against the description: answer with only the operations that mend what is missing or wrong, or with no operations if it is right.`;
+            prompt = `Description: ${options.description}${wording}\n\nApplied so far (do not repeat them):\n${JSON.stringify(done)}\n\nThe app they made:\n${spec}\n\nThe checks find: ${flaws.length ? `\n${flaws.map((f) => `- ${f}`).join("\n")}` : "nothing wrong."}\n\nRead the app against the description: answer with only the operations that mend what is missing or wrong, or with no operations if it is right.`;
             continue;
           }
           if (!flaws.some((f) => !told.has(f))) return draftOf(dropped);
           for (const f of flaws) told.add(f);
           droppedBefore = dropped;
           refused = [];
-          prompt = `Description: ${options.description}${languageNote(options.description)}\n\nApplied so far (do not repeat them):\n${JSON.stringify(done)}\n\nThe app is valid, but a visitor would find it broken or too open:\n${flaws.map((f) => `- ${f}`).join("\n")}\n\nAnswer with only the operations that put this right for what the description wants (usually setPublic with the whole list; removeSection for a landing section that shows what visitors may not read), or with no operations if it is as intended.`;
+          prompt = `Description: ${options.description}${wording}\n\nApplied so far (do not repeat them):\n${JSON.stringify(done)}\n\nThe app is valid, but a visitor would find it broken or too open:\n${flaws.map((f) => `- ${f}`).join("\n")}\n\nAnswer with only the operations that put this right for what the description wants (usually setPublic with the whole list; removeSection for a landing section that shows what visitors may not read), or with no operations if it is as intended.`;
           continue;
         }
         problem =
@@ -936,7 +970,7 @@ export async function draftProjectByOperations(options: {
         problem = essential.map((r) => `${r.step.op}: ${r.message}`).join("\n");
         break;
       }
-      prompt = `Description: ${options.description}${languageNote(options.description)}\n\nApplied so far (do not repeat them):\n${JSON.stringify(done)}\n\nThese operations were refused:\n${refused.map((r) => `${JSON.stringify(r.step)}\n  Reason: ${r.message}`).join("\n")}\n\nAnswer with corrected versions of the refused operations only (leave out any that are not needed), in order.`;
+      prompt = `Description: ${options.description}${wording}\n\nApplied so far (do not repeat them):\n${JSON.stringify(done)}\n\nThese operations were refused:\n${refused.map((r) => `${JSON.stringify(r.step)}\n  Reason: ${r.message}`).join("\n")}\n\nAnswer with corrected versions of the refused operations only (leave out any that are not needed), in order.`;
     }
   }
   return { kind: "failed", message: `No model drafted a valid project.\n${problem}`, usage };

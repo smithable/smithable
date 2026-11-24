@@ -8,8 +8,8 @@ export const STACK_PROFILE = {
   dependencies: {
     "@tailwindcss/vite": "4.3.5",
     "@tanstack/react-router": "1.170.46",
-    "@tanstack/react-start": "1.169.5",
-    "better-auth": "1.7.22",
+    "@tanstack/react-start": "1.169.7",
+    "better-auth": "1.7.27",
     // 12.x ships prebuilt binaries; 13.x always compiles from source (needs Python and a C++ compiler).
     "better-sqlite3": "12.11.1",
     "class-variance-authority": "0.7.1",
@@ -21,7 +21,7 @@ export const STACK_PROFILE = {
     react: "19.3.1",
     "react-dom": "19.3.1",
     srvx: "1.0.8",
-    "tailwind-merge": "3.7.0",
+    "tailwind-merge": "3.7.1",
     tailwindcss: "4.3.5",
     zod: "4.6.7",
   },

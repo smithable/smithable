@@ -22,7 +22,7 @@ export const SECTION_LOOKS: Partial<
     ...RHYTHM,
     ...MEDIA_LOOKS,
     measure: READING_MEASURES,
-    layout: ["split", "stacked"],
+    layout: ["split", "stacked", "collage"],
     image: ["left", "right"],
     band: BANDS,
   },

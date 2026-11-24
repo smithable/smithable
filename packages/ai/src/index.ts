@@ -17,6 +17,7 @@ export {
   dropForbidden,
   openLinked,
   visitorFlaws,
+  websiteDraftProblem,
 } from "./draft-operations.js";
 export {
   LANGUAGE_NAMES,

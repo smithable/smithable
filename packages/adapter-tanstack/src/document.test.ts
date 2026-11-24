@@ -190,7 +190,9 @@ test("a merge or a split that trashes or deletes a record ends its links as a de
   // ended), and so do an undone split's.
   const trashed = spec(true);
   const merge = file(trashed, "/actions/merge-invoices.server.ts");
-  expect(merge).toContain('import { endLinks } from "#/kit/view.server";');
+  // The lines it deletes have their links removed too: every model's, once the app keeps links (T1333).
+  expect(merge).toContain('import { endLinks, removeCopies } from "#/kit/view.server";');
+  expect(merge).toContain('removeCopies(tx, "InvoiceLine", d.id)');
   expect(merge).toContain(
     'if (goes.has(other.id)) endLinks(tx, viewer, "Invoice", other.id, "trashed");',
   );
@@ -202,7 +204,8 @@ test("a merge or a split that trashes or deletes a record ends its links as a de
   expect(deleted).toContain('import { removeCopies } from "#/kit/view.server";');
   expect(deleted).toContain('if (goes.has(other.id)) removeCopies(tx, "Invoice", other.id);');
   // Undoing a merge of clients brings back the invoices it put in the trash, and ends their
-  // links made before (T1083); a client's own module imports endLinks for it.
+  // links made before (T1083); a client's own module imports endLinks for it, and ends its own
+  // links as every model does once the app keeps them (T1333).
   const clients = files(
     at("smithable.yml")
       .replace("actions:\n", "actions:\n  mergeClients:\n    merge: Client\n")
@@ -210,7 +213,8 @@ test("a merge or a split that trashes or deletes a record ends its links as a de
       .replace("  Invoice:\n", "  Invoice:\n    trash: true\n"),
   );
   const client = file(clients, "/client.server.ts");
-  expect(client).toContain('import { endLinks } from "#/kit/view.server";');
+  expect(client).toContain('import { endLinks, removeCopies } from "#/kit/view.server";');
+  expect(client).toContain('if (gone) removeCopies(tx, "Client", row.id);');
   expect(client).toContain('if ((["Invoice"] as string[]).includes(d.model)) {');
   expect(client).toContain('if (was?.at) endLinks(tx, viewer, d.model, d.id, "trashed", was.at);');
   // A model that sends no link imports nothing for it.
@@ -230,4 +234,16 @@ test("without a {view} mail there is no link page and no Sent list", () => {
   expect([...app.keys()].some((p) => p.endsWith("kit/view.server.ts"))).toBe(false);
   const page = [...app].find(([path]) => path.endsWith("/invoices/$id_.document.tsx"))?.[1];
   expect(page).not.toContain("SentDocuments");
+});
+
+test("trashing ends the links of a model that sends none today, so sending again revives no old one (T1333)", () => {
+  // Client sends no link mail; with record_links in the app its trash still ends its links: a
+  // model that stopped sending keeps the links it sent, and an unexpired one would open again.
+  const app = files(at("smithable.yml").replace("  Client:\n", "  Client:\n    trash: true\n"));
+  const client = [...app].find(([path]) => path.endsWith("/client.server.ts"))?.[1];
+  expect(client).toContain('import { endLinks, removeCopies } from "#/kit/view.server";');
+  expect(client).toContain('endLinks(tx, viewer, "Client", id, "trashed");');
+  expect(client).toContain(
+    'if (row.deletedAt) endLinks(tx, viewer, "Client", row.id, "trashed", row.deletedAt);',
+  );
 });

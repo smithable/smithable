@@ -658,6 +658,7 @@ function HeroView({
   height,
   facts = [],
   stage,
+  film,
 }: {
   title: string;
   logoMark?: string;
@@ -703,6 +704,11 @@ function HeroView({
   };
   /** The picture's side in a split hero on wide screens. */
   imageSide?: "left" | "right";
+  /**
+   * The picture's film (section-film.md), drawn over it: framed where the picture is shown whole
+   * (split, inset), across the section otherwise. Only an app with a film fills it.
+   */
+  film?: (framed: boolean) => React.ReactNode;
   texts?: string;
   /** A short line over the title, e.g. who the app is for ("For small studios"). */
   eyebrow?: string;
@@ -744,6 +750,20 @@ function HeroView({
   );
   // Without a picture every look is plain.
   const shown = image ? layout : "plain";
+  // A picture shown whole carries its film in a frame of its own corners; its mark gives way to
+  // the film's while the film plays (section-film.md §3).
+  const framedFilm = (picture: React.ReactNode, corners: string, side?: string) =>
+    film ? (
+      <span className={cn("relative block overflow-hidden", corners, side)}>
+        {picture}
+        {film(true)}
+      </span>
+    ) : (
+      picture
+    );
+  // The mark is the wrapper's last child (AiMark.tsx).
+  const markGives = film && "not-print:[&:has(video[data-playing])>:last-child]:hidden";
+  const across = film?.(false);
   // The second button: an outline one, in the hero's own text color on a picture or a wash.
   const second = secondLink && (
     <Link
@@ -853,6 +873,7 @@ function HeroView({
           data-hero=""
           data-height={height}
           data-layout="cover"
+          data-shortcuts={film && shortcutList ? "" : undefined}
           className="relative isolate overflow-hidden"
         >
           {/* Not marked: the hero under its wash or veil (AiMark.tsx). */}
@@ -866,6 +887,7 @@ function HeroView({
             fetchPriority="high"
             className="absolute inset-0 -z-10 size-full object-cover"
           />
+          {across}
           {wash === "dark" ? (
             <div
               aria-hidden
@@ -936,6 +958,7 @@ function HeroView({
               fetchPriority="high"
               className="absolute inset-0 -z-10 size-full object-cover"
             />
+            {across}
             <div
               aria-hidden
               className="absolute inset-0 -z-10 bg-linear-to-t from-black/90 via-black/60 to-black/10"
@@ -954,7 +977,8 @@ function HeroView({
                 >
                   <Link
                     to={s.to}
-                    className="group relative isolate flex h-full min-h-40 items-end overflow-hidden rounded-[var(--radius-xl)] outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    data-link-card={s.image ? "" : undefined}
+                    className="relative isolate flex h-full min-h-40 items-end overflow-hidden rounded-[var(--radius-xl)] outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   >
                     {s.image ? (
                       // A tile is a card: an AI's picture carries the small mark, over its scrim.
@@ -971,7 +995,8 @@ function HeroView({
                           width={800}
                           height={600}
                           loading="lazy"
-                          className="size-full object-cover transition group-hover:scale-105"
+                          data-link-card-image=""
+                          className="size-full object-cover"
                         />
                         <span
                           aria-hidden
@@ -1010,6 +1035,7 @@ function HeroView({
         data-hero=""
         data-height={height}
         data-layout="photo"
+        data-shortcuts={film && shortcutList ? "" : undefined}
         className="relative isolate flex min-h-[26rem] items-end overflow-hidden sm:min-h-[38rem] lg:min-h-[80vh] lg:items-center"
       >
         {/* Not marked: the hero under its wash or veil (AiMark.tsx). */}
@@ -1023,6 +1049,7 @@ function HeroView({
           fetchPriority="high"
           className="absolute inset-0 -z-10 size-full object-cover"
         />
+        {across}
         <div
           aria-hidden
           className={
@@ -1054,6 +1081,7 @@ function HeroView({
         data-hero=""
         data-height={height}
         data-layout="centered"
+        data-shortcuts={film && shortcutList ? "" : undefined}
         className="relative isolate overflow-hidden"
       >
         {/* Not marked: the hero under its wash or veil (AiMark.tsx). */}
@@ -1067,6 +1095,7 @@ function HeroView({
           fetchPriority="high"
           className="absolute inset-0 -z-10 size-full object-cover"
         />
+        {across}
         <div aria-hidden className="absolute inset-0 -z-10 bg-black/60" />
         <div
           className={cn(
@@ -1142,17 +1171,20 @@ function HeroView({
             imageSide === "right" ? "lg:order-2" : "",
           )}
         >
-          <AiMarked generated={image.generated} kind={image.kind} full>
-            <img
-              src={image.src}
-              alt={image.alt}
-              srcSet={image.srcSet}
-              sizes={image.srcSet && "(min-width: 1024px) 42vw, 100vw"}
-              width={960}
-              height={1200}
-              fetchPriority="high"
-              className="aspect-[4/3] w-full rounded-[var(--picture-radius,var(--radius-lg))] object-cover lg:aspect-[4/5]"
-            />
+          <AiMarked generated={image.generated} kind={image.kind} full className={markGives}>
+            {framedFilm(
+              <img
+                src={image.src}
+                alt={image.alt}
+                srcSet={image.srcSet}
+                sizes={image.srcSet && "(min-width: 1024px) 42vw, 100vw"}
+                width={960}
+                height={1200}
+                fetchPriority="high"
+                className="aspect-[4/3] w-full rounded-[var(--picture-radius,var(--radius-lg))] object-cover lg:aspect-[4/5]"
+              />,
+              "rounded-[var(--picture-radius,var(--radius-lg))]",
+            )}
           </AiMarked>
         </div>
         <div className="lg:col-span-7">{text}</div>
@@ -1180,21 +1212,25 @@ function HeroView({
         generated={image.generated}
         kind={image.kind}
         full
-        className={cn(imageSide === "right" && "lg:order-2")}
+        className={cn(imageSide === "right" && "lg:order-2", markGives)}
       >
-        <img
-          src={image.src}
-          alt={image.alt}
-          srcSet={image.srcSet}
-          sizes={image.srcSet && "(min-width: 1024px) 50vw, 100vw"}
-          width={1200}
-          height={800}
-          fetchPriority="high"
-          className={cn(
-            "aspect-[3/2] w-full rounded-[var(--picture-radius,var(--radius-xl))] border-(length:--picture-frame) object-cover",
-            imageSide === "right" && "lg:order-2",
-          )}
-        />
+        {framedFilm(
+          <img
+            src={image.src}
+            alt={image.alt}
+            srcSet={image.srcSet}
+            sizes={image.srcSet && "(min-width: 1024px) 50vw, 100vw"}
+            width={1200}
+            height={800}
+            fetchPriority="high"
+            className={cn(
+              "aspect-[3/2] w-full rounded-[var(--picture-radius,var(--radius-xl))] border-(length:--picture-frame) object-cover",
+              imageSide === "right" && "lg:order-2",
+            )}
+          />,
+          "rounded-[var(--picture-radius,var(--radius-xl))]",
+          imageSide === "right" ? "lg:order-2" : undefined,
+        )}
       </AiMarked>
       {text}
       {/* After the picture too (it moves to the right with order-2), across both columns. */}
@@ -1388,10 +1424,10 @@ function RecordCardsView({
   // an icon then) and another card shown has one, so the cards stay even; a model without
   // pictures, or a section of records without any, keeps text cards.
   const pictured = cards.some((card) => card.picture);
-  const picture = (card: CardItem, className: string) =>
-    !card.picture ? (
-      icon && pictured && <PicturePlaceholder icon={icon} className={className} />
-    ) : (
+  const picture = (card: CardItem, className: string, linkImage = false) => {
+    if (!card.picture)
+      return icon && pictured && <PicturePlaceholder icon={icon} className={className} />;
+    const image = (
       <AiMarked generated={card.picture.generated} kind={card.picture.kind} className="shrink-0">
         <img
           src={card.picture.src}
@@ -1399,10 +1435,13 @@ function RecordCardsView({
           width={card.picture.width}
           height={card.picture.height}
           loading="lazy"
+          data-link-card-image={linkImage ? "" : undefined}
           className={className}
         />
       </AiMarked>
     );
+    return linkImage ? <div className="shrink-0 overflow-hidden">{image}</div> : image;
+  };
   const details = (card: CardItem) => (
     <>
       {card.amount && <p className="text-lg font-semibold tabular-nums">{card.amount}</p>}
@@ -1566,12 +1605,13 @@ function RecordCardsView({
           {cards.map((card) => (
             <li key={card.key}>
               <Card
+                data-link-card={card.href && card.picture ? "" : undefined}
                 className={cn(
                   "relative flex h-full flex-col gap-2 overflow-hidden",
                   card.href && "hover:bg-hover",
                 )}
               >
-                {picture(card, "aspect-[3/2] w-full object-cover")}
+                {picture(card, "aspect-[3/2] w-full object-cover", Boolean(card.href))}
                 <div className="flex flex-1 flex-col gap-2 p-card">
                   <h3 className="text-lg font-semibold">{heading(card)}</h3>
                   {details(card)}
@@ -2158,6 +2198,7 @@ function MediaTextView({
   title,
   text,
   image,
+  items,
   caption,
   link,
   layout = "split",
@@ -2175,10 +2216,23 @@ function MediaTextView({
     image?: LandingImage;
     caption?: string;
     link?: LandingLink;
-    layout?: "split" | "stacked";
+    items?: { image: LandingImage }[];
+    layout?: "split" | "stacked" | "collage";
     imageSide?: "left" | "right";
   }) {
   const dialog = useRef<HTMLDialogElement>(null);
+  const [open, setOpen] = useState(0);
+  const collage = layout === "collage";
+  const pictures: { image: LandingImage; caption?: string }[] = [
+    ...(image ? [{ image, caption }] : []),
+    ...(items ?? []),
+  ];
+  // Lazy images can use their rendered width; the fallback allows for the desktop overlap.
+  const collageSizes =
+    pictures.length < 2
+      ? "auto, 100vw"
+      : `auto, (min-width: 640px) calc(${Math.ceil(100 / pictures.length)}vw + 1rem), 50vw`;
+  const show = (index: number) => setOpen((index + pictures.length) % pictures.length);
   return (
     <section
       {...sectionHooks(texts)}
@@ -2217,7 +2271,58 @@ function MediaTextView({
             </Link>
           )}
         </div>
-        {image && (
+        {collage && pictures.length > 0 && (
+          <ul
+            className={cn(
+              "grid gap-3 sm:flex sm:items-start sm:gap-0 sm:pb-4",
+              pictures.length > 1 && "grid-cols-2",
+            )}
+          >
+            {pictures.map(({ image: photo, caption: note }, index) => (
+              <li
+                key={`${index}:${photo.src}`}
+                className={cn(
+                  "relative min-w-0 flex-1 focus-within:z-10",
+                  index > 0 && "sm:-ms-4",
+                  index % 2 === 1 && "sm:mt-4",
+                )}
+              >
+                <figure>
+                  <button
+                    type="button"
+                    aria-label={w.openPicture(photo.alt)}
+                    className="block w-full overflow-hidden rounded-lg border-2 border-background bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                    onClick={() => {
+                      show(index);
+                      dialog.current?.showModal();
+                    }}
+                  >
+                    <AiMarked generated={photo.generated} kind={photo.kind}>
+                      <img
+                        src={photo.src}
+                        alt={photo.alt}
+                        srcSet={photo.srcSet}
+                        sizes={photo.srcSet && collageSizes}
+                        loading="lazy"
+                        {...mediaSize(aspect)}
+                        className={cn("block w-full", mediaClasses({ fit, aspect, focal }))}
+                      />
+                    </AiMarked>
+                  </button>
+                  {note && (
+                    <figcaption
+                      className="mt-2 text-sm text-muted-foreground"
+                      {...mark(texts, "caption")}
+                    >
+                      {note}
+                    </figcaption>
+                  )}
+                </figure>
+              </li>
+            ))}
+          </ul>
+        )}
+        {!collage && image && (
           <figure
             className={cn(
               "min-w-0",
@@ -2258,9 +2363,9 @@ function MediaTextView({
       </div>
       <PictureDialog
         dialog={dialog}
-        pictures={image ? [{ image, caption }] : []}
-        open={0}
-        show={() => {}}
+        pictures={collage ? pictures : image ? [{ image, caption }] : []}
+        open={collage ? open : 0}
+        show={collage ? show : () => {}}
       />
     </section>
   );
