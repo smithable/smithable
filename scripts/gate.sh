@@ -153,7 +153,8 @@ fi
 # For a loop that waits for a quiet machine: --queue's "running: nothing" reads as busy to a grep
 # for "running" (a three-hour wait on an empty queue, 2026-11-25), so the answer is the exit status.
 if [ "${1:-}" = --idle ]; then
-  if running || [ -n "$(waiting)" ]; then exit 1; fi
+  # The queue first: a gate takes the lock before its ticket goes, so it is seen in one or the other.
+  if [ -n "$(waiting)" ] || running; then exit 1; fi
   exit 0
 fi
 

@@ -15,17 +15,18 @@ test("--idle: 0 on an empty queue, 1 while a gate holds the lock or a live one w
   t.after(() => rmSync(home, { recursive: true, force: true }));
   assert.equal(idle(home), 0, "nothing runs or waits");
 
-  // One process takes the lock and becomes sleep, so killing it frees the lock.
+  // One process takes the lock, says so, and holds it until its stdin closes.
   const holder = spawn("bash", [
     "-c",
-    'exec 9>>"$0"; flock 9; exec sleep 30',
+    'exec 9>>"$0"; flock 9; echo locked; read -r _',
     join(home, ".gate-lock"),
   ]);
   t.after(() => holder.kill());
-  await new Promise((done) => setTimeout(done, 300));
+  await new Promise((done) => holder.stdout.once("data", done));
   assert.equal(idle(home), 1, "a gate holds the lock");
-  holder.kill();
-  await new Promise((done) => holder.on("exit", done));
+  const exited = new Promise((done) => holder.on("exit", done));
+  holder.stdin.end();
+  await exited;
   assert.equal(idle(home), 0, "the lock is free again");
 
   writeFileSync(join(home, ".gate-queue", `1.${process.pid}`), "a\t/tmp/wt\n");
