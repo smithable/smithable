@@ -247,11 +247,11 @@ test("§4 the service's source sends the token read at each fetch and checks not
   }
 });
 
-test("§3 media in-use prints core's list as JSON and nothing else; none is []", async () => {
+test("§3 media in-use reads the folder's content file only, prints core's list as JSON; none is []", async () => {
   const { mediaInUseCommand } = await import("./media-cache.js");
   const { captureIo } = await import("./test-io.js");
   const dir = project(hero(ID));
-  writeFileSync(join(dir, "smithable.yml"), "smithable: 0.1\napp: { name: Roofs }\n");
+  // No smithable.yml: the service gives it the content file alone.
   const io = captureIo();
   expect(mediaInUseCommand(dir, io)).toBe(0);
   expect(JSON.parse(io.stdout)).toEqual([{ asset: ID, variants: ["w480.webp", "w1600.webp"] }]);
@@ -259,9 +259,10 @@ test("§3 media in-use prints core's list as JSON and nothing else; none is []",
   const none = captureIo();
   expect(mediaInUseCommand(dir, none)).toBe(0);
   expect(none.stdout).toBe("[]\n");
-  const outside = captureIo();
-  expect(mediaInUseCommand(folder("smithable-not-a-project-"), outside)).toBe(1);
-  expect(outside.stdout).toBe("");
+  writeFileSync(join(dir, "smithable.content.yml"), "pages: [unclosed\n");
+  const broken = captureIo();
+  expect(mediaInUseCommand(dir, broken)).toBe(1);
+  expect(broken.stdout).toBe("");
 });
 
 test("§4 a recheck takes out a cached file that is not its record's, and never goes through a link at public", async () => {

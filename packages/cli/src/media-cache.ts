@@ -302,11 +302,17 @@ export function mediaSyncer(dir: string, source: MediaSource, say: (line: string
  * publish staging, which run it on a checkout of the revision: no network, no writes, no model.
  */
 export function mediaInUseCommand(dir: string, io: Io): number {
-  if (!existsSync(join(dir, "smithable.yml"))) {
-    io.err(`${dir} is not a Smithable project: it has no smithable.yml.\n`);
+  // The folder's content file only: the service runs it on that one file taken from a revision.
+  let list: ReturnType<typeof mediaInUse>;
+  try {
+    list = mediaInUse({ content: contentOf(dir) });
+  } catch (error) {
+    io.err(
+      `${join(dir, "smithable.content.yml")} could not be read: ${(error as Error).message}\n`,
+    );
     return 1;
   }
-  io.out(`${JSON.stringify(mediaInUse({ content: contentOf(dir) }))}\n`);
+  io.out(`${JSON.stringify(list)}\n`);
   return 0;
 }
 

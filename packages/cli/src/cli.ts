@@ -290,7 +290,8 @@ export async function run(argv: string[], io: Io = processIo): Promise<number> {
   if (command === "timers") return timers(values.dir ?? ".", io, args, values.at);
   if (command === "inspect") return inspect(values.dir ?? ".", io, args[0], values.json === true);
   if (command === "customize") return customize(values.dir ?? ".", io, args[0]);
-  if (command === "media" && args[0] === "in-use") return mediaInUseCommand(values.dir ?? ".", io);
+  if (command === "media" && args[0] === "in-use")
+    return mediaInUseCommand(args[1] ?? values.dir ?? ".", io);
   if (command === "themes") return themes(args[0] ?? values.dir ?? ".", io);
   if (command === "theme" && args[0] === "revision") {
     io.out(`${projectRevision(values.dir ?? ".")}\n`);
