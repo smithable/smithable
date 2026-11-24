@@ -16,6 +16,7 @@ export { kitSummary } from "./kit-summary.js";
 export {
   choiceValueSql,
   columnOf,
+  copyKeptColumns,
   dropTakenColumn,
   dropTakenTables,
   dropTakenTablesSql,

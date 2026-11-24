@@ -22,6 +22,27 @@ export function quoteReferences(sql: string): string {
 }
 
 /**
+ * drizzle-kit's SQL with a rebuilt table's copy limited to the columns the table had (`before`, the
+ * snapshot the migration starts from): when one migration both rebuilds a table (a column made
+ * optional) and adds columns to it, drizzle-kit 0.31 copies the new columns from the old table as
+ * well, which has none of them, and the migration fails ("no such column") at the app's start.
+ */
+export function copyKeptColumns(sql: string, before: string): string {
+  const tables =
+    (JSON.parse(before) as { tables?: Record<string, { columns?: Record<string, unknown> }> })
+      .tables ?? {};
+  return sql.replace(
+    /INSERT INTO `__new_([^`]+)`\(([^)]*)\) SELECT ([^;]*?) FROM `\1`;/g,
+    (whole, table: string, into: string) => {
+      const had = tables[table]?.columns;
+      if (!had) return whole;
+      const kept = into.split(", ").filter((c) => (JSON.parse(c) as string) in had);
+      return `INSERT INTO \`__new_${table}\`(${kept.join(", ")}) SELECT ${kept.join(", ")} FROM \`${table}\`;`;
+    },
+  );
+}
+
+/**
  * SQL for a choice value that goes: the records holding it get the new one, or nothing ("").
  */
 export function choiceValueSql(model: string, field: string, from: string, to: string): string {
