@@ -11,6 +11,7 @@ import { AccessDenied, allows, Conflict, type Rule, type Viewer } from "./access
 import { audit } from "./audit.server";
 import { convertCell, type ImportRefusal, type Lookup, planImport } from "./import";
 import { log } from "./log.server";
+import { mailMode } from "./mail";
 import type { ModelUi } from "./model";
 import { BadInput } from "./refusal";
 import { w } from "./words";
@@ -27,6 +28,8 @@ export interface ImportAnswer {
   count: number;
   /** The activity line to undo it by, when records went in. */
   undo?: number;
+  /** The mail mode the app runs with, where it was started with one (mail.ts). */
+  mail?: "held" | "testers" | "all";
 }
 
 /** What a refused write says, for its row. */
@@ -75,6 +78,8 @@ export async function importRows(o: {
     refusals: [...plan.refusals],
     count: 0,
   };
+  const mail = mailMode();
+  if (mail) answer.mail = mail;
   if (plan.refusals.length) return answer;
   const lookup = await o.lookup(o.viewer);
   const column = (field: string) => plan.columns.find((c) => c.field.name === field)?.column;

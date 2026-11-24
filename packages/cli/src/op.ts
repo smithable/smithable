@@ -1236,8 +1236,13 @@ function dataImpact(dir: string, effects: Effect[], args: Record<string, unknown
     return `this removes the ${n} ${n === 1 ? plural(args.model).toLowerCase().replace(/s$/, "") : plural(args.model).toLowerCase()} in the trash for good.`;
   }
   const removed = effects.find((e) => e.kind === "remove-field");
-  const model = String(removed?.model ?? args.model);
-  const field = String(removed?.field ?? args.field);
+  const changed = effects.find((e) => e.kind === "change-field");
+  const model = removed?.model ?? changed?.model ?? args.model;
+  const field = removed?.field ?? changed?.field ?? args.field;
+  // An operation that loses something other than a field's values (a section's kind, a language,
+  // a timer) names it in its own description; no field is invented for it.
+  if (typeof model !== "string" || typeof field !== "string")
+    return "what it takes away is lost; undo brings it back.";
   const { table, column } = columnOf(model, field, removed?.storage === "reference");
   const counts = countValues(dir, table, column);
   const values = counts
