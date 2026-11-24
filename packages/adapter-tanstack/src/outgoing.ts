@@ -102,6 +102,15 @@ export function linkEntries(ir: SpecIR, content: ContentIR | undefined): RecordO
 }
 
 /**
+ * The models whose trash, removal, merge and split end their records' links: every model once the
+ * app keeps record_links, not only those that send a link today. A model that stopped sending keeps
+ * the links it sent, and sending again would bring an unexpired one back to life (T1333).
+ */
+export function linkedModels(ir: SpecIR, content: ContentIR | undefined): string[] {
+  return linkEntries(ir, content).length ? ir.models.map((m) => m.name) : [];
+}
+
+/**
  * Texts (notifications.md §5): the entries that text, in an app with sign-in (a person turns a
  * text on under their name; a number on a record is texted only from a signed-in person's change).
  */

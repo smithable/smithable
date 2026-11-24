@@ -52,6 +52,7 @@ import { mergeActionModule, mergeActionServer } from "./merge.js";
 import { named, nameModule } from "./names.js";
 import {
   linkEntries,
+  linkedModels,
   liveModels,
   liveRoute,
   outgoingModule,
@@ -1288,14 +1289,7 @@ const SECTION_GENERATORS: SectionGenerator[] = [
             : []),
           generated(
             `${base}.server.ts`,
-            dataModule(
-              model,
-              t,
-              ir,
-              auth,
-              ux,
-              linkEntries(ir, options.content).map((o) => o.when.model),
-            ),
+            dataModule(model, t, ir, auth, ux, linkedModels(ir, options.content)),
           ),
           // A record as its document, read by its page and by a mail that sends it (record-documents.md §5).
           ...ir.pages
@@ -1327,8 +1321,8 @@ const SECTION_GENERATORS: SectionGenerator[] = [
   {
     key: "actions",
     files: ({ ir, t, auth, options }) => {
-      // The models whose mails send a link to a copy: a merge or split that trashes one ends them.
-      const sending = linkEntries(ir, options.content).map((o) => o.when.model);
+      // The models whose records may hold links: a merge or split that trashes one ends them.
+      const sending = linkedModels(ir, options.content);
       // A standard action is generated whole; a custom one gets a stub to implement, once.
       return ir.actions.flatMap((action) =>
         action.custom
