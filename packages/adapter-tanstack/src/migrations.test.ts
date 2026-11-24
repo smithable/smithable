@@ -216,6 +216,28 @@ test("a rebuilt table copies only the columns it had: the ones added with it sta
   );
 });
 
+test("a column renamed earlier in the same migration is copied, not left out (T1012)", () => {
+  const before = JSON.stringify({
+    tables: { notes: { columns: { id: {}, entry: {}, title: {} } } },
+  });
+  const sql =
+    'ALTER TABLE `notes` RENAME COLUMN `entry` TO `label`;--> statement-breakpoint\nALTER TABLE `others` RENAME COLUMN `a` TO `extra`;--> statement-breakpoint\nCREATE TABLE `__new_notes` (`id` integer, `label` text, `title` text, `extra` text);--> statement-breakpoint\nINSERT INTO `__new_notes`("id", "label", "title", "extra") SELECT "id", "label", "title", "extra" FROM `notes`;';
+  // label is entry renamed: kept. extra was renamed on another table only: left out.
+  expect(copyKeptColumns(sql, before)).toBe(
+    sql.replace(
+      'INSERT INTO `__new_notes`("id", "label", "title", "extra") SELECT "id", "label", "title", "extra"',
+      'INSERT INTO `__new_notes`("id", "label", "title") SELECT "id", "label", "title"',
+    ),
+  );
+});
+
+test("a copy that would keep no column, or a table the snapshot lacks, stays as drizzle-kit wrote it (T1012)", () => {
+  const before = JSON.stringify({ tables: { notes: { columns: { old: {} } } } });
+  const sql =
+    'INSERT INTO `__new_notes`("id", "label") SELECT "id", "label" FROM `notes`;--> statement-breakpoint\nINSERT INTO `__new_others`("id") SELECT "id" FROM `others`;';
+  expect(copyKeptColumns(sql, before)).toBe(sql);
+});
+
 const renameFixture = () =>
   JSON.stringify({
     tables: {

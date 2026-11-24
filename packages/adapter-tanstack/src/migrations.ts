@@ -26,6 +26,10 @@ export function quoteReferences(sql: string): string {
  * snapshot the migration starts from): when one migration both rebuilds a table (a column made
  * optional) and adds columns to it, drizzle-kit 0.31 copies the new columns from the old table as
  * well, which has none of them, and the migration fails ("no such column") at the app's start.
+ * A column is left out only when the table truly lacks it at that point: a column renamed earlier
+ * in the same SQL (RENAME COLUMN, Smithable's own; drizzle-kit without a terminal never emits a
+ * rename) counts as there. A copy that would keep nothing, or a table the snapshot lacks, is left
+ * as drizzle-kit wrote it, so it fails loudly rather than drop data.
  */
 export function copyKeptColumns(sql: string, before: string): string {
   const tables =
@@ -33,10 +37,15 @@ export function copyKeptColumns(sql: string, before: string): string {
       .tables ?? {};
   return sql.replace(
     /INSERT INTO `__new_([^`]+)`\(([^)]*)\) SELECT ([^;]*?) FROM `\1`;/g,
-    (whole, table: string, into: string) => {
+    (whole, table: string, into: string, _select: string, at: number) => {
       const had = tables[table]?.columns;
       if (!had) return whole;
-      const kept = into.split(", ").filter((c) => (JSON.parse(c) as string) in had);
+      const there = new Set(Object.keys(had));
+      const renamed = /ALTER TABLE `([^`]+)` RENAME COLUMN `[^`]+` TO `([^`]+)`;/g;
+      for (const m of sql.slice(0, at).matchAll(renamed))
+        if (m[1] === table) there.add(m[2] as string);
+      const kept = into.split(", ").filter((c) => there.has(JSON.parse(c) as string));
+      if (!kept.length) return whole;
       return `INSERT INTO \`__new_${table}\`(${kept.join(", ")}) SELECT ${kept.join(", ")} FROM \`${table}\`;`;
     },
   );
