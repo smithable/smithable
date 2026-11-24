@@ -97,3 +97,22 @@ test("a change that deletes data and takes out a stored file says both", async (
   // The field's loss is said beside the picture's.
   expect(io.stderr).toContain("this deletes the notes column");
 });
+
+test("a loss that is no field's says so without inventing one (T1454)", async () => {
+  const dir = project();
+  const io = captureIo();
+  expect(
+    await runOperation(
+      dir,
+      io,
+      "changeSectionKind",
+      { ...hero, kind: "features" },
+      {
+        yes: false,
+        reportLater: true,
+      },
+    ),
+  ).toBe(1);
+  expect(io.stderr).toContain("what it replaces is lost; undo brings it back.");
+  expect(io.stderr).not.toContain("undefined");
+});
