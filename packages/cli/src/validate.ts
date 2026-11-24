@@ -8,6 +8,7 @@ import {
   actionAccess,
   analyticsOf,
   type ContentIR,
+  cardCover,
   type Diagnostic,
   DUE_WITHIN,
   formatDiagnostic,
@@ -608,6 +609,13 @@ export function explainSpec(
   // How a list page's filter on a reference is picked (A 208): the ux file's word, else the count.
   for (const page of ir.pages) {
     const model = ir.models.find((m) => m.name === pageModel(page));
+    // The cards' cover: the ux file's, else the model's first picture field.
+    const look = ux?.pages[page.id];
+    const cover = look?.view === "cards" && model ? cardCover(model, look) : undefined;
+    if (cover)
+      lines.push(
+        `${page.id} cards: cover ${cover.field.name} (${cover.byRule ? "by rule: the model's first picture field; say it with cover" : "cover"})${look?.open === "picture" ? "; a card's picture opens whole (open: picture)" : ""}`,
+      );
     for (const name of page.filters ?? []) {
       const field = model?.fields.find((x) => x.name === name);
       if (field?.type.kind !== "relation" || field.type.many || field.type.model === "User")

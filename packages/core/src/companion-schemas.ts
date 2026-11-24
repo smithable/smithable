@@ -321,6 +321,14 @@ export const UX_SCHEMA: JsonSchema = {
                 enum: ["table", "cards"],
                 description: "On a wide screen: a table, or cards (a phone shows cards anyway).",
               },
+              cover: text(
+                "The picture field on top of each card. Unsaid, the model's first picture field. Cards only.",
+              ),
+              open: {
+                enum: ["picture"],
+                description:
+                  "picture: a card's picture opens whole and steps through the records shown; the cards are two across, their pictures bigger. Cards only, on a model with a picture field.",
+              },
               mark: {
                 enum: UX_CAPABILITIES.mark.values,
                 description:

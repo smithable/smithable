@@ -1138,11 +1138,20 @@ const setResults: Operation<{ page: string; results: "beside" | "below" }> = {
   },
 };
 
-const setView: Operation<{ page: string; view: "table" | "cards" }> = {
+const setView: Operation<{
+  page: string;
+  view: "table" | "cards";
+  cover?: string;
+  open?: "picture";
+}> = {
   name: "setView",
-  sets: ["smithable.ux.yml:pages.*.table.view"],
+  sets: [
+    "smithable.ux.yml:pages.*.table.view",
+    "smithable.ux.yml:pages.*.table.cover",
+    "smithable.ux.yml:pages.*.table.open",
+  ],
   summary:
-    "Show a page's list as a table or as cards on wide screens (a phone shows cards anyway).",
+    "Show a page's list as a table or as cards on wide screens (a phone shows cards anyway). Cards show the model's first picture field on top unless a cover is named; open: picture opens a card's picture whole, two cards across.",
   schema: {
     type: "object",
     required: ["page", "view"],
@@ -1150,15 +1159,23 @@ const setView: Operation<{ page: string; view: "table" | "cards" }> = {
     properties: {
       page: refTo({ ref: "page", label: "Page" }),
       view: { type: "string", enum: ["table", "cards"] },
+      cover: refTo({ ref: "field", page: "page", label: "Cover" }),
+      open: { type: "string", enum: ["picture"] },
     },
   },
-  positional: ["page", "view"],
-  describe: ({ page, view }) =>
-    `Show the ${page} list as ${view === "cards" ? "cards" : "a table"}`,
+  positional: ["page", "view", "cover"],
+  describe: ({ page, view, cover, open }) =>
+    view === "cards"
+      ? `Show the ${page} list as cards${cover ? ` with ${cover} on top` : ""}${open ? ", their pictures opening whole" : ""}`
+      : `Show the ${page} list as a table`,
   destructive: () => false,
-  apply(editors, { page, view }, ir) {
+  apply(editors, { page, view, cover, open }, ir) {
     pageNamed(ir, page);
+    if ((cover || open) && view !== "cards")
+      throw new OperationError("A cover and open: picture are for cards: use the view cards.");
     put(editors.ux, ["pages", page, "table", "view"], view === "cards" ? "cards" : undefined);
+    put(editors.ux, ["pages", page, "table", "cover"], view === "cards" ? cover : undefined);
+    put(editors.ux, ["pages", page, "table", "open"], view === "cards" ? open : undefined);
     return [];
   },
 };

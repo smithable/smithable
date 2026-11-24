@@ -386,6 +386,7 @@ export {
   ACTIVES,
   BANDS,
   CONTROLS,
+  cardCover,
   controlUnfit,
   emptyUx,
   FONTS,
