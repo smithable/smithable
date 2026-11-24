@@ -39,7 +39,15 @@ export interface MediaSource {
   record(asset: string): Promise<Record<string, string> | undefined>;
   /** One rendition's bytes and the hash sent beside them; undefined when refused. */
   fetch(asset: string, variant: string): Promise<{ bytes: Uint8Array; sha256: string } | undefined>;
+  /**
+   * A stored picture's sizes from its record, for setSectionPicture's rendition (§2): undefined
+   * when refused, not a picture, or not processed yet.
+   */
+  sizes?(asset: string): Promise<{ width: number; widths: number[] } | undefined>;
 }
+
+const isWidth = (w: unknown): w is number =>
+  Number.isInteger(w) && (w as number) > 0 && (w as number) <= 9999;
 
 const sha256 = (bytes: Uint8Array) => createHash("sha256").update(bytes).digest("hex");
 
@@ -66,6 +74,18 @@ export function hostedMediaSource(
     return answer;
   };
   return {
+    async sizes(asset) {
+      if (!ASSET_ID.test(asset)) return undefined;
+      const answer = await ask(`/media/${asset}`);
+      if (!answer) return undefined;
+      const { kind, width, widths } = (await answer.json()) as Record<string, unknown>;
+      if (kind !== "image" || !isWidth(width)) return undefined;
+      const others = Array.isArray(widths) ? widths.filter(isWidth) : [];
+      return {
+        width,
+        widths: [...new Set(others)].filter((w) => w !== width).sort((a, b) => a - b),
+      };
+    },
     async record(asset) {
       if (!ASSET_ID.test(asset)) return undefined;
       const answer = await ask(`/media/${asset}`);

@@ -1514,6 +1514,27 @@ export async function studio(
             },
             409,
           );
+        // A stored picture's sizes are the service's record's, never the caller's (media-storage.md
+        // §2): read here for setSectionPicture with an asset. Locally there is no record to read,
+        // and the operation refuses a new stored file without them.
+        if (name === "setSectionPicture" && args && typeof args === "object") {
+          const choice = args as Record<string, unknown>;
+          delete choice.rendition;
+          if (typeof choice.asset === "string" && mediaSource?.sizes) {
+            try {
+              const sizes = await mediaSource.sizes(choice.asset);
+              if (sizes) choice.rendition = sizes.widths.length ? sizes : { width: sizes.width };
+            } catch {
+              return json(
+                {
+                  ok: false,
+                  output: "The photo library could not be reached. Try again in a moment.",
+                },
+                503,
+              );
+            }
+          }
+        }
         const offeredPictures =
           typeof pictureOffer === "string" ? pictureOffers.get(pictureOffer) : undefined;
         const preparedInkWash =

@@ -212,6 +212,9 @@ test("§4 the service's source sends the token read at each fetch and checks not
       res.writeHead(200, { "content-type": "application/json" });
       return res.end(
         JSON.stringify({
+          kind: "image",
+          width: 1600,
+          widths: [960, 480, 1600, -2, "x"],
           variants: { "w480.webp": hash("small"), "../x": hash("x"), "w960.webp": "short" },
         }),
       );
@@ -245,6 +248,9 @@ test("§4 the service's source sends the token read at each fetch and checks not
     expect(await s.fetch("../etc", "w480.webp")).toBeUndefined();
     expect(await s.fetch(ID, "../../x")).toBeUndefined();
     expect(seen).toHaveLength(4);
+    // The sizes for setSectionPicture: the record's, checked; none for a refused file.
+    expect(await s.sizes?.(ID)).toEqual({ width: 1600, widths: [480, 960] });
+    expect(await s.sizes?.("m_01hz8k3q4r5s6t7v8w9x0y1z2c")).toBeUndefined();
   } finally {
     server.close();
   }
