@@ -15,7 +15,7 @@ import { post, proxied, proxyRefusal } from "./call.server";
 import { dayText } from "./format";
 import { log } from "./log.server";
 import { mailConfigured, sendMail } from "./mail";
-import { pauseAfter, privateAddress, targetSettings } from "./outgoing";
+import { pauseAfter, privateAddress, targetSettings, withoutTokens } from "./outgoing";
 import { outsideTrace } from "./trace.server";
 import { w } from "./words";
 
@@ -490,8 +490,14 @@ async function sendMails(now: number): Promise<number> {
         await recordDelivery(
           () =>
             db.transaction((tx) => {
+              // Delivered, the row no longer needs a working link; kept in the outbox, it is the
+              // only copy and keeps it.
               tx.update(outgoingMail)
-                .set({ sentAt: new Date(), tries: mail.tries + 1 })
+                .set({
+                  sentAt: new Date(),
+                  tries: mail.tries + 1,
+                  ...(mailConfigured() ? { text: withoutTokens(mail.text) } : {}),
+                })
                 .where(eq(outgoingMail.id, mail.id))
                 .run();
               audit(tx, null, {
