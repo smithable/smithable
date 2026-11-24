@@ -18,10 +18,12 @@ case "$a" in
   *"--json mergeStateStatus"*) [ -e "$d/updated" ] && echo BLOCKED || echo BEHIND ;;
   *"--json headRefOid"*) head ;;
   "pr update-branch"*) touch "$d/updated" ;;
-  "api repos/o/r/commits/new/check-runs"*)
+  "api repos/o/r/commits/new/check-runs -q .total_count")
     n=$(cat "$d/asked" 2>/dev/null || echo 0); echo $((n + 1)) > "$d/asked"
-    [ "$n" = 0 ] && echo 0 || echo 1 ;;
-  "api repos/o/r/commits/old/check-runs"*) echo 1 ;;
+    [ "$n" = 0 ] || [ -n "$STATUS_ONLY" ] && echo 0 || echo 1 ;;
+  "api repos/o/r/commits/new/status -q .total_count")
+    [ -n "$STATUS_ONLY" ] && [ "$(cat "$d/asked")" != 1 ] && echo 1 || echo 0 ;;
+  "api repos/o/r/commits/old/"*) echo 1 ;;
   *"--watch"*) ;;
   "pr checks"*)
     [ -e "$d/listed" ] && exit 1
@@ -37,7 +39,7 @@ case "$a" in
 esac
 `;
 
-test("merge-green waits for the new head's checks after updating the branch (cloud #587)", () => {
+function mergeGreen(env = {}) {
   const dir = mkdtempSync(join(tmpdir(), "merge-green-"));
   writeFileSync(join(dir, "gh"), fakeGh);
   // The script's sleeps (and the lock's refresher) take no time here.
@@ -52,11 +54,23 @@ test("merge-green waits for the new head's checks after updating the branch (clo
       FAKE_GH: dir,
       MERGE_LOCK: join(dir, "lock"),
       SESSION: "test",
+      ...env,
     },
   });
+  return { run, dir };
+}
+
+test("merge-green waits for the new head's checks after updating the branch (cloud #587)", () => {
+  const { run, dir } = mergeGreen();
   assert.equal(run.status, 0, run.stdout + run.stderr);
   assert.match(run.stdout, /Merged #587\./);
   assert.doesNotMatch(run.stdout, /did not start/);
   assert.equal(readFileSync(join(dir, "asked"), "utf8").trim(), "2");
   assert.ok(!existsSync(join(dir, "lock")));
+});
+
+test("a head whose only checks are commit statuses has checks", () => {
+  const { run } = mergeGreen({ STATUS_ONLY: "1" });
+  assert.equal(run.status, 0, run.stdout + run.stderr);
+  assert.match(run.stdout, /Merged #587\./);
 });

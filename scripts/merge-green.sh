@@ -75,13 +75,16 @@ drop_lock() {
   release
   refresher=""
 }
-# Whether the current head has check runs, asked by its commit: just after the branch is updated,
-# `gh pr checks` could still list the old head's, so the wait ended at once and the check after
-# it, finding none yet for the new head, refused (cloud #587, 2026-11-24).
+# Whether the current head has checks (check runs or commit statuses), asked by its commit: just
+# after the branch is updated, `gh pr checks` could still list the old head's, so the wait ended
+# at once and the check after it, finding none yet for the new head, refused (cloud #587,
+# 2026-11-24). A failed lookup counts as none: the wait goes on, then refuses.
 has_checks() {
-  local n
-  n=$(gh api "repos/$nwo/commits/$(head_sha)/check-runs" -q .total_count 2>/dev/null || true)
-  [ "${n:-0}" -gt 0 ] 2>/dev/null
+  local sha runs statuses
+  sha=$(head_sha 2>/dev/null) || return 1
+  runs=$(gh api "repos/$nwo/commits/$sha/check-runs" -q .total_count 2>/dev/null || true)
+  statuses=$(gh api "repos/$nwo/commits/$sha/status" -q .total_count 2>/dev/null || true)
+  [ $((${runs:-0} + ${statuses:-0})) -gt 0 ] 2>/dev/null
 }
 head_sha() { gh pr view "$pr" "${repo[@]}" --json headRefOid -q .headRefOid; }
 merged() { [ "$(gh pr view "$pr" "${repo[@]}" --json state -q .state)" = MERGED ]; }
