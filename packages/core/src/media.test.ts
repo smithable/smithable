@@ -124,6 +124,9 @@ test("broughtMedia names a stored file the change brings in, and none it only mo
       hero(`{ asset: ${ID}, alt: B, width: 960 }`),
     ),
   ).toBeUndefined();
+  // A file already used once, put in a second place, is brought in too.
+  const twice = `${content(`{ asset: ${ID}, alt: A, width: 960 }`)}    jobs:\n      items:\n        - image: { asset: ${ID}, alt: A, width: 960 }\n`;
+  expect(broughtMedia(hero(`{ asset: ${ID}, alt: A, width: 960 }`), { content: twice })).toBe(ID);
 });
 
 test("setSectionPicture places a stored file with the sizes the host read, and only so", () => {
@@ -174,6 +177,21 @@ test("taking a stored file out of its place is destructive and names the place; 
   expect(removed.lostMedia?.length).toBe(1);
   // Destructive for the stored file alone: the CLI says no data goes.
   expect(removed.mediaOnly).toBe(true);
+
+  // A batch is read from its start to its end: taken out and put back, nothing is lost.
+  const back = applyOperations(stored.files, [
+    {
+      op: "setSectionPicture",
+      args: { page: "home", section: "hero", src: "images/new.webp", alt: "N" },
+    },
+    {
+      op: "setSectionPicture",
+      args: { page: "home", section: "hero", asset: ID, alt: "A roof", rendition: { width: 1600 } },
+    },
+  ]);
+  if (!back.ok) throw new Error(back.message);
+  expect(back.lostMedia).toBeUndefined();
+  expect(back.destructive).toBe(false);
 
   for (const path of [
     ["pages", "home", "hero", "image", "asset"],

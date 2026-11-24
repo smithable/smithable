@@ -161,8 +161,6 @@ export function applyOperations(
   const added: { path: string; text: string }[] = [];
   const removed: string[] = [];
   const effects: Effect[] = [];
-  const lost: MediaSlot[] = [];
-  let destructive = false;
   let own = false;
   for (const step of steps) {
     const result = applyOperation(current, step.op, step.args);
@@ -172,10 +170,12 @@ export function applyOperations(
     added.push(...result.added);
     removed.push(...result.removed);
     effects.push(...result.effects);
-    lost.push(...(result.lostMedia ?? []));
-    destructive ||= result.destructive;
     own ||= result.destructive && !result.mediaOnly;
   }
+  // Over the whole batch: a file one step takes out and a later one puts back elsewhere lost nothing.
+  const read = (text?: string) => (text ? new YamlEditor(text).get([]) : undefined);
+  const lost = lostMedia(read(files.content), read(current.content));
+  const destructive = own || lost.length > 0;
   return {
     ok: true,
     files: current,

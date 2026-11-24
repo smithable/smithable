@@ -57,12 +57,19 @@ export function lostMedia(before: unknown, after: unknown): MediaSlot[] {
 }
 
 /**
- * A stored file the change brings in that the files did not name before (media-storage.md §2):
- * what a model's change may never do, by whichever operation, since only a person picks one.
+ * A stored file the change puts in a place more than the files had it (media-storage.md §2), a
+ * new one or one already used elsewhere: what a model's change may never do, by whichever
+ * operation, since only a person picks where one goes.
  */
 export function broughtMedia(before: { content?: string }, after: { content?: string }) {
-  const had = new Set(mediaInUse(before).map((u) => u.asset));
-  return mediaInUse(after).find((u) => !had.has(u.asset))?.asset;
+  const uses = (files: { content?: string }) => {
+    const n = new Map<string, number>();
+    const slots = files.content ? mediaSlots(new YamlEditor(files.content).get([])) : [];
+    for (const s of slots) n.set(s.asset, (n.get(s.asset) ?? 0) + 1);
+    return n;
+  };
+  const had = uses(before);
+  return [...uses(after)].find(([asset, n]) => n > (had.get(asset) ?? 0))?.[0];
 }
 
 /** A slot in words: "the picture of hero on home", "picture 2 of gallery on home". */
