@@ -613,6 +613,13 @@ export function dataModule(
     .map((p) => p.pattern)
     .find((p): p is PatternOf<"order"> => p.kind === "order" && p.into === model.name);
   const formulas = hasFormulas(model);
+  // Each field with a formula default, filled by checkCreate when the values leave it out.
+  const formulaDefaults = model.fields
+    .filter((f) => f.defaultFormula && !f.formula)
+    .map(
+      (f) =>
+        `${dataKey(f)}: values.${dataKey(f)} === undefined ? ${defaultsName(model)}.${f.name}(values) : values.${dataKey(f)}`,
+    );
   const signedIn = hasSignIn(auth);
   const owner = ownerKey(model);
   // A data page lists the model's newest records only: its list takes a limit.
@@ -1170,18 +1177,9 @@ export function dataModule(
   // own transaction, so two records made at once never share one and a number is never given twice.
   const ownerValue = creatorOwned(model) ? "personOf(viewer)" : `ownerFor(viewer, values.${owner})`;
   const counted = sequenceEntries(model, auth, n.table, ownerValue);
-  // A formula default (`default: TODAY()`) for a field the values leave out: a form fills it in
-  // before it is sent, but a form that does not ask for it (a visitor's, or one whose field the app
-  // fills) leaves it to the server.
-  const formulaDefaults = model.fields
-    .filter((f) => f.defaultFormula && !f.formula)
-    .map(
-      (f) =>
-        `${dataKey(f)}: values.${dataKey(f)} === undefined ? ${defaultsName(model)}.${f.name}(values) : values.${dataKey(f)}`,
-    );
-  const set = [...byMe, ...formulaDefaults, ...counted].map((e) => `, ${e}`).join("");
+  const set = [...byMe, ...counted].map((e) => `, ${e}`).join("");
   const given = !signedIn
-    ? set
+    ? counted.length
       ? `{ ...values${set} }`
       : "values"
     : creatorOwned(model)
@@ -1325,7 +1323,7 @@ export function dataModule(
    * references, its rules, its capacity and time. create() and an action that adds one call it.
    */
   checkCreate(${capacity || occ ? "tx" : "_tx"}: Tx, ${createViewer ? "viewer" : "_viewer"}: Viewer | null, given: ${n.settableValues}${orderLine ? `, ${refs.length ? "known" : "_known"}: readonly string[] = []` : ""}): ${n.settableValues} {
-    ${uploadFields.length || sideRule("values") ? "let" : "const"} values = ${withoutSystem(model, "given")};
+    ${uploadFields.length || sideRule("values") ? "let" : "const"} values = ${formulaDefaults.length ? `withFormulaDefaults(${withoutSystem(model, "given")})` : withoutSystem(model, "given")};
 ${createBody}
     return values;
   },
@@ -2004,10 +2002,23 @@ ${occ ? occupiesImports() : ""}${unmerge ? unmergeImports(ir, model, t, sending)
   .join(
     "",
   )}import { ${[...(labelledKinds.has(model) ? [n.ui] : []), ...(sided ? [n.ours] : [])].map((x) => `${x}, `).join("")}type ${n.settableValues} } from "./${kebab(model.name)}";
-${formulas ? `import { ${[...(model.fields.some((f) => f.defaultFormula && !f.formula) ? [defaultsName(model)] : []), withFormulasName(model)].join(", ")} } from "./${kebab(model.name)}.formulas";\n` : ""}${counted.length ? 'import { nextInSequence } from "#/kit/sequence.server";\n' : ""}${trashing ? 'import "./trash.server";\n' : ""}${ir.timers.length ? 'import "./timers.server";\n' : ""}
+${formulas ? `import { ${[...(formulaDefaults.length ? [defaultsName(model)] : []), withFormulasName(model)].join(", ")} } from "./${kebab(model.name)}.formulas";\n` : ""}${counted.length ? 'import { nextInSequence } from "#/kit/sequence.server";\n' : ""}${trashing ? 'import "./trash.server";\n' : ""}${ir.timers.length ? 'import "./timers.server";\n' : ""}
 /** A transaction, as the write checks and the group's functions are called inside one. */
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
-${usedBy}${missingReference}${rootInTrash}${unmerge}${occ ? occupiesHelpers(model, ir, occ) : ""}
+${
+  formulaDefaults.length
+    ? `
+/**
+ * A formula default (\`default: TODAY()\`) for a field the values leave out: a form fills it in before
+ * it is sent, but a visitor's form that does not ask it, a field the app fills, an action that adds
+ * a record and custom code leave it to the server. A value given, null too, is kept.
+ */
+function withFormulaDefaults<T extends Record<string, unknown>>(values: T): T {
+  return { ...values, ${formulaDefaults.join(", ")} };
+}
+`
+    : ""
+}${usedBy}${missingReference}${rootInTrash}${unmerge}${occ ? occupiesHelpers(model, ir, occ) : ""}
 ${
   model.review
     ? `/**

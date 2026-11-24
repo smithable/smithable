@@ -39912,6 +39912,15 @@ import { enquiryDefaults, withEnquiryFormulas } from "./enquiry.formulas";
 /** A transaction, as the write checks and the group's functions are called inside one. */
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
+/**
+ * A formula default (\`default: TODAY()\`) for a field the values leave out: a form fills it in before
+ * it is sent, but a visitor's form that does not ask it, a field the app fills, an action that adds
+ * a record and custom code leave it to the server. A value given, null too, is kept.
+ */
+function withFormulaDefaults<T extends Record<string, unknown>>(values: T): T {
+  return { ...values, followUpOn: values.followUpOn === undefined ? enquiryDefaults.followUpOn(values) : values.followUpOn };
+}
+
 /** The reference of an add or a change that names no record, by its label, once the database refused one. */
 function missingReference(values: Record<string, unknown>): string | undefined {
   if (values.projectId != null && !db.select({ id: schema.projects.id }).from(schema.projects).where(eq(schema.projects.id, values.projectId as never)).get()) return "Project";
@@ -39964,7 +39973,7 @@ export const enquiryData = {
    * references, its rules, its capacity and time. create() and an action that adds one call it.
    */
   checkCreate(_tx: Tx, viewer: Viewer | null, given: EnquirySettable): EnquirySettable {
-    const values = given;
+    const values = withFormulaDefaults(given);
     checkReferences(viewer, values);
 
     return values;
@@ -40078,7 +40087,7 @@ export const enquiryData = {
       // The checks and the insert in one transaction.
       row = db.transaction((tx) => {
         values = enquiryData.checkCreate(tx, viewer, values);
-        const made = tx.insert(schema.enquiries).values({ ...values, ownerId: personOf(viewer), followUpOn: values.followUpOn === undefined ? enquiryDefaults.followUpOn(values) : values.followUpOn }).returning().get();
+        const made = tx.insert(schema.enquiries).values({ ...values, ownerId: personOf(viewer) }).returning().get();
         audit(tx, viewer, { action: "created", model: "Enquiry", record: made.id });
         return made;
       });
@@ -45256,7 +45265,7 @@ exports[`../../../examples/builder/smithable.yml > the generated files are as re
   "src/generated/enquiry.import.server.ts": "a633861c generated",
   "src/generated/enquiry.import.ts": "913f16b7 generated",
   "src/generated/enquiry.schema.ts": "0fcaedbc generated",
-  "src/generated/enquiry.server.ts": "d523278f generated",
+  "src/generated/enquiry.server.ts": "b19e5cec generated",
   "src/generated/enquiry.ts": "d7f7fabd generated",
   "src/generated/hooks.ts": "9ce2a021 generated",
   "src/generated/my-time.ts": "c315432b generated",
@@ -49374,6 +49383,15 @@ import "./trash.server";
 /** A transaction, as the write checks and the group's functions are called inside one. */
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
+/**
+ * A formula default (\`default: TODAY()\`) for a field the values leave out: a form fills it in before
+ * it is sent, but a visitor's form that does not ask it, a field the app fills, an action that adds
+ * a record and custom code leave it to the server. A value given, null too, is kept.
+ */
+function withFormulaDefaults<T extends Record<string, unknown>>(values: T): T {
+  return { ...values, dueOn: values.dueOn === undefined ? followUpDefaults.dueOn(values) : values.dueOn };
+}
+
 /** The reference of an add or a change that names no record, by its label, once the database refused one. */
 function missingReference(values: Record<string, unknown>): string | undefined {
   if (values.customerId != null && !db.select({ id: schema.customers.id }).from(schema.customers).where(eq(schema.customers.id, values.customerId as never)).get()) return "Customer";
@@ -49473,7 +49491,7 @@ export const followUpData = {
    * references, its rules, its capacity and time. create() and an action that adds one call it.
    */
   checkCreate(_tx: Tx, viewer: Viewer | null, given: FollowUpSettable): FollowUpSettable {
-    const values = (Object.fromEntries(Object.entries(given).filter(([key]) => !["deletedAt","deletedBy","deletedWith"].includes(key))) as typeof given);
+    const values = withFormulaDefaults((Object.fromEntries(Object.entries(given).filter(([key]) => !["deletedAt","deletedBy","deletedWith"].includes(key))) as typeof given));
     checkReferences(viewer, values);
 
     return values;
@@ -49787,7 +49805,7 @@ export const followUpData = {
       // The checks and the insert in one transaction.
       row = db.transaction((tx) => {
         values = followUpData.checkCreate(tx, viewer, values);
-        const made = tx.insert(schema.followUps).values({ ...values, ownerId: personOf(viewer), dueOn: values.dueOn === undefined ? followUpDefaults.dueOn(values) : values.dueOn }).returning().get();
+        const made = tx.insert(schema.followUps).values({ ...values, ownerId: personOf(viewer) }).returning().get();
         audit(tx, viewer, { action: "created", model: "FollowUp", record: made.id });
         return made;
       });
@@ -50500,6 +50518,15 @@ import "./trash.server";
 /** A transaction, as the write checks and the group's functions are called inside one. */
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
+/**
+ * A formula default (\`default: TODAY()\`) for a field the values leave out: a form fills it in before
+ * it is sent, but a visitor's form that does not ask it, a field the app fills, an action that adds
+ * a record and custom code leave it to the server. A value given, null too, is kept.
+ */
+function withFormulaDefaults<T extends Record<string, unknown>>(values: T): T {
+  return { ...values, placedAt: values.placedAt === undefined ? orderDefaults.placedAt(values) : values.placedAt };
+}
+
 /** The reference of an add or a change that names no record, by its label, once the database refused one. */
 function missingReference(values: Record<string, unknown>): string | undefined {
   if (values.customerId != null && !db.select({ id: schema.customers.id }).from(schema.customers).where(eq(schema.customers.id, values.customerId as never)).get()) return "Customer";
@@ -50601,7 +50628,7 @@ export const orderData = {
    * references, its rules, its capacity and time. create() and an action that adds one call it.
    */
   checkCreate(_tx: Tx, viewer: Viewer | null, given: OrderSettable): OrderSettable {
-    const values = (Object.fromEntries(Object.entries(given).filter(([key]) => !["deletedAt","deletedBy","deletedWith"].includes(key))) as typeof given);
+    const values = withFormulaDefaults((Object.fromEntries(Object.entries(given).filter(([key]) => !["deletedAt","deletedBy","deletedWith"].includes(key))) as typeof given));
     checkReferences(viewer, values);
 
     return values;
@@ -50915,7 +50942,7 @@ export const orderData = {
       // The checks and the insert in one transaction.
       row = db.transaction((tx) => {
         values = orderData.checkCreate(tx, viewer, values);
-        const made = tx.insert(schema.orders).values({ ...values, ownerId: personOf(viewer), placedAt: values.placedAt === undefined ? orderDefaults.placedAt(values) : values.placedAt }).returning().get();
+        const made = tx.insert(schema.orders).values({ ...values, ownerId: personOf(viewer) }).returning().get();
         audit(tx, viewer, { action: "created", model: "Order", record: made.id });
         return made;
       });
@@ -55198,7 +55225,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/generated/follow-up.import.server.ts": "747d6cf1 generated",
   "src/generated/follow-up.import.ts": "39b736bf generated",
   "src/generated/follow-up.schema.ts": "a4599e2b generated",
-  "src/generated/follow-up.server.ts": "7c4efb0e generated",
+  "src/generated/follow-up.server.ts": "3f9666d3 generated",
   "src/generated/follow-up.ts": "6e9b86d6 generated",
   "src/generated/hooks.ts": "c1f38e86 generated",
   "src/generated/my-time.ts": "c315432b generated",
@@ -55207,7 +55234,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/generated/order.import.server.ts": "afc9f15e generated",
   "src/generated/order.import.ts": "efdb6114 generated",
   "src/generated/order.schema.ts": "0a39b791 generated",
-  "src/generated/order.server.ts": "00113706 generated",
+  "src/generated/order.server.ts": "6a36c8af generated",
   "src/generated/order.ts": "739e757f generated",
   "src/generated/pages.ts": "93284445 generated",
   "src/generated/roles.ts": "1cc6979a generated",
@@ -60532,6 +60559,15 @@ import "./timers.server";
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 /**
+ * A formula default (\`default: TODAY()\`) for a field the values leave out: a form fills it in before
+ * it is sent, but a visitor's form that does not ask it, a field the app fills, an action that adds
+ * a record and custom code leave it to the server. A value given, null too, is kept.
+ */
+function withFormulaDefaults<T extends Record<string, unknown>>(values: T): T {
+  return { ...values, issuedOn: values.issuedOn === undefined ? invoiceDefaults.issuedOn(values) : values.issuedOn, dueOn: values.dueOn === undefined ? invoiceDefaults.dueOn(values) : values.dueOn };
+}
+
+/**
  * What points to a invoice (docs/design/delete-together.md): the records that would go with it
  * to the trash, by model, and those that would show no invoice; nothing when nothing does.
  */
@@ -60648,7 +60684,7 @@ export const invoiceData = {
    * references, its rules, its capacity and time. create() and an action that adds one call it.
    */
   checkCreate(_tx: Tx, viewer: Viewer | null, given: InvoiceSettable): InvoiceSettable {
-    let values = given;
+    let values = withFormulaDefaults(given);
     values = checkFiles(viewer, values);
     checkReferences(viewer, values);
 
@@ -61000,7 +61036,7 @@ export const invoiceData = {
       // The checks and the insert in one transaction.
       row = db.transaction((tx) => {
         values = invoiceData.checkCreate(tx, viewer, values);
-        const made = tx.insert(schema.invoices).values({ ...values, ownerId: personOf(viewer), issuedOn: values.issuedOn === undefined ? invoiceDefaults.issuedOn(values) : values.issuedOn, dueOn: values.dueOn === undefined ? invoiceDefaults.dueOn(values) : values.dueOn }).returning().get();
+        const made = tx.insert(schema.invoices).values({ ...values, ownerId: personOf(viewer) }).returning().get();
         audit(tx, viewer, { action: "created", model: "Invoice", record: made.id });
         outgoing(tx, viewer, "Invoice", "created", made);
         return made;
@@ -65452,7 +65488,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/generated/invoice.import.server.ts": "5d63bdd7 generated",
   "src/generated/invoice.import.ts": "92bad053 generated",
   "src/generated/invoice.schema.ts": "fc241430 generated",
-  "src/generated/invoice.server.ts": "ec12a44d generated",
+  "src/generated/invoice.server.ts": "e7008736 generated",
   "src/generated/invoice.ts": "99ac7b80 generated",
   "src/generated/my-time.ts": "c315432b generated",
   "src/generated/outgoing.server.ts": "8a4f3007 generated",
@@ -68642,6 +68678,15 @@ import { cateringEnquiryDefaults, withCateringEnquiryFormulas } from "./catering
 /** A transaction, as the write checks and the group's functions are called inside one. */
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
+/**
+ * A formula default (\`default: TODAY()\`) for a field the values leave out: a form fills it in before
+ * it is sent, but a visitor's form that does not ask it, a field the app fills, an action that adds
+ * a record and custom code leave it to the server. A value given, null too, is kept.
+ */
+function withFormulaDefaults<T extends Record<string, unknown>>(values: T): T {
+  return { ...values, followUpOn: values.followUpOn === undefined ? cateringEnquiryDefaults.followUpOn(values) : values.followUpOn };
+}
+
 /** Who may read, create, change and delete catering enquiries. */
 export const cateringEnquiryAccess: ModelAccess = {
   read: { public: false, roles: ["admin", "staff"], owner: false },
@@ -68670,7 +68715,7 @@ export const cateringEnquiryData = {
    * references, its rules, its capacity and time. create() and an action that adds one call it.
    */
   checkCreate(_tx: Tx, _viewer: Viewer | null, given: CateringEnquirySettable): CateringEnquirySettable {
-    const values = given;
+    const values = withFormulaDefaults(given);
 
     return values;
   },
@@ -68778,7 +68823,7 @@ export const cateringEnquiryData = {
       // The checks and the insert in one transaction.
       row = db.transaction((tx) => {
         values = cateringEnquiryData.checkCreate(tx, viewer, values);
-        const made = tx.insert(schema.cateringEnquiries).values({ ...values, ownerId: personOf(viewer), followUpOn: values.followUpOn === undefined ? cateringEnquiryDefaults.followUpOn(values) : values.followUpOn }).returning().get();
+        const made = tx.insert(schema.cateringEnquiries).values({ ...values, ownerId: personOf(viewer) }).returning().get();
         audit(tx, viewer, { action: "created", model: "CateringEnquiry", record: made.id });
         return made;
       });
@@ -76919,7 +76964,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/generated/catering-enquiry.import.server.ts": "60679c14 generated",
   "src/generated/catering-enquiry.import.ts": "2cc61e53 generated",
   "src/generated/catering-enquiry.schema.ts": "e10bf0d6 generated",
-  "src/generated/catering-enquiry.server.ts": "8ecb1d22 generated",
+  "src/generated/catering-enquiry.server.ts": "28b3a05f generated",
   "src/generated/catering-enquiry.ts": "f42fe4ed generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/dev-door.server.ts": "a88b402e generated",
@@ -84813,6 +84858,15 @@ import { enquiryDefaults, withEnquiryFormulas } from "./enquiry.formulas";
 /** A transaction, as the write checks and the group's functions are called inside one. */
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
+/**
+ * A formula default (\`default: TODAY()\`) for a field the values leave out: a form fills it in before
+ * it is sent, but a visitor's form that does not ask it, a field the app fills, an action that adds
+ * a record and custom code leave it to the server. A value given, null too, is kept.
+ */
+function withFormulaDefaults<T extends Record<string, unknown>>(values: T): T {
+  return { ...values, followUpOn: values.followUpOn === undefined ? enquiryDefaults.followUpOn(values) : values.followUpOn };
+}
+
 /** The reference of an add or a change that names no record, by its label, once the database refused one. */
 function missingReference(values: Record<string, unknown>): string | undefined {
   if (values.jobId != null && !db.select({ id: schema.jobs.id }).from(schema.jobs).where(eq(schema.jobs.id, values.jobId as never)).get()) return "Job";
@@ -84865,7 +84919,7 @@ export const enquiryData = {
    * references, its rules, its capacity and time. create() and an action that adds one call it.
    */
   checkCreate(_tx: Tx, viewer: Viewer | null, given: EnquirySettable): EnquirySettable {
-    const values = given;
+    const values = withFormulaDefaults(given);
     checkReferences(viewer, values);
 
     return values;
@@ -84979,7 +85033,7 @@ export const enquiryData = {
       // The checks and the insert in one transaction.
       row = db.transaction((tx) => {
         values = enquiryData.checkCreate(tx, viewer, values);
-        const made = tx.insert(schema.enquiries).values({ ...values, ownerId: personOf(viewer), followUpOn: values.followUpOn === undefined ? enquiryDefaults.followUpOn(values) : values.followUpOn }).returning().get();
+        const made = tx.insert(schema.enquiries).values({ ...values, ownerId: personOf(viewer) }).returning().get();
         audit(tx, viewer, { action: "created", model: "Enquiry", record: made.id });
         return made;
       });
@@ -89236,7 +89290,7 @@ exports[`../../../examples/painter/smithable.yml > the generated files are as re
   "src/generated/enquiry.import.server.ts": "0d228f50 generated",
   "src/generated/enquiry.import.ts": "913f16b7 generated",
   "src/generated/enquiry.schema.ts": "0fcaedbc generated",
-  "src/generated/enquiry.server.ts": "df5fcecb generated",
+  "src/generated/enquiry.server.ts": "9e23418c generated",
   "src/generated/enquiry.ts": "26b04121 generated",
   "src/generated/hooks.ts": "8a1f7baf generated",
   "src/generated/job.import.server.ts": "1cd5fe7e generated",
@@ -91005,6 +91059,15 @@ import { itemDefaults, withItemFormulas } from "./item.formulas";
 /** A transaction, as the write checks and the group's functions are called inside one. */
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
+/**
+ * A formula default (\`default: TODAY()\`) for a field the values leave out: a form fills it in before
+ * it is sent, but a visitor's form that does not ask it, a field the app fills, an action that adds
+ * a record and custom code leave it to the server. A value given, null too, is kept.
+ */
+function withFormulaDefaults<T extends Record<string, unknown>>(values: T): T {
+  return { ...values, addedOn: values.addedOn === undefined ? itemDefaults.addedOn(values) : values.addedOn };
+}
+
 /** Who may read, create, change and delete items. */
 export const itemAccess: ModelAccess = {
   read: { public: true, roles: ["admin"], owner: true },
@@ -91063,7 +91126,7 @@ export const itemData = {
    * references, its rules, its capacity and time. create() and an action that adds one call it.
    */
   checkCreate(_tx: Tx, _viewer: Viewer | null, given: ItemSettable): ItemSettable {
-    const values = given;
+    const values = withFormulaDefaults(given);
 
     return values;
   },
@@ -91364,7 +91427,7 @@ export const itemData = {
       // The checks and the insert in one transaction.
       row = db.transaction((tx) => {
         values = itemData.checkCreate(tx, viewer, values);
-        const made = tx.insert(schema.items).values({ ...values, ownerId: personOf(viewer), addedOn: values.addedOn === undefined ? itemDefaults.addedOn(values) : values.addedOn }).returning().get();
+        const made = tx.insert(schema.items).values({ ...values, ownerId: personOf(viewer) }).returning().get();
         audit(tx, viewer, { action: "created", model: "Item", record: made.id });
         return made;
       });
@@ -93352,7 +93415,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/generated/item.import.server.ts": "0fe6563a generated",
   "src/generated/item.import.ts": "0cb7ece1 generated",
   "src/generated/item.schema.ts": "0eb30681 generated",
-  "src/generated/item.server.ts": "9869d0a0 generated",
+  "src/generated/item.server.ts": "052c2de1 generated",
   "src/generated/item.ts": "380eeeef generated",
   "src/generated/my-time.ts": "c315432b generated",
   "src/generated/pages.ts": "e4262913 generated",

@@ -35,7 +35,7 @@ public: { pages: [enquiries], create: [Enquiry] }
   ir,
 ).auth as AuthIR;
 
-test("a formula default is filled on the server for a field the values leave out, a visitor's form too (T1366)", () => {
+test("a formula default is filled by checkCreate, so every way of making a record gets it, a visitor's form too (T1366)", () => {
   const data =
     generateApp(ir, { smithableVersion: "0.0.0", auth, content: emptyContent() }).find(
       (f) => f.path === "src/generated/enquiry.server.ts",
@@ -43,7 +43,9 @@ test("a formula default is filled on the server for a field the values leave out
   expect(data).toContain(
     'import { enquiryDefaults, withEnquiryFormulas } from "./enquiry.formulas";',
   );
-  // What the app fills and what a form may leave out alike; a value given is kept.
+  // checkCreate is what create(), actions, splits, merges and order lines all call.
+  expect(data).toMatch(/values = withFormulaDefaults\(/);
+  // What the app fills and what a form may leave out alike; a value given, null too, is kept.
   expect(data).toContain(
     "followUpOn: values.followUpOn === undefined ? enquiryDefaults.followUpOn(values) : values.followUpOn",
   );
