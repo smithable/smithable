@@ -242,3 +242,44 @@ test("setView sets cards with a cover and open, and a table takes them away", ()
   expect(last.ok && last.files.ux).toContain("view: cards");
   expect(last.ok && last.files.ux).not.toMatch(/cover|open/);
 });
+
+test("a picture field changed to another type takes its cover along, and open with the last picture", () => {
+  const files = { spec: pictured, ux: "smithableUx: 0.1\n" };
+  const cards = applyOperation(files, "setView", {
+    page: "projects",
+    view: "cards",
+    cover: "photos",
+    open: "picture",
+  });
+  if (!cards.ok) throw new Error(cards.message);
+  // Still a picture field (pictures to picture): the cover stays.
+  const single = applyOperation(cards.files, "changeField", {
+    model: "Project",
+    field: "photos",
+    type: "picture",
+  });
+  expect(single.ok && single.files.ux).toMatch(/cover: photos\n\s+open: picture/);
+  const files2 = applyOperation(cards.files, "changeField", {
+    model: "Project",
+    field: "photos",
+    type: "files",
+  });
+  expect(files2.ok && files2.files.ux).toContain("open: picture");
+  expect(files2.ok && files2.files.ux).not.toContain("cover");
+  if (!files2.ok) return;
+  const last = applyOperation(files2.files, "changeField", {
+    model: "Project",
+    field: "before",
+    type: "file",
+  });
+  expect(last.ok && last.files.ux).toContain("view: cards");
+  expect(last.ok && last.files.ux).not.toMatch(/cover|open/);
+  // Each step leaves a ux file that validates.
+  if (last.ok)
+    expect(
+      validateUx(
+        { path: "smithable.ux.yml", text: last.files.ux ?? "" },
+        validateSpec({ path: "smithable.yml", text: last.files.spec }).ir as SpecIR,
+      ).diagnostics,
+    ).toEqual([]);
+});
