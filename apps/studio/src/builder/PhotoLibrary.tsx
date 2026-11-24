@@ -4,6 +4,7 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   deleteFile,
+  failedBecause,
   grantFile,
   type Library,
   readLibrary,
@@ -142,7 +143,14 @@ export function PhotoLibrary({
                       className="h-16 w-full rounded object-cover"
                     />
                   ) : (
-                    <span className="flex h-16 items-center justify-center text-xs text-quiet">
+                    <span
+                      className="flex h-16 items-center justify-center text-xs text-quiet"
+                      title={
+                        typeof file !== "string" && file.state === "failed"
+                          ? failedBecause(file.error)
+                          : undefined
+                      }
+                    >
                       {typeof file !== "string" && file.state === "failed"
                         ? "Could not be used"
                         : typeof file !== "string" && file.kind === "video"

@@ -1,6 +1,7 @@
 import { expect, test } from "vitest";
 import {
   deleteFile,
+  failedBecause,
   grantFile,
   readLibrary,
   storedFile,
@@ -75,10 +76,14 @@ test("a new file is asked for until it is ready, failed, or the wait is over", a
   expect(ready).toMatchObject({ id: ID, state: "ready" });
   const failed = await untilReady(ID, {
     wait: async () => {},
-    fetcher: async () =>
-      reply(200, { id: ID, kind: "image", state: "failed", error: "Not a picture." }),
+    fetcher: async () => reply(200, { id: ID, kind: "image", state: "failed", error: "heic" }),
   });
-  expect(failed).toEqual({ why: "Not a picture." });
+  expect(failed).toEqual({
+    why: "HEIC photos cannot be used yet. Save it as JPEG and upload it again.",
+  });
+  // A code Studio does not know, or none, is the general sentence; never the code itself.
+  expect(failedBecause("toString")).toBe("This file could not be used. Try another.");
+  expect(failedBecause(undefined)).toBe(failedBecause("failed"));
   let asked = 0;
   const late = await untilReady(ID, {
     every: 10,

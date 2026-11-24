@@ -105,6 +105,23 @@ export async function uploadFile(
   }
 }
 
+// The service names why a file failed with a short code (never its tools' output); Studio says it.
+const FAILED: Record<string, string> = {
+  "too-large": "This file is too large.",
+  aborted: "The upload was cut off. Try again.",
+  heic: "HEIC photos cannot be used yet. Save it as JPEG and upload it again.",
+  "not-a-picture": "This file is not a picture.",
+  cancelled: "The upload was cancelled.",
+  lost: "The file was lost while it was made ready. Upload it again.",
+  unreadable: "This picture could not be read. Try another.",
+  "too-many-pixels": "This picture has too many pixels. Try a smaller one.",
+  stuck: "This file took too long to make ready. Upload it again.",
+};
+/** The sentence for a failed file's code; any other code is the general one. */
+export const failedBecause = (code: string | undefined) =>
+  (code && Object.hasOwn(FAILED, code) ? FAILED[code] : undefined) ??
+  "This file could not be used. Try another.";
+
 /** One stored file's state now, or undefined when the service does not answer for it. */
 export async function readFile(id: string, fetcher: Fetch = fetch) {
   if (!ASSET_ID.test(id)) return;
@@ -130,8 +147,7 @@ export async function untilReady(
   for (let waited = 0; waited <= within; waited += every) {
     const file = await readFile(id, fetcher);
     if (file?.state === "ready") return file;
-    if (file?.state === "failed")
-      return { why: file.error ?? "This file could not be made ready. Try another." };
+    if (file?.state === "failed") return { why: failedBecause(file.error) };
     await wait(every);
   }
   return { why: "The file is still being made ready. It will be in Photos and videos when it is." };
