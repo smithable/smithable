@@ -1,6 +1,7 @@
 import { expect, test } from "vitest";
 import { applyOperation } from "./apply.js";
 import type { SpecIR } from "./ir.js";
+import { MEDIA_LOOKS, SECTION_LOOKS } from "./section-looks.js";
 import { validateSpec } from "./spec.js";
 import { themeNamed } from "./theme.js";
 import { validateUx } from "./ux.js";
@@ -342,4 +343,12 @@ test("a band is checked with the brand's colours when the ux file names a brand 
     );
   expect(ux("").diagnostics.map((d) => d.code)).toEqual(["band-contrast"]);
   expect(ux(', brand: { primary: "#1f3a2e" }').diagnostics).toEqual([]);
+});
+
+test("the shared media looks never take a key a section sets itself (the hero's image side)", () => {
+  // The hero and mediaText spread MEDIA_LOOKS beside their own keys; one key in both would let the
+  // later one win without a word.
+  for (const looks of [SECTION_LOOKS.hero, SECTION_LOOKS.mediaText])
+    expect(looks?.image).toEqual(expect.arrayContaining(["left", "right"]));
+  expect(Object.keys(MEDIA_LOOKS)).not.toContain("image");
 });

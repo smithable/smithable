@@ -199,6 +199,8 @@ export interface MediaSync {
   removed: string[];
   /** Renditions in use the service did not give, which show the reserved frame. */
   missing: string[];
+  /** Renditions that came wrong or could not be placed, with why; counted missing too. */
+  faults: string[];
 }
 
 /**
@@ -212,7 +214,7 @@ export async function syncMedia(
   source: MediaSource,
   { recheck = false }: { recheck?: boolean } = {},
 ): Promise<MediaSync> {
-  const done: MediaSync = { written: [], removed: [], missing: [] };
+  const done: MediaSync = { written: [], removed: [], missing: [], faults: [] };
   const cached = cachedMedia(dir, recheck);
   const records = new Map<string, Promise<Record<string, string> | undefined>>();
   const record = (asset: string) => {
@@ -248,10 +250,17 @@ export async function syncMedia(
         done.missing.push(`${asset}/${variant}`);
         continue;
       }
-      if (got.sha256 !== hash || sha256(got.bytes) !== hash)
-        throw new Error(`${asset}/${variant} came with another hash than its record's.`);
-      placeMedia(dir, asset, variant, got.bytes, hash);
-      done.written.push(`${asset}/${variant}`);
+      // One rendition that is wrong stops only itself; a service that cannot answer (a throw from
+      // the source) still ends the sync, so it costs one timeout and not one per picture.
+      try {
+        if (got.sha256 !== hash || sha256(got.bytes) !== hash)
+          throw new Error("it came with another hash than its record's");
+        placeMedia(dir, asset, variant, got.bytes, hash);
+        done.written.push(`${asset}/${variant}`);
+      } catch (error) {
+        done.missing.push(`${asset}/${variant}`);
+        done.faults.push(`${asset}/${variant}: ${(error as Error).message}`);
+      }
     }
   }
   return done;
@@ -269,7 +278,8 @@ export function mediaSyncer(dir: string, source: MediaSource, say: (line: string
   const run = async (asked: boolean): Promise<void> => {
     const recheck = asked || owed;
     try {
-      const { missing } = await syncMedia(dir, source, { recheck });
+      const { missing, faults } = await syncMedia(dir, source, { recheck });
+      for (const fault of faults) say(`A stored picture was not placed: ${fault}.\n`);
       owed = false;
       if (missing.length) say(`Stored pictures not available: ${missing.join(", ")}.\n`);
     } catch (error) {
