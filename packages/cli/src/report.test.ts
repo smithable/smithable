@@ -11,6 +11,7 @@ import {
   sendFeedback,
   sendReport,
   setReportChoice,
+  specFilesOf,
   traceIdOf,
 } from "./report.js";
 import { tempDir } from "./test-dir.js";
@@ -182,6 +183,20 @@ test("addresses are left out of every file, the error, the log and the arguments
   expect(report?.log).toEqual(["sent to (an email address)"]);
   expect(report?.args.text).toBe("Write to (an email address)");
   expect(JSON.stringify(report)).not.toMatch(/acme\.example/);
+});
+
+test("a long word with no address is read once, not from every place in it (T1123)", () => {
+  // Each file is read up to a megabyte: two words of 400 KiB.
+  const word = "x".repeat(400 * 1024);
+  writeFileSync(
+    join(dir, "smithable.yml"),
+    `smithable: 0.1\napp: { name: Shop }\n# ${word}\n# ${word}.a@acme.example and ops@acme.example\n`,
+  );
+  const started = performance.now();
+  const files = specFilesOf(dir);
+  expect(performance.now() - started).toBeLessThan(2000);
+  expect(files["smithable.yml"]).toContain("(an email address) and (an email address)");
+  expect(JSON.stringify(files)).not.toMatch(/acme\.example/);
 });
 
 test("feedback: the person's words, and only what they ticked; an issue or a mail without the service", async () => {
