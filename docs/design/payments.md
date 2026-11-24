@@ -233,7 +233,9 @@ payments: { provider: mollie }       # stripe | mollie | fake
    token is compared by its hash in constant time. The amount bound is the one the record asks
    for when the mail is written, worked-out amounts included; Pay checks it again in the write
    transaction that makes the pending Payment, and a link whose record no longer fits or asks
-   for another amount says it no longer works. Trashing or deleting the record ends its links.
+   for another amount says it no longer works, which tells whoever holds it that the token was
+   real; that is by design, since only a holder of the token reaches that page, and a stranger
+   guessing tokens still gets the 404. Trashing or deleting the record ends its links.
    The entry a `{pay}` pays through is found by the spec's shape alone, the one entry that pays
    an existing record of the mail's model, and `validate --explain` names it.
 2. **The server function.** A same-origin call, checked as every server function is. It reads

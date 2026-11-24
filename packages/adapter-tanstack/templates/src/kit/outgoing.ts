@@ -30,6 +30,19 @@ function same(a: unknown, b: unknown): boolean {
   return a instanceof Date && b instanceof Date ? a.getTime() === b.getTime() : a === b;
 }
 
+/**
+ * A sent mail's text as the outbox keeps it: each view or pay link's token cut, as the request
+ * log cuts it (trace.server.ts), so the stored row and its backups open no record (T1323).
+ */
+export function withoutTokens(text: string): string {
+  return text.replace(
+    // Any 43 characters after /d/ or /p/, whatever follows: a token is never left whole, and a
+    // stranger's link cut in a delivered mail's stored copy costs nothing.
+    /\/([dp])\/[A-Za-z0-9_-]{43}/g,
+    (_, kind: string) => `/${kind}/…`,
+  );
+}
+
 /** The pause before the next try: a minute, then doubling, at most three hours. */
 export function pauseAfter(tries: number): number {
   return Math.min(MINUTE * 2 ** Math.max(tries - 1, 0), 3 * 60 * MINUTE);

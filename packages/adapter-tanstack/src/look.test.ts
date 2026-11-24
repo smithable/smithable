@@ -11,6 +11,7 @@ import {
 } from "@smithable/core";
 import { expect, test } from "vitest";
 import { generateApp } from "./generate.js";
+import { TEMPLATES } from "./templates.gen.js";
 
 const ir = validateSpec({
   path: "smithable.yml",
@@ -90,6 +91,27 @@ test("without any of it the routes are as before", () => {
   expect(form).not.toContain("control=");
   expect(plain.find((f) => f.path === "src/routes/customers/index.tsx")?.content).not.toContain(
     "sortRows",
+  );
+});
+
+test("linked card images share a clipped, input-aware motion default", () => {
+  const styles = file("src/styles.css");
+  expect(styles).toMatch(
+    /@media \(prefers-reduced-motion: no-preference\) and \(any-hover: hover\) and \(any-pointer: fine\)\s*\{\s*\[data-link-card\] \[data-link-card-image\] \{\s*transition: scale 300ms ease;/,
+  );
+  expect(styles).toContain(
+    "[data-link-card]:is(:hover, :focus-visible, :has(a:focus-visible)) [data-link-card-image]",
+  );
+  expect(styles).toContain("scale: 1.04");
+
+  const landing = TEMPLATES["src/kit/Landing.tsx"];
+  expect(landing).toContain('data-link-card={s.image ? "" : undefined}');
+  expect(landing).toContain('data-link-card={card.href && card.picture ? "" : undefined}');
+  expect(landing).toContain('<div className="shrink-0 overflow-hidden">{image}</div>');
+  const articles = TEMPLATES["src/kit/Articles.tsx"];
+  expect(articles).toContain('data-link-card={item.picture ? "" : undefined}');
+  expect(articles).toMatch(
+    /<div className="overflow-hidden">\s*<AiMarked[\s\S]*data-link-card-image=""/,
   );
 });
 

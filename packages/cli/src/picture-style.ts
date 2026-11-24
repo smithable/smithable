@@ -26,6 +26,8 @@ import { readTreeOrNone, treeBytes, treeText } from "./secrets.js";
 
 const TIMEOUT = 20_000;
 const MAX_PICTURE = 2_000_000;
+/** A project's own picture is read up to what Studio serves and the ink-wash worker takes (T1123). */
+const OWN_PICTURE = 32 * 1024 * 1024;
 
 /** A style in the library's index: its id, whether an image model makes it, its words. */
 export interface LibraryStyle {
@@ -274,7 +276,9 @@ export function planStyle(
     if (role === "logo") continue;
     const record = records[file];
     const bytes =
-      record?.sha256 && record.entry ? readTreeOrNone(join(imagesDir(dir), file)) : undefined;
+      record?.sha256 && record.entry
+        ? readTreeOrNone(join(imagesDir(dir), file), OWN_PICTURE)
+        : undefined;
     if (!bytes || !record?.entry || sha256(bytes) !== record.sha256) {
       plan.kept.push(file);
       continue;
@@ -417,7 +421,9 @@ export async function placeStyle(
   for (const write of plan.writes) {
     const old = join(dir, "public", "images", write.file);
     const original =
-      tint && planned[write.file] === write.entry.sha256 ? readTreeOrNone(old) : undefined;
+      tint && planned[write.file] === write.entry.sha256
+        ? readTreeOrNone(old, OWN_PICTURE)
+        : undefined;
     let bytes =
       original && sha256(original) === write.entry.sha256
         ? original
@@ -442,7 +448,11 @@ export async function placeStyle(
       if (planned[write.file] !== write.record.sha256) {
         files.push({ path: `public/images/${write.file}`, bytes });
         if (roleOf(write.file) === "sample" && existsSync(old))
-          swaps.push({ from: treeBytes(old), to: bytes, generated: !!write.record.generated });
+          swaps.push({
+            from: treeBytes(old, OWN_PICTURE),
+            to: bytes,
+            generated: !!write.record.generated,
+          });
       }
     }
   }
