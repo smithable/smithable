@@ -4188,9 +4188,14 @@ async function kioskScheduleFlow(dir, base) {
     await page.getByText("Catering Test", { exact: true }).first().waitFor();
     const [enquiry] = query(
       dir,
-      "SELECT id, status FROM catering_enquiries WHERE name = 'Catering Test'",
+      "SELECT id, status, follow_up_on FROM catering_enquiries WHERE name = 'Catering Test'",
     );
     if (enquiry?.status !== "new") throw new Error("the catering enquiry did not arrive as new");
+    // Its follow-up date's default, TODAY(), is filled by the server: the visitor's form does not ask it (T1366).
+    if (enquiry.follow_up_on !== "2026-11-22")
+      throw new Error(
+        `the visitor's enquiry has no follow-up date of today: ${enquiry.follow_up_on}`,
+      );
     await open(page, `${base}/enquiries/${enquiry.id}`);
     const contacted = page.getByRole("button", { name: "Mark contacted", exact: true });
     await contacted.click();

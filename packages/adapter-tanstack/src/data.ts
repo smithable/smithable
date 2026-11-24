@@ -1170,9 +1170,18 @@ export function dataModule(
   // own transaction, so two records made at once never share one and a number is never given twice.
   const ownerValue = creatorOwned(model) ? "personOf(viewer)" : `ownerFor(viewer, values.${owner})`;
   const counted = sequenceEntries(model, auth, n.table, ownerValue);
-  const set = [...byMe, ...counted].map((e) => `, ${e}`).join("");
+  // A formula default (`default: TODAY()`) for a field the values leave out: a form fills it in
+  // before it is sent, but a form that does not ask for it (a visitor's, or one whose field the app
+  // fills) leaves it to the server.
+  const formulaDefaults = model.fields
+    .filter((f) => f.defaultFormula && !f.formula)
+    .map(
+      (f) =>
+        `${dataKey(f)}: values.${dataKey(f)} === undefined ? ${defaultsName(model)}.${f.name}(values) : values.${dataKey(f)}`,
+    );
+  const set = [...byMe, ...formulaDefaults, ...counted].map((e) => `, ${e}`).join("");
   const given = !signedIn
-    ? counted.length
+    ? set
       ? `{ ...values${set} }`
       : "values"
     : creatorOwned(model)
@@ -1995,7 +2004,7 @@ ${occ ? occupiesImports() : ""}${unmerge ? unmergeImports(ir, model, t, sending)
   .join(
     "",
   )}import { ${[...(labelledKinds.has(model) ? [n.ui] : []), ...(sided ? [n.ours] : [])].map((x) => `${x}, `).join("")}type ${n.settableValues} } from "./${kebab(model.name)}";
-${formulas ? `import { ${withFormulasName(model)} } from "./${kebab(model.name)}.formulas";\n` : ""}${counted.length ? 'import { nextInSequence } from "#/kit/sequence.server";\n' : ""}${trashing ? 'import "./trash.server";\n' : ""}${ir.timers.length ? 'import "./timers.server";\n' : ""}
+${formulas ? `import { ${[...(model.fields.some((f) => f.defaultFormula && !f.formula) ? [defaultsName(model)] : []), withFormulasName(model)].join(", ")} } from "./${kebab(model.name)}.formulas";\n` : ""}${counted.length ? 'import { nextInSequence } from "#/kit/sequence.server";\n' : ""}${trashing ? 'import "./trash.server";\n' : ""}${ir.timers.length ? 'import "./timers.server";\n' : ""}
 /** A transaction, as the write checks and the group's functions are called inside one. */
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 ${usedBy}${missingReference}${rootInTrash}${unmerge}${occ ? occupiesHelpers(model, ir, occ) : ""}
