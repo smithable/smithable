@@ -332,6 +332,14 @@ describe("what a model is offered", () => {
     expect(picture).toContain("setSectionPicture");
     expect(picture).not.toContain('"asset"');
     expect(picture).not.toContain('"rendition"');
+    // An argument left out is not required of the model either.
+    expect(
+      plainSchema({
+        type: "object",
+        required: ["a", "b"],
+        properties: { a: { type: "string" }, b: { type: "string", "x-host": true } },
+      }),
+    ).toEqual({ type: "object", required: ["a"], properties: { a: { type: "string" } } });
   });
 
   test("the strict schema holds each operation's own arguments; the loose one only the names", () => {

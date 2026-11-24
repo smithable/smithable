@@ -653,10 +653,6 @@ const setSectionPicture: Operation<{
       throw new OperationError(
         `"${asset}" is not a stored file's id: m_ and 26 letters and digits.`,
       );
-    if (asset !== undefined && !rendition)
-      throw new OperationError(
-        "A stored file is placed by the hosted service, which knows its sizes: choose it in Photos and videos.",
-      );
     if (file !== undefined && rendition)
       throw new OperationError("A file under public/images/ has no stored renditions.");
     const made = rendition && renditionOf(rendition);
@@ -675,6 +671,12 @@ const setSectionPicture: Operation<{
       (asset !== undefined
         ? (before as { asset?: unknown }).asset === asset
         : (before as { src?: unknown }).src === file);
+    // A new stored file comes with the sizes the host read; the one already there keeps its own
+    // when only its words change (Studio's Save).
+    if (asset !== undefined && !rendition && !same)
+      throw new OperationError(
+        "A stored file is placed by the hosted service, which knows its sizes: choose it in Photos and videos.",
+      );
     // A stored file's sizes are the record's at each setting: one the service added since reaches it.
     const image: Record<string, YamlValue> = same
       ? { ...(before as Record<string, YamlValue>), alt: text, ...made }

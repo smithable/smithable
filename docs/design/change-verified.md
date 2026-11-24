@@ -121,7 +121,7 @@ before side and the after side are one object read twice. `consequences` is a li
 
 ```ts
 interface Consequence {
-  about: "records" | "access" | "custom-code" | "outside";
+  about: "records" | "access" | "custom-code" | "outside" | "media";
   says: string;               // "4 of 31 orders lose their discount code"
   undo: "full" | "data-snapshot" | "none";
 }
@@ -136,6 +136,8 @@ interface Consequence {
   from three operations to every effect through the index's `findImplementation`).
 - **outside**: what undo cannot take back: mail or calls that start or stop firing, a timer
   newly due, an integration's settings; always `undo: none`.
+- **media**: each place that loses a stored file (media-storage.md §2), from the operation's
+  `lostMedia`: the photo library keeps the file, so `undo: full`.
 
 Core makes records (without counts), access and custom code from the files and effects; the
 host adds counts and outside. A destructive change still asks once, now with this list.

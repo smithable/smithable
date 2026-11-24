@@ -207,12 +207,18 @@ export function promptFor(
  */
 export function plainSchema(schema: unknown): unknown {
   if (Array.isArray(schema)) return schema.map(plainSchema);
-  if (schema && typeof schema === "object")
-    return Object.fromEntries(
+  if (schema && typeof schema === "object") {
+    const plain: Record<string, unknown> = Object.fromEntries(
       Object.entries(schema as Record<string, unknown>)
         .filter(([key, value]) => !key.startsWith("x-") && !notForModels(value))
         .map(([key, value]) => [key, plainSchema(value)]),
     );
+    // An argument left out is not required of the model either.
+    const properties = plain.properties as Record<string, unknown> | undefined;
+    if (properties && Array.isArray(plain.required))
+      plain.required = plain.required.filter((name) => name in properties);
+    return plain;
+  }
   return schema;
 }
 

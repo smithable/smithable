@@ -6,6 +6,7 @@ import { pictureAt, pictureFile, validateContent } from "./content.js";
 import { lostMedia, mediaInUse, slotName } from "./media.js";
 import { refusedArgs } from "./operation.js";
 import { validateSpec } from "./spec.js";
+import { verificationBefore } from "./verification.js";
 
 const ID = "m_01hz8k3q4r5s6t7v8w9x0y1z2a";
 const OTHER = "m_7zzzzzzzzzzzzzzzzzzzzzzzzz";
@@ -165,4 +166,43 @@ test("a model never names a stored file, and nobody but the host gives its sizes
     refusedArgs(op, { ...base, asset: ID, rendition: { width: 960 } }, "host"),
   ).toBeUndefined();
   expect(refusedArgs(op, { ...base, src: "images/a.webp" }, "model")).toBeUndefined();
+});
+
+test("the stored file already there takes new words without sizes, and a proposal shows each loss", () => {
+  const stored = place({ asset: ID, alt: "A roof", rendition: { width: 1600, widths: [480] } });
+  if (!stored.ok) throw new Error(stored.message);
+  const words = applyOperation(stored.files, "setSectionPicture", {
+    page: "home",
+    section: "hero",
+    asset: ID,
+    alt: "A slate roof",
+  });
+  if (!words.ok) throw new Error(words.message);
+  expect(words.files.content).toContain("alt: A slate roof");
+  expect(words.files.content).toContain("width: 1600");
+  expect(words.files.content).toContain("widths: [480]");
+  expect(words.destructive).toBe(false);
+  const another = applyOperation(stored.files, "setSectionPicture", {
+    page: "home",
+    section: "hero",
+    asset: OTHER,
+    alt: "A",
+  });
+  expect(another.ok).toBe(false);
+
+  const removed = applyOperations(stored.files, [
+    { op: "removeSection", args: { page: "home", section: "hero" } },
+  ]);
+  const v = verificationBefore(stored.files, removed, {
+    base: "abc",
+    environment: { where: "studio", engine: "0.0.0" },
+    depth: "change",
+  });
+  expect(v.consequences.filter((c) => c.about === "media")).toEqual([
+    {
+      about: "media",
+      says: "the picture of hero on home loses its stored file; the photo library keeps it.",
+      undo: "full",
+    },
+  ]);
 });
