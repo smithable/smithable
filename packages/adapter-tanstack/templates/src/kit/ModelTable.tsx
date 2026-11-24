@@ -262,6 +262,28 @@ export function ModelTable<R extends Row>({
           get: (row) => (row as Record<string, unknown>)[fallback],
         },
       ];
+  // Before the empty list's early return: React needs the same hooks on every render.
+  const pictureField = ui.fields.find((f) => f.kind === "picture" || f.kind === "pictures");
+  // Cards show a picture on top when the model has pictures and a record shown has one: a
+  // record without one gets the placeholder so the cards stay even, and a page of records
+  // without any shows text cards, never a row of empty slots.
+  const coverField = (cover && ui.fields.find((f) => f.name === cover)) || pictureField;
+  const hasPicture = (row: R) =>
+    coverField !== undefined && formatValue(coverField, displayValue(coverField, row), app) !== "—";
+  const cardPicture = view === "cards" && shown.some(hasPicture) ? coverField : undefined;
+  // Pictures that open step through those of the records shown, in the list's order; the record
+  // shown gone from the list (deleted, filtered out), the dialog closes and shows nothing meanwhile.
+  const opening = opens === "picture" && cardPicture !== undefined;
+  // The layout follows the choice, not what the filters leave: two across even with no picture.
+  const wide = view === "cards" && opens === "picture";
+  const covered = opening ? shown.filter(hasPicture) : [];
+  const shownAt = covered.findIndex((row) => row.id === shownId);
+  useEffect(() => {
+    if (shownAt >= 0) return;
+    dialog.current?.close();
+    // The dialog may be gone already (no picture left), so no close event clears it.
+    setShownId(undefined);
+  }, [shownAt]);
   if (rows.length === 0) {
     return (
       <Card
@@ -323,7 +345,6 @@ export function ModelTable<R extends Row>({
   const date = others.find((f) => f.kind === "date" || f.kind === "datetime");
   const secondary = others.find((f) => f !== status && f !== amount && f !== date);
   const description = ui.fields.find((f) => f.name === ui.descriptionField);
-  const pictureField = ui.fields.find((f) => f.kind === "picture" || f.kind === "pictures");
   // A picture's address; for several pictures, the cover's (the first). With its smaller copies
   // as a srcset, so a thumbnail or a card loads no more than it shows.
   const pictureAt = (field: RecordFieldUi<R>, row: R) => {
@@ -469,26 +490,6 @@ export function ModelTable<R extends Row>({
         onToggle={() => saved.onToggle(row.id)}
       />
     );
-  // Cards show a picture on top when the model has pictures and a record shown has one: a
-  // record without one gets the placeholder so the cards stay even, and a page of records
-  // without any shows text cards, never a row of empty slots.
-  const coverField = (cover && ui.fields.find((f) => f.name === cover)) || pictureField;
-  const hasPicture = (row: R) =>
-    coverField !== undefined && formatValue(coverField, displayValue(coverField, row), app) !== "—";
-  const cardPicture = view === "cards" && shown.some(hasPicture) ? coverField : undefined;
-  // Pictures that open step through those of the records shown, in the list's order; the record
-  // shown gone from the list (deleted, filtered out), the dialog closes and shows nothing meanwhile.
-  const opening = opens === "picture" && cardPicture !== undefined;
-  // The layout follows the choice, not what the filters leave: two across even with no picture.
-  const wide = view === "cards" && opens === "picture";
-  const covered = opening ? shown.filter(hasPicture) : [];
-  const shownAt = covered.findIndex((row) => row.id === shownId);
-  useEffect(() => {
-    if (shownAt >= 0) return;
-    dialog.current?.close();
-    // The dialog may be gone already (no picture left), so no close event clears it.
-    setShownId(undefined);
-  }, [shownAt]);
   return (
     <div data-kit="model-table">
       {/* Phones: one card per record: its name and status, a contact or other identifier, its description, then a date and a key amount. */}

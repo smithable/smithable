@@ -4064,23 +4064,23 @@ async function painterFlow(dir, base) {
     // open: picture: a card's picture opens whole, steps to the next record's, and closes.
     await open(page, `${base}/jobs`);
     const cardCovers = page.locator('[data-kit="model-table"] [data-part="cover"]');
-    await cardCovers.first().waitFor();
-    if ((await cardCovers.count()) < 2)
-      throw new Error("/jobs has fewer than two pictures to open");
-    const firstName = (await cardCovers.first().getAttribute("aria-label"))?.replace(/^Open /, "");
+    await cardCovers.nth(1).waitFor();
+    const coverName = async (i) =>
+      (await cardCovers.nth(i).getAttribute("aria-label"))?.replace(/^Open /, "") ?? "";
+    const [firstName, secondName] = [await coverName(0), await coverName(1)];
+    if (!firstName || !secondName || firstName === secondName)
+      throw new Error(`/jobs covers are not named apart: "${firstName}", "${secondName}"`);
+    const captionShows = (name) =>
+      page.waitForFunction(
+        (n) => document.querySelector("dialog[open] figcaption")?.textContent?.includes(n),
+        name,
+      );
     await cardCovers.first().click();
     const shownWhole = page.locator("dialog[open] figure");
+    await captionShows(firstName);
     await loaded(shownWhole.locator("img"));
-    const caption = shownWhole.locator("figcaption");
-    if (!(await caption.textContent())?.includes(firstName ?? "\u0000"))
-      throw new Error(
-        `/jobs opened a picture captioned "${await caption.textContent()}", not "${firstName}"`,
-      );
     await page.getByRole("button", { name: "Next picture", exact: true }).click();
-    await page.waitForFunction(
-      (name) => !document.querySelector("dialog[open] figcaption")?.textContent?.includes(name),
-      firstName,
-    );
+    await captionShows(secondName);
     await loaded(shownWhole.locator("img"));
     await page.getByRole("button", { name: "Close", exact: true }).click();
     await page.locator("dialog[open]").waitFor({ state: "detached" });
