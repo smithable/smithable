@@ -384,6 +384,15 @@ export const COMMANDS: Command[] = [
     options: ["json", "dir"],
   },
   {
+    name: "media",
+    usage: "media in-use --json",
+    text: [
+      "The stored pictures the project's content file uses, with the renditions each needs,",
+      'as JSON: [{"asset": "m_…", "variants": ["w480.webp", …]}], sorted',
+    ],
+    options: ["json", "dir"],
+  },
+  {
     name: "customize",
     usage: "customize page:<p>",
     text: [
