@@ -198,8 +198,8 @@ serve({
         // signed-in person's own) is asked for again every time.
         const kept = new URL(request.url).pathname;
         const stored =
-          kept.startsWith("/media/") &&
-          !!response.headers.get("Content-Type")?.startsWith("image/webp");
+          /^\/media\/m_[0-9a-hjkmnp-tv-z]{26}\/w[1-9]\d{1,3}\.webp$/.test(kept) &&
+          response.headers.get("Content-Type")?.split(";")[0]?.trim() === "image/webp";
         if (response.ok && (kept.startsWith("/assets/") || stored))
           response.headers.set("Cache-Control", "public, max-age=31536000, immutable");
         else if (response.headers.get("Content-Type")?.startsWith("text/html"))

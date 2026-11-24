@@ -216,7 +216,7 @@ export function plainSchema(schema: unknown): unknown {
     // An argument left out is not required of the model either.
     const properties = plain.properties as Record<string, unknown> | undefined;
     if (properties && Array.isArray(plain.required))
-      plain.required = plain.required.filter((name) => name in properties);
+      plain.required = plain.required.filter((name) => Object.hasOwn(properties, name));
     return plain;
   }
   return schema;
