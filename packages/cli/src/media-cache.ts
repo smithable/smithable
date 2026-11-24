@@ -46,8 +46,9 @@ export interface MediaSource {
   sizes?(asset: string): Promise<{ width: number; widths: number[] } | undefined>;
 }
 
+// The content file's own range (100 to 4000 pixels), so a picture placed with them reads back.
 const isWidth = (w: unknown): w is number =>
-  Number.isInteger(w) && (w as number) > 0 && (w as number) <= 9999;
+  Number.isInteger(w) && (w as number) >= 100 && (w as number) <= 4000;
 
 const sha256 = (bytes: Uint8Array) => createHash("sha256").update(bytes).digest("hex");
 
