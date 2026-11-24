@@ -643,10 +643,10 @@ const setSectionPicture: Operation<{
       item === undefined ? ["pages", page, section, "image"] : [...items, String(item), "image"];
     if (src === undefined) {
       if (!content.has(path)) throw new OperationError(`The ${section} section has no picture.`);
-      content.removeAndPrune(path, 0);
+      emptyPlace(content, path);
       for (const language of languages) {
         const other = translations.get(language);
-        if (other?.has(path)) other.removeAndPrune(path, 0);
+        if (other?.has(path)) emptyPlace(other, path);
       }
       return [];
     }
@@ -777,7 +777,7 @@ const removeMedia: Operation<{ asset: string[] }> = {
           if (theirs.length === 1) editor.removeAndPrune(items, 0);
           else editor.removeItem(items, i);
         }
-      } else for (const editor of editors) if (editor.has(at)) editor.removeAndPrune(at, 0);
+      } else for (const editor of editors) if (editor.has(at)) emptyPlace(editor, at);
     }
     const nowhere = asset.filter((id) => !slots.some((s) => s.asset === id));
     return nowhere.length
@@ -790,6 +790,22 @@ const removeMedia: Operation<{ asset: string[] }> = {
   },
 };
 
+/**
+ * Takes a picture out of its place. A list item stays, as {} when the picture was all it held, so
+ * a language file's later items keep matching the content file's by place.
+ */
+function emptyPlace(editor: YamlEditor, at: string[]) {
+  const item = editor.get(at.slice(0, 5));
+  if (
+    at[3] === "items" &&
+    at.length === 6 &&
+    item &&
+    typeof item === "object" &&
+    Object.keys(item).length === 1
+  )
+    editor.setItem(at.slice(0, 4), Number(at[4]), {});
+  else editor.removeAndPrune(at, at[3] === "items" ? 5 : 0);
+}
 const sectionKind = (ir: SpecIR, page?: string, section?: string) =>
   ir.pages.find((p) => p.id === page)?.sections.find((s) => s.name === section)?.kind;
 

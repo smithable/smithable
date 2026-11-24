@@ -170,3 +170,30 @@ test.each(examples)("%s: every picture slot emptied, it validates", (name) => {
   expect(mediaSlots(parse(done.files.content as string))).toEqual([]);
   expect(done.lostMedia?.length ?? 0).toBe(placed);
 });
+
+// A language file's card that translated only its picture's words keeps its place, so the next
+// card's words stay on the next card (removeMedia and setSectionPicture's removal alike).
+test("a card emptied in a language file keeps its place in the list", () => {
+  const cards: ProjectFiles = {
+    spec: "smithable: 0.1\napp:\n  name: R\npages:\n  home:\n    route: /\n    landing:\n      hero: {}\n      features:\n",
+    content: `smithableContent: 0.1\nlanguages: [sv]\npages:\n  home:\n    features:\n      items:\n        - title: A\n          image: ${stored(ID, "X")}\n        - title: B\n`,
+    translations: {
+      sv: "smithableContent: 0.1\npages:\n  home:\n    features:\n      items:\n        - image: { alt: Xs }\n        - title: Bs\n",
+    },
+  };
+  for (const [name, args] of [
+    ["removeMedia", { asset: [ID] }],
+    ["setSectionPicture", { page: "home", section: "features", item: 0 }],
+  ] as const) {
+    const done = applyOperation(cards, name, args);
+    if (!done.ok) throw new Error(done.message);
+    expect(parse(done.files.translations?.sv as string).pages.home.features.items).toEqual([
+      {},
+      { title: "Bs" },
+    ]);
+    expect(parse(done.files.content as string).pages.home.features.items).toEqual([
+      { title: "A" },
+      { title: "B" },
+    ]);
+  }
+});
