@@ -70,8 +70,8 @@ test("a sent mail's view and pay tokens are cut from the stored text, other link
   expect(kit.withoutTokens(text)).toBe(
     "See it: https://shop.test/d/…\nPay: /p/…\nHome: /d/short /docs/x",
   );
-  // A longer run is not a token, and stays.
-  expect(kit.withoutTokens(`/d/${token}x`)).toBe(`/d/${token}x`);
+  // A token followed by a word character ("_See /d/<token>_") is cut all the same.
+  expect(kit.withoutTokens(`_See /d/${token}_`)).toBe("_See /d/…_");
 });
 
 test("an entry counts when the record comes to fit, not on every edit of one that fits", () => {

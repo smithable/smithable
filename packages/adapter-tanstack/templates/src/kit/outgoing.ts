@@ -36,7 +36,9 @@ function same(a: unknown, b: unknown): boolean {
  */
 export function withoutTokens(text: string): string {
   return text.replace(
-    /\/([dp])\/[A-Za-z0-9_-]{43}(?![A-Za-z0-9_-])/g,
+    // Any 43 characters after /d/ or /p/, whatever follows: a token is never left whole, and a
+    // stranger's link cut in a delivered mail's stored copy costs nothing.
+    /\/([dp])\/[A-Za-z0-9_-]{43}/g,
     (_, kind: string) => `/${kind}/…`,
   );
 }
