@@ -21,6 +21,7 @@ const kit = (await import(path)) as {
     fields?: string[],
   ): boolean;
   pauseAfter(tries: number): number;
+  withoutTokens(text: string): string;
   fillText(
     text: string,
     values: Record<string, string | undefined> | ((path: string) => string | undefined),
@@ -61,6 +62,16 @@ test("the kit fills placeholders as Smithable does, and picks what a call carrie
     note: "m",
   });
   expect(changedBefore({ status: "a" }, { status: "b" }, "none")).toEqual({});
+});
+
+test("a sent mail's view and pay tokens are cut from the stored text, other links kept (T1323)", () => {
+  const token = "A".repeat(42) + "_";
+  const text = `See it: https://shop.test/d/${token}\nPay: /p/${token}\nHome: /d/short /docs/x`;
+  expect(kit.withoutTokens(text)).toBe(
+    "See it: https://shop.test/d/…\nPay: /p/…\nHome: /d/short /docs/x",
+  );
+  // A longer run is not a token, and stays.
+  expect(kit.withoutTokens(`/d/${token}x`)).toBe(`/d/${token}x`);
 });
 
 test("an entry counts when the record comes to fit, not on every edit of one that fits", () => {
