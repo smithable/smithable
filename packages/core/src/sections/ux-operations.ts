@@ -1151,7 +1151,7 @@ const setView: Operation<{
     "smithable.ux.yml:pages.*.table.open",
   ],
   summary:
-    "Show a page's list as a table or as cards on wide screens (a phone shows cards anyway). Cards show the model's first picture field on top unless a cover is named; open: picture opens a card's picture whole, two cards across.",
+    "Show a page's list as a table or as cards on wide screens (a phone shows cards anyway). Cards show the model's first picture field on top unless a cover is named; open: picture opens a card's picture whole, two cards across. It writes the whole choice: a cover or open left out is taken away.",
   schema: {
     type: "object",
     required: ["page", "view"],

@@ -211,6 +211,13 @@ test("setView sets cards with a cover and open, and a table takes them away", ()
   });
   expect(cards.ok && cards.files.ux).toMatch(/view: cards\n\s+cover: photos\n\s+open: picture/);
   if (!cards.ok) return;
+  // setView writes the whole choice: an open left out goes.
+  const coverOnly = applyOperation(cards.files, "setView", {
+    page: "projects",
+    view: "cards",
+    cover: "before",
+  });
+  expect(coverOnly.ok && coverOnly.files.ux).not.toContain("open");
   const table = applyOperation(cards.files, "setView", { page: "projects", view: "table" });
   expect(table.ok && table.files.ux).not.toMatch(/view|cover|open/);
   expect(

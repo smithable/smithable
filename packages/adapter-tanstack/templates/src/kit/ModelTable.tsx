@@ -479,17 +479,22 @@ export function ModelTable<R extends Row>({
   // Pictures that open step through those of the records shown, in the list's order; the record
   // shown gone from the list (deleted, filtered out), the dialog closes and shows nothing meanwhile.
   const opening = opens === "picture" && cardPicture !== undefined;
+  // The layout follows the choice, not what the filters leave: two across even with no picture.
+  const wide = view === "cards" && opens === "picture";
   const covered = opening ? shown.filter(hasPicture) : [];
   const shownAt = covered.findIndex((row) => row.id === shownId);
   useEffect(() => {
-    if (shownAt < 0) dialog.current?.close();
+    if (shownAt >= 0) return;
+    dialog.current?.close();
+    // The dialog may be gone already (no picture left), so no close event clears it.
+    setShownId(undefined);
   }, [shownAt]);
   return (
     <div data-kit="model-table">
       {/* Phones: one card per record: its name and status, a contact or other identifier, its description, then a date and a key amount. */}
       <ul
         className={
-          opening
+          wide
             ? "grid gap-4 md:grid-cols-2"
             : view === "cards"
               ? "grid gap-3 md:grid-cols-2 xl:grid-cols-3"
@@ -567,7 +572,7 @@ export function ModelTable<R extends Row>({
                     icon={icon}
                     className={cn(
                       "-mx-5 w-[calc(100%+2.5rem)]",
-                      opening ? "aspect-[4/3]" : "aspect-[3/2]",
+                      wide ? "aspect-[4/3]" : "aspect-[3/2]",
                     )}
                   />
                 ))}

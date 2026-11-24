@@ -670,8 +670,8 @@ export function listParts(
       }
     : undefined;
   const cards = presentation?.view === "cards";
-  // The cards' cover when the ux file names one (unsaid, the kit shows the first picture field,
-  // the same rule as cardCover), and whether a card's picture opens whole.
+  // The cards' cover, named or by rule (cardCover, as validate --explain says), and whether a
+  // card's picture opens whole.
   const cover = cards ? cardCover(model, presentation) : undefined;
   const opens = cards && presentation?.open === "picture";
   // A mark before each title, and every row action in a menu (the ux file's table, look-gap §4).
@@ -1067,7 +1067,7 @@ ${
           filtering && Object.keys(filtering.headers).length
             ? `\n        sorting={{ keys: ${literal(filtering.headers)}, value: sort, onChange: (next) => navigate({ to: ${JSON.stringify(page.route)}, search: (prev) => ({ ...prev, sort: next, page: undefined }), replace: true, resetScroll: false }) }}`
             : ""
-        }${cards ? '\n        view="cards"' : ""}${cover && !cover.byRule ? `\n        cover=${attr(key(cover.field.name))}` : ""}${opens ? '\n        opens="picture"' : ""}${mark ? `\n        mark=${attr(mark)}` : ""}${icon ? `\n        icon={${icon}}` : ""}${favorites ? "\n        saved={{ ids: saved, onToggle: toggleSaved }}" : ""}${threadField ? `\n        thread={{ label: ${JSON.stringify(t.field(model, threadField).label ?? humanize(threadField.name))}, counts: threads }}` : ""}${selecting ? "\n        selection={selectable ? { ids: selected, onChange: setSelected } : undefined}" : ""}${
+        }${cards ? '\n        view="cards"' : ""}${cover ? `\n        cover=${attr(key(cover.field.name))}` : ""}${opens ? '\n        opens="picture"' : ""}${mark ? `\n        mark=${attr(mark)}` : ""}${icon ? `\n        icon={${icon}}` : ""}${favorites ? "\n        saved={{ ids: saved, onToggle: toggleSaved }}" : ""}${threadField ? `\n        thread={{ label: ${JSON.stringify(t.field(model, threadField).label ?? humanize(threadField.name))}, counts: threads }}` : ""}${selecting ? "\n        selection={selectable ? { ids: selected, onChange: setSelected } : undefined}" : ""}${
           offered.length
             ? `
         rowActions={(row) => (

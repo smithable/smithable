@@ -387,8 +387,7 @@ pages:
     );
   };
   const byRule = listOf("{ view: cards }");
-  expect(byRule).toContain('view="cards"');
-  expect(byRule).not.toContain("cover=");
+  expect(byRule).toContain('view="cards"\n        cover="before"');
   expect(byRule).not.toContain("opens=");
   expect(listOf("{ view: cards, cover: photos, open: picture }")).toContain(
     'view="cards"\n        cover="photos"\n        opens="picture"',
