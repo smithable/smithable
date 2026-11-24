@@ -198,6 +198,28 @@ export async function checkStudioSelection(browser, base) {
     await sectionForm.getByRole("button", { name: "Cancel", exact: true }).click();
     await sectionForm.waitFor({ state: "hidden" });
     await frame.locator("[data-hero] img").first().waitFor();
+    // The Photos and videos panel (T1458): locally it lists the project's pictures, marks the one
+    // in use, and choosing another is tried on like any change; Cancel puts the first back.
+    await select.click();
+    await hero.click({ position: { x: 4, y: 4 } });
+    await sectionForm.waitFor();
+    await sectionForm.getByRole("button", { name: "Photos and videos", exact: true }).click();
+    const library = sectionForm.locator("[data-photo-library]");
+    await library.getByText("hero.webp (here now)", { exact: true }).waitFor();
+    const chosen = page.waitForResponse(
+      (response) =>
+        response.url() === `${base}/api/op` &&
+        response.request().postDataJSON()?.name === "setSectionPicture",
+    );
+    await library.getByRole("button", { name: "Use logo.webp", exact: true }).click();
+    const op = await chosen;
+    assert.equal(op.request().postDataJSON()?.args?.src, "images/logo.webp");
+    assert.equal((await op.json()).ok, true);
+    await library.waitFor({ state: "detached" });
+    await frame.locator('[data-hero] img[src*="logo"]').first().waitFor();
+    await sectionForm.getByRole("button", { name: "Cancel", exact: true }).click();
+    await sectionForm.waitFor({ state: "hidden" });
+    await frame.locator('[data-hero] img[src*="hero"]').first().waitFor();
     // Its film (T1278): a file that breaks a rule is refused with the rule named; one within them is
     // tried on, and Cancel takes it away again.
     await select.click();
