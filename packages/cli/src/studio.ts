@@ -517,6 +517,15 @@ export class TooLarge extends Error {
 export const projectImage = (dir: string, path: string): Buffer | undefined =>
   readTreeOrNone(join(dir, "public", "images", path), 32 << 20);
 
+/**
+ * A stored file's copy as Studio serves it (media-storage.md): `<id>/w<width>.webp` under
+ * public/media/, where the workspace fetched it; none before the fetch.
+ */
+export const projectMedia = (dir: string, path: string): Buffer | undefined =>
+  /^m_[0-9a-hjkmnp-tv-z]{26}\/w[1-9]\d{1,3}\.webp$/.test(path)
+    ? readTreeOrNone(join(dir, "public", "media", path), 32 << 20)
+    : undefined;
+
 /** A declared plugin's code as Studio serves it to the tab: the project's own file, or none. */
 export const projectPlugin = (dir: string, name: string): Buffer | undefined =>
   declaredPlugins(dir).includes(name) ? readTreeOrNone(pluginPath(dir, name)) : undefined;
@@ -1402,6 +1411,16 @@ export async function studio(
               : `image/${image[2] === "jpg" ? "jpeg" : image[2]}`,
           "Content-Security-Policy": "sandbox; default-src 'none'; style-src 'unsafe-inline'",
           "Cache-Control": "no-cache",
+        });
+        return res.end(bytes);
+      }
+      if (url.pathname.startsWith("/api/media/")) {
+        const bytes = projectMedia(dir, url.pathname.slice("/api/media/".length));
+        if (!bytes) return json({ ok: false }, 404);
+        res.writeHead(200, {
+          "Content-Type": "image/webp",
+          "Content-Security-Policy": "sandbox; default-src 'none'; style-src 'unsafe-inline'",
+          "Cache-Control": "public, max-age=31536000, immutable",
         });
         return res.end(bytes);
       }

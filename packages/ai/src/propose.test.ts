@@ -327,6 +327,11 @@ describe("what a model is offered", () => {
         properties: { a: { "x-y": 1, type: "string" } },
       }),
     ).toEqual({ type: "object", properties: { a: { type: "string" } } });
+    // A stored file is a person's choice and its sizes the host's: a model is offered neither.
+    const picture = JSON.stringify(answerSchema(relevantOperations(["page:home"])));
+    expect(picture).toContain("setSectionPicture");
+    expect(picture).not.toContain('"asset"');
+    expect(picture).not.toContain('"rendition"');
   });
 
   test("the strict schema holds each operation's own arguments; the loose one only the names", () => {

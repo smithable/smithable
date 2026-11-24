@@ -454,7 +454,8 @@ export function picturesToReview(
       if (section.kind !== "hero" && section.pictures !== "work") continue;
       const texts = content?.pages[page.id]?.sections?.[section.name];
       const look = (image: ContentImage | undefined, item?: number) => {
-        if (image?.generated && !image.kept)
+        // A stored file is the owner's own picture (media-storage.md §6): only a file's is asked about.
+        if (image?.generated && !image.kept && image.src !== undefined)
           found.push({
             page: page.id,
             section: section.name,

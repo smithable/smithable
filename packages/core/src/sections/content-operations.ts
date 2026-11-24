@@ -1,5 +1,6 @@
 import { parse, stringify } from "yaml";
 import {
+  ASSET_ID,
   ASSISTANT_TEXTS,
   derivedTexts,
   FILM_SRC,
@@ -63,6 +64,13 @@ const setText: Operation<{ path: string[]; text: string; language?: string }> = 
       );
     const parent = path.slice(0, -1);
     const before = content.get(path);
+    // A stored file is not text, and a picture holding one changes only by choosing another file,
+    // which a person does (media-storage.md §2).
+    const last = path[path.length - 1];
+    if (last === "asset" || (last === "src" && content.has([...parent, "asset"])))
+      throw new OperationError(
+        "This picture is a stored file, not text: choose another in Photos and videos.",
+      );
     // An item of a plain list, e.g. one of a plan's features.
     if (Array.isArray(content.get(parent)) && typeof content.get(path) === "string") {
       if (text === "") throw new OperationError("A list's item has no default text.");
@@ -509,12 +517,15 @@ const setInitials: Operation<{ initials?: string }> = {
  * so the mark, kind and widths go; the alt stays unless given. No src removes the picture, in
  * every language file too; the section is then shown without one. With item, a gallery's picture
  * by its place: no src removes that item, its caption with it (the release review's Remove,
- * picture-kinds.md §6).
+ * picture-kinds.md §6). With asset, a file the hosted service keeps (media-storage.md §2): a
+ * person's choice, never a model's, whose sizes the host gives from the service's record.
  */
 const setSectionPicture: Operation<{
   page: string;
   section: string;
   src?: string;
+  asset?: string;
+  rendition?: { width: number; widths?: number[] };
   alt?: string;
   item?: number;
   was?: string;
@@ -537,6 +548,22 @@ const setSectionPicture: Operation<{
         type: "string",
         description: "The file, e.g. images/team.webp (webp, avif, jpg or png); none removes it.",
       },
+      asset: {
+        type: "string",
+        description: "A stored file's id from the photo library, in place of src.",
+        "x-not-for-models": true,
+      },
+      rendition: {
+        type: "object",
+        description: "The stored file's renditions, from the service's record: never a caller's.",
+        required: ["width"],
+        additionalProperties: false,
+        properties: {
+          width: { type: "integer", minimum: 1 },
+          widths: { type: "array", items: { type: "integer", minimum: 1 } },
+        },
+        "x-host": true,
+      },
       alt: {
         type: "string",
         description: "What the picture shows; without it, the one it has.",
@@ -555,19 +582,32 @@ const setSectionPicture: Operation<{
     },
   },
   positional: ["page", "section", "src"],
-  describe: ({ page, section, src, item }) => {
+  describe: ({ page, section, src, asset, item }) => {
     const which = `${item === undefined ? "the picture" : `picture ${item + 1}`} of the ${section} section of ${page}`;
-    return src ? `Use ${src} as ${which}` : `Remove ${which}`;
+    return src
+      ? `Use ${src} as ${which}`
+      : asset
+        ? `Use stored file ${asset} as ${which}`
+        : `Remove ${which}`;
   },
   destructive: () => false,
-  apply({ content, translations }, { page, section, src, alt, item, was }, ir) {
+  apply(
+    { content, translations },
+    { page, section, src: file, asset, rendition, alt, item, was },
+    ir,
+  ) {
+    if (file !== undefined && asset !== undefined)
+      throw new OperationError("Give the picture's file or a stored file, not both.");
+    // Either names the new picture; the checks below that ask whether one is given ask of both.
+    const src = file ?? asset;
     const found = ir.pages.find((p) => p.id === page)?.sections.find((s) => s.name === section);
     if (!found) throw new OperationError(`The ${page} page has no section named "${section}".`);
     const picturePath =
       item === undefined
         ? ["pages", page, section, "image"]
         : ["pages", page, section, "items", String(item), "image"];
-    if (was !== undefined && content.get([...picturePath, "src"]) !== was)
+    const there = content.get([...picturePath, "src"]) ?? content.get([...picturePath, "asset"]);
+    if (was !== undefined && there !== was)
       throw new OperationError(
         `The picture there is no longer ${was}: another change came between. Look again.`,
       );
@@ -609,9 +649,20 @@ const setSectionPicture: Operation<{
       }
       return [];
     }
-    if (!IMAGE_SRC.test(src))
+    if (asset !== undefined && !ASSET_ID.test(asset))
       throw new OperationError(
-        `"${src}" is not a file under public/images/: give it as images/<file> (webp, avif, jpg or png).`,
+        `"${asset}" is not a stored file's id: m_ and 26 letters and digits.`,
+      );
+    if (asset !== undefined && !rendition)
+      throw new OperationError(
+        "A stored file is placed by the hosted service, which knows its sizes: choose it in Photos and videos.",
+      );
+    if (file !== undefined && rendition)
+      throw new OperationError("A file under public/images/ has no stored renditions.");
+    const made = rendition && renditionOf(rendition);
+    if (file !== undefined && !IMAGE_SRC.test(file))
+      throw new OperationError(
+        `"${file}" is not a file under public/images/: give it as images/<file> (webp, avif, jpg or png).`,
       );
     const had = content.get([...path, "alt"]);
     const text = alt?.trim() || (typeof had === "string" ? had : "");
@@ -619,10 +670,18 @@ const setSectionPicture: Operation<{
       throw new OperationError("Say what the picture shows (alt), for people who cannot see it.");
     const before = content.get(path);
     const same =
-      !!before && typeof before === "object" && (before as { src?: unknown }).src === src;
+      !!before &&
+      typeof before === "object" &&
+      (asset !== undefined
+        ? (before as { asset?: unknown }).asset === asset
+        : (before as { src?: unknown }).src === file);
+    // A stored file's sizes are the record's at each setting: one the service added since reaches it.
     const image: Record<string, YamlValue> = same
-      ? { ...(before as Record<string, YamlValue>), alt: text }
-      : { src, alt: text };
+      ? { ...(before as Record<string, YamlValue>), alt: text, ...made }
+      : asset !== undefined
+        ? { asset, alt: text, ...made }
+        : { src: file as string, alt: text };
+    if (same && made && !made.widths) delete image.widths;
     if (append) {
       if (content.has(items)) content.appendItem(items, { image });
       else put(content, items, [{ image }]);
@@ -637,6 +696,19 @@ const setSectionPicture: Operation<{
     return [];
   },
 };
+
+/**
+ * A stored file's renditions as a slot names them (media-storage.md §1): the largest made as
+ * `width`, the others narrowest first as `widths`.
+ */
+function renditionOf({ width, widths = [] }: { width: number; widths?: number[] }) {
+  const all = [...new Set([width, ...widths])]
+    .filter((w) => Number.isInteger(w) && w > 0)
+    .sort((a, b) => a - b);
+  const largest = all.pop();
+  if (!largest) throw new OperationError("The stored file's record names no rendition.");
+  return { width: largest, ...(all.length ? { widths: all } : {}) };
+}
 
 /**
  * A hero's film (section-film.md): a short silent loop over its picture. Only the name is checked

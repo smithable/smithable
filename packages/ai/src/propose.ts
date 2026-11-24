@@ -93,15 +93,17 @@ export function signature(op: AnyOperation): string {
     >;
     required?: string[];
   };
-  const args = Object.entries(schema.properties ?? {}).map(([name, p]) => {
-    const type = p.enum
-      ? p.enum.map((v) => JSON.stringify(v)).join(" | ")
-      : p.type === "array"
-        ? `${p.items?.type ?? "string"}[]`
-        : (p.type ?? "any");
-    const optional = schema.required?.includes(name) ? "" : "?";
-    return `${name}${optional}: ${type}${p.description ? ` (${p.description})` : ""}`;
-  });
+  const args = Object.entries(schema.properties ?? {})
+    .filter(([, p]) => !notForModels(p))
+    .map(([name, p]) => {
+      const type = p.enum
+        ? p.enum.map((v) => JSON.stringify(v)).join(" | ")
+        : p.type === "array"
+          ? `${p.items?.type ?? "string"}[]`
+          : (p.type ?? "any");
+      const optional = schema.required?.includes(name) ? "" : "?";
+      return `${name}${optional}: ${type}${p.description ? ` (${p.description})` : ""}`;
+    });
   return `- ${op.name} { ${args.join(", ")} }: ${op.summary}`;
 }
 
@@ -199,17 +201,27 @@ export function promptFor(
   };
 }
 
-/** A schema without Smithable's own annotations (x-smithable), which a strict server may refuse. */
+/**
+ * A schema without Smithable's own annotations (x-smithable), which a strict server may refuse,
+ * and without the arguments no model is offered: a host's and a person's own (refusedArgs).
+ */
 export function plainSchema(schema: unknown): unknown {
   if (Array.isArray(schema)) return schema.map(plainSchema);
   if (schema && typeof schema === "object")
     return Object.fromEntries(
       Object.entries(schema as Record<string, unknown>)
-        .filter(([key]) => !key.startsWith("x-"))
+        .filter(([key, value]) => !key.startsWith("x-") && !notForModels(value))
         .map(([key, value]) => [key, plainSchema(value)]),
     );
   return schema;
 }
+
+/** An argument's schema that only a host or a person may give (refusedArgs in core). */
+const notForModels = (value: unknown) =>
+  !!value &&
+  typeof value === "object" &&
+  ((value as Record<string, unknown>)["x-host"] === true ||
+    (value as Record<string, unknown>)["x-not-for-models"] === true);
 
 interface Answer {
   kind?: string;

@@ -193,9 +193,11 @@ serve({
       if (overHttps(request) && !response.headers.has("Strict-Transport-Security"))
         response.headers.set("Strict-Transport-Security", "max-age=31536000");
       if (!response.headers.has("Cache-Control")) {
-        // The build's files have their content's hash in the name, so a browser keeps them a
-        // year; a page (often a signed-in person's own) is asked for again every time.
-        if (response.ok && new URL(request.url).pathname.startsWith("/assets/"))
+        // The build's files have their content's hash in the name, and a stored file's copy its
+        // id and width, neither ever changed, so a browser keeps them a year; a page (often a
+        // signed-in person's own) is asked for again every time.
+        const kept = new URL(request.url).pathname;
+        if (response.ok && (kept.startsWith("/assets/") || kept.startsWith("/media/")))
           response.headers.set("Cache-Control", "public, max-age=31536000, immutable");
         else if (response.headers.get("Content-Type")?.startsWith("text/html"))
           response.headers.set("Cache-Control", "no-store");
@@ -205,7 +207,10 @@ serve({
       const path = new URL(request.url).pathname;
       if (
         response.ok &&
-        (path.startsWith("/images/") || path.startsWith("/uploads/") || path.endsWith(".svg"))
+        (path.startsWith("/images/") ||
+          path.startsWith("/media/") ||
+          path.startsWith("/uploads/") ||
+          path.endsWith(".svg"))
       ) {
         response.headers.set(
           "Content-Security-Policy",

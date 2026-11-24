@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { afterEach, beforeEach, expect, test } from "vitest";
 import { specFilesOf } from "./report.js";
 import { forgetProjectUserForTests } from "./secrets.js";
-import { projectImage, projectPlugin } from "./studio.js";
+import { projectImage, projectMedia, projectPlugin } from "./studio.js";
 import { tempDir } from "./test-dir.js";
 import { loadSpec, projectTranslations } from "./validate.js";
 
@@ -33,6 +33,25 @@ test.runIf(linux)("a picture: its own file is served, a link in its place is not
   expect(projectImage(dir, "logo.png")?.toString()).toBe("png");
   expect(projectImage(dir, "planted.png")).toBeUndefined();
 });
+
+test.runIf(linux)(
+  "a stored file's copy: only an id and a width name it, and a link is not served",
+  () => {
+    const id = "m_01hz8k3q4r5s6t7v8w9x0y1z2a";
+    mkdirSync(join(dir, "public", "media", id), { recursive: true });
+    writeFileSync(join(dir, "public", "media", id, "w480.webp"), "webp");
+    symlinkSync(secret, join(dir, "public", "media", id, "w960.webp"));
+    expect(projectMedia(dir, `${id}/w480.webp`)?.toString()).toBe("webp");
+    expect(projectMedia(dir, `${id}/w960.webp`)).toBeUndefined();
+    for (const path of [
+      `${id}/../../images/x.webp`,
+      `${id}/w480.png`,
+      `m_UPPER/w480.webp`,
+      `${id}/w048.webp`,
+    ])
+      expect(projectMedia(dir, path), path).toBeUndefined();
+  },
+);
 
 test.runIf(linux)(
   "a declared plugin's code: its own file is served, a link in its place is not",
