@@ -1,0 +1,8 @@
+id: datetime-formula-default
+title: A datetime field with a formula default (default NOW()) left out of the values made adding the record fail, so an import or a form that does not ask the field could not add one.
+severity: fix
+exposure: Adding a record without a value for such a field (an import, a visitor's form, an action) was refused with an error since the server began filling formula defaults.
+introduced: cab14e708
+affects:
+  features: [field:datetime]
+migration: none
