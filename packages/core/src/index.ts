@@ -268,7 +268,7 @@ export type {
   OperationArgs,
   Refusal,
 } from "./operation.js";
-export { OperationError, refHint, refusedArgs } from "./operation.js";
+export { forModels, OperationError, refHint, refusedArgs } from "./operation.js";
 export type { PagePattern } from "./patterns.js";
 export {
   LANDING_SECTIONS,

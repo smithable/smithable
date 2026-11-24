@@ -84,6 +84,15 @@ construct in both: a name for fixed files the service made):
   and confirmed by the person, never applied by itself, and applied only to the revision the person
   saw. An edit that does not ask for a picture therefore cannot lose one, whatever the model
   writes, because nothing a model writes reaches the files but operations.
+- **`removeMedia --asset <id> [--asset <id>…]`** empties every slot naming the given files in one
+  change, so one undo step: the service's take-off after a library delete names every deleted
+  file a revision uses at once. A section's picture goes; a gallery's or media-and-text section's
+  item goes with its caption, the highest place first so the places before it stay as they are; a
+  features card keeps its words and a tile its label; any other slot (a hero's film) goes whole;
+  the same in every language file. Each emptied slot is reported and confirmed as above. Its ids
+  are a person's choice, so no model is offered the operation at all (`forModels`: an operation
+  with a required argument only a person or the host gives). A file named nowhere is no change,
+  and the change says so.
 - **Undo** restores the content file and so the reference. Releasing a slot does not delete the
   file or the project's right to use it, which only the library's own delete does, so an undone
   removal shows the picture again (after a library delete, the reference shows the reserved frame
@@ -189,3 +198,5 @@ service's per level. Longer videos with sound, in a section of their own, are no
    publish staging.
 4. **Studio:** Replace photo on the preview and the Photos and videos panel, hosted and local.
 5. **Video:** `film: { asset, heights }`, the record's checks for a stored film, the panel's videos.
+6. **Take-off:** `removeMedia` in core, for the service's take-off of deleted files (its own note in
+   the service).

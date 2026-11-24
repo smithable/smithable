@@ -203,6 +203,19 @@ export function refusedArgs(
     : undefined;
 }
 
+/**
+ * An operation a model may be offered: none of its required arguments is one only a host or a
+ * person gives (refusedArgs). removeMedia, whose stored files are a person's choice, is not.
+ */
+export function forModels(op: AnyOperation): boolean {
+  const properties = (op.schema.properties ?? {}) as Record<string, Record<string, unknown>>;
+  const required = (op.schema.required ?? []) as string[];
+  return !required.some(
+    (name) =>
+      properties[name]?.["x-host"] === true || properties[name]?.["x-not-for-models"] === true,
+  );
+}
+
 // Operations are defined with their own argument types and stored in untyped registries.
 // biome-ignore lint/suspicious/noExplicitAny: each operation narrows its own arguments.
 export type AnyOperation = Operation<any>;
