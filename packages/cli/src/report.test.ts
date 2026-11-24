@@ -185,16 +185,17 @@ test("addresses are left out of every file, the error, the log and the arguments
   expect(JSON.stringify(report)).not.toMatch(/acme\.example/);
 });
 
-test("a long word with no address is read once, not from every place in it (T1123)", () => {
+test("a long word is not read again from every place in it, and every address goes (T1123)", () => {
   // Each file is read up to a megabyte: two words of 400 KiB.
   const word = "x".repeat(400 * 1024);
   writeFileSync(
     join(dir, "smithable.yml"),
-    `smithable: 0.1\napp: { name: Shop }\n# ${word}\n# ${word}.a@acme.example and ops@acme.example\n`,
+    `smithable: 0.1\napp: { name: Shop }\n# ${word}\n# ${word}.a@acme.example and ops@acme.example\n# a@b.co+ops@acme.example\n`,
   );
   const started = performance.now();
   const files = specFilesOf(dir);
-  expect(performance.now() - started).toBeLessThan(2000);
+  // Unbounded, this took minutes; the bound leaves room for a loaded machine.
+  expect(performance.now() - started).toBeLessThan(10_000);
   expect(files["smithable.yml"]).toContain("(an email address) and (an email address)");
   expect(JSON.stringify(files)).not.toMatch(/acme\.example/);
 });

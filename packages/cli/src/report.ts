@@ -117,9 +117,9 @@ export async function sendFailure(failure: Failure): Promise<boolean> {
 }
 
 /** People's addresses are theirs, not the app's: left out of everything a report carries. */
-// A match starts only where a run of address characters starts: tried from inside one, the
-// pattern rescanned the rest of the run from every place in it (a 1 MiB word took minutes, T1123).
-const EMAIL = /(?<![\w.+-])[\w.+-]+@[\w-]+(\.[\w-]+)+/g;
+// The part before @ is at most 64 characters, as in an address: unbounded, the pattern rescanned
+// the rest of a long run from every place in it (a 1 MiB word took minutes, T1123).
+const EMAIL = /[\w.+-]{1,64}@[\w-]+(\.[\w-]+)+/g;
 const redact = (text: string) => text.replace(EMAIL, "(an email address)");
 
 /** Arguments as a report shows them: a whole file's text is only its size, addresses left out. */

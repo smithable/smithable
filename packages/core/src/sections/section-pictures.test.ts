@@ -113,7 +113,7 @@ test("a new picture drops another language's words for the old one; new words al
   // Another file: the Swedish words said nothing of it and go; the main alt stands in.
   const changed = picture({ src: "images/barn.webp", alt: "A barn" });
   expect(changed.content).toContain("images/barn.webp");
-  expect(changed.translations?.sv).not.toContain("Ett tak");
+  expect(changed.translations?.sv ?? files.translations.sv).not.toContain("Ett tak");
 });
 
 const fail = (): never => {
