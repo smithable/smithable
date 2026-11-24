@@ -13,6 +13,8 @@ import {
   readFileSync,
   renameSync,
   rmSync,
+  statSync,
+  unlinkSync,
   writeFileSync,
 } from "node:fs";
 import { homedir } from "node:os";
@@ -140,7 +142,9 @@ function cachedMediaHere(dir: string, hashes = false): Record<string, Record<str
     for (const name of readdirSync(join(media, asset))) {
       const path = join(media, asset, name);
       if (!VARIANT.test(name) || !lstatSync(path).isFile()) continue;
-      found[asset][name] = hashes ? sha256(readFileSync(path)) : "";
+      // A file larger than a rendition can be is no rendition: "" never matches a record.
+      found[asset][name] =
+        hashes && statSync(path).size <= MAX_BYTES ? sha256(readFileSync(path)) : "";
     }
   }
   return found;
@@ -172,7 +176,10 @@ function dropMediaHere(dir: string, asset: string, variant?: string): void {
     throw new Error("Not a media name.");
   const media = mediaFolder(dir);
   if (!media) return;
-  rmSync(join(media, asset, variant ?? ""), { recursive: true, force: true });
+  const folder = join(media, asset);
+  if (!existsSync(folder) || !lstatSync(folder).isDirectory()) return;
+  if (variant === undefined) rmSync(folder, { recursive: true, force: true });
+  else if (existsSync(join(folder, variant))) unlinkSync(join(folder, variant));
 }
 
 export const cachedMedia = asProject("cachedMedia", cachedMediaHere);
