@@ -1,6 +1,14 @@
 import { type ChildProcess, spawn } from "node:child_process";
 import { createHash, randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
-import { existsSync, lstatSync, readFileSync, rmSync, statSync, watchFile } from "node:fs";
+import {
+  existsSync,
+  lstatSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  watchFile,
+} from "node:fs";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { extname, join, normalize, resolve } from "node:path";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
@@ -526,6 +534,24 @@ export const projectMedia = (dir: string, path: string): Buffer | undefined =>
   /^m_[0-9a-hjkmnp-tv-z]{26}\/w[1-9]\d{1,3}\.webp$/.test(path)
     ? readTreeOrNone(join(dir, "public", "media", path), 32 << 20)
     : undefined;
+
+/**
+ * The project's own pictures for the Photos panel (media-storage.md §6): names directly under
+ * public/images/ that are plain files of a picture type, through no link; sorted.
+ */
+export function projectPhotos(dir: string): string[] {
+  const images = join(dir, "public", "images");
+  for (const path of [join(dir, "public"), images])
+    if (!existsSync(path) || !lstatSync(path).isDirectory()) return [];
+  return readdirSync(images)
+    .filter(
+      (name) =>
+        /^[\w-][\w.-]*\.(webp|avif|jpe?g|png)$/i.test(name) &&
+        lstatSync(join(images, name)).isFile(),
+    )
+    .sort()
+    .map((name) => `images/${name}`);
+}
 
 /** A declared plugin's code as Studio serves it to the tab: the project's own file, or none. */
 export const projectPlugin = (dir: string, name: string): Buffer | undefined =>
@@ -1424,6 +1450,8 @@ export async function studio(
         });
         return res.end(bytes);
       }
+      if (url.pathname === "/api/photos" && req.method === "GET")
+        return json({ photos: projectPhotos(dir) });
       if (url.pathname.startsWith("/api/media/")) {
         const bytes = projectMedia(dir, url.pathname.slice("/api/media/".length));
         if (!bytes) return json({ ok: false }, 404);

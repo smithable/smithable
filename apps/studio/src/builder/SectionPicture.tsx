@@ -4,6 +4,7 @@
 // with its undo.
 import { type ContentImage, pictureFile } from "@smithable/core";
 import { useId, useState } from "react";
+import { PhotoLibrary } from "./PhotoLibrary";
 
 export const PICTURE_TYPES: Record<string, string> = {
   "image/webp": "webp",
@@ -50,6 +51,14 @@ export function SectionPicture({
   // A file being read: nothing else is sent meanwhile.
   const [reading, setReading] = useState(false);
   const held = busy || reading;
+  const [choosing, setChoosing] = useState(false);
+  // A file chosen in the panel goes in with the words given here, as an upload does.
+  const chosen = (picked: { asset: string } | { src: string }) => {
+    setRefused(undefined);
+    if (!alt.trim()) return setRefused("Say first what the picture shows.");
+    setChoosing(false);
+    change({ ...picked, alt: alt.trim() });
+  };
   const altId = useId();
   const replace = (file: File | undefined) => {
     setRefused(undefined);
@@ -97,6 +106,15 @@ export function SectionPicture({
             }}
           />
         </label>
+        <button
+          type="button"
+          disabled={held}
+          aria-expanded={choosing}
+          className="rounded border border-line px-2 py-1 text-sm hover:bg-subtle disabled:opacity-60"
+          onClick={() => setChoosing(!choosing)}
+        >
+          Photos and videos
+        </button>
         {image && (
           <button
             type="button"
@@ -136,6 +154,14 @@ export function SectionPicture({
           </button>
         )}
       </div>
+      {choosing && (
+        <PhotoLibrary
+          current={image?.asset ?? image?.src}
+          choose={chosen}
+          close={() => setChoosing(false)}
+          busy={held}
+        />
+      )}
       {refused && (
         <p role="alert" className="text-xs text-red-700">
           {refused}
