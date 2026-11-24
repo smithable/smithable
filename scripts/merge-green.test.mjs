@@ -74,3 +74,90 @@ test("a head whose only checks are commit statuses has checks", () => {
   assert.equal(run.status, 0, run.stdout + run.stderr);
   assert.match(run.stdout, /Merged #587\./);
 });
+
+// merge_generated alone, on a real repository: main changed a generated file, and the branch
+// changed it too ("clash"), changed only its own file ("clean"), changed a file main changed too
+// ("beyond"), or has a push the origin rejects ("rejected"). #1369 (2026-11-24): a finished rebase
+// was taken for unfinished, and a rebase needed a force push.
+function mergeMain(mode) {
+  const dir = mkdtempSync(join(tmpdir(), "merge-main-"));
+  const fn = readFileSync("scripts/merge-green.sh", "utf8").match(
+    /^merge_generated\(\) \{[\s\S]*?^\}$/m,
+  )[0];
+  writeFileSync(join(dir, "gh"), "#!/usr/bin/env bash\necho c/x\n");
+  // The build regenerates the embedded file, only from main's side (3).
+  writeFileSync(
+    join(dir, "pnpm"),
+    '#!/usr/bin/env bash\nf=packages/cli/src/starters.gen.ts\n[ "$1" = build ] && grep -qx 3 $f && echo built > $f\nexit 0\n',
+  );
+  for (const f of ["gh", "pnpm"]) chmodSync(join(dir, f), 0o755);
+  const gen = mode === "clash" || mode === "rejected";
+  const sh = `set -e
+git init -q --bare -b main origin.git
+git clone -q origin.git w 2>/dev/null; cd w
+git config user.email t@example.invalid; git config user.name t
+mkdir -p packages/cli/src
+echo 1 > packages/cli/src/starters.gen.ts; echo a > notes.md
+git add -A; git commit -q -m base; git push -q origin HEAD:main
+git checkout -q -b c/x
+${gen ? "echo 2 > packages/cli/src/starters.gen.ts" : ""}
+echo branch > ${mode === "beyond" ? "notes.md" : "own.md"}
+git add -A; git commit -q -m branch; git push -q origin c/x
+git checkout -q main
+echo 3 > packages/cli/src/starters.gen.ts; echo main > notes.md
+git add -A; git commit -q -m main; git push -q origin main
+git checkout -q c/x
+${mode === "rejected" ? "printf '#!/bin/sh\\nexit 1\\n' > ../origin.git/hooks/pre-receive; chmod +x ../origin.git/hooks/pre-receive" : ""}
+before=$(git rev-parse HEAD)
+set +e
+pr=1; repo=()
+${fn}
+merge_generated; echo "status $?"
+echo "parents $(git rev-list --parents -n1 HEAD | wc -w)"
+echo "back $([ "$(git rev-parse HEAD)" = "$before" ] && echo yes || echo no)"
+echo "pushed $([ "$(git rev-parse HEAD)" = "$(git rev-parse origin/c/x)" ] && echo yes || echo no)"
+echo "file $(cat packages/cli/src/starters.gen.ts)"
+echo "clean $([ -z "$(git status --porcelain)" ] && [ ! -e .git/MERGE_HEAD ] && echo yes || echo no)"
+git log -1 --format=%B`;
+  return spawnSync("bash", ["-c", sh], {
+    cwd: dir,
+    encoding: "utf8",
+    timeout: 60_000,
+    env: { ...process.env, PATH: `${dir}:${process.env.PATH}`, GIT_CONFIG_GLOBAL: "/dev/null" },
+  });
+}
+
+function expectLines(run, lines) {
+  for (const line of lines) {
+    assert.match(run.stdout, new RegExp(`^${line}$`, "m"), run.stdout + run.stderr);
+  }
+}
+
+test("a clash in generated files alone is resolved by merging main in, pushed without force (#1369)", () => {
+  const run = mergeMain("clash");
+  assert.match(run.stdout, /main merged in and pushed/);
+  expectLines(run, ["status 0", "parents 3", "back no", "pushed yes", "file built", "clean yes"]);
+  assert.match(run.stdout, /Co-Authored-By: Claude/);
+});
+
+test("a branch that merges main cleanly still gets its merge commit and refreshed files", () => {
+  expectLines(mergeMain("clean"), [
+    "status 0",
+    "parents 3",
+    "pushed yes",
+    "file built",
+    "clean yes",
+  ]);
+});
+
+test("a clash beyond the generated files leaves the branch as it was", () => {
+  const run = mergeMain("beyond");
+  assert.match(run.stdout, /a conflict beyond the generated files: notes\.md/);
+  expectLines(run, ["status 1", "back yes", "pushed yes", "clean yes"]);
+});
+
+test("a rejected push puts the branch back where it was", () => {
+  const run = mergeMain("rejected");
+  assert.match(run.stdout, /the push of the merge failed/);
+  expectLines(run, ["status 1", "back yes", "pushed yes", "file 2", "clean yes"]);
+});

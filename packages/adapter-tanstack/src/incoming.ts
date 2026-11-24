@@ -133,6 +133,20 @@ function signedCode(text: string): string {
   return `\`${code}\``;
 }
 
+/**
+ * The id a call is known by for a day, as code. A signed call's is what is signed, since the signed
+ * text always takes the body: the value `id` names in it, or, where that is missing or not named,
+ * the signature itself (of the body, with the time where one is signed). A header the signature
+ * leaves out (Idempotency-Key) never stands in for it: a replay with another header is still a
+ * repeat. An unsigned call's is the header, else what the entry names.
+ */
+function dedupeKey(incoming: IncomingIR): string {
+  const named = incoming.id ? `fill(${JSON.stringify(incoming.id)}, body)` : "";
+  if (incoming.signed) return named ? `${named} || \`sig:\${given}\`` : "`sig:${given}`";
+  const own = named || (incoming.mail ? "mailKey(body as Mail)" : '""');
+  return `request.headers.get("idempotency-key") ?? ${own}`;
+}
+
 export function incomingRoute(incoming: IncomingIR, ir: SpecIR, t: Texts): string {
   const model = incoming.create ? modelNamed(ir, incoming.create) : undefined;
   const n = model ? names(model, t) : undefined;
@@ -387,8 +401,8 @@ ${
         if (check) return new Response(check, { status: 200, headers: { "content-type": "text/plain" } });`
     : ""
 }
-        // A call seen in the last day is answered as received and not acted on again${incoming.mail && !incoming.id ? "; a mail's id is its Message-ID" : ""}.
-        const key = request.headers.get("idempotency-key") ?? ${incoming.id ? `fill(${JSON.stringify(incoming.id)}, body)` : incoming.mail ? "mailKey(body as Mail)" : stamp ? "`sig:${given}`" : '""'};
+        // A call seen in the last day is answered as received and not acted on again${incoming.mail && !incoming.id ? "; a mail's id is its Message-ID" : ""}${incoming.signed ? "; signed, its id is what is signed, never a header the signature leaves out" : ""}.
+        const key = ${dedupeKey(incoming)};
         // The id is taken before anything is done, in one statement: a second delivery of it, even at the same
         // moment, finds it taken (the index is unique) and is answered as received; one older than a day is forgotten.
         // The time written is this call's mark on the row: only the call that holds it may give it back.
