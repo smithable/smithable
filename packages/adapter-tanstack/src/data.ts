@@ -638,10 +638,12 @@ export function dataModule(
   // after another so a default that reads another (dueOn from issuedOn) sees it filled.
   const formulaDefaults = defaultOrder(
     model.fields.filter((f) => f.defaultFormula && !f.formula),
-  ).map(
-    (f) =>
-      `  if (values.${dataKey(f)} === undefined) values.${dataKey(f)} = ${defaultsName(model)}.${f.name}(values);`,
-  );
+  ).map((f) => {
+    // NOW() is an ISO text; a datetime column is written from a Date, as a form or an import gives it.
+    const value = `${defaultsName(model)}.${f.name}(values)`;
+    const instant = f.type.kind === "scalar" && f.type.name === "datetime";
+    return `  if (values.${dataKey(f)} === undefined) values.${dataKey(f)} = ${instant ? `new Date(${value})` : value};`;
+  });
   const signedIn = hasSignIn(auth);
   const owner = ownerKey(model);
   // A data page lists the model's newest records only: its list takes a limit.

@@ -8,7 +8,11 @@ import { projectRevision } from "./project-revision.js";
 import { StudioInkWash } from "./studio-ink-wash.js";
 import { tempDir } from "./test-dir.js";
 
-test("Studio prepares its offer outside the project and invalidates it after a picture edit", async () => {
+// The real worker thread starts three times (the offer, a refused fetch, the updated offer), each
+// loading its bundle: about 4 s alone, more under a gate, so past vitest's 5 s default (T1396).
+test("Studio prepares its offer outside the project and invalidates it after a picture edit", {
+  timeout: 30_000,
+}, async () => {
   const drawing = Buffer.from(
     "UklGRlAAAABXRUJQVlA4TEQAAAAvCcABEB8gECByREsSY0dAQrwx2U85ICQgTpnsnAmagKDg/+jiA2SfgoI2kpS7Z351a3JNPoqI6H8CHvBrzbWmfGQhCw==",
     "base64",
