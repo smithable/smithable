@@ -74,12 +74,15 @@ function losePicture(editor: YamlEditor, ir: SpecIR, m: string, gone: string): v
     f.type.kind === "scalar" &&
     (f.type.name === "picture" || f.type.name === "pictures");
   const fields = ir.models.find((x) => x.name === m)?.fields ?? [];
+  const was = fields.find((f) => f.name === gone);
+  if (!was || !isPicture(was)) return;
   const left = fields.some((f) => f.name !== gone && isPicture(f));
   for (const page of ir.pages.filter((p) => pageModel(p) === m)) {
     const cover = ["pages", page.id, "table", "cover"];
     if (editor.has(cover) && editor.get(cover) === gone) editor.removeAndPrune(cover, 0);
     const opens = ["pages", page.id, "table", "open"];
-    if (!left && editor.has(opens)) editor.removeAndPrune(opens, 0);
+    if (!left && editor.has(opens) && editor.get(opens) === "picture")
+      editor.removeAndPrune(opens, 0);
   }
 }
 
