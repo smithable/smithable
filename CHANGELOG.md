@@ -26,6 +26,7 @@ The entries are filled in from the merged pull requests at each release. A fix t
 
 ### Fixes
 
+- Linked card images in generated apps zoom slightly on hover and keyboard focus when the device supports hover and reduced motion is off (`fixes/link-card-image-motion.yml`).
 - Generated apps can build and run a record action that asks for an app-filled field, such as a follow-up date (`fixes/app-filled-action-inputs.yml`).
 - Generated apps keep the sign-out and site menu buttons inside a narrow landing header by shortening the app name as needed (`fixes/landing-header-phone-actions.yml`).
 - Generated apps: on a phone, a landing page's header puts its "Open …" link in the site menu when there is one, and otherwise lets it shorten, so a long app name no longer makes the page scroll sideways (`fixes/landing-header-phone-width.yml`).
