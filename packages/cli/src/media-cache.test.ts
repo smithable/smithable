@@ -101,7 +101,10 @@ test("§4 a file whose hash is not its record's is never placed", async () => {
       }),
     },
   );
-  await expect(syncMedia(dir, s)).rejects.toThrow("another hash than its record's");
+  const done = await syncMedia(dir, s);
+  // Each wrong rendition is counted missing, with why, and the others are still tried.
+  expect(done.missing).toEqual([`${ID}/w480.webp`, `${ID}/w1600.webp`]);
+  expect(done.faults[0]).toContain("another hash than its record's");
   expect(existsSync(join(dir, "public/media", ID))).toBe(false);
   // And the writer checks again on its own, whoever calls it.
   expect(() => placeMedia(dir, ID, "w480.webp", bytes("small"), hash("other"))).toThrow(
@@ -306,4 +309,25 @@ test("§4 a recheck that failed is owed: the next sync rechecks", async () => {
   down = false;
   await sync();
   expect(existsSync(join(dir, "public/media", OTHER))).toBe(false);
+});
+
+test("§4 one picture that cannot be placed stops only itself; the others are fetched", async () => {
+  const dir = project(`smithableContent: 0.1
+pages:
+  home:
+    hero:
+      title: Roofs
+      image: { asset: ${ID}, alt: A roof, width: 480 }
+    about:
+      title: Us
+      image: { asset: ${OTHER}, alt: Us, width: 480 }
+`);
+  const outside = folder("smithable-media-outside-");
+  mkdirSync(join(dir, "public/media"), { recursive: true });
+  symlinkSync(outside, join(dir, "public/media", ID));
+  const { source: s } = source({ [`${ID}/w480.webp`]: "a", [`${OTHER}/w480.webp`]: "o" });
+  const done = await syncMedia(dir, s);
+  expect(done.missing).toEqual([`${ID}/w480.webp`]);
+  expect(done.written).toEqual([`${OTHER}/w480.webp`]);
+  expect(readdirSync(outside)).toEqual([]);
 });
