@@ -39917,8 +39917,10 @@ type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
  * it is sent, but a visitor's form that does not ask it, a field the app fills, an action that adds
  * a record and custom code leave it to the server. A value given, null too, is kept.
  */
-function withFormulaDefaults<T extends Record<string, unknown>>(values: T): T {
-  return { ...values, followUpOn: values.followUpOn === undefined ? enquiryDefaults.followUpOn(values) : values.followUpOn };
+function withFormulaDefaults<T extends Record<string, unknown>>(given: T): T {
+  const values: Record<string, unknown> = { ...given };
+  if (values.followUpOn === undefined) values.followUpOn = enquiryDefaults.followUpOn(values);
+  return values as T;
 }
 
 /** The reference of an add or a change that names no record, by its label, once the database refused one. */
@@ -45265,7 +45267,7 @@ exports[`../../../examples/builder/smithable.yml > the generated files are as re
   "src/generated/enquiry.import.server.ts": "a633861c generated",
   "src/generated/enquiry.import.ts": "913f16b7 generated",
   "src/generated/enquiry.schema.ts": "0fcaedbc generated",
-  "src/generated/enquiry.server.ts": "b19e5cec generated",
+  "src/generated/enquiry.server.ts": "0aca01af generated",
   "src/generated/enquiry.ts": "d7f7fabd generated",
   "src/generated/hooks.ts": "9ce2a021 generated",
   "src/generated/my-time.ts": "c315432b generated",
@@ -49388,8 +49390,10 @@ type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
  * it is sent, but a visitor's form that does not ask it, a field the app fills, an action that adds
  * a record and custom code leave it to the server. A value given, null too, is kept.
  */
-function withFormulaDefaults<T extends Record<string, unknown>>(values: T): T {
-  return { ...values, dueOn: values.dueOn === undefined ? followUpDefaults.dueOn(values) : values.dueOn };
+function withFormulaDefaults<T extends Record<string, unknown>>(given: T): T {
+  const values: Record<string, unknown> = { ...given };
+  if (values.dueOn === undefined) values.dueOn = followUpDefaults.dueOn(values);
+  return values as T;
 }
 
 /** The reference of an add or a change that names no record, by its label, once the database refused one. */
@@ -50523,8 +50527,10 @@ type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
  * it is sent, but a visitor's form that does not ask it, a field the app fills, an action that adds
  * a record and custom code leave it to the server. A value given, null too, is kept.
  */
-function withFormulaDefaults<T extends Record<string, unknown>>(values: T): T {
-  return { ...values, placedAt: values.placedAt === undefined ? orderDefaults.placedAt(values) : values.placedAt };
+function withFormulaDefaults<T extends Record<string, unknown>>(given: T): T {
+  const values: Record<string, unknown> = { ...given };
+  if (values.placedAt === undefined) values.placedAt = orderDefaults.placedAt(values);
+  return values as T;
 }
 
 /** The reference of an add or a change that names no record, by its label, once the database refused one. */
@@ -55225,7 +55231,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/generated/follow-up.import.server.ts": "747d6cf1 generated",
   "src/generated/follow-up.import.ts": "39b736bf generated",
   "src/generated/follow-up.schema.ts": "a4599e2b generated",
-  "src/generated/follow-up.server.ts": "3f9666d3 generated",
+  "src/generated/follow-up.server.ts": "48c45170 generated",
   "src/generated/follow-up.ts": "6e9b86d6 generated",
   "src/generated/hooks.ts": "c1f38e86 generated",
   "src/generated/my-time.ts": "c315432b generated",
@@ -55234,7 +55240,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/generated/order.import.server.ts": "afc9f15e generated",
   "src/generated/order.import.ts": "efdb6114 generated",
   "src/generated/order.schema.ts": "0a39b791 generated",
-  "src/generated/order.server.ts": "6a36c8af generated",
+  "src/generated/order.server.ts": "1eb61143 generated",
   "src/generated/order.ts": "739e757f generated",
   "src/generated/pages.ts": "93284445 generated",
   "src/generated/roles.ts": "1cc6979a generated",
@@ -60563,8 +60569,11 @@ type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
  * it is sent, but a visitor's form that does not ask it, a field the app fills, an action that adds
  * a record and custom code leave it to the server. A value given, null too, is kept.
  */
-function withFormulaDefaults<T extends Record<string, unknown>>(values: T): T {
-  return { ...values, issuedOn: values.issuedOn === undefined ? invoiceDefaults.issuedOn(values) : values.issuedOn, dueOn: values.dueOn === undefined ? invoiceDefaults.dueOn(values) : values.dueOn };
+function withFormulaDefaults<T extends Record<string, unknown>>(given: T): T {
+  const values: Record<string, unknown> = { ...given };
+  if (values.issuedOn === undefined) values.issuedOn = invoiceDefaults.issuedOn(values);
+  if (values.dueOn === undefined) values.dueOn = invoiceDefaults.dueOn(values);
+  return values as T;
 }
 
 /**
@@ -65488,7 +65497,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/generated/invoice.import.server.ts": "5d63bdd7 generated",
   "src/generated/invoice.import.ts": "92bad053 generated",
   "src/generated/invoice.schema.ts": "fc241430 generated",
-  "src/generated/invoice.server.ts": "e7008736 generated",
+  "src/generated/invoice.server.ts": "8d422f56 generated",
   "src/generated/invoice.ts": "99ac7b80 generated",
   "src/generated/my-time.ts": "c315432b generated",
   "src/generated/outgoing.server.ts": "8a4f3007 generated",
@@ -68683,8 +68692,10 @@ type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
  * it is sent, but a visitor's form that does not ask it, a field the app fills, an action that adds
  * a record and custom code leave it to the server. A value given, null too, is kept.
  */
-function withFormulaDefaults<T extends Record<string, unknown>>(values: T): T {
-  return { ...values, followUpOn: values.followUpOn === undefined ? cateringEnquiryDefaults.followUpOn(values) : values.followUpOn };
+function withFormulaDefaults<T extends Record<string, unknown>>(given: T): T {
+  const values: Record<string, unknown> = { ...given };
+  if (values.followUpOn === undefined) values.followUpOn = cateringEnquiryDefaults.followUpOn(values);
+  return values as T;
 }
 
 /** Who may read, create, change and delete catering enquiries. */
@@ -76964,7 +76975,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/generated/catering-enquiry.import.server.ts": "60679c14 generated",
   "src/generated/catering-enquiry.import.ts": "2cc61e53 generated",
   "src/generated/catering-enquiry.schema.ts": "e10bf0d6 generated",
-  "src/generated/catering-enquiry.server.ts": "28b3a05f generated",
+  "src/generated/catering-enquiry.server.ts": "8d8755e0 generated",
   "src/generated/catering-enquiry.ts": "f42fe4ed generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/dev-door.server.ts": "a88b402e generated",
@@ -84863,8 +84874,10 @@ type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
  * it is sent, but a visitor's form that does not ask it, a field the app fills, an action that adds
  * a record and custom code leave it to the server. A value given, null too, is kept.
  */
-function withFormulaDefaults<T extends Record<string, unknown>>(values: T): T {
-  return { ...values, followUpOn: values.followUpOn === undefined ? enquiryDefaults.followUpOn(values) : values.followUpOn };
+function withFormulaDefaults<T extends Record<string, unknown>>(given: T): T {
+  const values: Record<string, unknown> = { ...given };
+  if (values.followUpOn === undefined) values.followUpOn = enquiryDefaults.followUpOn(values);
+  return values as T;
 }
 
 /** The reference of an add or a change that names no record, by its label, once the database refused one. */
@@ -89290,7 +89303,7 @@ exports[`../../../examples/painter/smithable.yml > the generated files are as re
   "src/generated/enquiry.import.server.ts": "0d228f50 generated",
   "src/generated/enquiry.import.ts": "913f16b7 generated",
   "src/generated/enquiry.schema.ts": "0fcaedbc generated",
-  "src/generated/enquiry.server.ts": "9e23418c generated",
+  "src/generated/enquiry.server.ts": "a0278d43 generated",
   "src/generated/enquiry.ts": "26b04121 generated",
   "src/generated/hooks.ts": "8a1f7baf generated",
   "src/generated/job.import.server.ts": "1cd5fe7e generated",
@@ -91064,8 +91077,10 @@ type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
  * it is sent, but a visitor's form that does not ask it, a field the app fills, an action that adds
  * a record and custom code leave it to the server. A value given, null too, is kept.
  */
-function withFormulaDefaults<T extends Record<string, unknown>>(values: T): T {
-  return { ...values, addedOn: values.addedOn === undefined ? itemDefaults.addedOn(values) : values.addedOn };
+function withFormulaDefaults<T extends Record<string, unknown>>(given: T): T {
+  const values: Record<string, unknown> = { ...given };
+  if (values.addedOn === undefined) values.addedOn = itemDefaults.addedOn(values);
+  return values as T;
 }
 
 /** Who may read, create, change and delete items. */
@@ -93415,7 +93430,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/generated/item.import.server.ts": "0fe6563a generated",
   "src/generated/item.import.ts": "0cb7ece1 generated",
   "src/generated/item.schema.ts": "0eb30681 generated",
-  "src/generated/item.server.ts": "052c2de1 generated",
+  "src/generated/item.server.ts": "5656535c generated",
   "src/generated/item.ts": "380eeeef generated",
   "src/generated/my-time.ts": "c315432b generated",
   "src/generated/pages.ts": "e4262913 generated",

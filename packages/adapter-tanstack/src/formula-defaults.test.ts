@@ -19,6 +19,10 @@ models:
       eventDate: date
       followUpOn: { type: date, default: TODAY(), by: app }
       remindOn: { type: date, default: TODAY() }
+      dueOn:
+        type: date
+        default: DATEADD(issuedOn, 30, "day")
+      issuedOn: { type: date, default: TODAY() }
 pages:
   enquiries: { crud: Enquiry }
 `,
@@ -47,9 +51,14 @@ test("a formula default is filled by checkCreate, so every way of making a recor
   expect(data).toMatch(/values = withFormulaDefaults\(/);
   // What the app fills and what a form may leave out alike; a value given, null too, is kept.
   expect(data).toContain(
-    "followUpOn: values.followUpOn === undefined ? enquiryDefaults.followUpOn(values) : values.followUpOn",
+    "if (values.followUpOn === undefined) values.followUpOn = enquiryDefaults.followUpOn(values);",
   );
   expect(data).toContain(
-    "remindOn: values.remindOn === undefined ? enquiryDefaults.remindOn(values) : values.remindOn",
+    "if (values.remindOn === undefined) values.remindOn = enquiryDefaults.remindOn(values);",
   );
+  // A default that reads another defaulted field comes after it, whatever the spec's order.
+  const issued = data.indexOf("values.issuedOn = enquiryDefaults.issuedOn(values)");
+  const due = data.indexOf("values.dueOn = enquiryDefaults.dueOn(values)");
+  expect(issued).toBeGreaterThan(-1);
+  expect(due).toBeGreaterThan(issued);
 });

@@ -8,6 +8,7 @@ import {
   emptyUx,
   FILES_MAX,
   type FieldIR,
+  fieldsUsed,
   humanize,
   isFile,
   isFiles,
@@ -597,6 +598,26 @@ function localized<U extends { label: string; pluralLabel: string; fields: objec
   } as unknown as U;
 }
 
+/**
+ * Fields with a formula default, each after the defaulted fields its formula reads, so a default
+ * computed from another (dueOn from issuedOn) is filled after it. A cycle keeps the spec's order.
+ */
+function defaultOrder(fields: FieldIR[]): FieldIR[] {
+  const placed: FieldIR[] = [];
+  let left = [...fields];
+  while (left.length) {
+    const ready = left.filter((f) =>
+      fieldsUsed(f.defaultFormula as NonNullable<FieldIR["defaultFormula"]>).every(
+        (name) => name === f.name || !left.some((o) => o.name === name),
+      ),
+    );
+    const next = ready.length ? ready : left;
+    placed.push(...next);
+    left = left.filter((f) => !next.includes(f));
+  }
+  return placed;
+}
+
 export function dataModule(
   model: ModelIR,
   t: Texts,
@@ -613,13 +634,14 @@ export function dataModule(
     .map((p) => p.pattern)
     .find((p): p is PatternOf<"order"> => p.kind === "order" && p.into === model.name);
   const formulas = hasFormulas(model);
-  // Each field with a formula default, filled by checkCreate when the values leave it out.
-  const formulaDefaults = model.fields
-    .filter((f) => f.defaultFormula && !f.formula)
-    .map(
-      (f) =>
-        `${dataKey(f)}: values.${dataKey(f)} === undefined ? ${defaultsName(model)}.${f.name}(values) : values.${dataKey(f)}`,
-    );
+  // Each field with a formula default, filled by checkCreate when the values leave it out, one
+  // after another so a default that reads another (dueOn from issuedOn) sees it filled.
+  const formulaDefaults = defaultOrder(
+    model.fields.filter((f) => f.defaultFormula && !f.formula),
+  ).map(
+    (f) =>
+      `  if (values.${dataKey(f)} === undefined) values.${dataKey(f)} = ${defaultsName(model)}.${f.name}(values);`,
+  );
   const signedIn = hasSignIn(auth);
   const owner = ownerKey(model);
   // A data page lists the model's newest records only: its list takes a limit.
@@ -2013,8 +2035,10 @@ ${
  * it is sent, but a visitor's form that does not ask it, a field the app fills, an action that adds
  * a record and custom code leave it to the server. A value given, null too, is kept.
  */
-function withFormulaDefaults<T extends Record<string, unknown>>(values: T): T {
-  return { ...values, ${formulaDefaults.join(", ")} };
+function withFormulaDefaults<T extends Record<string, unknown>>(given: T): T {
+  const values: Record<string, unknown> = { ...given };
+${formulaDefaults.join("\n")}
+  return values as T;
 }
 `
     : ""
