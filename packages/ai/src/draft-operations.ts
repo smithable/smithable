@@ -681,11 +681,20 @@ export function visitorFlaws(files: ProjectFiles): string[] {
   return flawsOf(files).map((d) => d.message);
 }
 
-function flawsOf(files: ProjectFiles): { code: string; message: string }[] {
+function flawsOf(files: ProjectFiles, requireLanding = false): { code: string; message: string }[] {
   const ir = validateSpec({ path: "smithable.yml", text: files.spec }).ir;
   if (!ir) return [];
   const english = untranslated(files);
   return [
+    ...(requireLanding && !ir.pages.some((page) => page.pattern.kind === "landing")
+      ? [
+          {
+            code: "missing-landing",
+            message:
+              "The imported website needs a landing page with the source home page's content.",
+          },
+        ]
+      : []),
     ...validateAuth({ path: "smithable.auth.yml", text: files.auth ?? "" }, ir).diagnostics.filter(
       (d) => d.severity === "warning" && VISITOR_FLAWS.has(d.code),
     ),
@@ -741,6 +750,18 @@ const EXPOSES = new Set(["public-personal-data", "visitors-read-drafts"]);
 const weigh = (flaws: { code: string }[]) =>
   flaws.reduce((n, f) => n + (EXPOSES.has(f.code) ? 100 : 1), 0);
 
+/** Requirements shared by the two drafting modes for a full website import. */
+export function websiteDraftProblem(
+  files: Pick<ProjectFiles, "spec" | "auth">,
+): string | undefined {
+  const ir = validateSpec({ path: "smithable.yml", text: files.spec }).ir;
+  if (!ir?.pages.some((page) => page.pattern.kind === "landing"))
+    return "The website draft has no landing page.";
+  const { diagnostics } = validateAuth({ path: "smithable.auth.yml", text: files.auth ?? "" }, ir);
+  if (diagnostics.some(({ code }) => EXPOSES.has(code)))
+    return "The website draft would expose private records to visitors.";
+}
+
 const toProject = (files: SpecFiles): ProjectFiles => ({
   spec: files["smithable.yml"] ?? "",
   auth: files["smithable.auth.yml"],
@@ -781,6 +802,7 @@ export async function draftProjectByOperations(options: {
   description: string;
   language?: Language;
   preserveSourceCopy?: boolean;
+  fullWebsiteImport?: boolean;
   providers: Provider[];
   /** The closest starter (clarify's choice): the example of shape, and the access default. */
   starter?: { name: string; files: SpecFiles };
@@ -821,7 +843,11 @@ export async function draftProjectByOperations(options: {
     const language = options.language ?? textLanguage(options.description);
     if (language && language !== "en")
       files = applyAll(files, done, [{ op: "setLanguage", args: { language } }]).files;
-    let prompt = `${options.attempt ? `(${options.attempt}.) ` : ""}Description: ${options.description}${languageNote(options.description, language)}${done.length ? `\n\nApplied so far (do not repeat them):\n${JSON.stringify(done)}` : ""}${shape}`;
+    const wording = languageNote(options.description, language, options.preserveSourceCopy);
+    const landing = options.fullWebsiteImport
+      ? "\nThe result needs a landing page with the source home page's content. Start it with addLandingPage."
+      : "";
+    let prompt = `${options.attempt ? `(${options.attempt}.) ` : ""}Description: ${options.description}${wording}${landing}${done.length ? `\n\nApplied so far (do not repeat them):\n${JSON.stringify(done)}` : ""}${shape}`;
     let round = 0;
     let assumptions: Assumption[] = [];
     let refused: { step: Step; message: string }[] = [];
@@ -837,9 +863,12 @@ export async function draftProjectByOperations(options: {
     // added last, when the app has its texts: its file lists every one, to be filled in.
     const others = otherLanguages(options.description, language ?? "en");
     const draftOf = (dropped: string[]): Draft & { operations?: Step[] } => {
+      const selected = best?.files ?? files;
+      const failure = options.fullWebsiteImport && websiteDraftProblem(selected);
+      if (failure) return { kind: "failed", message: failure, usage };
       const steps = [...(best ? done.slice(0, best.count) : done)];
       const chosen = applyAll(
-        best?.files ?? files,
+        selected,
         steps,
         others.map((other) => ({ op: "addLanguage", args: { language: other } })),
       ).files;
@@ -906,9 +935,13 @@ export async function draftProjectByOperations(options: {
         ];
         if (done.length > 0) {
           files = mended(files, done);
-          const found = flawsOf(files);
-          if (!best || weigh(found) < best.score)
-            best = { files, count: done.length, score: weigh(found) };
+          const found = flawsOf(files, options.fullWebsiteImport);
+          const score = weigh(found);
+          const eligible =
+            !options.fullWebsiteImport ||
+            !found.some(({ code }) => code === "missing-landing" || EXPOSES.has(code));
+          if (eligible && (!best || score < best.score))
+            best = { files, count: done.length, score };
           const flaws = last ? [] : found.map((f) => f.message);
           if (critique && round === 1) {
             // The critique: the spec the draft became and what the checks find, to mend once.
@@ -918,14 +951,14 @@ export async function draftProjectByOperations(options: {
               .filter(([, text]) => text.trim())
               .map(([name, text]) => `${name}:\n\`\`\`yaml\n${text.trim()}\n\`\`\``)
               .join("\n");
-            prompt = `Description: ${options.description}${languageNote(options.description)}\n\nApplied so far (do not repeat them):\n${JSON.stringify(done)}\n\nThe app they made:\n${spec}\n\nThe checks find: ${flaws.length ? `\n${flaws.map((f) => `- ${f}`).join("\n")}` : "nothing wrong."}\n\nRead the app against the description: answer with only the operations that mend what is missing or wrong, or with no operations if it is right.`;
+            prompt = `Description: ${options.description}${wording}\n\nApplied so far (do not repeat them):\n${JSON.stringify(done)}\n\nThe app they made:\n${spec}\n\nThe checks find: ${flaws.length ? `\n${flaws.map((f) => `- ${f}`).join("\n")}` : "nothing wrong."}\n\nRead the app against the description: answer with only the operations that mend what is missing or wrong, or with no operations if it is right.`;
             continue;
           }
           if (!flaws.some((f) => !told.has(f))) return draftOf(dropped);
           for (const f of flaws) told.add(f);
           droppedBefore = dropped;
           refused = [];
-          prompt = `Description: ${options.description}${languageNote(options.description)}\n\nApplied so far (do not repeat them):\n${JSON.stringify(done)}\n\nThe app is valid, but a visitor would find it broken or too open:\n${flaws.map((f) => `- ${f}`).join("\n")}\n\nAnswer with only the operations that put this right for what the description wants (usually setPublic with the whole list; removeSection for a landing section that shows what visitors may not read), or with no operations if it is as intended.`;
+          prompt = `Description: ${options.description}${wording}\n\nApplied so far (do not repeat them):\n${JSON.stringify(done)}\n\nThe app is valid, but a visitor would find it broken or too open:\n${flaws.map((f) => `- ${f}`).join("\n")}\n\nAnswer with only the operations that put this right for what the description wants (usually setPublic with the whole list; removeSection for a landing section that shows what visitors may not read), or with no operations if it is as intended.`;
           continue;
         }
         problem =
@@ -937,7 +970,7 @@ export async function draftProjectByOperations(options: {
         problem = essential.map((r) => `${r.step.op}: ${r.message}`).join("\n");
         break;
       }
-      prompt = `Description: ${options.description}${languageNote(options.description)}\n\nApplied so far (do not repeat them):\n${JSON.stringify(done)}\n\nThese operations were refused:\n${refused.map((r) => `${JSON.stringify(r.step)}\n  Reason: ${r.message}`).join("\n")}\n\nAnswer with corrected versions of the refused operations only (leave out any that are not needed), in order.`;
+      prompt = `Description: ${options.description}${wording}\n\nApplied so far (do not repeat them):\n${JSON.stringify(done)}\n\nThese operations were refused:\n${refused.map((r) => `${JSON.stringify(r.step)}\n  Reason: ${r.message}`).join("\n")}\n\nAnswer with corrected versions of the refused operations only (leave out any that are not needed), in order.`;
     }
   }
   return { kind: "failed", message: `No model drafted a valid project.\n${problem}`, usage };

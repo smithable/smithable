@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { createServer } from "node:http";
 import { dirname, join } from "node:path";
 import { Readable } from "node:stream";
-import { YamlEditor } from "@smithable/core";
+import { applyOperations, YamlEditor } from "@smithable/core";
 import { expect, test, vi } from "vitest";
 import { generationReceipt, startGeneration } from "./generation-job.js";
 import { create } from "./new.js";
@@ -20,6 +20,8 @@ const state = vi.hoisted(() => ({
   personalEmail: "",
   draftLanguage: undefined as string | undefined,
   copiedText: "",
+  privacyOnly: false,
+  exposeDuringPlacement: false,
 }));
 vi.mock("@smithable/ai", async (original) => ({
   ...(await original<object>()),
@@ -34,6 +36,15 @@ vi.mock("@smithable/ai", async (original) => ({
   }) => {
     state.descriptions.push(options.description);
     state.draftLanguage = options.language;
+    if (state.privacyOnly)
+      return {
+        kind: "draft",
+        files: {
+          "smithable.yml":
+            "smithable: 0.1\napp: { name: Shop }\npages:\n  privacy: { route: /privacy, legal: privacy }\n",
+        },
+        usage: [],
+      };
     const files = { ...options.starter };
     const content = new YamlEditor(files["smithable.content.yml"] ?? "");
     content.set(
@@ -58,6 +69,27 @@ vi.mock("./ask.js", async (original) => ({
   ...(await original<object>()),
   providersFor: () => [],
 }));
+vi.mock("./website-generation.js", async (original) => {
+  const real = await original<typeof import("./website-generation.js")>();
+  return {
+    ...real,
+    async websitePictures(options: Parameters<typeof real.websitePictures>[0]) {
+      const placed = await real.websitePictures(options);
+      if (state.exposeDuringPlacement) {
+        const result = applyOperations(
+          {
+            spec: options.files["smithable.yml"] ?? "",
+            auth: options.files["smithable.auth.yml"],
+          },
+          [{ op: "setPublic", args: { read: ["Appointment"] } }],
+        );
+        if (!result.ok || !result.files.auth) throw new Error("Could not prepare the test draft");
+        options.files["smithable.auth.yml"] = result.files.auth;
+      }
+      return placed;
+    },
+  };
+});
 vi.mock("./generate.js", async (original) => ({
   ...(await original<object>()),
   generate: async (dir: string) => {
@@ -299,8 +331,9 @@ test("explicit full-content input preserves the source language and requested co
     ).toBe(1);
     expect(state.descriptions).toHaveLength(calls);
     vi.stubEnv("SMITHABLE_HOSTED_LEVEL", "");
+    const report: string[] = [];
     expect(
-      await create(dir, quiet, "barbers", {
+      await create(dir, { ...quiet, out: (message) => report.push(message) }, "barbers", {
         websiteInput: source,
         yes: true,
         unattended: true,
@@ -309,6 +342,7 @@ test("explicit full-content input preserves the source language and requested co
       }),
     ).toBe(0);
     expect(state.draftLanguage).toBe("sv");
+    expect(report.join("")).toContain("Website draft language: Swedish (page language tag).");
     expect(state.descriptions.at(-1)).toContain(text);
     expect(state.descriptions.at(-1)).toContain("actual items as inline content");
     expect(state.descriptions.at(-1)).not.toContain("write new prose");
@@ -316,8 +350,40 @@ test("explicit full-content input preserves the source language and requested co
     expect(new YamlEditor(content).get(["language"])).toBe("sv");
     expect(content).toContain(text);
     expect(content).not.toContain("People and contact details are samples");
+
+    const incomplete = join(tempDir("website-full-incomplete-"), "app");
+    const errors: string[] = [];
+    state.privacyOnly = true;
+    expect(
+      await create(incomplete, { ...quiet, err: (message) => errors.push(message) }, "barbers", {
+        websiteInput: source,
+        yes: true,
+        unattended: true,
+        installed: true,
+      }),
+    ).toBe(1);
+    expect(errors.join("")).toContain("The website draft has no landing page.");
+    expect(existsSync(incomplete)).toBe(false);
+
+    state.privacyOnly = false;
+    state.exposeDuringPlacement = true;
+    errors.length = 0;
+    expect(
+      await create(incomplete, { ...quiet, err: (message) => errors.push(message) }, "barbers", {
+        websiteInput: source,
+        yes: true,
+        unattended: true,
+        installed: true,
+      }),
+    ).toBe(1);
+    expect(errors.join("")).toContain(
+      "The website draft would expose private records to visitors.",
+    );
+    expect(existsSync(incomplete)).toBe(false);
   } finally {
     state.copiedText = "";
+    state.privacyOnly = false;
+    state.exposeDuringPlacement = false;
     vi.unstubAllEnvs();
   }
 });

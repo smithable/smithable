@@ -13,6 +13,7 @@ import {
   draftProjectByOperations,
   draftSamples,
   type Edit,
+  LANGUAGE_NAMES,
   nameFrom,
   type Question,
   readDescription,
@@ -20,6 +21,7 @@ import {
   STARTER_TEXTS,
   starterScore,
   type Usage,
+  websiteDraftProblem,
 } from "@smithable/ai";
 import {
   applyOperations,
@@ -61,6 +63,7 @@ import {
   websitePrivateProviders,
 } from "./website-generation.js";
 import { digest, parseWebsiteInput, type WebsiteGenerationInput } from "./website-input.js";
+import { sourceFontTheme, sourceLayout, sourceSectionLooks } from "./website-layout.js";
 
 /**
  * The starter a description is, or is a small edit of, where that can be read without a model
@@ -167,6 +170,7 @@ export async function create(
   let library: LibraryVersion | string | undefined;
   let fromPage = false;
   let draftedSamples: DraftedSamples = {};
+  let layout: ReturnType<typeof sourceLayout> = [];
   if (options.from) {
     if (options.withPictures) {
       const consent = await confirm(
@@ -178,6 +182,7 @@ export async function create(
     }
     try {
       const site = await readSite(options.from, { allowAssets: options.withPictures === true });
+      if (options.contentMode === "full") layout = sourceLayout(site.bundle.pages);
       if (site.reading.tooLittle && options.contentMode !== "full")
         throw new PageError(
           "The site gave too little factual information. Describe what the app should do.",
@@ -213,6 +218,7 @@ export async function create(
   }
   let website: WebsiteContext | undefined;
   let websiteAssets: WebsiteAsset[] = [];
+  let websiteTheme: { path: string; text: string }[] = [];
   let websiteAssumptions: Assumption[] | undefined;
   if (options.contentMode === "full" && !options.from) {
     io.err("Full website content requires the explicit local --from workflow.\n");
@@ -339,8 +345,13 @@ export async function create(
       (message) => options.onDiagnostic?.(message),
       options.instructions,
       options.websiteOwnerDescription === true,
+      layout,
     );
     description = website.description;
+    if (website.language && website.languageReason)
+      io.out(
+        `Website draft language: ${LANGUAGE_NAMES[website.language]} (${website.languageReason}).\n`,
+      );
     options.onWebsite?.({
       contentMode: website.contentMode,
       personal: website.personal,
@@ -402,6 +413,17 @@ export async function create(
   if (website?.contentMode === "sample" && description)
     description = replaceSitePersonalText(description, website.personalMap, { context: "text" });
   let files = prepared ?? (STARTERS[name] as Record<string, string>);
+  const fullWebsiteImport = website?.contentMode === "full" && !options.websiteOwnerDescription;
+  const rejectInvalidWebsite = (draft: Record<string, string>): boolean => {
+    if (!fullWebsiteImport) return false;
+    const problem = websiteDraftProblem({
+      spec: draft["smithable.yml"] ?? "",
+      auth: draft["smithable.auth.yml"],
+    });
+    if (!problem) return false;
+    io.err(`${problem} No app was created.\n`);
+    return true;
+  };
   // Prepared dependencies (node_modules, possibly a link, and the lockfile they were installed
   // from, as hosted workspaces provide) do not count: the install then has little to do.
   const PREPARED = ["node_modules", "pnpm-lock.yaml"];
@@ -449,12 +471,14 @@ export async function create(
             starter: files,
             providers,
             language: website?.language,
+            preserveSourceCopy: website?.contentMode === "full",
           })
         : await draftProjectByOperations({
             description,
             providers,
             language: website?.language,
             preserveSourceCopy: website?.contentMode === "full",
+            fullWebsiteImport,
             starter: { name, files },
             // The bench's harness switches (backlog Experiments 7); unset, the draft is made as always.
             ...(/^\d+$/.test(process.env.SMITHABLE_REPAIRS ?? "")
@@ -551,6 +575,7 @@ export async function create(
       path: "smithable.auth.yml",
       text: files["smithable.auth.yml"] ?? "",
     }).auth;
+    if (rejectInvalidWebsite(files)) return 1;
     const ir = validateSpec({ path: "smithable.yml", text: files["smithable.yml"] ?? "" }).ir;
     const content = files["smithable.content.yml"];
     if (ir) {
@@ -652,10 +677,36 @@ export async function create(
     pictures = placed.pictures;
     websiteAssets = placed.assets;
     files = replaceWebsitePersonalFiles(files, website);
+    const home = layout.find((page) => page.page === 1);
+    const sourceLooks = home ? sourceSectionLooks(home, files, ir) : [];
+    if (sourceLooks.length) {
+      const looks = applyOperations(
+        {
+          spec: files["smithable.yml"] ?? "",
+          auth: files["smithable.auth.yml"],
+          content: files["smithable.content.yml"],
+          ux: files["smithable.ux.yml"],
+        },
+        sourceLooks,
+      );
+      if (looks.ok && looks.files.ux) files = { ...files, "smithable.ux.yml": looks.files.ux };
+    }
+    const fonts = home && sourceFontTheme(home, files, ir);
+    if (fonts?.ok && fonts.files.ux) {
+      files = { ...files, "smithable.ux.yml": fonts.files.ux };
+      websiteTheme = fonts.added;
+    } else if (fonts && !fonts.ok) {
+      io.out("The source heading font could not be applied. Kept the draft theme.\n");
+    }
     fromPage = false;
   }
+  if (rejectInvalidWebsite(files)) return 1;
   mkdirSync(dir, { recursive: true });
   for (const [file, text] of Object.entries(files)) writeFileSync(join(dir, file), text);
+  for (const { path, text } of websiteTheme) {
+    mkdirSync(dirname(join(dir, path)), { recursive: true });
+    writeFileSync(join(dir, path), text);
+  }
   // The plain starter comes with its own custom code (e.g. the CRM's customer merge); an app
   // drafted from a description may have changed what that code relies on, so it gets stubs.
   if (!options.describe)
