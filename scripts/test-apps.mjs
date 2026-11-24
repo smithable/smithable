@@ -7596,6 +7596,11 @@ async function onboardingFlow(base) {
 async function invoicePaymentFlow(dir, base) {
   const spec = join(dir, "smithable.yml");
   const original = readFileSync(spec, "utf8");
+  // Send invoice's mail carries a link to pay (payments.md §4.1).
+  const contentFile = join(dir, "smithable.content.yml");
+  const content = readFileSync(contentFile, "utf8");
+  if (!content.includes("See it here: {view}")) throw new Error("the invoice mail's text moved");
+  writeFileSync(contentFile, content.replace("See it here: {view}", "Pay here: {pay}"));
   writeFileSync(
     spec,
     original.replace(
@@ -7625,7 +7630,9 @@ async function invoicePaymentFlow(dir, base) {
        insert into invoice_lines (invoice_id, description, quantity, unit_price, owner_id, created_at, updated_at)
          values ((select id from invoices where number = 'PAY-001'), 'Design work', 1, 12000, '${me.id}', 0, 0);
        insert into invoices (number, client_id, issued_on, due_on, status, owner_id, created_at, updated_at)
-         values ('PAY-002', (select id from clients where name = 'Paying Client'), '2026-11-01', '2026-12-01', 'draft', '${me.id}', 0, 0);`,
+         values ('PAY-002', (select id from clients where name = 'Paying Client'), '2026-11-01', '2026-12-01', 'draft', '${me.id}', 0, 0);
+       insert into invoice_lines (invoice_id, description, quantity, unit_price, owner_id, created_at, updated_at)
+         values ((select id from invoices where number = 'PAY-002'), 'Pay link work', 1, 5000, '${me.id}', 0, 0);`,
     );
     const [sent] = query(dir, "select id from invoices where number = 'PAY-001'");
     const [draft] = query(dir, "select id from invoices where number = 'PAY-002'");
@@ -7678,6 +7685,60 @@ async function invoicePaymentFlow(dir, base) {
     console.log(
       "  ✓ browser: a sent invoice is paid on its page through the fake provider and marked paid; its owner refunds it and finds it on the Payments page; a draft asks for nothing",
     );
+    step = "send with a pay link";
+    const outbox = join(dir, "data", "mail", "outbox");
+    const mails = () =>
+      existsSync(outbox) ? readdirSync(outbox).filter((f) => !f.startsWith(".")) : [];
+    const before = new Set(mails());
+    await page.getByRole("button", { name: "Send invoice" }).filter({ visible: true }).click();
+    await page
+      .getByRole("dialog", { name: "Send invoice" })
+      .getByRole("button", { name: "Send invoice" })
+      .click();
+    for (let i = 0; i < 100 * P && mails().every((m) => before.has(m)); i++)
+      await page.waitForTimeout(100);
+    const mail = mails()
+      .filter((m) => !before.has(m))
+      .map((m) => quotedPrintable(readFileSync(join(outbox, m), "latin1")))
+      .find((m) => m.includes("Invoice PAY-002:"));
+    const token = mail?.match(/\/p\/([A-Za-z0-9_-]{43})\b/)?.[1];
+    if (!token) throw new Error(`no pay link in the mail: ${mail?.slice(0, 600)}`);
+    step = "the pay link's page";
+    // Someone without an account: a browser of its own, signed in nowhere.
+    const stranger = await browser.newPage();
+    const served = await stranger.request.get(`${base}/p/${token}`);
+    if (served.status() !== 200) throw new Error(`the pay link answers ${served.status()}`);
+    if (!/no-store/.test(served.headers()["cache-control"] ?? ""))
+      throw new Error(`the pay page may be cached: ${served.headers()["cache-control"]}`);
+    if (!/noindex/.test(served.headers()["x-robots-tag"] ?? ""))
+      throw new Error("the pay page may be indexed");
+    if ((await served.text()).includes("Pay link work"))
+      throw new Error("the pay page shows the invoice's lines");
+    for (const wrong of [`/p/${"A".repeat(43)}`, `/d/${token}`]) {
+      const answer = await stranger.request.get(`${base}${wrong}`);
+      if (answer.status() !== 404)
+        throw new Error(`${wrong.slice(0, 3)} answers ${answer.status()}`);
+    }
+    await open(stranger, `${base}/p/${token}`);
+    await stranger.getByRole("heading", { name: "Invoice PAY-002" }).waitFor();
+    await hydrated(stranger);
+    await stranger.getByRole("button", { name: /^Pay .*50/ }).click();
+    await stranger.waitForURL(/\/payments\/fake\/\d+$/, { timeout: 30000 * P });
+    await hydrated(stranger);
+    await stranger.getByRole("button", { name: "Approve" }).click();
+    await stranger
+      .getByRole("heading", { name: /^Paid .+ Thank you!$/ })
+      .waitFor({ timeout: 15000 * P });
+    const [linkPaid] = query(dir, `select status from invoices where id = ${draft.id}`);
+    if (linkPaid.status !== "paid")
+      throw new Error(`an invoice paid by link is ${linkPaid.status}`);
+    await open(stranger, `${base}/p/${token}`);
+    await stranger.getByRole("heading", { name: /^Paid / }).waitFor({ timeout: 10000 * P });
+    if (await stranger.getByRole("button", { name: /^Pay / }).count())
+      throw new Error("a paid pay link still offers Pay");
+    console.log(
+      "  ✓ browser: Send invoice's mail carries a pay link; someone signed out pays the invoice through it, uncached and unindexed, and the link then says paid; a wrong link and a view link's path answer 404",
+    );
   } catch (error) {
     console.log(
       `  ✗ invoice payments (${step}): ${error.message.split("\n")[0]}\n    at ${page.url()}, see ${await screenshot(page)}`,
@@ -7686,6 +7747,7 @@ async function invoicePaymentFlow(dir, base) {
   } finally {
     await browser.close();
     writeFileSync(spec, original);
+    writeFileSync(contentFile, content);
     const back = spawnSync("node", [cli, "generate", dir], { cwd: repo, encoding: "utf8" });
     if (back.status !== 0) failures.push(`invoice payments put back: ${back.stdout}${back.stderr}`);
   }

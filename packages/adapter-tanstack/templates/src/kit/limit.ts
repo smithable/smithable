@@ -113,14 +113,19 @@ export function writeAllowed(viewer: { id: string } | null, headers: Headers): v
 }
 
 /**
- * Counts a look at a sent document's link (record-documents.md §5) from the request's address;
+ * Counts a look at a sent document's link (record-documents.md §5) or a pay link (payments.md
+ * §4.1) from the request's address, the two together;
  * an address that has opened nothing ten times within the hour is refused even a right link.
  */
-export function viewAllowed(headers: Pick<Headers, "get">, now = Date.now()): void {
+export function viewAllowed(
+  headers: Pick<Headers, "get">,
+  now = Date.now(),
+  what: string = w.document.views,
+): void {
   const from = address(headers);
   const missed = strangers.get(`view-miss:${from}`);
-  if (missed && missed.until > now && missed.n >= missed.max) throw new TooMany(w.document.views);
-  count(`view:${from}`, LIMITS.views, w.document.views, now);
+  if (missed && missed.until > now && missed.n >= missed.max) throw new TooMany(what);
+  count(`view:${from}`, LIMITS.views, what, now);
 }
 
 /** Counts a link that opened nothing, from the request's address. */

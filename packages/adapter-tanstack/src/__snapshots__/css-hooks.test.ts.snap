@@ -197,6 +197,9 @@ exports[`every kit component's hooks, as they are 1`] = `
   "src/kit/Overflow.tsx": [
     "data-part="more-actions"",
   ],
+  "src/kit/PayLink.tsx": [
+    "data-kit="pay-link"",
+  ],
   "src/kit/PaymentBack.tsx": [
     "data-kit="payment-back"",
   ],

@@ -70,6 +70,38 @@ export function viewEntries(ir: SpecIR, content: ContentIR | undefined): RecordO
 }
 
 /**
+ * The mails that send a link to pay for their record ({pay}, payments.md §4.1); core allows it
+ * only in a record's mail on a model a payments entry pays when it fits a condition.
+ */
+export function payEntries(ir: SpecIR, content: ContentIR | undefined): RecordOutgoing[] {
+  return ir.outgoing
+    .filter(onRecords)
+    .filter(
+      (o) =>
+        o.to === "mail" &&
+        placeholdersOf(content?.outgoing?.[o.name]?.text ?? "").includes("pay") &&
+        ir.payments.some((p) => p.on === o.when.model && p.when !== "created"),
+    );
+}
+
+/**
+ * Which payments entry each {pay} mail pays through, for `validate --explain`: found by the spec's
+ * shape alone, the entry that pays an existing record of the mail's model.
+ */
+export function payLinksExplained(ir: SpecIR, content: ContentIR | undefined): string[] {
+  return payEntries(ir, content).map((o) => {
+    const paying = ir.payments.find((p) => p.on === o.when.model && p.when !== "created");
+    return `outgoing ${o.name}: {pay} links to paying the ${o.when.model} through payments entry ${paying?.name} (the one that pays an existing ${o.when.model})`;
+  });
+}
+
+/** The mails that send links of either kind: their records' links end with them (record_links). */
+export function linkEntries(ir: SpecIR, content: ContentIR | undefined): RecordOutgoing[] {
+  const pays = payEntries(ir, content);
+  return [...viewEntries(ir, content).filter((o) => !pays.includes(o)), ...pays];
+}
+
+/**
  * Texts (notifications.md §5): the entries that text, in an app with sign-in (a person turns a
  * text on under their name; a number on a record is texted only from a signed-in person's change).
  */
@@ -304,6 +336,11 @@ export function outgoingModule(
   // The mails that send a link to a copy of their record's document (record-documents.md §5).
   const views = entries.filter((o) => viewEntries(ir, content).includes(o));
   const viewModels = [...new Set(views.map((o) => o.when.model))].map((m) => modelNamed(ir, m));
+  // The mails that send a link to pay for their record (payments.md §4.1), and the entry that pays.
+  const pays = entries.filter((o) => payEntries(ir, content).includes(o));
+  const payOf = (o: RecordOutgoing) =>
+    ir.payments.find((p) => p.on === o.when.model && p.when !== "created")?.name;
+  const linking = views.length || pays.length;
   const calls = entries.filter((o) => !told(o));
   const pushes = entries.filter((o) => channelsOf(o)?.includes("push"));
   const texts = entries.filter((o) => channelsOf(o)?.includes("sms"));
@@ -459,7 +496,7 @@ ${each.join("\n")}
     return `  {
     name: ${JSON.stringify(o.name)},
     model: ${JSON.stringify(o.when.model)},
-    when: ${JSON.stringify(when)},${fits ? `\n    fits: ${fits},` : ""}${o.fields?.length ? `\n    fields: ${JSON.stringify(o.fields.map((f) => keyOf(model, f)))},` : ""}${words?.subject ? `\n    subject: ${JSON.stringify(words.subject)},` : ""}${words?.text ? `\n    text: ${JSON.stringify(words.text)},` : ""}${o.show ? `\n    show: ${JSON.stringify(o.show)},` : ""}${o.previous ? "\n    previous: true," : ""}${paths.some((p) => p.startsWith("before.")) ? "\n    before: true," : ""}${worked.length ? `\n    worked: ${JSON.stringify(worked)},` : ""}${views.includes(o) ? `\n    view: ${o.viewDays ?? 60},` : ""}${hops.length ? `\n    more: (tx, r) => ({ ${hops.map(([path, code]) => `${JSON.stringify(path)}: ${code}`).join(", ")} }),` : ""}
+    when: ${JSON.stringify(when)},${fits ? `\n    fits: ${fits},` : ""}${o.fields?.length ? `\n    fields: ${JSON.stringify(o.fields.map((f) => keyOf(model, f)))},` : ""}${words?.subject ? `\n    subject: ${JSON.stringify(words.subject)},` : ""}${words?.text ? `\n    text: ${JSON.stringify(words.text)},` : ""}${o.show ? `\n    show: ${JSON.stringify(o.show)},` : ""}${o.previous ? "\n    previous: true," : ""}${paths.some((p) => p.startsWith("before.")) ? "\n    before: true," : ""}${worked.length ? `\n    worked: ${JSON.stringify(worked)},` : ""}${views.includes(o) ? `\n    view: ${o.viewDays ?? 60},` : ""}${pays.includes(o) ? `\n    pay: ${JSON.stringify(payOf(o))},` : ""}${hops.length ? `\n    more: (tx, r) => ({ ${hops.map(([path, code]) => `${JSON.stringify(path)}: ${code}`).join(", ")} }),` : ""}
     ${told(o) ? toCode(recipients(model, o.recipient)) : `target: ${JSON.stringify(o.to)},`}${channelsOf(o)?.includes("push") ? "\n    push: true," : ""}${channelsOf(o)?.includes("sms") ? "\n    sms: true," : ""}${told(o) && !channelsOf(o)?.includes("mail") ? "\n    mail: false," : ""}
   },`;
   });
@@ -507,9 +544,9 @@ ${each.join("\n")}
   ];
   return `${HEADER}${imports}${drizzle.length ? `import { ${drizzle.join(", ")} } from "drizzle-orm";\n` : ""}${ones ? 'import type { SQLiteColumn, SQLiteTable } from "drizzle-orm/sqlite-core";\n' : ""}import type { db } from "#/db";
 ${tables.size || users || named || threaded ? `${SCHEMA_IMPORT}\n` : ""}${body.includes("formatValue(") || threaded ? 'import { app } from "#/generated/app";\n' : ""}import type { Viewer } from "#/kit/access";
-${body.includes("formatValue(") || body.includes("titleOf(") ? `import { ${[...(body.includes("formatValue(") ? ["formatValue"] : []), ...(body.includes("titleOf(") ? ["titleOf"] : [])].join(", ")} } from "#/kit/format";\n` : ""}${entries.length ? `import { ${[...(mails.length ? ["blank"] : []), ...(calls.length ? ["changedBefore"] : []), "counts", ...(mails.length ? ["fillText"] : []), ...(calls.length ? ["picked"] : [])].join(", ")} } from "#/kit/outgoing";\n` : ""}${[...composedUsed].map((m) => `import { ${nameFunction(m)} } from "./${kebab(m.name)}.name";\n`).join("")}${[...workedBy.keys()].map((m) => `import { ${formulasName(m)} } from "${formulasModule(m)}";\n`).join("")}import { ${[...(mails.length ? ["type Happening", "linkTo"] : []), ...(calls.length || callsAfter ? ["queueCall"] : []), ...(mails.length || mailsAfter ? ["queueMail", "type Recipient"] : []), ...(mails.length ? ["shownFields"] : []), ...(threaded ? ["type Thread"] : []), ...(workers.length ? ["type Worked", "workedOut"] : [])].join(", ")} } from "#/kit/outgoing.server";${listed.length ? '\nimport { dayWords, listText } from "#/kit/outgoing.server";' : ""}${pushes.length ? '\nimport { pushReaders, queuePush } from "#/kit/push.server";' : ""}${views.length ? `\nimport { ${pushes.length || texts.length ? "unviewed, " : ""}VIEW_MARK } from "#/kit/outgoing.server";\nimport { type DocumentRead, viewLinks } from "#/kit/view.server";${viewModels.map((m) => `\nimport { ${documentReaderName(m)} } from "./${kebab(m.name)}.document.server";`).join("")}` : ""}${texts.length ? '\nimport { queueSms } from "#/kit/sms.server";' : ""}
+${body.includes("formatValue(") || body.includes("titleOf(") ? `import { ${[...(body.includes("formatValue(") ? ["formatValue"] : []), ...(body.includes("titleOf(") ? ["titleOf"] : [])].join(", ")} } from "#/kit/format";\n` : ""}${entries.length ? `import { ${[...(mails.length ? ["blank"] : []), ...(calls.length ? ["changedBefore"] : []), "counts", ...(mails.length ? ["fillText"] : []), ...(calls.length ? ["picked"] : [])].join(", ")} } from "#/kit/outgoing";\n` : ""}${[...composedUsed].map((m) => `import { ${nameFunction(m)} } from "./${kebab(m.name)}.name";\n`).join("")}${[...workedBy.keys()].map((m) => `import { ${formulasName(m)} } from "${formulasModule(m)}";\n`).join("")}import { ${[...(mails.length ? ["type Happening", "linkTo"] : []), ...(calls.length || callsAfter ? ["queueCall"] : []), ...(mails.length || mailsAfter ? ["queueMail", "type Recipient"] : []), ...(mails.length ? ["shownFields"] : []), ...(threaded ? ["type Thread"] : []), ...(workers.length ? ["type Worked", "workedOut"] : [])].join(", ")} } from "#/kit/outgoing.server";${listed.length ? '\nimport { dayWords, listText } from "#/kit/outgoing.server";' : ""}${pushes.length ? '\nimport { pushReaders, queuePush } from "#/kit/push.server";' : ""}${linking && (pushes.length || texts.length) ? '\nimport { unviewed } from "#/kit/outgoing.server";' : ""}${pays.length ? '\nimport { PAY_MARK } from "#/kit/outgoing.server";\nimport { payLinks } from "#/kit/view.server";\nimport { PAYMENT_ENTRIES } from "./payments.server";' : ""}${views.length ? `\nimport { VIEW_MARK } from "#/kit/outgoing.server";\nimport { type DocumentRead, viewLinks } from "#/kit/view.server";${viewModels.map((m) => `\nimport { ${documentReaderName(m)} } from "./${kebab(m.name)}.document.server";`).join("")}` : ""}${texts.length ? '\nimport { queueSms } from "#/kit/sms.server";' : ""}
 
-type Tx = Pick<typeof db, "select" | "insert"${composedUsed.size || workers.length || views.length ? ' | "query"' : ""}>;
+type Tx = Pick<typeof db, "select" | "insert"${composedUsed.size || workers.length || linking ? ' | "query"' : ""}>;
 type Row = Record<string, unknown>;
 
 /** The targets the outgoing section calls: the only ones src/kit/tell.server.ts may call too. */
@@ -657,7 +694,7 @@ const ENTRIES: {
   /** The texts use {before.<field>}: the record before the change is read too. */
   before?: true;
   /** The texts' placeholders one reference away, read with the record. */
-  more?: (tx: Tx, r: Row) => Record<string, string>;${workers.length ? "\n  /** The worked-out fields its show and texts name. */\n  worked?: string[];" : ""}${views.length ? "\n  /** Mails each recipient a link to a copy of the record's document, open this many days. */\n  view?: number;" : ""}
+  more?: (tx: Tx, r: Row) => Record<string, string>;${workers.length ? "\n  /** The worked-out fields its show and texts name. */\n  worked?: string[];" : ""}${views.length ? "\n  /** Mails each recipient a link to a copy of the record's document, open this many days. */\n  view?: number;" : ""}${pays.length ? "\n  /** Mails each recipient a link to pay for the record, through this payments entry. */\n  pay?: string;" : ""}
   to?: (tx: Tx, r: Row) => Recipient[];${
     pushes.length || texts.length
       ? `
@@ -757,8 +794,8 @@ export function outgoing(tx: Tx, ${mails.length ? "viewer" : "_viewer"}: Viewer 
     const more = entry.more?.(tx, record);
     // The texts' placeholders (outgoing-templates.md §3): the record's values as its page shows them, its title and address, who made the change, and what a field was.
     const fill = (text: string, oneLine = false) =>
-      fillText(text, (path) => ${views.length ? 'path === "view" ? VIEW_MARK : ' : ""}path === "title" ? title : path === "link" ? linkTo(rest.link) : path === "by" ? (viewer && !viewer.system ? viewer.name : "") : path.startsWith("before.") ? blank(prior?.values[path.slice(7)]) : blank(more?.[path] ?? values[path]), oneLine);
-    const happening: Happening = { ...rest, subject: entry.subject ? fill(entry.subject, true) : rest.subject, ...(entry.text ? { text: fill(entry.text) } : {}), fields: shownFields(labels, values, prior?.values, entry.show, entry.previous), entry: entry.name, model, record: record.id as number${views.length ? ", ...(entry.view ? { view: viewLinks(tx, viewer, { entry: entry.name, model, record: record.id as number, days: entry.view, read: () => DOCUMENTS[model]?.(tx, viewer, record.id as number) ?? null }) } : {})" : ""} };${pushes.length ? `\n    if (entry.push) queuePush(tx, viewer, ${views.length ? "entry.view ? unviewed(happening) : happening" : "happening"}, to);` : ""}${texts.length ? `\n    if (entry.sms) queueSms(tx, viewer, ${views.length ? "entry.view ? unviewed(happening) : happening" : "happening"}, to);` : ""}
+      fillText(text, (path) => ${views.length ? 'path === "view" ? VIEW_MARK : ' : ""}${pays.length ? 'path === "pay" ? PAY_MARK : ' : ""}path === "title" ? title : path === "link" ? linkTo(rest.link) : path === "by" ? (viewer && !viewer.system ? viewer.name : "") : path.startsWith("before.") ? blank(prior?.values[path.slice(7)]) : blank(more?.[path] ?? values[path]), oneLine);
+    const happening: Happening = { ...rest, subject: entry.subject ? fill(entry.subject, true) : rest.subject, ...(entry.text ? { text: fill(entry.text) } : {}), fields: shownFields(labels, values, prior?.values, entry.show, entry.previous), entry: entry.name, model, record: record.id as number${views.length ? ", ...(entry.view ? { view: viewLinks(tx, viewer, { entry: entry.name, model, record: record.id as number, days: entry.view, read: () => DOCUMENTS[model]?.(tx, viewer, record.id as number) ?? null }) } : {})" : ""}${pays.length ? ", ...(entry.pay ? { pay: payLinks(tx, viewer, { entry: entry.name, payment: entry.pay, model, record: record.id as number, amount: PAYMENT_ENTRIES[entry.pay]?.due?.(tx as never, record.id as number) ?? 0 }) } : {})" : ""} };${pushes.length ? `\n    if (entry.push) queuePush(tx, viewer, ${linking ? `${[...(views.length ? ["entry.view"] : []), ...(pays.length ? ["entry.pay"] : [])].join(" || ")} ? unviewed(happening) : happening` : "happening"}, to);` : ""}${texts.length ? `\n    if (entry.sms) queueSms(tx, viewer, ${linking ? `${[...(views.length ? ["entry.view"] : []), ...(pays.length ? ["entry.pay"] : [])].join(" || ")} ? unviewed(happening) : happening` : "happening"}, to);` : ""}
     ${pushes.length || texts.length ? "if (entry.mail !== false) " : ""}queueMail(tx, viewer, happening, to, entry.when === "created");`
         : ""
     }
