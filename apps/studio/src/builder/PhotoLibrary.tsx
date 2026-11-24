@@ -4,6 +4,7 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   deleteFile,
+  grantFile,
   type Library,
   readLibrary,
   type StoredFile,
@@ -53,7 +54,19 @@ export function PhotoLibrary({
     setWorking(undefined);
     void load();
     if ("why" in ready) return setSaid(ready.why);
-    choose({ asset: ready.id });
+    await place(ready);
+  };
+
+  // A file of the owner's library is granted to this project before it is placed here.
+  const place = async (file: StoredFile) => {
+    setSaid(undefined);
+    if (!file.here) {
+      setWorking(`Bringing ${file.name} into this app…`);
+      const granted = await grantFile(file.id);
+      setWorking(undefined);
+      if (!granted) return setSaid(`${file.name} could not be used here. Try again in a moment.`);
+    }
+    choose({ asset: file.id });
   };
 
   const remove = async (file: StoredFile) => {
@@ -119,7 +132,7 @@ export function PhotoLibrary({
                   aria-label={`Use ${name}`}
                   className="block w-full rounded border border-line hover:ring-2 hover:ring-accent disabled:opacity-60"
                   onClick={() =>
-                    choose(typeof file === "string" ? { src: file } : { asset: file.id })
+                    typeof file === "string" ? choose({ src: file }) : void place(file)
                   }
                 >
                   {ready ? (

@@ -2,7 +2,7 @@
 // what it shows, Replace with the owner's file, Remove. Each is one setSectionPicture, tried on in
 // the form like a layout (Cancel undoes it); an uploaded file goes in with the change and leaves
 // with its undo.
-import { type ContentImage, pictureFile } from "@smithable/core";
+import { type ContentImage, pictureAt, pictureFile } from "@smithable/core";
 import { useId, useState } from "react";
 import { PhotoLibrary } from "./PhotoLibrary";
 
@@ -86,7 +86,7 @@ export function SectionPicture({
       <div className="flex items-center gap-2">
         {image ? (
           <img
-            src={`/api/${pictureFile(image)}`}
+            src={`/api/${image.asset && image.widths?.length ? pictureAt(image, Math.min(...image.widths)) : pictureFile(image)}`}
             alt=""
             className="h-12 w-16 shrink-0 rounded border border-line object-cover"
           />

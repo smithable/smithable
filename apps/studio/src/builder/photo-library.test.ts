@@ -1,5 +1,12 @@
 import { expect, test } from "vitest";
-import { deleteFile, readLibrary, storedFile, untilReady, uploadFile } from "./photo-library";
+import {
+  deleteFile,
+  grantFile,
+  readLibrary,
+  storedFile,
+  untilReady,
+  uploadFile,
+} from "./photo-library";
 
 const ID = "m_01hz8k3q4r5s6t7v8w9x0y1z2a";
 const reply = (status: number, body?: unknown) =>
@@ -14,7 +21,7 @@ test("hosted: the service's library, each file checked; a stray entry is left ou
     seen.push(url);
     return reply(200, {
       assets: [
-        { id: ID, name: "roof.jpg", kind: "image", state: "ready" },
+        { id: ID, name: "roof.jpg", kind: "image", state: "ready", here: true },
         { id: "../x", name: "x", kind: "image", state: "ready" },
         { id: ID, kind: "image", state: "unknown" },
       ],
@@ -23,7 +30,7 @@ test("hosted: the service's library, each file checked; a stray entry is left ou
   });
   expect(library).toEqual({
     hosted: true,
-    files: [{ id: ID, name: "roof.jpg", kind: "image", state: "ready" }],
+    files: [{ id: ID, name: "roof.jpg", kind: "image", state: "ready", here: true }],
     more: true,
   });
   expect(seen).toEqual(["/_smithable/media"]);
@@ -97,5 +104,21 @@ test("delete is 204 only, and never for a name that is not an id", async () => {
     }),
   ).toBe(false);
   expect(called).toBe(false);
-  expect(storedFile({ id: ID, kind: "video", state: "ready" })?.name).toBe(ID);
+  expect(storedFile({ id: ID, kind: "video", state: "ready" })).toMatchObject({
+    name: ID,
+    here: false,
+  });
+});
+
+test("a file is granted to the project by its /use, 204 only", async () => {
+  const seen: string[] = [];
+  expect(
+    await grantFile(ID, async (url, init) => {
+      seen.push(`${init?.method} ${url}`);
+      return reply(204);
+    }),
+  ).toBe(true);
+  expect(seen).toEqual([`POST /_smithable/media/${ID}/use`]);
+  expect(await grantFile(ID, async () => reply(404))).toBe(false);
+  expect(await grantFile("../x", async () => reply(204))).toBe(false);
 });

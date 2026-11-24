@@ -13,6 +13,8 @@ export type StoredFile = {
   kind: "image" | "video";
   state: "processing" | "ready" | "failed";
   error?: string;
+  /** Granted to this project already: only a granted file may be placed or published. */
+  here: boolean;
 };
 export type Library =
   | { hosted: true; files: StoredFile[]; more: boolean }
@@ -40,7 +42,14 @@ export function storedFile(value: unknown): StoredFile | undefined {
   if (o.state !== "processing" && o.state !== "ready" && o.state !== "failed") return;
   const name = typeof o.name === "string" && o.name.trim() ? o.name.trim().slice(0, 120) : o.id;
   const error = typeof o.error === "string" && o.error ? o.error : undefined;
-  return { id: o.id, name, kind: o.kind, state: o.state, ...(error ? { error } : {}) };
+  return {
+    id: o.id,
+    name,
+    kind: o.kind,
+    state: o.state,
+    ...(error ? { error } : {}),
+    here: o.here === true,
+  };
 }
 
 /**
@@ -128,6 +137,19 @@ export async function untilReady(
   return { why: "The file is still being made ready. It will be in Photos and videos when it is." };
 }
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+
+/**
+ * Grants one of the owner's files to this project, so that it may be placed here (the service's
+ * /use; 204). False when it is not the owner's, not there, or not ready: the service says no more.
+ */
+export async function grantFile(id: string, fetcher: Fetch = fetch): Promise<boolean> {
+  if (!ASSET_ID.test(id)) return false;
+  try {
+    return (await fetcher(`${LIBRARY_PATH}/${id}/use`, { method: "POST" })).status === 204;
+  } catch {
+    return false;
+  }
+}
 
 /** Deletes a stored file from the library (no undo in phase A); true when it is gone. */
 export async function deleteFile(id: string, fetcher: Fetch = fetch): Promise<boolean> {
