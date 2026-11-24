@@ -88,6 +88,34 @@ pages:
   ).toBe(false);
 });
 
+test("a new picture drops another language's words for the old one; new words alone keep them (T1187)", () => {
+  const files = {
+    spec: spec("      hero: {}\n"),
+    content:
+      "smithableContent: 0.1\nlanguages: [sv]\npages:\n  home:\n    hero:\n      image: { src: images/hero.webp, alt: A roof }\n",
+    translations: {
+      sv: "smithableContent: 0.1\npages:\n  home:\n    hero:\n      image: { alt: Ett tak }\n",
+    },
+  };
+  const picture = (args: Record<string, unknown>) => {
+    const done = applyOperation(files, "setSectionPicture", {
+      page: "home",
+      section: "hero",
+      ...args,
+    });
+    if (!done.ok) throw new Error(done.message);
+    return done.files;
+  };
+  // Only the words: the same file, so the Swedish words for it still hold.
+  const worded = picture({ src: "images/hero.webp", alt: "A red roof" });
+  expect(worded.content).toContain("alt: A red roof");
+  expect(worded.translations?.sv ?? files.translations.sv).toContain("Ett tak");
+  // Another file: the Swedish words said nothing of it and go; the main alt stands in.
+  const changed = picture({ src: "images/barn.webp", alt: "A barn" });
+  expect(changed.content).toContain("images/barn.webp");
+  expect(changed.translations?.sv).not.toContain("Ett tak");
+});
+
 const fail = (): never => {
   throw new Error("invalid spec");
 };
