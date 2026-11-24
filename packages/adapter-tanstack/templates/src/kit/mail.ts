@@ -5,7 +5,8 @@
 // "Stillwater Yoga <hello@stillwater.ax>". Without SMTP settings nothing leaves the machine: each
 // mail is written to DATA_DIR/mail/outbox as a .eml file, which is how development and the tests
 // see what would have been sent. In production that also happens, with a warning, so a hook
-// never fails a request over a missing mail setting.
+// never fails a request over a missing mail setting. MAIL_MODE=outbox keeps every mail there with
+// SMTP settings too (any MAIL_MODE but testers or all), and Import says so (mailMode).
 import { mkdirSync, readdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { createTransport } from "nodemailer";
@@ -35,10 +36,23 @@ const outboxDir = () => join(ownDataDir(), "mail", "outbox");
  */
 const WAITS = { connectionTimeout: 10_000, greetingTimeout: 10_000, socketTimeout: 30_000 };
 
+/**
+ * MAIL_MODE unset sends as before. testers or all send too; any other value, a blank or mistyped
+ * one included (outbox, " all"), keeps every mail in the outbox: an unclear setting fails closed.
+ */
+const sends = (mode = process.env.MAIL_MODE) =>
+  mode === undefined || mode === "testers" || mode === "all";
+
 function smtp() {
   const env = process.env;
+  if (!sends()) return undefined;
   if (env.SMTP_URL) {
-    const url = new URL(env.SMTP_URL);
+    // An SMTP_URL that is no address sends nothing: the mail is held, as Import says, and logged.
+    const url = URL.parse(env.SMTP_URL);
+    if (!url) {
+      log.error("SMTP_URL is not an address: mail is held in the outbox");
+      return undefined;
+    }
     for (const [key, ms] of Object.entries(WAITS))
       if (!url.searchParams.has(key)) url.searchParams.set(key, String(ms));
     return url.toString();
@@ -59,9 +73,22 @@ function smtp() {
   return undefined;
 }
 
-/** Whether mail leaves the machine: the app has SMTP settings. */
+/** Whether mail leaves the machine: the app has SMTP settings, and no MAIL_MODE that holds it. */
 export function mailConfigured(): boolean {
   return smtp() !== undefined;
+}
+
+/**
+ * The mail mode the app was started with (MAIL_MODE), for whoever imports addresses to see before
+ * they go in: "held" (kept in the outbox, nobody mailed), "testers" (only the testers its mail
+ * server lets through) or "all". Nothing when MAIL_MODE is not set; outbox, an unknown value, or an
+ * app without SMTP settings is held, and smtp() keeps those mails in the outbox.
+ */
+export function mailMode(): "held" | "testers" | "all" | undefined {
+  const mode = process.env.MAIL_MODE;
+  if (mode === undefined) return undefined;
+  if (mode !== "testers" && mode !== "all") return "held";
+  return mailConfigured() ? mode : "held";
 }
 
 /** Sends a mail, or writes it to the outbox when the app has no SMTP settings. */
@@ -91,9 +118,12 @@ export async function sendMail(mail: Mail): Promise<void> {
   writeFileSync(join(outboxDir(), `.${name}.tmp`), info.message as Buffer);
   renameSync(join(outboxDir(), `.${name}.tmp`), join(outboxDir(), name));
   if (process.env.NODE_ENV === "production")
-    log.warn("A mail was not sent: no SMTP settings (SMTP_URL, or SMTP_HOST and the others)", {
-      kept: outboxDir(),
-    });
+    log.warn(
+      sends()
+        ? "A mail was not sent: no SMTP settings (SMTP_URL, or SMTP_HOST and the others)"
+        : "A mail was held in the outbox: MAIL_MODE is neither testers nor all",
+      { kept: outboxDir() },
+    );
 }
 
 /** The mails in the outbox, oldest first, as tests read them: the headers and the text body. */
