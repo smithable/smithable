@@ -14,6 +14,7 @@ import {
 import type { YamlEditor, YamlValue } from "../edit.js";
 import { initialsForm } from "../initials.js";
 import type { SpecIR } from "../ir.js";
+import { mediaSlots } from "../media.js";
 import { humanize, plural } from "../naming.js";
 import { type AnyOperation, type Operation, OperationError, refTo } from "../operation.js";
 import { pageModel } from "../patterns.js";
@@ -642,10 +643,10 @@ const setSectionPicture: Operation<{
       item === undefined ? ["pages", page, section, "image"] : [...items, String(item), "image"];
     if (src === undefined) {
       if (!content.has(path)) throw new OperationError(`The ${section} section has no picture.`);
-      content.removeAndPrune(path, 0);
+      emptyPlace(content, path);
       for (const language of languages) {
         const other = translations.get(language);
-        if (other?.has(path)) other.removeAndPrune(path, 0);
+        if (other?.has(path)) emptyPlace(other, path);
       }
       return [];
     }
@@ -721,6 +722,97 @@ function renditionOf({ width, widths = [] }: { width: number; widths?: number[] 
  * here; the host reads the file's bytes. A new picture drops the film (setSectionPicture), since it
  * was made to play over the old one.
  */
+/**
+ * Takes stored files out of every place that names them, in one change and so one undo step: the
+ * hosted service's take-off after the owner deleted them (media-storage.md §2). A section's own
+ * picture goes; a gallery's or media-and-text section's item goes with its caption, the highest
+ * place first, so the places before it stay as they are; a features card keeps its words and a
+ * tile its label; any other place holding one (a hero's film) goes whole. The same places go in
+ * every language file. A person's choice, never a model's (forModels); each emptied place is its
+ * lostMedia, confirmed like any other.
+ */
+const removeMedia: Operation<{ asset: string[] }> = {
+  name: "removeMedia",
+  summary:
+    "Take stored files out of every place that shows them, in one change: a section's picture, a gallery or media-and-text item with its caption, a features card's or tile's picture, a hero's film.",
+  schema: {
+    type: "object",
+    required: ["asset"],
+    additionalProperties: false,
+    properties: {
+      asset: {
+        type: "array",
+        minItems: 1,
+        items: { type: "string" },
+        description:
+          "The stored files' ids, e.g. m_01hz8k3q4r5s6t7v8w9x0y1z2a; repeat --asset for more.",
+        "x-not-for-models": true,
+      },
+    },
+  },
+  positional: ["...asset"],
+  describe: ({ asset }) =>
+    `Take stored file${asset.length === 1 ? "" : "s"} ${asset.join(", ")} out of every place`,
+  destructive: () => false,
+  apply({ content, translations }, { asset }, ir) {
+    for (const id of asset)
+      if (!ASSET_ID.test(id))
+        throw new OperationError(
+          `"${id}" is not a stored file's id: m_ and 26 letters and digits.`,
+        );
+    const slots = mediaSlots(content.get([])).filter((s) => asset.includes(s.asset));
+    const languages = (content.get(["languages"]) as string[] | undefined) ?? [];
+    const editors = [content, ...languages.flatMap((language) => translations.get(language) ?? [])];
+    // Last first: an item taken out moves only the places after it, which are done by then.
+    for (const { at } of slots.reverse()) {
+      const [top, page, section, list, place, last] = at;
+      const kind = top === "pages" ? sectionKind(ir, page, section) : undefined;
+      if (
+        at.length === 6 &&
+        list === "items" &&
+        last === "image" &&
+        (kind === "gallery" || kind === "mediaText")
+      ) {
+        const items = at.slice(0, 4);
+        const i = Number(place);
+        for (const editor of editors) {
+          const theirs = editor.get(items);
+          if (!Array.isArray(theirs) || i >= theirs.length) continue;
+          if (theirs.length === 1) editor.removeAndPrune(items, 0);
+          else editor.removeItem(items, i);
+        }
+      } else for (const editor of editors) if (editor.has(at)) emptyPlace(editor, at);
+    }
+    const nowhere = asset.filter((id) => !slots.some((s) => s.asset === id));
+    return nowhere.length
+      ? [
+          {
+            note: `${nowhere.join(", ")} ${nowhere.length === 1 ? "is" : "are"} in no place, so nothing of ${nowhere.length === 1 ? "it" : "them"} changed`,
+          },
+        ]
+      : [];
+  },
+};
+
+/**
+ * Takes a picture out of its place. A list item stays, as {} when the picture was all it held, so
+ * a language file's later items keep matching the content file's by place.
+ */
+function emptyPlace(editor: YamlEditor, at: string[]) {
+  const item = editor.get(at.slice(0, 5));
+  if (
+    at[3] === "items" &&
+    at.length === 6 &&
+    item &&
+    typeof item === "object" &&
+    Object.keys(item).length === 1
+  )
+    editor.setItem(at.slice(0, 4), Number(at[4]), {});
+  else editor.removeAndPrune(at, at[3] === "items" ? 5 : 0);
+}
+const sectionKind = (ir: SpecIR, page?: string, section?: string) =>
+  ir.pages.find((p) => p.id === page)?.sections.find((s) => s.name === section)?.kind;
+
 const setSectionFilm: Operation<{ page: string; section: string; src?: string }> = {
   name: "setSectionFilm",
   sets: ["smithable.content.yml:pages.*.*.image.film"],
@@ -935,6 +1027,7 @@ export const contentOperations: AnyOperation[] = [
   setTexts,
   setItems,
   setSectionPicture,
+  removeMedia,
   setSectionFilm,
   keepPicture,
   nameRecords,

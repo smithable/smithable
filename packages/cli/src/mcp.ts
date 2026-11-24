@@ -7,6 +7,7 @@ import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprot
 import { plainSchema } from "@smithable/ai";
 import {
   DEPTHS,
+  forModels,
   type JsonSchema,
   type OperationArgs,
   operationsFor,
@@ -57,9 +58,10 @@ const toolName = (name: string) =>
   `smithable_${name.replace(/[A-Z]/g, (c) => `_${c.toLowerCase()}`)}`;
 
 function tools(dir: string): Tool[] {
-  // Replacing the whole spec is for people in Studio's editor; agents use the specific operations.
+  // Replacing the whole spec is for people in Studio's editor; agents use the specific operations,
+  // but those only a person or a host may call (forModels).
   const operations: Tool[] = operationsFor(loadPlugins(dir))
-    .filter((op) => op.name !== "editSpec")
+    .filter((op) => op.name !== "editSpec" && forModels(op))
     .map((op) => ({
       name: toolName(op.name),
       description: `${op.summary} ${OPERATION_NOTE}`,

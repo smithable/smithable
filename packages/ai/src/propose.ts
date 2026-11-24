@@ -6,6 +6,7 @@ import {
   type AuthIR,
   applyOperation,
   type Effect,
+  forModels,
   type OperationArgs,
   operationsFor,
   PEOPLE_PATH,
@@ -80,9 +81,12 @@ A record belongs to whoever created it. When the request says it belongs to, is 
 Use the exact names of models, fields and pages from the app. New names are camelCase (fields) or PascalCase (models).
 Field types (shorthand): string, text, email, phone, url, int, decimal, money, bool, date, datetime; choices as "a | b | c"; a reference to another model as "Customer"; a list of related records as "Order[]". Append ! for required, add "unique", and "= value" for a default: "email! unique", "int = 60".`;
 
-/** The operations a model may propose: the project's, its plugins' included, but the whole-file edit. */
+/**
+ * The operations a model may propose: the project's, its plugins' included, but the whole-file
+ * edit and those only a person or a host may call (forModels).
+ */
 const proposable = (plugins?: readonly SpecPlugin[]) =>
-  operationsFor(plugins).filter((o) => o.name !== "editSpec");
+  operationsFor(plugins).filter((o) => o.name !== "editSpec" && forModels(o));
 
 /** The operation's arguments, compactly: names, types, allowed values and hints. */
 export function signature(op: AnyOperation): string {
