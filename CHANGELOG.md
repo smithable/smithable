@@ -26,6 +26,7 @@ The entries are filled in from the merged pull requests at each release. A fix t
 
 ### Fixes
 
+- A signed call to a generated app's incoming address is known by what is signed (the id its entry names, else the signature), never by the Idempotency-Key header the signature leaves out, so a replay with a new header is not acted on again (`fixes/signed-incoming-replay.yml`).
 - Linked card images in generated apps zoom slightly on hover and keyboard focus when the device supports hover and reduced motion is off (`fixes/link-card-image-motion.yml`).
 - Generated apps can build and run a record action that asks for an app-filled field, such as a follow-up date (`fixes/app-filled-action-inputs.yml`).
 - Generated apps keep the sign-out and site menu buttons inside a narrow landing header by shortening the app name as needed (`fixes/landing-header-phone-actions.yml`).
