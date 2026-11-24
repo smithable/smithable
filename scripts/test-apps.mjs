@@ -4061,6 +4061,20 @@ async function painterFlow(dir, base) {
     );
     await page.getByRole("button", { name: "Send enquiry", exact: true }).waitFor();
 
+    // One job without pictures among pictured ones keeps the cards even with a placeholder; a
+    // filter that leaves only that job shows a text card, never an empty slot.
+    write(dir, "UPDATE jobs SET photos = NULL WHERE surface = 'roof'");
+    await open(page, `${base}/jobs`);
+    await page.getByText("Painted eaves on a lakeside cottage", { exact: true }).first().waitFor();
+    if ((await page.locator('[data-part="placeholder"]').count()) < 1)
+      throw new Error("/jobs should show a placeholder for the job without pictures");
+    if (!(await page.locator('img[src^="/files/job/"]').count()))
+      throw new Error("/jobs should still show the other jobs' covers");
+    await open(page, `${base}/jobs?surface=roof`);
+    await page.getByText("Painted eaves on a lakeside cottage", { exact: true }).first().waitFor();
+    if (await page.locator('[data-part="placeholder"]').count())
+      throw new Error("/jobs?surface=roof shows an empty picture slot with no pictured job left");
+
     // A painter who removes the sample images can still show and link to text-only projects.
     write(dir, "UPDATE jobs SET photos = NULL");
     for (const path of ["/jobs", "/"]) {
