@@ -61,6 +61,10 @@ The entries are filled in from the merged pull requests at each release. A fix t
 
 - The generated apps' sign-in library, better-auth, moves from 1.7.15 to 1.7.18 for its published security fixes (`fixes/better-auth-1-7-18.yml`), with tailwind 4.3.5.
 
+### The spec
+
+- A record's mail may hold `{pay}`: a link of each recipient's own to a page where someone without an account pays the record, through the payments entry that pays an existing record of the mail's model (`validate --explain` names it). The page shows the entry's description and the amount bound when the mail was written, nothing else of the record, and works for 60 days while the record fits, is unpaid and asks for that amount (docs/design/payments.md §4.1).
+
 ### The engine
 
 - `setFieldDefault` and `setFieldRange` set a field's default and its bounds, and `setFieldRules --sequence` numbers a whole-number field in turn; Studio's "What it does" writes those keys through them.
