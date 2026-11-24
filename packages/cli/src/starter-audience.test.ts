@@ -23,6 +23,17 @@ import {
 import { STARTERS } from "./starters.gen.js";
 import { tempDir } from "./test-dir.js";
 
+// Each test validates every starter, or builds one.
+// On a loaded machine (a gate, main's full run) that can take more than the default 5 s;
+// alone it takes a fraction of it (T1481).
+vi.setConfig({ testTimeout: 30_000 });
+// The build test keeps only the draft: the build after it (install, drizzle-kit) has nothing
+// installed to run here, and said "Command drizzle-kit not found" on every run.
+vi.mock("./generate.js", async (original) => ({
+  ...(await original<typeof import("./generate.js")>()),
+  generate: vi.fn(async () => 0),
+}));
+
 const PRIVATE = [
   "A recipe collection for a family, with ingredients and shopping lists",
   "A list of our team's equipment and who has what",

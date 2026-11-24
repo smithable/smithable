@@ -1,7 +1,7 @@
 import { mkdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
-import { afterEach, expect, test } from "vitest";
+import { afterEach, expect, test, vi } from "vitest";
 import { childCallsForTests, decode, encode } from "./as-project.js";
 import {
   countValue,
@@ -14,6 +14,11 @@ import { keepImport } from "./import.js";
 import { forgetProjectUserForTests } from "./secrets.js";
 import { tempDir } from "./test-dir.js";
 import { changeTree, removeTree, writeTreeFile } from "./tree-files.js";
+
+// Each test starts a child that takes the project user's ids.
+// On a loaded machine (a gate, main's full run) that can take more than the default 5 s;
+// alone it takes a fraction of it (T1481).
+vi.setConfig({ testTimeout: 30_000 });
 
 afterEach(() => {
   delete process.env.SMITHABLE_PROJECT_UID;

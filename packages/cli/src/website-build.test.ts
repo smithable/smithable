@@ -14,6 +14,11 @@ import { tempDir } from "./test-dir.js";
 import { assetReview } from "./website-assets.js";
 import { digest, installWebsiteInputCommand, parseWebsiteInput } from "./website-input.js";
 
+// Each test builds a website project on disk.
+// On a loaded machine (a gate, main's full run) that can take more than the default 5 s;
+// alone it takes a fraction of it (T1481).
+vi.setConfig({ testTimeout: 30_000 });
+
 const state = vi.hoisted(() => ({
   descriptions: [] as string[],
   artifact: "",

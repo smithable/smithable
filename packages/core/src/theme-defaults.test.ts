@@ -1,5 +1,5 @@
 import { Ajv } from "ajv";
-import { expect, test } from "vitest";
+import { expect, test, vi } from "vitest";
 import { parse } from "yaml";
 import { applyOperation } from "./apply.js";
 import { validateAuth } from "./auth.js";
@@ -10,6 +10,11 @@ import { THEME_DEFAULT_TREE, themeDefaultsSchema } from "./theme-default-schema.
 import { buildThemeSchema } from "./theme-schema.js";
 import { emptyUx, validateUx } from "./ux.js";
 import { UX_CAPABILITIES, type UxCapability } from "./ux-capabilities.js";
+
+// Each test validates every example app's files.
+// On a loaded machine (a gate, main's full run) that can take more than the default 5 s;
+// alone it takes a fraction of it (T1481).
+vi.setConfig({ testTimeout: 30_000 });
 
 const files = import.meta.glob("../../../examples/booking/*.yml", {
   query: "?raw",
