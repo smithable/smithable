@@ -4073,7 +4073,10 @@ async function painterFlow(dir, base) {
       throw new Error("/jobs shows a picture on the job without pictures");
     await card("Red farmhouse in linseed oil paint").locator('img[src^="/files/job/"]').waitFor();
     await open(page, `${base}/jobs?surface=roof`);
-    await page.waitForFunction((selector) => document.querySelectorAll(selector).length === 1, rows);
+    await page.waitForFunction(
+      (selector) => document.querySelectorAll(selector).length === 1,
+      rows,
+    );
     await card(roof).waitFor();
     if (await card(roof).locator('[data-part="placeholder"], img').count())
       throw new Error("/jobs?surface=roof shows a picture slot with no pictured job left");
