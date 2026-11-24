@@ -559,8 +559,8 @@ const setSectionPicture: Operation<{
         required: ["width"],
         additionalProperties: false,
         properties: {
-          width: { type: "integer", minimum: 1 },
-          widths: { type: "array", items: { type: "integer", minimum: 1 } },
+          width: { type: "integer", minimum: 100, maximum: 4000 },
+          widths: { type: "array", items: { type: "integer", minimum: 100, maximum: 4000 } },
         },
         "x-host": true,
       },
@@ -705,11 +705,13 @@ const setSectionPicture: Operation<{
  */
 function renditionOf({ width, widths = [] }: { width: number; widths?: number[] }) {
   const all = [...new Set([width, ...widths])]
-    .filter((w) => Number.isInteger(w) && w > 0)
+    .filter((w) => Number.isInteger(w) && w >= 100 && w <= 4000)
     .sort((a, b) => a - b);
   const largest = all.pop();
   if (!largest) throw new OperationError("The stored file's record names no rendition.");
-  return { width: largest, ...(all.length ? { widths: all } : {}) };
+  // A content file lists at most six copies (readWidths); the widest are kept.
+  const copies = all.slice(-6);
+  return { width: largest, ...(copies.length ? { widths: copies } : {}) };
 }
 
 /**

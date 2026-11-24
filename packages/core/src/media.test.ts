@@ -38,6 +38,7 @@ test("a stored picture names its id and its largest width, never a file as well"
     ["{ asset: m_SHOUTING, alt: A, width: 1600 }", "must be a stored file's id"],
     [`{ asset: ${ID}, alt: A }`, 'needs "width" beside "asset"'],
     [`{ asset: ${ID}, width: 1600 }`, 'needs "alt"'],
+    [`{ asset: ${ID}, alt: A, width: 960, widths: [480, 1600] }`, "narrower than its"],
   ] as [string, string][])
     expect(
       errors(content(hero)).map((d) => d.message),
@@ -142,12 +143,19 @@ test("setSectionPicture places a stored file with the sizes the host read, and o
   expect(set.files.content).not.toContain("images/hero.webp");
   // The file the hero had was the owner's, not a stored one: nothing lost, nothing to confirm.
   expect(set.destructive).toBe(false);
+  // A copy outside the content file's range is left out, so what is written always reads back.
+  const small = place({ asset: ID, alt: "A", rendition: { width: 960, widths: [50] } });
+  if (!small.ok) throw new Error(small.message);
+  expect(small.files.content).not.toContain("widths");
+  expect(errors(small.files.content ?? "")).toEqual([]);
 
   for (const [args, says] of [
     [{ asset: ID, alt: "A" }, "placed by the hosted service"],
     [{ asset: "m_bad", alt: "A", rendition: { width: 960 } }, ""],
     [{ asset: ID, src: "images/a.webp", alt: "A", rendition: { width: 960 } }, ""],
     [{ src: "images/a.webp", alt: "A", rendition: { width: 960 } }, ""],
+    // The content file's own range (100 to 4000 pixels), so what is written always reads back.
+    [{ asset: ID, alt: "A", rendition: { width: 9000 } }, ""],
   ] as const) {
     const refused = place(args);
     expect(refused.ok, JSON.stringify(args)).toBe(false);
