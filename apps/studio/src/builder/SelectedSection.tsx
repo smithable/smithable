@@ -238,15 +238,16 @@ export function SelectedSection({
       ),
     );
   // A picture replaced, removed or described is tried on like a layout: Cancel puts it back, and
-  // an uploaded file leaves with the change that brought it.
+  // an uploaded file leaves with the change that brought it. The click on the picture shown is the
+  // confirmation a stored file's place asks for (media-storage.md §2): the photo library keeps it.
   const choosePicture = (
-    args: { src?: string; alt?: string },
+    args: { src?: string; asset?: string; alt?: string },
     file?: { path: string; data: string },
     item?: number,
   ) =>
     attempt(
       item === undefined ? "picture" : `picture:${item}`,
-      pictureValue(args.src ? { src: args.src, alt: args.alt ?? "" } : undefined),
+      pictureValue(args.src || args.asset ? args : undefined),
       (revision) =>
         api.lookChange(
           "setSectionPicture",
@@ -254,6 +255,7 @@ export function SelectedSection({
           revision,
           lookProject,
           file,
+          true,
         ),
     );
   // A hero's film, tried on the same way: its file goes in with the change and leaves with its undo.
@@ -442,8 +444,8 @@ export function SelectedSection({
 }
 
 /** A section picture as one value of the form's session: its file and what it shows. */
-const pictureValue = (image: { src: string; alt?: string } | undefined) =>
-  image ? `${image.src}\n${image.alt ?? ""}` : "";
+const pictureValue = (image: { src?: string; asset?: string; alt?: string } | undefined) =>
+  image ? `${image.asset ?? image.src}\n${image.alt ?? ""}` : "";
 
 type Box = { left: number; right: number; top: number; bottom: number };
 /**

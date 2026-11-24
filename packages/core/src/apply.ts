@@ -5,6 +5,7 @@ import { type Diagnostic, hasErrors } from "./diagnostics.js";
 import { EditError, YamlEditor } from "./edit.js";
 import { editAsRename } from "./edit-rename.js";
 import { forgetKept } from "./kept.js";
+import { lostMedia, type MediaSlot, slotName } from "./media.js";
 import {
   type AnyOperation,
   type Editors,
@@ -74,6 +75,13 @@ export type OperationResult =
       removed: string[];
       description: string;
       destructive: boolean;
+      /**
+       * The places that held a stored file and lose it (media-storage.md §2): the change is then
+       * destructive, shown and confirmed slot by slot.
+       */
+      lostMedia?: MediaSlot[];
+      /** Destructive only for the stored files it takes out: no data of the app's goes. */
+      mediaOnly?: true;
       effects: Effect[];
       /** What the change will do and what was verified (verification.ts); the host fills it. */
       verification?: Verification;
@@ -153,7 +161,7 @@ export function applyOperations(
   const added: { path: string; text: string }[] = [];
   const removed: string[] = [];
   const effects: Effect[] = [];
-  let destructive = false;
+  let own = false;
   for (const step of steps) {
     const result = applyOperation(current, step.op, step.args);
     if (!result.ok) return result;
@@ -162,8 +170,12 @@ export function applyOperations(
     added.push(...result.added);
     removed.push(...result.removed);
     effects.push(...result.effects);
-    destructive ||= result.destructive;
+    own ||= result.destructive && !result.mediaOnly;
   }
+  // Over the whole batch: a file one step takes out and a later one puts back elsewhere lost nothing.
+  const read = (text?: string) => (text ? new YamlEditor(text).get([]) : undefined);
+  const lost = lostMedia(read(files.content), read(current.content));
+  const destructive = own || lost.length > 0;
   return {
     ok: true,
     files: current,
@@ -171,6 +183,7 @@ export function applyOperations(
     removed,
     description: descriptions.join("; "),
     destructive,
+    ...(lost.length ? { lostMedia: lost, ...(own ? {} : { mediaOnly: true as const }) } : {}),
     effects,
   };
 }
@@ -271,6 +284,7 @@ export function applyOperation(
   } as Editors;
   let effects: Effect[];
   const notes: string[] = [];
+  const lost: MediaSlot[] = [];
   try {
     // What the operation says for the person (a note) is not something the others follow.
     const done = op.apply(editors, args, before.ir);
@@ -307,8 +321,11 @@ export function applyOperation(
     }
     // A kept picture is kept as the picture it was: whatever operation put another file in its
     // place, the owner is asked again (picture-kinds.md §6). Here, so no operation has to remember.
-    if (editors.content && files.content !== undefined)
-      forgetKept(new YamlEditor(files.content).get([]), editors.content);
+    if (editors.content && files.content !== undefined) {
+      const was = new YamlEditor(files.content).get([]);
+      forgetKept(was, editors.content);
+      lost.push(...lostMedia(was, editors.content.get([])));
+    }
   } catch (error) {
     // An edit the files cannot take is the operation failing too, not a crash.
     if (error instanceof OperationError || error instanceof EditError) return fail(error.message);
@@ -363,6 +380,8 @@ export function applyOperation(
     }
     translationsNow[language] = editor.text;
   }
+  // The operation's own loss, apart from the stored files: the person is told of both.
+  const own = op.destructive(args, before.ir, after.ir);
   return {
     ok: true,
     files: {
@@ -384,8 +403,13 @@ export function applyOperation(
     },
     added: added.map((a) => ({ path: a.path ?? `themes/${a.theme.name}.yml`, text: a.text })),
     removed: [...removedLanguages].map(translationPath),
-    description: [op.describe(args, before.ir), ...notes].join("; "),
-    destructive: op.destructive(args, before.ir, after.ir),
+    description: [
+      op.describe(args, before.ir),
+      ...notes,
+      ...lost.map((slot) => `loses the stored file of ${slotName(slot)}`),
+    ].join("; "),
+    destructive: own || lost.length > 0,
+    ...(lost.length ? { lostMedia: lost, ...(own ? {} : { mediaOnly: true as const }) } : {}),
     effects,
   };
 }

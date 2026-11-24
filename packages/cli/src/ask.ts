@@ -426,6 +426,7 @@ export async function applyProposal(
     })}`;
     const code = await runOperation(dir, io, op, args, {
       yes: true,
+      from: "model",
       trailer,
       ...(i === 0 && base ? { expectedRevision: base } : {}),
     });

@@ -83,6 +83,7 @@ function tools(dir: string): Tool[] {
         const code = await runOperation(dir, io, op.name, args, {
           yes: confirm === true,
           mcp: true,
+          from: "model",
           onResult: (r) => {
             if (r.verification) result.verification = r.verification;
           },
