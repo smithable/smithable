@@ -4,6 +4,7 @@
 # out) and push memory until Claude Code stops background work.
 #   usage (from a worktree): SESSION=<name> TEST_APPS_PORT=… TEST_STUDIO_PORT=… scripts/gate.sh
 #          scripts/gate.sh --queue     who is running and who waits, in order
+#          scripts/gate.sh --idle      exit 0 when no gate runs or waits, else 1 (for a wait loop)
 # Each session has its own ports (its brief says which).
 #
 # Turns go round the sessions: the session that has had the fewest turns since the queue was
@@ -38,7 +39,7 @@ set -u
 # quiet nights again, remove it to stop). The runner's own service (SESSION=ci) is capped by its
 # timer instead (smithable-runner-cap.timer, enabled and disabled with systemctl). GATE_CLOCK
 # (HHMM) stands for the time, for a test.
-if [ "${1:-}" != "--queue" ] && [ "${SESSION:-}" != "ci" ] && [ -z "${GATE_NIGHT_CAPPED:-}" ] && [ -e "${GATE_HOME:-/var/lib/smithable-gate}/night-cap" ]; then
+if [ "${1:-}" != "--queue" ] && [ "${1:-}" != "--idle" ] && [ "${SESSION:-}" != "ci" ] && [ -z "${GATE_NIGHT_CAPPED:-}" ] && [ -e "${GATE_HOME:-/var/lib/smithable-gate}/night-cap" ]; then
   now=$((10#${GATE_CLOCK:-$(TZ=Europe/Mariehamn date +%H%M)}))
   if [ "$now" -ge 2330 ] || [ "$now" -lt 700 ]; then
     export GATE_NIGHT_CAPPED=1
@@ -146,6 +147,13 @@ plan() {
 
 if [ "${1:-}" = --plan ]; then
   plan
+  exit 0
+fi
+
+# For a loop that waits for a quiet machine: --queue's "running: nothing" reads as busy to a grep
+# for "running" (a three-hour wait on an empty queue, 2026-11-25), so the answer is the exit status.
+if [ "${1:-}" = --idle ]; then
+  if running || [ -n "$(waiting)" ]; then exit 1; fi
   exit 0
 fi
 
