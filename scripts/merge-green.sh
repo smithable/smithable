@@ -188,19 +188,21 @@ merge_generated() {
         *) git reset -q --hard "$start"; echo "#$pr: a conflict beyond the generated files: $f"; return 1 ;;
       esac
     done
-    git checkout -q --theirs -- "${files[@]}"
-    git add -- "${files[@]}"
+    # A generated file main removed has no side to take: refused like any other conflict.
+    { git checkout -q --theirs -- "${files[@]}" && git add -- "${files[@]}"; } ||
+      { git reset -q --hard "$start"; echo "#$pr: the generated files' clash could not be resolved."; return 1; }
   fi
+  [ -n "$(git rev-parse -q --verify MERGE_HEAD)" ] || { git reset -q --hard "$start"; echo "#$pr: main is already in it, yet GitHub sees conflicts."; return 1; }
   pnpm build >/dev/null 2>&1 || { git reset -q --hard "$start"; echo "#$pr: the build failed after merging main."; return 1; }
   for t in $(printf '%s\n' ${tests[@]+"${tests[@]}"} | sort -u); do
     pnpm exec vitest run -u "$t" >/dev/null 2>&1 || { git reset -q --hard "$start"; echo "#$pr: $t failed after merging main."; return 1; }
   done
-  for f in packages/adapter-tanstack/src/templates.gen.ts packages/cli/src/starters.gen.ts packages/adapter-tanstack/src/__snapshots__/generate.test.ts.snap; do
-    [ -e "$f" ] && git add -- "$f"
-  done
+  mapfile -t files < <(git diff --name-only -- ':(glob)**/*.gen.ts' ':(glob)**/__snapshots__/*.snap')
+  [ ${#files[@]} -eq 0 ] || git add -- "${files[@]}" ||
+    { git reset -q --hard "$start"; echo "#$pr: the regenerated files could not be staged."; return 1; }
   git commit -q -s -m "Merged main: generated files refreshed" --trailer "Co-Authored-By: Claude <noreply@anthropic.com>" ||
     { git reset -q --hard "$start"; echo "#$pr: the merge of main could not be committed."; return 1; }
-  git push -q origin "$branch" || { echo "#$pr: the push of the merge failed."; return 1; }
+  git push -q origin "$branch" || { git reset -q --hard "$start"; echo "#$pr: the push of the merge failed."; return 1; }
   echo "#$pr: main merged in and pushed ($(git rev-parse --short HEAD))."
 }
 for attempt in 1 2 3 4 5 6 7 8; do

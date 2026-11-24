@@ -75,20 +75,23 @@ test("a head whose only checks are commit statuses has checks", () => {
   assert.match(run.stdout, /Merged #587\./);
 });
 
-// merge_generated alone, on a real repository: main and the branch both changed a generated file
-// (#1369, 2026-11-24, where a finished rebase was taken for unfinished and needed a force push).
-function mergeMain(branchFile) {
+// merge_generated alone, on a real repository: main changed a generated file, and the branch
+// changed it too ("clash"), changed only its own file ("clean"), changed a file main changed too
+// ("beyond"), or has a push the origin rejects ("rejected"). #1369 (2026-11-24): a finished rebase
+// was taken for unfinished, and a rebase needed a force push.
+function mergeMain(mode) {
   const dir = mkdtempSync(join(tmpdir(), "merge-main-"));
   const fn = readFileSync("scripts/merge-green.sh", "utf8").match(
     /^merge_generated\(\) \{[\s\S]*?^\}$/m,
   )[0];
   writeFileSync(join(dir, "gh"), "#!/usr/bin/env bash\necho c/x\n");
-  // The build regenerates the embedded file from both sides.
+  // The build regenerates the embedded file, only from main's side (3).
   writeFileSync(
     join(dir, "pnpm"),
-    '#!/usr/bin/env bash\n[ "$1" = build ] && echo built > packages/cli/src/starters.gen.ts\nexit 0\n',
+    '#!/usr/bin/env bash\nf=packages/cli/src/starters.gen.ts\n[ "$1" = build ] && grep -qx 3 $f && echo built > $f\nexit 0\n',
   );
   for (const f of ["gh", "pnpm"]) chmodSync(join(dir, f), 0o755);
+  const gen = mode === "clash" || mode === "rejected";
   const sh = `set -e
 git init -q --bare -b main origin.git
 git clone -q origin.git w 2>/dev/null; cd w
@@ -97,17 +100,21 @@ mkdir -p packages/cli/src
 echo 1 > packages/cli/src/starters.gen.ts; echo a > notes.md
 git add -A; git commit -q -m base; git push -q origin HEAD:main
 git checkout -q -b c/x
-echo 2 > packages/cli/src/starters.gen.ts; echo branch > ${branchFile}
+${gen ? "echo 2 > packages/cli/src/starters.gen.ts" : ""}
+echo branch > ${mode === "beyond" ? "notes.md" : "own.md"}
 git add -A; git commit -q -m branch; git push -q origin c/x
 git checkout -q main
 echo 3 > packages/cli/src/starters.gen.ts; echo main > notes.md
 git add -A; git commit -q -m main; git push -q origin main
 git checkout -q c/x
+${mode === "rejected" ? "printf '#!/bin/sh\\nexit 1\\n' > ../origin.git/hooks/pre-receive; chmod +x ../origin.git/hooks/pre-receive" : ""}
+before=$(git rev-parse HEAD)
 set +e
 pr=1; repo=()
 ${fn}
 merge_generated; echo "status $?"
 echo "parents $(git rev-list --parents -n1 HEAD | wc -w)"
+echo "back $([ "$(git rev-parse HEAD)" = "$before" ] && echo yes || echo no)"
 echo "pushed $([ "$(git rev-parse HEAD)" = "$(git rev-parse origin/c/x)" ] && echo yes || echo no)"
 echo "file $(cat packages/cli/src/starters.gen.ts)"
 echo "clean $([ -z "$(git status --porcelain)" ] && [ ! -e .git/MERGE_HEAD ] && echo yes || echo no)"
@@ -120,20 +127,37 @@ git log -1 --format=%B`;
   });
 }
 
-test("a clash in generated files alone is resolved by merging main in, pushed without force (#1369)", () => {
-  const run = mergeMain("own.md");
-  assert.equal(run.status, 0, run.stderr);
-  assert.match(run.stdout, /main merged in and pushed/);
-  for (const line of ["status 0", "parents 3", "pushed yes", "file built", "clean yes"]) {
+function expectLines(run, lines) {
+  for (const line of lines) {
     assert.match(run.stdout, new RegExp(`^${line}$`, "m"), run.stdout + run.stderr);
   }
+}
+
+test("a clash in generated files alone is resolved by merging main in, pushed without force (#1369)", () => {
+  const run = mergeMain("clash");
+  assert.match(run.stdout, /main merged in and pushed/);
+  expectLines(run, ["status 0", "parents 3", "back no", "pushed yes", "file built", "clean yes"]);
   assert.match(run.stdout, /Co-Authored-By: Claude/);
 });
 
+test("a branch that merges main cleanly still gets its merge commit and refreshed files", () => {
+  expectLines(mergeMain("clean"), [
+    "status 0",
+    "parents 3",
+    "pushed yes",
+    "file built",
+    "clean yes",
+  ]);
+});
+
 test("a clash beyond the generated files leaves the branch as it was", () => {
-  const run = mergeMain("notes.md");
+  const run = mergeMain("beyond");
   assert.match(run.stdout, /a conflict beyond the generated files: notes\.md/);
-  for (const line of ["status 1", "parents 2", "pushed yes", "file 2", "clean yes"]) {
-    assert.match(run.stdout, new RegExp(`^${line}$`, "m"), run.stdout + run.stderr);
-  }
+  expectLines(run, ["status 1", "back yes", "pushed yes", "clean yes"]);
+});
+
+test("a rejected push puts the branch back where it was", () => {
+  const run = mergeMain("rejected");
+  assert.match(run.stdout, /the push of the merge failed/);
+  expectLines(run, ["status 1", "back yes", "pushed yes", "file 2", "clean yes"]);
 });
