@@ -80,6 +80,8 @@ export type OperationResult =
        * destructive, shown and confirmed slot by slot.
        */
       lostMedia?: MediaSlot[];
+      /** Destructive only for the stored files it takes out: no data of the app's goes. */
+      mediaOnly?: true;
       effects: Effect[];
       /** What the change will do and what was verified (verification.ts); the host fills it. */
       verification?: Verification;
@@ -161,6 +163,7 @@ export function applyOperations(
   const effects: Effect[] = [];
   const lost: MediaSlot[] = [];
   let destructive = false;
+  let own = false;
   for (const step of steps) {
     const result = applyOperation(current, step.op, step.args);
     if (!result.ok) return result;
@@ -171,6 +174,7 @@ export function applyOperations(
     effects.push(...result.effects);
     lost.push(...(result.lostMedia ?? []));
     destructive ||= result.destructive;
+    own ||= result.destructive && !result.mediaOnly;
   }
   return {
     ok: true,
@@ -179,7 +183,7 @@ export function applyOperations(
     removed,
     description: descriptions.join("; "),
     destructive,
-    ...(lost.length ? { lostMedia: lost } : {}),
+    ...(lost.length ? { lostMedia: lost, ...(own ? {} : { mediaOnly: true as const }) } : {}),
     effects,
   };
 }
@@ -376,6 +380,8 @@ export function applyOperation(
     }
     translationsNow[language] = editor.text;
   }
+  // The operation's own loss, apart from the stored files: the person is told of both.
+  const own = op.destructive(args, before.ir, after.ir);
   return {
     ok: true,
     files: {
@@ -402,8 +408,8 @@ export function applyOperation(
       ...notes,
       ...lost.map((slot) => `loses the stored file of ${slotName(slot)}`),
     ].join("; "),
-    destructive: op.destructive(args, before.ir, after.ir) || lost.length > 0,
-    ...(lost.length ? { lostMedia: lost } : {}),
+    destructive: own || lost.length > 0,
+    ...(lost.length ? { lostMedia: lost, ...(own ? {} : { mediaOnly: true as const }) } : {}),
     effects,
   };
 }

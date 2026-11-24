@@ -3,7 +3,7 @@
 import { expect, test } from "vitest";
 import { applyOperation, applyOperations, findOperation } from "./apply.js";
 import { pictureAt, pictureFile, validateContent } from "./content.js";
-import { lostMedia, mediaInUse, slotName } from "./media.js";
+import { broughtMedia, lostMedia, mediaInUse, slotName } from "./media.js";
 import { refusedArgs } from "./operation.js";
 import { validateSpec } from "./spec.js";
 import { verificationBefore } from "./verification.js";
@@ -71,7 +71,7 @@ pages:
   expect(mediaInUse({})).toEqual([]);
 });
 
-test("each place that held a stored file and no longer does is named, the same file elsewhere or not", () => {
+test("each place a stored file is no longer in is named, the same file elsewhere or not", () => {
   const before = {
     pages: {
       home: {
@@ -85,8 +85,9 @@ test("each place that held a stored file and no longer does is named, the same f
       home: { hero: { image: { asset: ID } }, jobs: { items: [{ image: { asset: OTHER } }] } },
     },
   };
+  // The second item only moved up: OTHER keeps its one place, ID has one place fewer.
   const lost = lostMedia(before, after);
-  expect(lost.map(slotName)).toEqual(["picture 1 of jobs on home", "picture 2 of jobs on home"]);
+  expect(lost.map(slotName)).toEqual(["picture 1 of jobs on home"]);
   expect(slotName({ at: ["pages", "home", "hero", "image"], asset: ID })).toBe(
     "the picture of hero on home",
   );
@@ -95,6 +96,35 @@ test("each place that held a stored file and no longer does is named, the same f
 const files = { spec, content: content("{ src: images/hero.webp, alt: A roof }") };
 const place = (args: Record<string, unknown>) =>
   applyOperation(files, "setSectionPicture", { page: "home", section: "hero", ...args });
+
+test("a file that only moved loses nothing: an item taken out before it, items reordered, a page renamed", () => {
+  const items = (...ids: string[]) => ({ items: ids.map((asset) => ({ image: { asset } })) });
+  const page = (name: string, jobs: object) => ({ pages: { [name]: { jobs } } });
+  const THIRD = "m_3zzzzzzzzzzzzzzzzzzzzzzzzz";
+  expect(
+    lostMedia(page("home", items(ID, OTHER, THIRD)), page("home", items(OTHER, THIRD))).map(
+      slotName,
+    ),
+  ).toEqual(["picture 1 of jobs on home"]);
+  expect(lostMedia(page("home", items(ID, OTHER)), page("home", items(OTHER, ID)))).toEqual([]);
+  expect(lostMedia(page("home", items(ID)), page("start", items(ID)))).toEqual([]);
+});
+
+test("broughtMedia names a stored file the change brings in, and none it only moves", () => {
+  const hero = (image: string) => ({ content: content(image) });
+  expect(
+    broughtMedia(
+      hero("{ src: images/a.webp, alt: A }"),
+      hero(`{ asset: ${ID}, alt: A, width: 960 }`),
+    ),
+  ).toBe(ID);
+  expect(
+    broughtMedia(
+      hero(`{ asset: ${ID}, alt: A, width: 960 }`),
+      hero(`{ asset: ${ID}, alt: B, width: 960 }`),
+    ),
+  ).toBeUndefined();
+});
 
 test("setSectionPicture places a stored file with the sizes the host read, and only so", () => {
   const set = place({
@@ -142,6 +172,8 @@ test("taking a stored file out of its place is destructive and names the place; 
   if (!removed.ok) throw new Error(removed.message);
   expect(removed.destructive).toBe(true);
   expect(removed.lostMedia?.length).toBe(1);
+  // Destructive for the stored file alone: the CLI says no data goes.
+  expect(removed.mediaOnly).toBe(true);
 
   for (const path of [
     ["pages", "home", "hero", "image", "asset"],

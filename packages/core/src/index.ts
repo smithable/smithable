@@ -219,6 +219,7 @@ export type { UxDefaultFact, UxInherited } from "./look-defaults.js";
 export * from "./look-impact.js";
 export * from "./look-protocol.js";
 export {
+  broughtMedia,
   lostMedia,
   type MediaSlot,
   type MediaUse,

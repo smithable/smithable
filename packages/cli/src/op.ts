@@ -5,6 +5,7 @@ import {
   AI_BADGE_OFF_REFUSAL,
   applyOperation,
   applyOperations,
+  broughtMedia,
   checkOf,
   type Depth,
   type Effect,
@@ -509,6 +510,13 @@ async function applyAndCheckpoint(
     // A refusal, said in words: not a failure to report (only what throws below is one).
     return 1;
   }
+  // A model never brings in a stored file, by any operation (media-storage.md §2): the argument
+  // check above stops the known routes, and this the outcome.
+  const brought = flags.from === "model" && broughtMedia(files, result.files);
+  if (brought) {
+    io.err(`The stored file ${brought} is placed from a person's choice only, never a model's.\n`);
+    return 2;
+  }
   if (name === "applyTheme") {
     const unchanged =
       (["spec", "content", "auth", "ux", "context", "people"] as const).every(
@@ -640,11 +648,8 @@ async function applyAndCheckpoint(
     const media = places.length
       ? `this takes the stored file out of ${places.join(", ")}; the photo library keeps it, and undo puts it back.`
       : "";
-    const data =
-      plan ||
-      args.trash === false ||
-      result.effects.some((e) => e.kind === "remove-field" || e.kind === "change-field") ||
-      !media;
+    // The operation's own loss is said whenever it has one, a stored file's beside it.
+    const data = plan || !result.mediaOnly;
     io.err(
       `${result.description}: ${[data ? (plan ? `this deletes the ${lost.join(", ")} ${lost.length === 1 ? "column" : "columns"} and the values in ${lost.length === 1 ? "it" : "them"}.` : dataImpact(dir, result.effects, args)) : "", media].filter(Boolean).join(" ")}\nRun again with ${flags.mcp ? "confirm: true" : "--yes"} to apply it.\n`,
     );

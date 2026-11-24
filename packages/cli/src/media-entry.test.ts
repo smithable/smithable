@@ -23,13 +23,14 @@ pages:
       image: { asset: ${ID}, alt: A roof, width: 1600 }
 `;
 
-function project() {
+function project(spec?: string) {
   const dir = mkdtempSync(join(tmpdir(), "smithable-media-entry-"));
   roots.push(dir);
   writeFileSync(join(dir, ".gitignore"), "data/\n");
   writeFileSync(
     join(dir, "smithable.yml"),
-    "smithable: 0.1\napp: { name: Roofs }\npages:\n  home:\n    route: /\n    landing:\n      hero: {}\n      faq:\n",
+    spec ??
+      "smithable: 0.1\napp: { name: Roofs }\npages:\n  home:\n    route: /\n    landing:\n      hero: {}\n      faq:\n",
   );
   writeFileSync(join(dir, "smithable.content.yml"), content);
   mkdirSync(join(dir, ".smithable"), { recursive: true });
@@ -78,4 +79,21 @@ test("removing a stored file asks first, naming its place and saying undo brings
   );
   expect(io.stderr).not.toContain("converts");
   expect(readFileSync(join(dir, "smithable.content.yml"), "utf8")).toBe(content);
+});
+
+test("a change that deletes data and takes out a stored file says both", async () => {
+  const dir = project(
+    "smithable: 0.1\napp: { name: Roofs }\nmodels:\n  Job:\n    fields:\n      title: text\n      notes: text\npages:\n  home:\n    route: /\n    landing:\n      hero: {}\n      faq:\n",
+  );
+  const io = captureIo();
+  const batch = {
+    operations: [
+      { op: "removeSection", args: hero },
+      { op: "removeField", args: { model: "Job", field: "notes" } },
+    ],
+  };
+  expect(await runOperation(dir, io, "batch", batch, { yes: false, reportLater: true })).toBe(1);
+  expect(io.stderr).toContain("the photo library keeps it");
+  // The field's loss is said beside the picture's.
+  expect(io.stderr).toContain("this deletes the notes column");
 });

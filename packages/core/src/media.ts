@@ -33,12 +33,36 @@ export function mediaSlots(
 
 /**
  * The places that held a stored file before a change and hold another file or none after it
- * (§2): each one, whether or not the same file is still used elsewhere, so the person confirms
- * every slot an operation would empty.
+ * (§2), so the person confirms every slot an operation would empty. A file counts by its places:
+ * one that only moved (a gallery item before it taken out, items reordered, a page renamed) keeps
+ * as many places as it had, and loses none; one in fewer places loses the difference, whether or
+ * not the same file is still used elsewhere.
  */
 export function lostMedia(before: unknown, after: unknown): MediaSlot[] {
-  const now = new Map(mediaSlots(after).map((s) => [s.at.join("\u0000"), s.asset]));
-  return mediaSlots(before).filter((s) => now.get(s.at.join("\u0000")) !== s.asset);
+  const key = (s: MediaSlot) => s.at.join("\u0000");
+  const now = mediaSlots(after);
+  const there = new Map(now.map((s) => [key(s), s.asset]));
+  const stays = (s: MediaSlot) => there.get(key(s)) === s.asset;
+  const had = mediaSlots(before);
+  // Places left for a moved file: its places after, less those it kept where it was.
+  const free = new Map<string, number>();
+  for (const s of now) free.set(s.asset, (free.get(s.asset) ?? 0) + 1);
+  for (const s of had) if (stays(s)) free.set(s.asset, (free.get(s.asset) ?? 0) - 1);
+  return had.filter((s) => {
+    if (stays(s)) return false;
+    const left = free.get(s.asset) ?? 0;
+    free.set(s.asset, left - 1);
+    return left <= 0;
+  });
+}
+
+/**
+ * A stored file the change brings in that the files did not name before (media-storage.md §2):
+ * what a model's change may never do, by whichever operation, since only a person picks one.
+ */
+export function broughtMedia(before: { content?: string }, after: { content?: string }) {
+  const had = new Set(mediaInUse(before).map((u) => u.asset));
+  return mediaInUse(after).find((u) => !had.has(u.asset))?.asset;
 }
 
 /** A slot in words: "the picture of hero on home", "picture 2 of gallery on home". */
