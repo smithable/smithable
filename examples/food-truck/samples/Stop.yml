@@ -1,9 +1,0 @@
-# This draft shows how a stop is filled in. Add and confirm your next real stop in Stops.
-- place: Harbour market
-  address: Market Square
-  startsAt: 2026-11-21 11:00
-  endsAt: 2026-11-21 15:00
-  photo:
-    file: food-truck-evening.webp
-    alt: People at tables under string lights by a food truck on a summer evening
-  status: draft

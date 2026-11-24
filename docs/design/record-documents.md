@@ -30,7 +30,7 @@ link to that document for one person outside.
   computed when a record is read, the mail is written in the change's own transaction; "a later
   step may add them with the record page's formatter").
 - `{link}` is the record page's address: it needs an account with the right to read the record.
-- One thing is planned to reach a person without an account: `{pay}` (payments.md §4.1, not built yet: core refuses it until it is), a page showing the
+- One thing reaches a person without an account: `{pay}` (payments.md §4.1), a page showing the
   description, the amount and a Pay button, "nothing else of the record", by a random token
   stored as a hash, bound to the entry and the record, ended after 60 days, behind the limiter.
 - `public:` in the auth file opens a whole model (with a `where`), never one record to one person.
@@ -153,9 +153,8 @@ the invoice."
 - Making and withdrawing a link go to the app's audit log, with the record and the actor.
 - **It never pays.** The page shows no Pay button, and a view token is refused by the pay page
   as a pay token is refused here: two kinds, two tables' worth of checks. A mail that should let
-  the client pay will hold `{pay}` beside `{view}`, once the pay link is built (payments.md §4.1;
-  until then core refuses `{pay}`). The links share one token table with a `kind` column; this
-  page reads only kind `view`.
+  the client pay holds `{pay}` beside `{view}` (payments.md §4.1). The links share one token
+  table with a `kind` column; this page reads only kind `view`, and a pay link's row has no copy.
 - A sent copy is removed with its record. Until then it stays for the owner after its link has
   ended, as the record of what was sent.
 

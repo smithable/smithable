@@ -1381,7 +1381,8 @@ async function callReceiver() {
  */
 async function kioskLandingFlow(dir, base) {
   const browser = await chromium.launch();
-  const page = await browser.newPage({ viewport: { width: 1600, height: 900 } });
+  const viewport = { width: 1600, height: 900 };
+  let page = await browser.newPage({ viewport });
   let changed = 0;
   try {
     await open(page, `${base}/where`);
@@ -1400,7 +1401,17 @@ async function kioskLandingFlow(dir, base) {
     console.log(
       "  ✓ browser: a tiles hero draws its shortcuts as tiles: a picture where given, the page's title on the primary where not",
     );
-    // The week's stops as a week (A 215): each under its day, the days in their order, at most seven.
+    // Keep checking the generic weekly layout with the kiosk's confirmed schedule fixtures.
+    for (const args of [
+      ["changeSectionKind", "where", "stops", "records", "--records", "Stop", "--yes"],
+      ["setSectionLook", "where", "stops", "layout", "week"],
+    ]) {
+      const result = smithable(dir, "op", ...args);
+      if (result.code !== 0) throw new Error(`weekly layout fixture: ${result.out}`);
+      changed++;
+    }
+    await page.close();
+    page = await browser.newPage({ viewport });
     await open(page, `${base}/where`);
     const days = page.locator('[data-layout="week"] [data-part="day"]');
     await days.first().waitFor({ timeout: 10000 * P });
@@ -4004,20 +4015,95 @@ async function marketplaceFlow(dir, base) {
 async function painterFlow(dir, base) {
   const browser = await chromium.launch();
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+  const loaded = async (picture) => {
+    await picture.scrollIntoViewIfNeeded();
+    await picture.evaluate((image) => image.decode());
+  };
   try {
+    await open(page, base);
+    await loaded(
+      page.getByRole("img", {
+        name: "A red farmhouse and barn by a field of grain under a wide sky",
+        exact: true,
+      }),
+    );
+    const projects = page.getByRole("region", { name: "Recent painting projects", exact: true });
+    const covers = projects.locator('img[src^="/files/job/"]');
+    await loaded(covers.first());
+    if ((await covers.count()) !== 6)
+      throw new Error("the landing grid should show six project covers");
+    const project = projects
+      .locator("figure")
+      .filter({ has: page.locator('img[src^="/files/job/"]') })
+      .first()
+      .getByRole("link");
+    const title = await project.innerText();
+    const cover = await covers.first().getAttribute("alt");
+    await project.click();
+    await page.waitForURL(`${base}/jobs/*`);
+    await page.getByRole("heading", { name: title, exact: true }).first().waitFor();
+    await loaded(page.getByRole("img", { name: cover, exact: true }).first());
+
+    const [interior] = query(
+      dir,
+      "SELECT id FROM jobs WHERE title = 'Living room and hall refresh'",
+    );
+    await open(page, `${base}/jobs/${interior.id}`);
+    await loaded(
+      page
+        .getByRole("img", {
+          name: "A bright apartment living room with a balcony door",
+          exact: true,
+        })
+        .first(),
+    );
+    await page.getByRole("button", { name: "Picture 2 of 2", exact: true }).click();
+    await loaded(
+      page
+        .getByRole("img", {
+          name: "A freshly painted green wall with a roller and an open tin of the same paint",
+          exact: true,
+        })
+        .first(),
+    );
+    await page.getByRole("button", { name: "Send enquiry", exact: true }).waitFor();
+
+    // One job without pictures among pictured ones keeps the cards even with a placeholder; a
+    // filter that leaves only that job shows a text card, never an empty slot.
+    write(dir, "UPDATE jobs SET photos = NULL WHERE surface = 'roof'");
+    const rows = '[data-kit="model-table"] li[data-part="row"]';
+    const card = (name) => page.locator(rows).filter({ hasText: name });
+    const roof = "Painted eaves on a lakeside cottage";
+    await open(page, `${base}/jobs`);
+    await card(roof).locator('[data-part="placeholder"]').waitFor();
+    if (await card(roof).locator("img").count())
+      throw new Error("/jobs shows a picture on the job without pictures");
+    await card("Red farmhouse in linseed oil paint").locator('img[src^="/files/job/"]').waitFor();
+    await open(page, `${base}/jobs?surface=roof`);
+    await page.waitForFunction(
+      (selector) => document.querySelectorAll(selector).length === 1,
+      rows,
+    );
+    await card(roof).waitFor();
+    if (await card(roof).locator('[data-part="placeholder"], img').count())
+      throw new Error("/jobs?surface=roof shows a picture slot with no pictured job left");
+
+    // A painter who removes the sample images can still show and link to text-only projects.
+    write(dir, "UPDATE jobs SET photos = NULL");
     for (const path of ["/jobs", "/"]) {
       await open(page, `${base}${path}`);
-      // The landing shows six of the seven jobs, so wait for any of them.
       await page
         .getByText(
-          /^(Red farmhouse|Tin roof|Twelve windows|Yellow cladding|Staircase|Living room|Pine floor)/,
+          /^(Red farmhouse|Painted eaves|Window surrounds|Yellow cladding|Green door|Living room|Street-facing trim|Pale timber floor)/,
         )
         .first()
         .waitFor();
-      const slots = await page.locator('[data-part="placeholder"]').count();
-      if (slots) throw new Error(`${path} shows ${slots} empty picture slots`);
+      if (await page.locator('[data-part="placeholder"]').count())
+        throw new Error(`${path} shows empty picture slots`);
     }
-    console.log("  ✓ painter: jobs without photos show as text cards, with no empty picture slot");
+    console.log(
+      "  ✓ painter: the landing grid covers link to pictured projects, and text-only jobs still work",
+    );
     await signInAs(page, base, "admin");
     await open(page, `${base}/enquiries/1`);
     await page.getByRole("button", { name: "Mark contacted", exact: true }).click();
@@ -4039,22 +4125,26 @@ async function painterFlow(dir, base) {
   }
 }
 
-async function foodTruckFlow(dir, base) {
+async function kioskScheduleFlow(dir, base) {
   const browser = await chromium.launch();
   const page = await browser.newPage({ viewport: { width: 390, height: 844 }, isMobile: true });
+  let changed = false;
   const heroPhoto = () =>
     page.waitForFunction(() => {
       const image = document.querySelector("[data-hero] img");
       return image?.complete && image.naturalWidth > 0;
     });
-  const showAt = async (at) => {
+  const clock = async (at) => {
     const moved = await fetch(`${base}/_dev/clock`, {
       method: "POST",
       headers: { "x-dev-door": DOOR_SECRET, "Content-Type": "application/json" },
       body: JSON.stringify({ at }),
     });
     if (!moved.ok) throw new Error(`the stop's test clock: ${moved.status} ${await moved.text()}`);
-    await open(page, base);
+  };
+  const showAt = async (at) => {
+    await clock(at);
+    await open(page, `${base}/where`);
   };
   try {
     write(
@@ -4064,10 +4154,11 @@ async function foodTruckFlow(dir, base) {
         menu_override = 'Smoky bean flatbread €10', status = 'confirmed' WHERE place = 'Harbour market';
         INSERT INTO stops (place, starts_at, ends_at, directions_url, menu_override, status, created_at, updated_at) VALUES
         ('Sunday square', ${Date.parse("2026-11-22T09:00Z")}, ${Date.parse("2026-11-22T13:00Z")}, NULL, NULL, 'confirmed', unixepoch() * 1000, unixepoch() * 1000),
-        ('Private draft', ${Date.parse("2026-11-23T09:00Z")}, ${Date.parse("2026-11-23T13:00Z")}, NULL, NULL, 'draft', unixepoch() * 1000, unixepoch() * 1000)`,
+        ('Private draft', ${Date.parse("2026-11-23T09:00Z")}, ${Date.parse("2026-11-23T13:00Z")}, NULL, NULL, 'draft', unixepoch() * 1000, unixepoch() * 1000),
+        ('Cancelled fixture', ${Date.parse("2026-11-24T09:00Z")}, ${Date.parse("2026-11-24T13:00Z")}, NULL, NULL, 'cancelled', unixepoch() * 1000, unixepoch() * 1000)`,
     );
     const venues = page
-      .getByRole("region", { name: "Find the truck" })
+      .getByRole("region", { name: "Upcoming stops" })
       .getByRole("heading", { level: 3 });
     await showAt("2026-11-21T12:55:00.000Z");
     await heroPhoto();
@@ -4079,8 +4170,6 @@ async function foodTruckFlow(dir, base) {
     const map = page.getByRole("link", { name: "Map and directions" });
     if ((await map.getAttribute("href")) !== "https://example.com/map")
       throw new Error("the stop's map link is missing");
-    await open(page, `${base}/where`);
-    await heroPhoto();
     const stopPhoto = page.getByRole("region", { name: "Upcoming stops" }).getByRole("img");
     await stopPhoto.scrollIntoViewIfNeeded();
     await page.waitForFunction(() => {
@@ -4088,18 +4177,19 @@ async function foodTruckFlow(dir, base) {
       return image?.complete && image.naturalWidth > 0;
     });
 
+    await open(page, `${base}/stops`);
+    await page.getByText("Sunday square", { exact: true }).first().waitFor();
+    for (const place of ["Private draft", "Cancelled fixture"]) {
+      if (await page.getByText(place, { exact: true }).count())
+        throw new Error(`the public Stops page shows ${place}`);
+    }
+
     await showAt("2026-11-21T13:00:00.000Z");
     await page.getByRole("heading", { name: "Sunday square" }).waitFor();
     if ((await venues.allTextContents()).join(",") !== "Sunday square")
       throw new Error("Saturday's stop is still on the schedule after closing");
     await page.getByRole("link", { name: "Regular menu" }).click();
-    await page.getByText("Cheeseburger and fries", { exact: true }).waitFor();
-    const menuPhoto = page.getByRole("img", { name: "A cheeseburger and fries on a wooden board" });
-    await menuPhoto.scrollIntoViewIfNeeded();
-    await page.waitForFunction(() => {
-      const image = document.querySelector('img[src^="/files/menu-item/"]');
-      return image?.complete && image.naturalWidth > 0;
-    });
+    await page.getByRole("button", { name: "Add Fish soup", exact: true }).waitFor();
 
     await showAt("2026-11-22T13:00:00.000Z");
     await page.getByText("No stop planned.", { exact: true }).waitFor();
@@ -4112,19 +4202,51 @@ async function foodTruckFlow(dir, base) {
       .fill("Lunch for a garden party");
     await page.getByRole("button", { name: "Send catering enquiry" }).click();
     await page.getByText("Thanks for your enquiry.").waitFor();
-    await signInAs(page, base, "admin");
+    const fallback = smithable(dir, "op", "setSectionPicture", "where", "hero");
+    if (fallback.code !== 0) throw new Error(`remove the schedule hero picture: ${fallback.out}`);
+    changed = true;
+    await open(page, `${base}/where`);
+    const plain = page.locator('[data-hero][data-layout="plain"]');
+    await plain.getByRole("heading", { name: "Find the truck", exact: true }).waitFor();
+    await page.getByRole("link", { name: "Ask about catering", exact: true }).waitFor();
+    await clock("2026-11-22T13:00:00.000Z");
+    await signInAs(page, base, "staff");
     await open(page, `${base}/enquiries`);
     await page.getByText("Catering Test", { exact: true }).first().waitFor();
+    const [enquiry] = query(
+      dir,
+      "SELECT id, status, follow_up_on FROM catering_enquiries WHERE name = 'Catering Test'",
+    );
+    if (enquiry?.status !== "new") throw new Error("the catering enquiry did not arrive as new");
+    // Its follow-up date's default, TODAY(), is filled by the server: the visitor's form does not ask it (T1366).
+    if (enquiry.follow_up_on !== "2026-11-22")
+      throw new Error(
+        `the visitor's enquiry has no follow-up date of today: ${enquiry.follow_up_on}`,
+      );
+    await open(page, `${base}/enquiries/${enquiry.id}`);
+    const contacted = page.getByRole("button", { name: "Mark contacted", exact: true });
+    await contacted.click();
+    await contacted.waitFor({ state: "hidden" });
+    const [followUp] = query(
+      dir,
+      `SELECT status, follow_up_on FROM catering_enquiries WHERE id = ${enquiry.id}`,
+    );
+    if (followUp?.status !== "contacted" || followUp.follow_up_on !== "2026-11-25")
+      throw new Error("Mark contacted did not schedule the catering follow-up in three days");
     console.log(
-      "  ✓ food truck: the next stop replaces Saturday, and catering works after the last stop",
+      "  ✓ kiosk schedule: the next stop replaces Saturday, and catering works after the last stop",
     );
   } catch (error) {
     console.log(
-      `  ✗ food truck: ${error.message}\n    at ${page.url()}, see ${await screenshot(page)}`,
+      `  ✗ kiosk schedule: ${error.message}\n    at ${page.url()}, see ${await screenshot(page)}`,
     );
-    failures.push("food truck flow");
+    failures.push("kiosk schedule flow");
   } finally {
     await browser.close();
+    if (changed) {
+      const back = smithable(dir, "undo");
+      if (back.code !== 0) failures.push(`kiosk schedule put back: ${back.out}`);
+    }
   }
 }
 
@@ -6077,6 +6199,177 @@ async function refusalFlow(base) {
   }
 }
 
+/**
+ * A hero's film (section-film.md §3, T1278): it plays over its picture, the picture's mark giving
+ * way only while it plays; the visitor pauses it by touch and by key and it stays paused back in
+ * view; a film that cannot play, or a visitor who asked for less motion, gets the picture and
+ * fetches nothing; a film across the width plays under the hero's wash.
+ */
+async function filmFlow(dir, base) {
+  const browser = await chromium.launch();
+  const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  const film = join(dir, "public", "images", "hero-film.mp4");
+  let changed = 0;
+  const change = (...args) => {
+    const done = smithable(dir, "op", ...args);
+    if (done.code !== 0) throw new Error(`${args[0]}: ${done.out}`);
+    changed++;
+  };
+  // The app reloads itself after a change: a load it interrupts is one more try.
+  const until = async (url, ready, why) => {
+    for (let i = 0; ; i++) {
+      await open(page, url).catch(() => {});
+      if (await ready().catch(() => false)) return;
+      if (i === 40 * P) throw new Error(why);
+      await page.waitForTimeout(500);
+    }
+  };
+  const hero = page.locator("[data-hero]");
+  const playing = hero.locator("video[data-playing]");
+  const mark = hero.locator('[data-part="ai-mark"]').first();
+  try {
+    writeFileSync(film, readFileSync(join(repo, "scripts", "fixtures", "film.mp4")));
+    change("setSectionFilm", "home", "hero", "images/hero-film.mp4");
+    // The dev server answers a part of the file, as a player asks for it.
+    const part = await page.request.get(`${base}/images/hero-film.mp4`, {
+      headers: { range: "bytes=0-99" },
+    });
+    if (part.status() !== 206 || !/^bytes 0-99\//.test(part.headers()["content-range"] ?? ""))
+      throw new Error(`a range of the film is answered ${part.status()}, not 206`);
+
+    // Inset, then split: the picture is shown whole and its mark gives way while the film plays.
+    for (const layout of ["inset", "split"]) {
+      if (layout !== "inset") change("setSectionLook", "home", "hero", "layout", layout);
+      await until(
+        `${base}/`,
+        async () =>
+          (await hero.getAttribute("data-layout")) === layout && (await playing.count()) > 0,
+        `the ${layout} hero's film does not play`,
+      );
+      if (await mark.isVisible())
+        throw new Error(`the ${layout} picture's mark shows over its film`);
+    }
+    const pause = hero.getByRole("button", { name: "Pause the film", exact: true });
+    await pause.click();
+    const resume = hero.getByRole("button", { name: "Play the film", exact: true });
+    await resume.waitFor();
+    // Found by itself, not by its playing mark: Pause may clear that.
+    const heroFilm = hero.locator("video").first();
+    if (!(await heroFilm.evaluate((v) => v.paused)))
+      throw new Error("the film plays on after Pause");
+    // Away and back: paused stays paused.
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    await page.waitForTimeout(300);
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await page.waitForTimeout(500);
+    if (!(await heroFilm.evaluate((v) => v.paused)))
+      throw new Error("the film played again in view");
+    await resume.focus();
+    await page.keyboard.press("Enter");
+    await pause.waitFor();
+    await page.waitForFunction(() => !document.querySelector("[data-hero] video")?.paused);
+    await playing.waitFor();
+    if (await mark.isVisible())
+      throw new Error("the picture's mark shows over its film after Play");
+    console.log(
+      "  ✓ browser: a hero's film plays over its picture in inset and split, the picture's mark giving way; paused by key or click it stays paused back in view; a range of it is answered 206",
+    );
+
+    // By touch, on a phone.
+    const phone = await browser.newContext({
+      viewport: { width: 390, height: 844 },
+      hasTouch: true,
+      isMobile: true,
+    });
+    const tap = await phone.newPage();
+    await open(tap, `${base}/`);
+    await tap.locator("[data-hero] video[data-playing]").waitFor({ timeout: 20000 * P });
+    await tap
+      .locator("[data-hero]")
+      .getByRole("button", { name: "Pause the film", exact: true })
+      .tap();
+    await tap
+      .locator("[data-hero]")
+      .getByRole("button", { name: "Play the film", exact: true })
+      .waitFor();
+    await phone.close();
+
+    // Less motion, and a film that cannot play: the picture with its mark, nothing fetched.
+    for (const [why, setup] of [
+      ["less motion", (context) => context.newPage()],
+      [
+        "a film that cannot play",
+        async (context) => {
+          await context.route("**/*.mp4*", (route) =>
+            route.fulfill({ body: "not a film", contentType: "video/mp4" }),
+          );
+          return context.newPage();
+        },
+      ],
+    ]) {
+      const context = await browser.newContext({
+        viewport: { width: 1440, height: 900 },
+        reducedMotion: why === "less motion" ? "reduce" : "no-preference",
+      });
+      const other = await setup(context);
+      const asked = [];
+      other.on("request", (r) => r.url().includes(".mp4") && asked.push(r.url()));
+      await open(other, `${base}/`);
+      await other.waitForTimeout(2000);
+      const otherHero = other.locator("[data-hero]");
+      if (await otherHero.locator("video[data-playing]").count())
+        throw new Error(`a film plays for ${why}`);
+      if (!(await otherHero.locator('[data-part="ai-mark"]').first().isVisible()))
+        throw new Error(`the picture's mark is hidden for ${why}`);
+      if (why === "less motion" && asked.length)
+        throw new Error("the film was fetched for less motion");
+      await context.close();
+    }
+    console.log(
+      "  ✓ browser: a film pauses by touch; for less motion, or when it cannot play, the picture shows with its mark, and less motion fetches nothing",
+    );
+
+    // Across the width: the film under the wash, the text over both.
+    change("setSectionLook", "home", "hero", "layout", "photo");
+    await until(
+      `${base}/`,
+      async () =>
+        (await hero.getAttribute("data-layout")) === "photo" && (await playing.count()) > 0,
+      "the photo hero's film does not play",
+    );
+    const top = await hero.evaluate((section) => {
+      // What is painted on top, whether or not the film takes the pointer.
+      for (const v of section.querySelectorAll("video")) v.style.pointerEvents = "auto";
+      const box = section.getBoundingClientRect();
+      const at = (x, y) =>
+        document.elementFromPoint(box.left + x * box.width, box.top + y * box.height);
+      return [at(0.02, 0.5), at(0.5, 0.95), at(0.98, 0.05)].map((e) => e?.tagName);
+    });
+    if (top.includes("VIDEO")) throw new Error(`the film is over the hero's wash (${top})`);
+    const title = hero.getByRole("heading").first();
+    if (
+      !(await title.evaluate((h) => {
+        const r = h.getBoundingClientRect();
+        return h.contains(document.elementFromPoint(r.left + 4, r.top + r.height / 2));
+      }))
+    )
+      throw new Error("the hero's title is under its film");
+    console.log("  ✓ browser: a film across the width plays under the hero's wash and text");
+  } catch (error) {
+    console.log(
+      `  ✗ browser: ${error.message.split("\n")[0]}\n    at ${page.url()}, see ${await screenshot(page)}`,
+    );
+    failures.push("film flow");
+  } finally {
+    await browser.close();
+    for (; changed > 0; changed--) {
+      const back = smithable(dir, "undo");
+      if (back.code !== 0) failures.push(`film put back: ${back.out}`);
+    }
+    rmSync(film, { force: true });
+  }
+}
+
 async function landingFlow(dir, base) {
   const browser = await chromium.launch();
   const page = await browser.newPage();
@@ -7330,6 +7623,11 @@ async function onboardingFlow(base) {
 async function invoicePaymentFlow(dir, base) {
   const spec = join(dir, "smithable.yml");
   const original = readFileSync(spec, "utf8");
+  // Send invoice's mail carries a link to pay (payments.md §4.1).
+  const contentFile = join(dir, "smithable.content.yml");
+  const content = readFileSync(contentFile, "utf8");
+  if (!content.includes("See it here: {view}")) throw new Error("the invoice mail's text moved");
+  writeFileSync(contentFile, content.replace("See it here: {view}", "Pay here: {pay}"));
   writeFileSync(
     spec,
     original.replace(
@@ -7359,7 +7657,9 @@ async function invoicePaymentFlow(dir, base) {
        insert into invoice_lines (invoice_id, description, quantity, unit_price, owner_id, created_at, updated_at)
          values ((select id from invoices where number = 'PAY-001'), 'Design work', 1, 12000, '${me.id}', 0, 0);
        insert into invoices (number, client_id, issued_on, due_on, status, owner_id, created_at, updated_at)
-         values ('PAY-002', (select id from clients where name = 'Paying Client'), '2026-11-01', '2026-12-01', 'draft', '${me.id}', 0, 0);`,
+         values ('PAY-002', (select id from clients where name = 'Paying Client'), '2026-11-01', '2026-12-01', 'draft', '${me.id}', 0, 0);
+       insert into invoice_lines (invoice_id, description, quantity, unit_price, owner_id, created_at, updated_at)
+         values ((select id from invoices where number = 'PAY-002'), 'Pay link work', 1, 5000, '${me.id}', 0, 0);`,
     );
     const [sent] = query(dir, "select id from invoices where number = 'PAY-001'");
     const [draft] = query(dir, "select id from invoices where number = 'PAY-002'");
@@ -7412,6 +7712,60 @@ async function invoicePaymentFlow(dir, base) {
     console.log(
       "  ✓ browser: a sent invoice is paid on its page through the fake provider and marked paid; its owner refunds it and finds it on the Payments page; a draft asks for nothing",
     );
+    step = "send with a pay link";
+    const outbox = join(dir, "data", "mail", "outbox");
+    const mails = () =>
+      existsSync(outbox) ? readdirSync(outbox).filter((f) => !f.startsWith(".")) : [];
+    const before = new Set(mails());
+    await page.getByRole("button", { name: "Send invoice" }).filter({ visible: true }).click();
+    await page
+      .getByRole("dialog", { name: "Send invoice" })
+      .getByRole("button", { name: "Send invoice" })
+      .click();
+    for (let i = 0; i < 100 * P && mails().every((m) => before.has(m)); i++)
+      await page.waitForTimeout(100);
+    const mail = mails()
+      .filter((m) => !before.has(m))
+      .map((m) => quotedPrintable(readFileSync(join(outbox, m), "latin1")))
+      .find((m) => m.includes("Invoice PAY-002:"));
+    const token = mail?.match(/\/p\/([A-Za-z0-9_-]{43})\b/)?.[1];
+    if (!token) throw new Error(`no pay link in the mail: ${mail?.slice(0, 600)}`);
+    step = "the pay link's page";
+    // Someone without an account: a browser of its own, signed in nowhere.
+    const stranger = await browser.newPage();
+    const served = await stranger.request.get(`${base}/p/${token}`);
+    if (served.status() !== 200) throw new Error(`the pay link answers ${served.status()}`);
+    if (!/no-store/.test(served.headers()["cache-control"] ?? ""))
+      throw new Error(`the pay page may be cached: ${served.headers()["cache-control"]}`);
+    if (!/noindex/.test(served.headers()["x-robots-tag"] ?? ""))
+      throw new Error("the pay page may be indexed");
+    if ((await served.text()).includes("Pay link work"))
+      throw new Error("the pay page shows the invoice's lines");
+    for (const wrong of [`/p/${"A".repeat(43)}`, `/d/${token}`]) {
+      const answer = await stranger.request.get(`${base}${wrong}`);
+      if (answer.status() !== 404)
+        throw new Error(`${wrong.slice(0, 3)} answers ${answer.status()}`);
+    }
+    await open(stranger, `${base}/p/${token}`);
+    await stranger.getByRole("heading", { name: "Invoice PAY-002" }).waitFor();
+    await hydrated(stranger);
+    await stranger.getByRole("button", { name: /^Pay .*50/ }).click();
+    await stranger.waitForURL(/\/payments\/fake\/\d+$/, { timeout: 30000 * P });
+    await hydrated(stranger);
+    await stranger.getByRole("button", { name: "Approve" }).click();
+    await stranger
+      .getByRole("heading", { name: /^Paid .+ Thank you!$/ })
+      .waitFor({ timeout: 15000 * P });
+    const [linkPaid] = query(dir, `select status from invoices where id = ${draft.id}`);
+    if (linkPaid.status !== "paid")
+      throw new Error(`an invoice paid by link is ${linkPaid.status}`);
+    await open(stranger, `${base}/p/${token}`);
+    await stranger.getByRole("heading", { name: /^Paid / }).waitFor({ timeout: 10000 * P });
+    if (await stranger.getByRole("button", { name: /^Pay / }).count())
+      throw new Error("a paid pay link still offers Pay");
+    console.log(
+      "  ✓ browser: Send invoice's mail carries a pay link; someone signed out pays the invoice through it, uncached and unindexed, and the link then says paid; a wrong link and a view link's path answer 404",
+    );
   } catch (error) {
     console.log(
       `  ✗ invoice payments (${step}): ${error.message.split("\n")[0]}\n    at ${page.url()}, see ${await screenshot(page)}`,
@@ -7420,6 +7774,7 @@ async function invoicePaymentFlow(dir, base) {
   } finally {
     await browser.close();
     writeFileSync(spec, original);
+    writeFileSync(contentFile, content);
     const back = spawnSync("node", [cli, "generate", dir], { cwd: repo, encoding: "utf8" });
     if (back.status !== 0) failures.push(`invoice payments put back: ${back.stdout}${back.stderr}`);
   }
@@ -10137,6 +10492,7 @@ test("the session cookie's name and attributes", async () => {
       }
       if (example === "booking") {
         await landingFlow(dir, base);
+        await filmFlow(dir, base);
         await calendarFlow(base);
         await bookingFlow(dir, base);
         await clockFlow(dir, base);
@@ -10163,13 +10519,13 @@ test("the session cookie's name and attributes", async () => {
       if (example === "support") await supportFlow(dir, base);
       if (example === "kiosk") {
         await kioskFlow(dir, base);
+        await kioskScheduleFlow(dir, base);
         await kioskLandingFlow(dir, base);
         await kioskPaymentFlow(dir, base);
       }
       if (example === "barbers") await barbersFlow(dir, base);
       if (example === "restaurant") await restaurantFlow(base);
       if (example === "painter") await painterFlow(dir, base);
-      if (example === "food-truck") await foodTruckFlow(dir, base);
       if (example === "crm") await importFlow(dir, base);
       if (example === "status") await statusFlow(base);
       if (example === "status") await sessionFlow(base);

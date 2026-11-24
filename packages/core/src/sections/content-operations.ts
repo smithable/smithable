@@ -2,6 +2,7 @@ import { parse, stringify } from "yaml";
 import {
   ASSISTANT_TEXTS,
   derivedTexts,
+  FILM_SRC,
   IMAGE_SRC,
   LANGUAGES,
   LOGO_SRC,
@@ -521,7 +522,7 @@ const setSectionPicture: Operation<{
   name: "setSectionPicture",
   sets: ["smithable.content.yml:pages.*.*.image", "smithable.content.yml:pages.*.*.items"],
   summary:
-    "Set a landing section's picture (a hero, media-and-text, text, call to action or features section, or a gallery or features item by its place) to a file under public/images/, with what it shows; no src removes it (only a gallery loses the whole item).",
+    "Set a landing section's picture, or a gallery, features or media-and-text item picture by its place, to a file under public/images/ with what it shows. No src removes it. Media-and-text items can be added in order, up to three.",
   schema: {
     type: "object",
     required: ["page", "section"],
@@ -543,7 +544,8 @@ const setSectionPicture: Operation<{
       item: {
         type: "integer",
         minimum: 0,
-        description: "A gallery or features picture by its place, from 0.",
+        description:
+          "A picture by its place, from 0. A media-and-text section takes up to three extra pictures in order.",
       },
       was: {
         type: "string",
@@ -571,18 +573,19 @@ const setSectionPicture: Operation<{
       );
     const languages = (content.get(["languages"]) as string[] | undefined) ?? [];
     const items = ["pages", page, section, "items"];
+    let append = false;
     if (item !== undefined) {
-      if (found.kind !== "gallery" && found.kind !== "features")
-        throw new OperationError(
-          `Only a gallery or features section's pictures are given by their place; ${section} is a ${found.kind} section.`,
-        );
+      if (!["gallery", "features", "mediaText"].includes(found.kind))
+        throw new OperationError(`A ${found.kind} section's pictures cannot be set by place.`);
       const list = content.get(items);
-      if (!Array.isArray(list) || item >= list.length)
+      const length = Array.isArray(list) ? list.length : 0;
+      append = found.kind === "mediaText" && src !== undefined && item === length && item < 3;
+      if (item >= length && !append)
         throw new OperationError(`The ${section} section has no picture ${item + 1}.`);
-      if (src === undefined && found.kind === "gallery") {
+      if (src === undefined && found.kind !== "features") {
         // The item goes, its caption with it, in every language file that has it.
         content.removeItem(items, item);
-        if (list.length === 1) content.removeAndPrune(items, 0);
+        if (length === 1) content.removeAndPrune(items, 0);
         for (const language of languages) {
           const other = translations.get(language);
           const theirs = other?.get(items);
@@ -620,7 +623,10 @@ const setSectionPicture: Operation<{
     const image: Record<string, YamlValue> = same
       ? { ...(before as Record<string, YamlValue>), alt: text }
       : { src, alt: text };
-    if (content.has(path)) content.set(path, image);
+    if (append) {
+      if (content.has(items)) content.appendItem(items, { image });
+      else put(content, items, [{ image }]);
+    } else if (content.has(path)) content.set(path, image);
     else put(content, path, image);
     // Another language's words for the old picture say nothing of a new one: the main alt stands in.
     if (!same)
@@ -628,6 +634,64 @@ const setSectionPicture: Operation<{
         const other = translations.get(language);
         if (other?.has(path)) other.removeAndPrune(path, 0);
       }
+    return [];
+  },
+};
+
+/**
+ * A hero's film (section-film.md): a short silent loop over its picture. Only the name is checked
+ * here; the host reads the file's bytes. A new picture drops the film (setSectionPicture), since it
+ * was made to play over the old one.
+ */
+const setSectionFilm: Operation<{ page: string; section: string; src?: string }> = {
+  name: "setSectionFilm",
+  sets: ["smithable.content.yml:pages.*.*.image.film"],
+  summary:
+    "Set a hero's film, a short silent loop over its picture (an MP4 under public/images/); no src removes it. The picture stays and shows first.",
+  schema: {
+    type: "object",
+    required: ["page", "section"],
+    additionalProperties: false,
+    properties: {
+      page: refTo({ ref: "page", label: "Page" }, { description: "The page, e.g. home." }),
+      section: refTo(
+        { ref: "section", page: "page", label: "Section" },
+        { description: "The hero, e.g. hero." },
+      ),
+      src: {
+        type: "string",
+        description: "The file, e.g. images/hero.mp4; none removes the film.",
+      },
+    },
+  },
+  positional: ["page", "section", "src"],
+  describe: ({ page, section, src }) =>
+    src
+      ? `Play ${src} over the picture of the ${section} section of ${page}`
+      : `Remove the film of the ${section} section of ${page}`,
+  destructive: () => false,
+  apply({ content }, { page, section, src }, ir) {
+    const found = ir.pages.find((p) => p.id === page)?.sections.find((s) => s.name === section);
+    if (!found) throw new OperationError(`The ${page} page has no section named "${section}".`);
+    if (found.kind !== "hero")
+      throw new OperationError(`Only a hero takes a film; ${section} is a ${found.kind} section.`);
+    const film = ["pages", page, section, "image", "film"];
+    if (src === undefined) {
+      if (!content.has(film)) throw new OperationError(`The ${section} section has no film.`);
+      content.removeAndPrune(film, 0);
+      return [];
+    }
+    if (typeof content.get(["pages", page, section, "image", "src"]) !== "string")
+      throw new OperationError(
+        `The ${section} section has no picture: a film plays over one, so set the picture first.`,
+      );
+    if (!FILM_SRC.test(src))
+      throw new OperationError(
+        `"${src}" is not an MP4 file under public/images/: give it as images/<file>.mp4.`,
+      );
+    // The owner's file: the origin of the film there before says nothing of it.
+    if (content.has(film)) content.set(film, { src });
+    else put(content, film, { src });
     return [];
   },
 };
@@ -693,10 +757,8 @@ const keepPicture: Operation<{
       throw new OperationError(
         `The picture there is no longer ${was}: another change came between. Look again.`,
       );
-    if (item !== undefined && found.kind !== "gallery")
-      throw new OperationError(
-        `Only a gallery's pictures are given by their place; ${section} is a ${found.kind} section.`,
-      );
+    if (item !== undefined && found.kind !== "gallery" && found.kind !== "mediaText")
+      throw new OperationError(`A ${found.kind} section's pictures cannot be kept by place.`);
     const path =
       item === undefined
         ? ["pages", page, section, "image"]
@@ -795,6 +857,7 @@ export const contentOperations: AnyOperation[] = [
   setTexts,
   setItems,
   setSectionPicture,
+  setSectionFilm,
   keepPicture,
   nameRecords,
   setLanguage,

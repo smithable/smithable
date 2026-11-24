@@ -111,5 +111,6 @@ test("the access line never holds a sent document's link (record-documents.md §
   const token = "a".repeat(43);
   expect(trace.loggedPath(new URL(`http://app.test/d/${token}`))).toBe("/d/…");
   expect(trace.loggedPath(new URL(`http://app.test/d/${token}?x=1`))).toBe("/d/…?x");
+  expect(trace.loggedPath(new URL(`http://app.test/p/${token}`))).toBe("/p/…");
   expect(trace.loggedPath(new URL("http://app.test/documents/7"))).toBe("/documents/7");
 });

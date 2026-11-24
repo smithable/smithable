@@ -271,7 +271,13 @@ export function landingRoute(
           }${
             own.image
               ? `
-          image={{ src: ${JSON.stringify(`/${own.image.src}`)}, alt: ${JSON.stringify(own.image.alt)}${own.image.generated ? ", generated: true" : ""}${own.image.kind ? `, kind: ${JSON.stringify(own.image.kind)}` : ""}${srcSetOf(own.image) ? `, srcSet: ${JSON.stringify(srcSetOf(own.image))}` : ""} }}`
+          image={{ src: ${JSON.stringify(`/${own.image.src}`)}, alt: ${JSON.stringify(own.image.alt)}${own.image.generated ? ", generated: true" : ""}${own.image.kind ? `, kind: ${JSON.stringify(own.image.kind)}` : ""}${srcSetOf(own.image) ? `, srcSet: ${JSON.stringify(srcSetOf(own.image))}` : ""} }}${
+            own.image.film
+              ? (imports.add("#/kit/Film", "Film"),
+                `
+          film={(framed) => <Film src=${attr(`/${own.image.film.src}`)}${own.image.film.generated ? " generated" : ""}${own.image.film.kind ? ` kind=${attr(own.image.film.kind)}` : ""} framed={framed} />}`)
+              : ""
+          }`
               : ""
           }${
             section.shortcuts?.length
@@ -529,11 +535,19 @@ export function landingRoute(
         ];
       }
       case "mediaText": {
-        if (!own.title && !own.text && !own.image) return [];
+        const extra =
+          given.layout === "collage"
+            ? (own.items ?? []).flatMap(({ image }) =>
+                typeof image === "object" && !Array.isArray(image)
+                  ? [{ image: picture(image) }]
+                  : [],
+              )
+            : [];
+        if (!own.title && !own.text && !own.image && !extra.length) return [];
         imports.add("#/kit/Landing", "MediaText");
         return [
           `${open("MediaText")}
-          id=${attr(section.name)}${own.title ? `\n          title=${attr(own.title)}` : ""}${own.text ? `\n          text=${attr(own.text)}` : ""}${own.caption ? `\n          caption=${attr(own.caption)}` : ""}${own.image ? `\n          image={${literal(picture(own.image))}}` : ""}${section.button ? `\n          link=${link(routeOf(section.button), own.button ?? t.pageTitleOf(section.button))}` : ""}
+          id=${attr(section.name)}${own.title ? `\n          title=${attr(own.title)}` : ""}${own.text ? `\n          text=${attr(own.text)}` : ""}${own.caption ? `\n          caption=${attr(own.caption)}` : ""}${own.image ? `\n          image={${literal(picture(own.image))}}` : ""}${extra.length ? `\n          items={${literal(extra)}}` : ""}${section.button ? `\n          link=${link(routeOf(section.button), own.button ?? t.pageTitleOf(section.button))}` : ""}
         />`,
         ];
       }
@@ -762,10 +776,28 @@ ${loaded ? "  const data = Route.useLoaderData();\n" : ""}${
  */
 function homeForSite(ir: SpecIR, auth: AuthIR) {
   const landings = ir.pages.filter((p) => p.pattern.kind === "landing");
-  return landings.find((p) => auth.public.pages.includes(p.id)) ?? landings[0];
+  return publicLanding(ir, auth) ?? landings[0];
 }
 
-function siteContact(home: PageIR | undefined, t: Texts) {
+/**
+ * The landing page visitors may open that the site's shared texts are taken from: the first listed
+ * as public, or with no sign-in (every page open) the first of all. None when every landing is
+ * open only to some.
+ */
+function publicLanding(ir: SpecIR, auth: AuthIR) {
+  const landings = ir.pages.filter((p) => p.pattern.kind === "landing");
+  return (
+    landings.find((p) => auth.public.pages.includes(p.id)) ??
+    (hasSignIn(auth) ? undefined : landings[0])
+  );
+}
+
+/**
+ * The contact details for the whole site's frame, which every public page carries: from a landing
+ * visitors may open, never from one only some may (the menu's home link keeps its fallback).
+ */
+function siteContact(ir: SpecIR, auth: AuthIR, t: Texts) {
+  const home = publicLanding(ir, auth);
   const section =
     home?.pattern.kind === "landing"
       ? home.pattern.sections.find((s) => s.kind === "contact")
@@ -784,7 +816,7 @@ function contactFooterEnabled(ir: SpecIR, auth: AuthIR, ux: UxIR, t: Texts, page
   return (
     !!footer &&
     ux.pages[page.id]?.looks?.[footer.name]?.layout === "contactBand" &&
-    Object.keys(siteContact(homeForSite(ir, auth), t)).length > 0
+    Object.keys(siteContact(ir, auth, t)).length > 0
   );
 }
 
@@ -815,7 +847,7 @@ export function siteModule(ir: SpecIR, t: Texts, auth: AuthIR, ux: UxIR): string
   const legal = ir.pages
     .filter((p) => p.pattern.kind === "legal" && auth.public.pages.includes(p.id))
     .map((p) => ({ to: p.route, label: code(t.pageTitleOf(p.id)) }));
-  const contact = siteContact(home, t);
+  const contact = siteContact(ir, auth, t);
   return `${HEADER}import type { LandingSite } from "#/kit/Landing";${guarded ? '\nimport { pageAccess } from "#/generated/pages";' : ""}
 
 /** The public site's frame: the pages visitors may open, and how to reach the business. */

@@ -61,6 +61,7 @@ pages:
       hero: { button: jobs }
       latest: { records: Job, filters: [surface, setting], limit: 6 }
       features:                         # what is painted and how, as text
+      gallery: { pictures: work }
       testimonials:                     # what clients said, as text: no photos needed
       faq:
       footer:

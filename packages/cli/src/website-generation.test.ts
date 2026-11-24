@@ -21,6 +21,25 @@ afterEach(() => {
 });
 const io = { out: () => {}, err: () => {} };
 const url = "https://business.example/";
+test("full imports without a language tag use the home page before other crawled pages", async () => {
+  const source = input();
+  source.options = { contentMode: "full" };
+  const texts = [
+    "Här har vi en liten salong och du kan boka ett besök hos oss.",
+    "Here is our menu and what we have for you. ".repeat(20),
+  ];
+  source.sourceCorpus.pages = texts.map((text, index) => ({
+    id: `p${index + 1}`,
+    text,
+    sha256: digest(text),
+  }));
+  const context = await prepareWebsiteContext(source, false, [], () => {});
+  expect(context.language).toBe("sv");
+  expect(context.languageReason).toBe("home page text");
+  expect(context.description).toContain(texts[0]);
+  expect(context.description).toContain(texts[1]);
+});
+
 function input(
   html = '<meta property="og:site_name" content="Harbour"><img src="/room.jpg" alt="Room">',
   address = url,

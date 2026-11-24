@@ -39,11 +39,14 @@ case "$state" in
   *) echo "Not merging #$pr: state, draft, mergeable = $state"; exit 1 ;;
 esac
 lock="${MERGE_LOCK:-$HOME/repos/.merge-lock}"
-me="#$pr ${repo[1]:-$(gh repo view --json nameWithOwner -q .nameWithOwner)} ${SESSION:-session $PPID} $(date -u +%FT%TZ) pid $$@$(hostname)"
+nwo="${repo[1]:-$(gh repo view --json nameWithOwner -q .nameWithOwner)}"
+me="#$pr $nwo ${SESSION:-session $PPID} $(date -u +%FT%TZ) pid $$@$(hostname)"
 refresher=""
+# The refresher stops first: its touch after the lock was removed made an empty lock, which
+# nobody's pid names, so every other merge would wait an hour for it to go stale.
 release() {
-  if [ "$(cat "$lock" 2>/dev/null)" = "$me" ]; then rm -f "$lock"; fi
   if [ -n "$refresher" ]; then { pkill -P "$refresher"; kill "$refresher"; wait "$refresher"; } 2>/dev/null || true; fi
+  if [ "$(cat "$lock" 2>/dev/null)" = "$me" ]; then rm -f "$lock"; fi
 }
 trap release EXIT
 # Stopped by a signal, the script still releases the lock (bash runs the EXIT trap only on exit).
@@ -72,9 +75,17 @@ drop_lock() {
   release
   refresher=""
 }
-# Whether the head has checks listed. gh exits non-zero while any is pending (8) or has failed
-# (1), so its output, not its status, says whether there are any (pipefail would hide them).
-has_checks() { [ -n "$(gh pr checks "$pr" "${repo[@]}" 2>/dev/null || true)" ]; }
+# Whether the current head has checks (check runs or commit statuses), asked by its commit: just
+# after the branch is updated, `gh pr checks` could still list the old head's, so the wait ended
+# at once and the check after it, finding none yet for the new head, refused (cloud #587,
+# 2026-11-24). A failed lookup counts as none: the wait goes on, then refuses.
+has_checks() {
+  local sha runs statuses
+  sha=$(head_sha 2>/dev/null) || return 1
+  runs=$(gh api "repos/$nwo/commits/$sha/check-runs" -q .total_count 2>/dev/null || true)
+  statuses=$(gh api "repos/$nwo/commits/$sha/status" -q .total_count 2>/dev/null || true)
+  [ $((${runs:-0} + ${statuses:-0})) -gt 0 ] 2>/dev/null
+}
 head_sha() { gh pr view "$pr" "${repo[@]}" --json headRefOid -q .headRefOid; }
 merged() { [ "$(gh pr view "$pr" "${repo[@]}" --json state -q .state)" = MERGED ]; }
 # The branch is deleted by GitHub's own "delete head branches" setting, which retargets the pull
@@ -221,15 +232,16 @@ for attempt in 1 2 3 4 5 6 7 8; do
   # A head's checks are listed only once a runner takes its job, which can take a long while when
   # other sessions' runs fill the runners; a workflow run for the head means they are coming.
   # No run for the head after fifteen minutes is not green; a queued one is waited for, an hour.
+  started=0
   for i in $(seq 360); do
-    has_checks && break
+    has_checks && { started=1; break; }
     if [ "$i" -ge 90 ] && [ -z "$(gh run list "${repo[@]}" --commit "$(head_sha)" --json databaseId -q '.[].databaseId' 2>/dev/null)" ]; then
       refuse "no checks have run."
     fi
     [ $((i % 30)) = 0 ] && echo "#$pr: waiting for its checks to start (runners busy?)"
     sleep 10
   done
-  has_checks || refuse "its checks did not start within an hour."
+  [ "$started" = 1 ] || refuse "its checks did not start within an hour."
   # GitHub merges by itself the moment the checks pass. It refuses to arm auto-merge on a pull
   # request that is already mergeable ("clean status": its checks finished before this line,
   # cloud #201 on 2026-10-14); that one is merged below by the script itself, once the required

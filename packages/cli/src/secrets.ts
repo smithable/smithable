@@ -244,8 +244,8 @@ export function treeText(path: string): string {
 }
 
 /** `readTree`, failing as readFileSync does when the file is not there. */
-export function treeBytes(path: string): Buffer {
-  const bytes = readTree(path);
+export function treeBytes(path: string, max?: number): Buffer {
+  const bytes = readTree(path, max);
   if (bytes === undefined)
     throw Object.assign(new Error(`ENOENT: no such file, open '${path}'`), { code: "ENOENT" });
   return bytes;

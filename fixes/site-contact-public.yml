@@ -1,0 +1,8 @@
+id: site-contact-public
+title: When no landing page was open to visitors, the public pages' shared frame took its contact details from a landing page only signed-in people may open.
+severity: security
+exposure: The address, phone, email or opening hours written on a members-only landing page could have been read by visitors to the app's public pages.
+introduced: unknown
+affects:
+  features: [section:contact]
+migration: none

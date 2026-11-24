@@ -54,7 +54,7 @@ export const STARTER_TEXTS: Record<string, StarterText> = {
   },
   kiosk: {
     text: "A takeaway where people browse our menu and order dishes to pick up, with staff we invite.",
-    pages: { dish: "dishes", order: "orders" },
+    pages: { dish: "dishes", order: "orders", stop: "stops", enquiry: "enquiries" },
   },
   barbers: {
     text: "A barbershop where people browse our services and barbers and book an appointment with a barber for a service, at a time that is free.",
@@ -71,10 +71,6 @@ export const STARTER_TEXTS: Record<string, StarterText> = {
   painter: {
     text: "A painter's site where people browse our jobs on facades, with free quotes on enquiry, answered by staff we invite.",
     pages: { job: "jobs", enquiry: "enquiries" },
-  },
-  "food-truck": {
-    text: "A public site for a food truck where people browse our stops and menu, with catering enquiries and staff we invite.",
-    pages: { stop: "stops", enquiry: "enquiries" },
   },
 };
 

@@ -31,7 +31,7 @@ picture (`setSectionPicture`, spec "Landing pages") and on [picture-kinds.md](pi
 - The film is decoration: it has no text of its own, and the picture's `alt` stays the description.
 - **Where the rules are checked.** Core checks only what it can without reading a file: the name, under
   `images/`, ending `.mp4`. The bytes are read by the host, as a picture's are: Studio's server at
-  upload, and `smithable check` for a file put there by hand. It reads the container's boxes (brand,
+  upload, and `smithable validate` for a file put there by hand. It reads the container's boxes (brand,
   codec, a sound track, length, shown size, where the index is) and names the rule that failed.
 - Flashing cannot be measured by that read. Studio's form states the rule beside the upload, an
   owner's file is the owner's to answer for, and a clip in the library is checked before it is added.
@@ -134,7 +134,7 @@ The builder never adds a film by itself in the first step: an app's first look d
 
 1. Core: the key (name check only), `setSectionFilm`, `setSectionPicture` clearing it, the spec
    reference. Kit: the film file, written only when a film is set. Host: the byte check, in
-   `smithable check`. The range check of both servers.
+   `smithable validate`. The range check of both servers.
 2. Studio: the "Film" row in the section form, upload with the checks, the try-on, Cancel puts it back.
 3. Media-and-text sections (the same code path; a separate check of the layouts).
 4. Library loops and the starters that use them.

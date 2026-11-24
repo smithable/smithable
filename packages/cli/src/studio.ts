@@ -36,6 +36,7 @@ import { cardTexts } from "./card.js";
 import { logTokens } from "./context.js";
 import { customize } from "./customize.js";
 import { devServerEnv } from "./dev.js";
+import { readFilm, sizeProblems } from "./film-check.js";
 import { backFromFix, rememberBeforeFix } from "./fix-open.js";
 import {
   generationId,
@@ -210,7 +211,8 @@ export function pictureBytes(bytes: Uint8Array, ext: string): boolean {
  * smaller copies, so a file written over one with the same name never leaves another picture's
  * widths pointing at the old picture. A section's picture is a new file, named as its src, never
  * one that is there (a library picture with its record, or another section's), and a picture file
- * by its bytes, not only by its name.
+ * by its bytes, not only by its name. A hero's film (setSectionFilm) is a new MP4 named as its
+ * src, read against section-film.md §2 as `smithable validate` reads it, each broken rule named.
  */
 export function pictureRefusal(
   operation: string,
@@ -232,8 +234,22 @@ export function pictureRefusal(
     if (there(path)) return `${path} is already there: a new picture gets a name of its own.`;
     return undefined;
   }
+  if (operation === "setSectionFilm") {
+    if (
+      typeof path !== "string" ||
+      !/^public\/images\/[\w-][\w.-]*\.mp4$/.test(path) ||
+      path !== `public/${String(args.src)}` ||
+      !bytes
+    )
+      return "A film must be an MP4 file.";
+    if (bytes.byteLength > 50_000_000) return sizeProblems(bytes.byteLength).join(" ");
+    const { problems } = readFilm(bytes);
+    if (problems.length) return problems.join(" ");
+    if (there(path)) return `${path} is already there: a new film gets a name of its own.`;
+    return undefined;
+  }
   if (operation !== "setLogo")
-    return "Only the logo and a section's picture are uploaded with a change.";
+    return "Only the logo, a section's picture and a hero's film are uploaded with a change.";
   if (
     typeof path !== "string" ||
     !/^public\/images\/[\w-][\w.-]*\.(webp|avif|jpe?g|png|svg)$/.test(path) ||
@@ -1585,6 +1601,7 @@ export async function studio(
                   "setAiBadge",
                   "setSectionLook",
                   "setSectionPicture",
+                  "setSectionFilm",
                 ].includes(String(name)) &&
                 result.ok &&
                 result.verification?.revision
@@ -1614,7 +1631,7 @@ export async function studio(
                     {
                       path: given.path as string,
                       bytes,
-                      fresh: String(name) === "setSectionPicture",
+                      fresh: ["setSectionPicture", "setSectionFilm"].includes(String(name)),
                     },
                   ],
                 }
