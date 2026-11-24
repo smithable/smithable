@@ -133,7 +133,14 @@ export interface SectionContent {
 }
 
 export interface ContentImage {
-  src: string;
+  /** A file of the project's, under public/images/; or else `asset`. */
+  src?: string;
+  /**
+   * A file the hosted service keeps (media-storage.md §1): its renditions are fetched into
+   * public/media/<asset>/, and `width` and `widths` name the ones made. Exactly one of `src` and
+   * `asset`.
+   */
+  asset?: string;
   alt: string;
   /** Made by an AI (the image library's pictures): the app says so on pictures that could pass for photographs. */
   generated?: true;
@@ -167,6 +174,8 @@ export interface ContentFilm {
 export const IMAGE_SRC = /^images\/([\w-][\w.-]*\/)*[\w-][\w.-]*\.(webp|avif|jpe?g|png)$/;
 /** A mark's file: a picture's, or an SVG (a maker's own logo usually is one). */
 export const LOGO_SRC = /^images\/([\w-][\w.-]*\/)*[\w-][\w.-]*\.(webp|avif|jpe?g|png|svg)$/;
+/** A stored file's id (media-storage.md §1): `m_` and 26 Crockford base32 characters. */
+export const ASSET_ID = /^m_[0-9a-hjkmnp-tv-z]{26}$/;
 /** A film's file: an MP4 under public/images/; its bytes are the host's to check (section-film.md §2). */
 export const FILM_SRC = /^images\/([\w-][\w.-]*\/)*[\w-][\w.-]*\.mp4$/;
 
@@ -976,6 +985,7 @@ function readPicture(
 ): {
   film?: ParsedNode | null;
   src?: string;
+  asset?: string;
   alt?: string;
   generated?: true;
   kept?: true;
@@ -989,7 +999,7 @@ function readPicture(
       "src",
       "alt",
       "generated",
-      ...(sized ? ["kind", "kept", "width", "widths"] : []),
+      ...(sized ? ["asset", "kind", "kept", "width", "widths"] : []),
       ...(film ? ["film"] : []),
     ],
   });
@@ -1004,7 +1014,7 @@ function readPicture(
     ctx,
     node,
     where,
-    ["src", "alt"],
+    ["src", "alt", "asset"],
     entries.filter(
       (e) => e !== flag && e !== keep && e !== sort && e !== own && e !== copies && e !== reel,
     ),
@@ -1106,7 +1116,7 @@ function readImage(
   where: string,
   filmed = false,
 ): ContentImage | undefined {
-  const { src, alt, generated, kept, kind, width, widths, film } = readPicture(
+  const { src, asset, alt, generated, kept, kind, width, widths, film } = readPicture(
     ctx,
     node,
     where,
@@ -1115,16 +1125,25 @@ function readImage(
     filmed && !ctx.emptyTexts,
   );
   // In a language file a picture says what it shows only: its file is the content file's.
-  if (ctx.emptyTexts) return { alt: alt ?? "" } as ContentImage;
-  if (!src || !IMAGE_SRC.test(src)) {
+  if (ctx.emptyTexts) {
+    if (asset !== undefined)
+      ctx.error(
+        node,
+        "invalid-value",
+        `${capitalize(where)} in a language file says what it shows ("alt") only: its "asset" is the content file's.`,
+      );
+    return { alt: alt ?? "" } as ContentImage;
+  }
+  if (asset !== undefined) {
+    if (!storedChecks(ctx, node, where, { src, asset, alt, width })) return undefined;
+  } else if (!src || !IMAGE_SRC.test(src)) {
     ctx.error(
       node,
       "invalid-value",
       `"src" of ${where} must be a file in the app's public/images/ folder, e.g. images/hero.webp (webp, avif, jpg or png).`,
     );
     return undefined;
-  }
-  if (!alt) {
+  } else if (!alt) {
     ctx.error(
       node,
       "invalid-value",
@@ -1133,8 +1152,8 @@ function readImage(
     return undefined;
   }
   return {
-    src,
-    alt,
+    ...(asset !== undefined ? { asset } : { src }),
+    alt: alt as string,
     ...(generated ? { generated } : {}),
     ...(kept ? { kept } : {}),
     ...(kind ? { kind } : {}),
@@ -1142,6 +1161,31 @@ function readImage(
     ...(widths ? { widths } : {}),
     ...(film !== undefined ? optional("film", readFilm(ctx, film, `the film of ${where}`)) : {}),
   };
+}
+
+/**
+ * A stored picture's checks (media-storage.md §1): a valid id, no `src` beside it, and the width of
+ * its largest rendition, which names its file. The rest (widths, generated, kind, film) is read as
+ * a file's picture's is.
+ */
+function storedChecks(
+  ctx: ParseContext,
+  node: ParsedNode | null,
+  where: string,
+  { src, asset, alt, width }: { src?: string; asset: string; alt?: string; width?: number },
+): boolean {
+  const fault =
+    src !== undefined
+      ? `${capitalize(where)} names its file twice: "asset" (a stored file) or "src" (a file in public/images/), not both.`
+      : !ASSET_ID.test(asset)
+        ? `"asset" of ${where} must be a stored file's id: m_ and 26 letters and digits, as the photo library gives it.`
+        : !width
+          ? `${capitalize(where)} needs "width" beside "asset": the width of its largest copy, which names its file.`
+          : !alt
+            ? `${capitalize(where)} needs "alt": what it shows, for people who cannot see it.`
+            : undefined;
+  if (fault) ctx.error(node, "invalid-value", fault);
+  return !fault;
 }
 
 const optional = <K extends string, V>(key: K, value: V | undefined) =>
@@ -1195,6 +1239,19 @@ export const imageAt = (src: string, width: number) => {
   const file = at < 0 ? src : src.slice(0, at);
   return `${file.replace(/(\.[a-z0-9]+)$/, `-${width}$1`)}${at < 0 ? "" : src.slice(at)}`;
 };
+
+/**
+ * A picture's file under the app's public/ folder: its own, or a stored file's largest rendition
+ * (media-storage.md §3: `media/<asset>/w<width>.webp`).
+ */
+export const pictureFile = (image: Pick<ContentImage, "src" | "asset" | "width">) =>
+  image.asset !== undefined ? `media/${image.asset}/w${image.width}.webp` : (image.src ?? "");
+
+/** The file of a picture's copy at a width: a stored file's rendition, or imageAt's copy. */
+export const pictureAt = (image: Pick<ContentImage, "src" | "asset">, width: number) =>
+  image.asset !== undefined
+    ? `media/${image.asset}/w${width}.webp`
+    : imageAt(image.src ?? "", width);
 
 /** A list of items, each a mapping of texts; a pricing plan's features are a list of texts. */
 function readItems(

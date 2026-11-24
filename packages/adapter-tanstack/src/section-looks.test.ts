@@ -131,7 +131,7 @@ test("robots.txt lets search engines read the public pages and nothing else", ()
     );
   };
   expect(robots("public: { pages: [home, items], read: [Item] }\n")).toContain(
-    'const ROBOTS = "User-agent: *\\nAllow: /$\\nAllow: /items\\nAllow: /assets/\\nAllow: /images/\\nAllow: /files/\\nDisallow: /\\n";',
+    'const ROBOTS = "User-agent: *\\nAllow: /$\\nAllow: /items\\nAllow: /assets/\\nAllow: /images/\\nAllow: /media/\\nAllow: /files/\\nDisallow: /\\n";',
   );
   expect(robots("")).toContain('const ROBOTS = "User-agent: *\\nDisallow: /\\n";');
 });
@@ -192,4 +192,44 @@ test("a picture in several widths gives the browser its files by width; one with
   );
   // The gallery's picture has one width: no srcSet.
   expect(route.match(/srcSet/g)).toHaveLength(1);
+});
+
+test("a stored picture's files are its copies under /media/ by width, and a hero takes fit and focal", () => {
+  const ir = validateSpec({
+    path: "smithable.yml",
+    text: "smithable: 0.1\napp: { name: Site }\npages:\n  home:\n    route: /\n    landing:\n      hero:\n",
+  }).ir as SpecIR;
+  const auth = validateAuth(
+    {
+      path: "smithable.auth.yml",
+      text: "smithableAuth: 0.1\nsignIn: none\npublic: { pages: [home] }\n",
+    },
+    ir,
+  ).auth as AuthIR;
+  const id = "m_01hz8k3q4r5s6t7v8w9x0y1z2a";
+  const content = validateContent(
+    {
+      path: "smithable.content.yml",
+      text: `smithableContent: 0.1\npages:\n  home:\n    hero:\n      image: { asset: ${id}, alt: A harbour, width: 1600, widths: [480, 960] }\n`,
+    },
+    ir,
+  ).content;
+  const ux = validateUx(
+    {
+      path: "smithable.ux.yml",
+      text: "smithableUx: 0.1\npages:\n  home:\n    sections:\n      hero: { layout: split, fit: contain, focal: top }\n",
+    },
+    ir,
+  ).ux;
+  if (!content || !ux) throw new Error("the files do not validate");
+  const route =
+    generateApp(ir, { smithableVersion: "0.0.0", auth, content, ux }).find(
+      (f) => f.path === "src/routes/index.tsx",
+    )?.content ?? "";
+  expect(route).toContain(`src: "/media/${id}/w1600.webp"`);
+  expect(route).toContain(
+    `srcSet: "/media/${id}/w480.webp 480w, /media/${id}/w960.webp 960w, /media/${id}/w1600.webp 1600w"`,
+  );
+  expect(route).toContain('fit="contain"');
+  expect(route).toContain('focal="top"');
 });
