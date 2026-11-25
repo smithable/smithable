@@ -105,6 +105,11 @@ export const badgeValue = (aiBadge: boolean | undefined): BadgeValue =>
 export const askedUnder = (aiBadge: boolean | undefined, realistic: boolean) =>
   `${badgeValue(aiBadge)} ${realistic}`;
 
+/** The open confirmation after a render under `under`: gone for good once either changed, so a
+ * change back does not bring it back unasked. */
+export const stillOpen = (openUnder: string | null, under: string) =>
+  openUnder === under ? openUnder : null;
+
 /**
  * The app's badge: by kind (the key unsaid), on, or off. Off while realistic AI pictures are placed
  * asks first and sends the acknowledgement; the operation refuses it without one.
@@ -122,8 +127,7 @@ export function BadgeSwitch({
 }) {
   const under = askedUnder(aiBadge, realistic);
   const [openUnder, setOpenUnder] = useState<string | null>(null);
-  // Gone for good once either changes, so a change back does not bring it back unasked.
-  if (openUnder !== null && openUnder !== under) setOpenUnder(null);
+  if (stillOpen(openUnder, under) !== openUnder) setOpenUnder(null);
   const asking = openUnder === under;
   const setAsking = (open: boolean) => setOpenUnder(open ? under : null);
   return (

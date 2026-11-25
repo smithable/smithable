@@ -1,5 +1,13 @@
 import { expect, test } from "vitest";
-import { askedUnder, badgeLine, badgeValue, kindChoices, startingKind, styleKind } from "./AiBadge";
+import {
+  askedUnder,
+  badgeLine,
+  badgeValue,
+  kindChoices,
+  startingKind,
+  stillOpen,
+  styleKind,
+} from "./AiBadge";
 import { BADGE_WORDS } from "./badge-words";
 
 const photos = { id: "photos", generated: 0 };
@@ -39,4 +47,9 @@ test("the off confirmation closes when the badge or the realistic pictures chang
   expect(askedUnder(true, true)).not.toBe(asked);
   expect(askedUnder(false, true)).not.toBe(asked);
   expect(askedUnder(undefined, false)).not.toBe(asked);
+  // Open, a refresh turns the badge on, then back: it stays closed until Off is chosen again.
+  let open: string | null = stillOpen(asked, asked);
+  expect(open).toBe(asked);
+  open = stillOpen(open, askedUnder(true, true));
+  expect(stillOpen(open, asked)).toBeNull();
 });
