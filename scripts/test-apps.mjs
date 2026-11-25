@@ -227,14 +227,14 @@ async function open(page, url) {
     // The last four, so a reload late in the load is not crowded out by the first connects.
     else if (m.text().startsWith("[vite]")) vite.push(clean(m.text())) > 4 && vite.shift();
   };
-  const onError = (e) => add(seen, 10, `pageerror: ${e.message}`);
+  const onError = (e) => add(seen, 10, `pageerror: ${e?.message || String(e)}`);
   // Requests have their own cap, so a run of failed ones never hides a page error. One a reload cut
   // off is not why a page failed.
   const onFailed = (r) => {
     const why = r.failure()?.errorText ?? "";
     if (!why.includes("ERR_ABORTED")) add(net, 5, `failed: ${where(r.url())} ${why}`);
   };
-  const onResponse = (r) => r.status() >= 500 && add(net, 5, `${r.status()}: ${where(r.url())}`);
+  const onResponse = (r) => r.status() >= 400 && add(net, 5, `${r.status()}: ${where(r.url())}`);
   page.on("console", onConsole);
   page.on("pageerror", onError);
   page.on("requestfailed", onFailed);
