@@ -176,3 +176,109 @@ function hosted(given: "stdin" | "env") {
 
 describe("the token on standard input", () => hosted("stdin"));
 describe("the token in Studio's environment", () => hosted("env"));
+
+/**
+ * The fallback's life (T1585): a Studio started again on the same app keeps saying why it is the
+ * starter; an app that comes in takes that reason away, and a Studio started after it does not
+ * bring it back.
+ */
+describe("the fallback to the starter, across restarts and a replacement", () => {
+  const port = 20001 + Math.floor(Math.random() * 9000) * 2;
+  let dir = "";
+  let from = "";
+  let studio: ChildProcess | undefined;
+  const files = [
+    "smithable.yml",
+    "smithable.auth.yml",
+    "smithable.ux.yml",
+    "smithable.content.yml",
+  ];
+  const pkg = JSON.stringify({ name: "fallback-test", private: true });
+  const call = async (path: string, init: RequestInit = {}) =>
+    fetch(`http://127.0.0.1:${port}${path}`, {
+      ...init,
+      // As Studio's own page sends a change.
+      headers: {
+        "x-smithable-studio-token": TOKEN,
+        "x-smithable": "1",
+        "content-type": "application/json",
+      },
+    });
+  const project = async () =>
+    (await (await call("/api/project")).json()) as { notice?: string; fallback?: string };
+  const start = async (replaceable: boolean) => {
+    const args = [bin, "studio", dir, "--host", "127.0.0.1", "--port", String(port)];
+    studio = spawn(
+      process.execPath,
+      [...args, "--secrets-stdin", ...(replaceable ? ["--replaceable"] : [])],
+      { stdio: ["pipe", "ignore", "ignore"], detached: true },
+    );
+    studio.stdin?.end(JSON.stringify({ studioToken: TOKEN }));
+    // Studio's warm-up has reached the preview: stopped before that, it is not yet settled.
+    await until(
+      () =>
+        existsSync(join(dir, "seen.jsonl")) &&
+        readFileSync(join(dir, "seen.jsonl"), "utf8").includes('"url"'),
+    );
+    const end = Date.now() + 30_000;
+    while ((await call("/api/project").catch(() => undefined))?.status !== 200) {
+      if (Date.now() > end) throw new Error("Studio did not answer");
+      await new Promise((done) => setTimeout(done, 200));
+    }
+  };
+  const stop = async () => {
+    expect(await stopStudioFixture(studio, dir)).toBe(true);
+    expect(fixturePids(dir)).toEqual([]);
+    rmSync(join(dir, "seen.jsonl"), { force: true });
+  };
+
+  beforeAll(() => {
+    dir = realpathSync(mkdtempSync(join(tmpdir(), "studio-fallback-")));
+    from = realpathSync(mkdtempSync(join(tmpdir(), "studio-fallback-from-")));
+    for (const name of files) {
+      cpSync(join(root, "examples/records", name), join(dir, name));
+      cpSync(join(root, "examples/records", name), join(from, name));
+    }
+    writeFileSync(join(dir, "package.json"), pkg);
+    writeFileSync(join(from, "package.json"), pkg);
+    mkdirSync(join(dir, "node_modules/.bin"), { recursive: true });
+    writeFileSync(join(dir, "node_modules/.bin/vite"), fakeVite);
+    chmodSync(join(dir, "node_modules/.bin/vite"), 0o755);
+    mkdirSync(join(dir, "data/.smithable"), { recursive: true });
+    writeFileSync(join(dir, "data/.smithable/notice.txt"), `${FELL_BACK}\n`);
+  });
+
+  afterAll(async () => {
+    try {
+      if (studio && studio.exitCode === null) await stopStudioFixture(studio, dir);
+    } finally {
+      for (const d of [dir, from]) if (d) rmSync(d, { recursive: true, force: true });
+    }
+  }, 15_000);
+
+  test("kept by a Studio started again, cleared by an app that comes in, also after a restart", async () => {
+    await start(true);
+    expect((await project()).fallback).toBe(FELL_BACK);
+    await stop();
+
+    // Started again (a workspace woken): the reason holds, and the one-time notice is not repeated.
+    await start(true);
+    const again = await project();
+    expect(again.fallback).toBe(FELL_BACK);
+    expect(again.notice).toBeUndefined();
+
+    // A finished app takes the starter's place: it is not the starter, so no reason stays.
+    const replaced = await call("/api/project/replace", {
+      method: "POST",
+      body: JSON.stringify({ from }),
+    });
+    expect(replaced.status, await replaced.clone().text()).toBe(200);
+    expect((await project()).fallback).toBeUndefined();
+    expect(existsSync(join(dir, "data/.smithable/fallback.txt"))).toBe(false);
+    await stop();
+
+    await start(false);
+    expect((await project()).fallback).toBeUndefined();
+    await stop();
+  }, 120_000);
+});
