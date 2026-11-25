@@ -183,7 +183,8 @@ describe("the token in Studio's environment", () => hosted("env"));
  * bring it back.
  */
 describe("the fallback to the starter, across restarts and a replacement", () => {
-  const port = 20001 + Math.floor(Math.random() * 9000) * 2;
+  // Studio and its preview (port + 1), in a range apart from the suites above.
+  const port = 40000 + Math.floor(Math.random() * 9000) * 2;
   let dir = "";
   let from = "";
   let studio: ChildProcess | undefined;
@@ -220,8 +221,12 @@ describe("the fallback to the starter, across restarts and a replacement", () =>
         existsSync(join(dir, "seen.jsonl")) &&
         readFileSync(join(dir, "seen.jsonl"), "utf8").includes('"url"'),
     );
+    // The first read Studio answers is the test's: it is the one the one-time notice goes to.
     const end = Date.now() + 30_000;
-    while ((await call("/api/project").catch(() => undefined))?.status !== 200) {
+    for (;;) {
+      const answer = await call("/api/project").catch(() => undefined);
+      if (answer?.status === 200)
+        return (await answer.json()) as Awaited<ReturnType<typeof project>>;
       if (Date.now() > end) throw new Error("Studio did not answer");
       await new Promise((done) => setTimeout(done, 200));
     }
@@ -241,6 +246,8 @@ describe("the fallback to the starter, across restarts and a replacement", () =>
     }
     writeFileSync(join(dir, "package.json"), pkg);
     writeFileSync(join(from, "package.json"), pkg);
+    // So the app that came in can be told from the one it replaced.
+    writeFileSync(join(from, "came-in.txt"), "the new app\n");
     mkdirSync(join(dir, "node_modules/.bin"), { recursive: true });
     writeFileSync(join(dir, "node_modules/.bin/vite"), fakeVite);
     chmodSync(join(dir, "node_modules/.bin/vite"), 0o755);
@@ -257,13 +264,13 @@ describe("the fallback to the starter, across restarts and a replacement", () =>
   }, 15_000);
 
   test("kept by a Studio started again, cleared by an app that comes in, also after a restart", async () => {
-    await start(true);
-    expect((await project()).fallback).toBe(FELL_BACK);
+    const first = await start(true);
+    expect(first.fallback).toBe(FELL_BACK);
+    expect(first.notice).toBe(FELL_BACK);
     await stop();
 
     // Started again (a workspace woken): the reason holds, and the one-time notice is not repeated.
-    await start(true);
-    const again = await project();
+    const again = await start(true);
     expect(again.fallback).toBe(FELL_BACK);
     expect(again.notice).toBeUndefined();
 
@@ -275,10 +282,13 @@ describe("the fallback to the starter, across restarts and a replacement", () =>
     expect(replaced.status, await replaced.clone().text()).toBe(200);
     expect((await project()).fallback).toBeUndefined();
     expect(existsSync(join(dir, "data/.smithable/fallback.txt"))).toBe(false);
+    expect(readFileSync(join(dir, "came-in.txt"), "utf8")).toBe("the new app\n");
     await stop();
 
-    await start(false);
-    expect((await project()).fallback).toBeUndefined();
+    const after = await start(false);
+    expect(after.fallback).toBeUndefined();
+    expect(after.notice).toBeUndefined();
+    expect(existsSync(join(dir, "came-in.txt"))).toBe(true);
     await stop();
   }, 120_000);
 });
