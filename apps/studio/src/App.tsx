@@ -222,14 +222,16 @@ export function App() {
   // Studio keeps its one-time notice in every read of the project until Builder says it showed it,
   // so whichever read comes first here (the page loading, a reconnect, the catch-up after a change)
   // shows it, and a read that is not the page's does not take it (T1599).
-  // The notices put on the page, and the one whose acknowledgement failed (notice.ts, T1602).
-  const noticesSeen = useRef<NoticesSeen>({ shown: new Set() });
+  // The notices put on the page, and those whose acknowledgement failed (notice.ts, T1602).
+  // Said seen as it is put on the page: a message that replaces the banner before it renders
+  // does not leave it unsaid, to come back with the next read.
+  const noticesSeen = useRef<NoticesSeen>({ shown: new Set(), failed: new Set() });
   const acknowledge = useCallback((id: string) => {
     const seen = noticesSeen.current;
     seen.shown.add(id);
-    if (seen.failed === id) seen.failed = undefined;
+    seen.failed.delete(id);
     api.noticeSeen(id).catch(() => {
-      seen.failed = id;
+      seen.failed.add(id);
     });
   }, []);
   const noticed = useCallback(
@@ -238,16 +240,11 @@ export function App() {
       const step = notice ? noticeStep(noticesSeen.current, noticeId) : "none";
       if (step === "show" && notice && noticeId)
         setMessage({ ok: false, text: notice, notice: noticeId });
-      else if (step === "again" && noticeId) acknowledge(noticeId);
+      if (step !== "none" && noticeId) acknowledge(noticeId);
       return next;
     },
     [acknowledge],
   );
-  // Said seen once the banner is on the page, not when it was only asked for.
-  const shownNotice = message?.notice;
-  useEffect(() => {
-    if (shownNotice) acknowledge(shownNotice);
-  }, [shownNotice, acknowledge]);
   // A held fix opened from the service's link, ?fix=<id> (A 245): read once, then gone from the address.
   const [fixLine, setFixLine] = useState<string>();
   useEffect(() => {

@@ -1,5 +1,5 @@
-/** The one-time notices Builder put on the page, and the one whose acknowledgement failed (T1602). */
-export type NoticesSeen = { shown: Set<string>; failed?: string };
+/** The one-time notices Builder put on the page, and those whose acknowledgement failed (T1602). */
+export type NoticesSeen = { shown: Set<string>; failed: Set<string> };
 
 /**
  * What a read of the project does with the notice it carries: shows one not shown yet, says
@@ -9,5 +9,5 @@ export type NoticesSeen = { shown: Set<string>; failed?: string };
 export function noticeStep(seen: NoticesSeen, id: string | undefined): "show" | "again" | "none" {
   if (!id) return "none";
   if (!seen.shown.has(id)) return "show";
-  return seen.failed === id ? "again" : "none";
+  return seen.failed.has(id) ? "again" : "none";
 }

@@ -1116,9 +1116,9 @@ export async function studio(
   const replaceWith = async (to: Asked) => {
     // The notice file comes and goes with the app's other files (replace.ts writes the new app's
     // tree whole): an app that came in brings its own or none, and a replace refused or failed
-    // before it leaves the old app's unseen notice, for a Studio started again too (T1602). Until
-    // it is read again below, an acknowledgement neither reads nor removes the file: by then it
-    // may be the new app's.
+    // before it leaves the old app's notice and its reason as they were, for a Studio started again
+    // too (T1602). Meanwhile an acknowledgement is answered "say it again" and touches nothing: by
+    // then the file may be the new app's.
     replacing = true;
     const result = await capture((io) =>
       replaceProject(dir, io, to, (stage, draft, assumptions) => {
@@ -1142,7 +1142,6 @@ export async function studio(
         send("making", making);
       }),
     ).finally(() => {
-      // Whatever came of it, the file is the app's again (read below, with nothing in between).
       replacing = false;
     });
     if (result.ok) lookProject = randomUUID();
@@ -1151,16 +1150,18 @@ export async function studio(
     writePreviewConfig();
     delete pending.standard;
     delete pending.referenceHelp;
-    try {
-      notice = readOwn(noticeFile)?.trim();
-    } catch {
-      notice = undefined;
+    if (result.ok) {
+      try {
+        notice = readOwn(noticeFile)?.trim();
+      } catch {
+        notice = undefined;
+      }
+      noticeId = randomUUID();
+      noticeInFile = Boolean(notice);
+      // The app that came in replaces the old one's reason with its own, or with none.
+      fallback = notice;
+      keepFallback(fallback);
     }
-    noticeId = randomUUID();
-    noticeInFile = Boolean(notice);
-    // The app that came in replaces the old one's reason with its own, or with none.
-    fallback = notice;
-    keepFallback(fallback);
     await settled();
     // The log starts with the person's app: nothing of the app that was here, and nothing
     // of what the dev server said while the files under it were being exchanged.
@@ -1792,11 +1793,15 @@ export async function studio(
       if (req.method === "POST" && url.pathname === "/api/notice/seen") {
         const { id } = await body();
         if (notice && typeof id === "string" && id === noticeId) {
+          // Builder says it again (the next read still has this notice): while an app comes in,
+          // or when the file cannot be read.
+          const again = { message: "Not yet: say it again once the app is in." };
+          if (replacing) return json(again, 409);
           let file: string | undefined;
           try {
-            file = replacing ? undefined : readOwn(noticeFile)?.trim() || undefined;
+            file = readOwn(noticeFile)?.trim() || undefined;
           } catch {
-            file = undefined;
+            return json(again, 503);
           }
           // The maker's file goes with its notice, only while it still says it, and first, so a
           // failure leaves the notice to be said seen again.
