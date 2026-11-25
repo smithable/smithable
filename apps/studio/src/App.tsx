@@ -213,23 +213,40 @@ export function App() {
     report?: "offer";
     /** Something went wrong (not a change refused): the bar offers Troubleshoot. */
     failure?: boolean;
-    /** Left for Studio by the making or the daemon (a description that could not be used). */
-    notice?: boolean;
+    /** Left for Studio by the making or the daemon (a description that could not be used): its id. */
+    notice?: string;
     diagnostics?: PresentedDiagnostic[];
   }>();
   const [reporting, setReporting] = useState(false);
   // Studio keeps its one-time notice in every read of the project until Builder says it showed it,
   // so whichever read comes first here (the page loading, a reconnect, the catch-up after a change)
   // shows it, and a read that is not the page's does not take it (T1599).
-  const noticed = useCallback((next: Project) => {
-    if (next.notice) setMessage({ ok: false, text: next.notice, notice: true });
-    return next;
+  // The notice on the page, and whether saying so failed: the next read that still has it says it
+  // again, and does not put the banner up again (T1602).
+  const noticeShown = useRef<{ id: string; failed: boolean } | undefined>(undefined);
+  const acknowledge = useCallback((id: string) => {
+    noticeShown.current = { id, failed: false };
+    api.noticeSeen(id).catch(() => {
+      if (noticeShown.current?.id === id) noticeShown.current = { id, failed: true };
+    });
   }, []);
+  const noticed = useCallback(
+    (next: Project) => {
+      const { notice, noticeId } = next;
+      if (notice && noticeId) {
+        const shown = noticeShown.current;
+        if (shown?.id !== noticeId) setMessage({ ok: false, text: notice, notice: noticeId });
+        else if (shown.failed) acknowledge(noticeId);
+      }
+      return next;
+    },
+    [acknowledge],
+  );
   // Said seen once the banner is on the page, not when it was only asked for.
-  const shownNotice = message?.notice ? message.text : undefined;
+  const shownNotice = message?.notice;
   useEffect(() => {
-    if (shownNotice) api.noticeSeen(shownNotice).catch(() => {});
-  }, [shownNotice]);
+    if (shownNotice) acknowledge(shownNotice);
+  }, [shownNotice, acknowledge]);
   // A held fix opened from the service's link, ?fix=<id> (A 245): read once, then gone from the address.
   const [fixLine, setFixLine] = useState<string>();
   useEffect(() => {

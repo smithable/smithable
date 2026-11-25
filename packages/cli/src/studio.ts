@@ -993,6 +993,15 @@ export async function studio(
   let notice = readTreeOrNone(noticeFile, 64 * 1024)
     ?.toString("utf8")
     .trim();
+  // Each notice has an id of its own, so a late acknowledgement of one never takes another in the
+  // same words (T1602); and whether it is the maker's file, which goes once it is seen.
+  let noticeId = randomUUID();
+  let noticeInFile = Boolean(notice);
+  const tell = (text: string) => {
+    notice = text;
+    noticeId = randomUUID();
+    noticeInFile = false;
+  };
   // The maker's message is also why this app is not the one described (a description that fell
   // back to the starter, T1577), and that holds for as long as the app does: kept for every read of
   // /api/project, not only the first, so whoever looks after the page's first read still sees it.
@@ -1011,7 +1020,9 @@ export async function studio(
   if (leftover)
     void fetch(`http://${OLD_HOST}:${leftover.port}/`, { signal: AbortSignal.timeout(3000) }).then(
       () => {
-        notice = `An old version's server from before may still be running (process ${leftover.pid}, port ${leftover.port}). Studio cannot tell it is its own on this system, so it left it; stop it if it is.`;
+        tell(
+          `An old version's server from before may still be running (process ${leftover.pid}, port ${leftover.port}). Studio cannot tell it is its own on this system, so it left it; stop it if it is.`,
+        );
       },
       () => {},
     );
@@ -1081,7 +1092,7 @@ export async function studio(
       ...(hostedLevel() ? { servicePays: true as const } : {}),
       // Where Smith may hear and speak, from the same policy (smith-speech.md §3).
       speech: speechProviders(),
-      ...(notice ? { notice } : {}),
+      ...(notice ? { notice, noticeId } : {}),
       ...(fallback ? { fallback } : {}),
       ...(making ? { making } : {}),
       ...(waiting.length ? { waiting } : {}),
@@ -1101,8 +1112,9 @@ export async function studio(
   let waiting: string[] = [];
   let asked: Asked | undefined;
   const replaceWith = async (to: Asked) => {
-    // An unseen notice of the app being replaced is not the new app's: its maker writes its own.
-    changeTree([{ path: noticeFile, data: null }]);
+    // The notice file comes and goes with the app's other files (replace.ts writes the new app's
+    // tree whole): an app that came in brings its own or none, and a replace refused or failed
+    // before it leaves the old app's unseen notice, for a Studio started again too (T1602).
     const result = await capture((io) =>
       replaceProject(dir, io, to, (stage, draft, assumptions) => {
         if (!making) return;
@@ -1136,6 +1148,8 @@ export async function studio(
     } catch {
       notice = undefined;
     }
+    noticeId = randomUUID();
+    noticeInFile = Boolean(notice);
     // The app that came in replaces the old one's reason with its own, or with none.
     fallback = notice;
     keepFallback(fallback);
@@ -1292,8 +1306,9 @@ export async function studio(
         // Back from a held fix's branch: the dev data as it was before it (fix-open.ts), said.
         if (backFromFix(dir)) {
           reopenDatabase(dir);
-          notice =
-            "The dev data is back as it was before the fix was opened: what changed in it while the fix was open is gone.";
+          tell(
+            "The dev data is back as it was before the fix was opened: what changed in it while the fix was open is gone.",
+          );
         }
         // The one-time notice stays until Builder says it showed it (/api/notice/seen), so a read
         // that is not the page's (the release smoke's probe) does not take it (T1599).
@@ -1764,19 +1779,14 @@ export async function studio(
           ...(diagnostics ? { diagnostics } : {}),
         });
       }
-      // Builder showed the one-time notice: it is not given again. Only that text, so a newer notice
-      // that came meanwhile stays to be shown (T1599).
+      // Builder showed the one-time notice: it is not given again. Only that one, by its id, so a
+      // newer notice that came meanwhile stays to be shown, even in the same words (T1599, T1602).
       if (req.method === "POST" && url.pathname === "/api/notice/seen") {
-        const { text } = await body();
-        if (typeof text === "string" && text === notice) {
+        const { id } = await body();
+        if (notice && typeof id === "string" && id === noticeId) {
           notice = undefined;
-          let kept: string | undefined;
-          try {
-            kept = readOwn(noticeFile)?.trim();
-          } catch {
-            kept = undefined;
-          }
-          if (kept === text) changeTree([{ path: noticeFile, data: null }]);
+          if (noticeInFile) changeTree([{ path: noticeFile, data: null }]);
+          noticeInFile = false;
         }
         return json({ ok: true });
       }
