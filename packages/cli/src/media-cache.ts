@@ -79,7 +79,9 @@ export function hostedMediaSource(
       if (!ASSET_ID.test(asset)) return undefined;
       const answer = await ask(`/media/${asset}`);
       if (!answer) return undefined;
-      const { kind, width, widths } = (await answer.json()) as Record<string, unknown>;
+      const body: unknown = await answer.json().catch(() => undefined);
+      if (!body || typeof body !== "object") return undefined;
+      const { kind, width, widths } = body as Record<string, unknown>;
       if (kind !== "image" || !isWidth(width)) return undefined;
       const others = Array.isArray(widths) ? widths.filter(isWidth) : [];
       return {

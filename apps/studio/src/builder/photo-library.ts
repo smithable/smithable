@@ -54,13 +54,14 @@ export function storedFile(value: unknown): StoredFile | undefined {
 
 /**
  * The service's library when it answers here, else the project's own pictures (local Studio, where
- * /_smithable/media is no route of Studio's and answers no JSON).
+ * /_smithable/media is no route of Studio's: its page or a 404, no JSON). Any other refusal (a
+ * sign-in that ended, the service down) is said, never shown as the local list.
  */
 export async function readLibrary(fetcher: Fetch = fetch): Promise<Library | { why: string }> {
   try {
-    const hosted = await json(
-      await fetcher(LIBRARY_PATH, { headers: { accept: "application/json" } }),
-    );
+    const response = await fetcher(LIBRARY_PATH, { headers: { accept: "application/json" } });
+    const hosted = await json(response);
+    if (!response.ok && response.status !== 404) return { why: COULD_NOT };
     if (hosted && Array.isArray(hosted.assets))
       return {
         hosted: true,
@@ -122,15 +123,18 @@ export const failedBecause = (code: string | undefined) =>
   (code && Object.hasOwn(FAILED, code) ? FAILED[code] : undefined) ??
   "This file could not be used. Try another.";
 
-/** One stored file's state now, or undefined when the service does not answer for it. */
+/**
+ * One stored file's state now; undefined when the service does not answer for it just now, null
+ * when it says no for good (not there, not the owner's, signed out).
+ */
 export async function readFile(id: string, fetcher: Fetch = fetch) {
-  if (!ASSET_ID.test(id)) return;
+  if (!ASSET_ID.test(id)) return null;
   try {
-    return storedFile(
-      await json(
-        await fetcher(`${LIBRARY_PATH}/${id}`, { headers: { accept: "application/json" } }),
-      ),
-    );
+    const response = await fetcher(`${LIBRARY_PATH}/${id}`, {
+      headers: { accept: "application/json" },
+    });
+    if ([401, 403, 404].includes(response.status)) return null;
+    return storedFile(await json(response));
   } catch {
     return;
   }
@@ -147,11 +151,13 @@ export async function untilReady(
   for (let waited = 0; waited <= within; waited += every) {
     const file = await readFile(id, fetcher);
     if (file?.state === "ready") return file;
+    if (file === null) return { why: GONE };
     if (file?.state === "failed") return { why: failedBecause(file.error) };
     await wait(every);
   }
   return { why: "The file is still being made ready. It will be in Photos and videos when it is." };
 }
+const GONE = "The library no longer answers for this file. Reload Studio and try again.";
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
 /**

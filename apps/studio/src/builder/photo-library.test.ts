@@ -45,6 +45,17 @@ test("local: no JSON from the service's address, so the project's pictures, name
   );
   expect(library).toEqual({ hosted: false, files: ["images/a.webp", "images/d.JPG"] });
   expect(await readLibrary(async () => Promise.reject(new Error("down")))).toHaveProperty("why");
+  // A 404 from Studio is local too; a sign-in that ended or a service down is said, not local.
+  const notFound = await readLibrary(async (url) =>
+    url === "/api/photos" ? reply(200, { photos: [] }) : reply(404),
+  );
+  expect(notFound).toEqual({ hosted: false, files: [] });
+  for (const status of [401, 503])
+    expect(
+      await readLibrary(async (url) =>
+        url === "/api/photos" ? reply(200, { photos: [] }) : reply(status, { error: "no" }),
+      ),
+    ).toHaveProperty("why");
 });
 
 test("upload: 202 gives the id; a refusal gives the service's own sentence", async () => {
@@ -96,6 +107,19 @@ test("a new file is asked for until it is ready, failed, or the wait is over", a
   });
   expect(late).toHaveProperty("why");
   expect(asked).toBe(4);
+  // A file the service says no to for good is not asked for again.
+  for (const status of [401, 404]) {
+    asked = 0;
+    const gone = await untilReady(ID, {
+      wait: async () => {},
+      fetcher: async () => {
+        asked++;
+        return reply(status);
+      },
+    });
+    expect(gone).toHaveProperty("why");
+    expect(asked).toBe(1);
+  }
 });
 
 test("delete is 204 only, and never for a name that is not an id", async () => {

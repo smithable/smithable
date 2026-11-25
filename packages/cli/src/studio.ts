@@ -543,12 +543,16 @@ export function projectPhotos(dir: string): string[] {
   const images = join(dir, "public", "images");
   for (const path of [join(dir, "public"), images])
     if (!existsSync(path) || !lstatSync(path).isDirectory()) return [];
+  // A file removed while the folder is read is left out, never a failed list.
+  const isFile = (name: string) => {
+    try {
+      return lstatSync(join(images, name)).isFile();
+    } catch {
+      return false;
+    }
+  };
   return readdirSync(images)
-    .filter(
-      (name) =>
-        /^[\w-][\w.-]*\.(webp|avif|jpe?g|png)$/i.test(name) &&
-        lstatSync(join(images, name)).isFile(),
-    )
+    .filter((name) => /^[\w-][\w.-]*\.(webp|avif|jpe?g|png)$/i.test(name) && isFile(name))
     .sort()
     .map((name) => `images/${name}`);
 }

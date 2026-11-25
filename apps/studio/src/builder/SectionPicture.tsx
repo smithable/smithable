@@ -160,6 +160,7 @@ export function SectionPicture({
           choose={chosen}
           close={() => setChoosing(false)}
           busy={held}
+          wordsFirst={alt.trim() ? undefined : "Say first what the picture shows."}
         />
       )}
       {refused && (

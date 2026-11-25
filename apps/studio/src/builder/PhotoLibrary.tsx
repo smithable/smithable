@@ -1,7 +1,7 @@
 // The Photos and videos panel as a chooser (docs/design/media-storage.md §6; T1458): the owner's
 // library on the hosted service, with upload and delete; locally the project's own pictures.
 // Choosing one hands it back to the section's form, which runs setSectionPicture.
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   deleteFile,
   failedBecause,
@@ -19,12 +19,15 @@ export function PhotoLibrary({
   choose,
   close,
   busy,
+  wordsFirst,
 }: {
   /** The section's file now (its asset or src), marked in the list. */
   current: string | undefined;
   choose: (picked: { asset: string } | { src: string }) => void;
   close: () => void;
   busy: boolean;
+  /** Why nothing may be placed yet (the section's words are missing), said before any upload. */
+  wordsFirst?: string;
 }) {
   const [library, setLibrary] = useState<Library>();
   const [said, setSaid] = useState<string>();
@@ -39,10 +42,20 @@ export function PhotoLibrary({
     void load();
   }, [load]);
   const held = busy || !!working;
+  // Closed or gone (another section chosen): a wait that ends later places nothing.
+  const open = useRef(true);
+  useEffect(
+    () => () => {
+      open.current = false;
+    },
+    [],
+  );
 
   const upload = async (file: File | undefined) => {
     setSaid(undefined);
+    setDeleting(undefined);
     if (!file) return;
+    if (wordsFirst) return setSaid(wordsFirst);
     setWorking(`Sending ${file.name}…`);
     const sent = await uploadFile(file, file);
     if ("why" in sent) {
@@ -52,6 +65,7 @@ export function PhotoLibrary({
     setWorking(`Making ${file.name} ready…`);
     void load();
     const ready = await untilReady(sent.id);
+    if (!open.current) return;
     setWorking(undefined);
     void load();
     if ("why" in ready) return setSaid(ready.why);
@@ -61,9 +75,12 @@ export function PhotoLibrary({
   // A file of the owner's library is granted to this project before it is placed here.
   const place = async (file: StoredFile) => {
     setSaid(undefined);
+    setDeleting(undefined);
+    if (wordsFirst) return setSaid(wordsFirst);
     if (!file.here) {
       setWorking(`Bringing ${file.name} into this app…`);
       const granted = await grantFile(file.id);
+      if (!open.current) return;
       setWorking(undefined);
       if (!granted) return setSaid(`${file.name} could not be used here. Try again in a moment.`);
     }
@@ -74,6 +91,7 @@ export function PhotoLibrary({
     setDeleting(undefined);
     setWorking(`Deleting ${file.name}…`);
     const gone = await deleteFile(file.id);
+    if (!open.current) return;
     setWorking(undefined);
     if (!gone) setSaid(`${file.name} could not be deleted. Try again in a moment.`);
     void load();
@@ -132,9 +150,11 @@ export function PhotoLibrary({
                   disabled={held || !ready || key === current}
                   aria-label={`Use ${name}`}
                   className="block w-full rounded border border-line hover:ring-2 hover:ring-accent disabled:opacity-60"
-                  onClick={() =>
-                    typeof file === "string" ? choose({ src: file }) : void place(file)
-                  }
+                  onClick={() => {
+                    if (typeof file !== "string") return void place(file);
+                    if (wordsFirst) return setSaid(wordsFirst);
+                    choose({ src: file });
+                  }}
                 >
                   {ready ? (
                     <img
@@ -189,7 +209,8 @@ export function PhotoLibrary({
           <div className="flex gap-2">
             <button
               type="button"
-              className="rounded border border-red-700 px-2 py-1 text-red-700"
+              className="rounded border border-red-700 px-2 py-1 text-red-700 disabled:opacity-60"
+              disabled={held}
               onClick={() => void remove(deleting)}
             >
               Delete
