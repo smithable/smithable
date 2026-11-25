@@ -568,7 +568,9 @@ export function robotsRoute(ir: SpecIR, auth: AuthIR): string {
     .map((p) => `Allow: ${p.route === "/" ? "/$" : p.route}`);
   // What public pages are made of: scripts and styles (rendered before indexing), pictures, and
   // record pictures (/files checks who may read each one).
-  const parts = allowed.length ? ["Allow: /assets/", "Allow: /images/", "Allow: /files/"] : [];
+  const parts = allowed.length
+    ? ["Allow: /assets/", "Allow: /images/", "Allow: /media/", "Allow: /files/"]
+    : [];
   const text = ["User-agent: *", ...allowed, ...parts, "Disallow: /", ""].join("\n");
   // With public pages, the sitemap's address too, at the site's own origin.
   const sitemap = allowed.length

@@ -5,3 +5,5 @@ data
 *.local
 .tanstack
 test-results
+# Stored files from the hosted photo library, fetched by the workspace (media-storage.md).
+public/media

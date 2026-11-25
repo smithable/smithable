@@ -1,5 +1,6 @@
 import { parse, stringify } from "yaml";
 import {
+  ASSET_ID,
   ASSISTANT_TEXTS,
   derivedTexts,
   FILM_SRC,
@@ -13,6 +14,7 @@ import {
 import type { YamlEditor, YamlValue } from "../edit.js";
 import { initialsForm } from "../initials.js";
 import type { SpecIR } from "../ir.js";
+import { mediaSlots } from "../media.js";
 import { humanize, plural } from "../naming.js";
 import { type AnyOperation, type Operation, OperationError, refTo } from "../operation.js";
 import { pageModel } from "../patterns.js";
@@ -63,6 +65,13 @@ const setText: Operation<{ path: string[]; text: string; language?: string }> = 
       );
     const parent = path.slice(0, -1);
     const before = content.get(path);
+    // A stored file is not text, and a picture holding one changes only by choosing another file,
+    // which a person does (media-storage.md §2).
+    const last = path[path.length - 1];
+    if (last === "asset" || (last === "src" && content.has([...parent, "asset"])))
+      throw new OperationError(
+        "This picture is a stored file, not text: choose another in Photos and videos.",
+      );
     // An item of a plain list, e.g. one of a plan's features.
     if (Array.isArray(content.get(parent)) && typeof content.get(path) === "string") {
       if (text === "") throw new OperationError("A list's item has no default text.");
@@ -509,12 +518,15 @@ const setInitials: Operation<{ initials?: string }> = {
  * so the mark, kind and widths go; the alt stays unless given. No src removes the picture, in
  * every language file too; the section is then shown without one. With item, a gallery's picture
  * by its place: no src removes that item, its caption with it (the release review's Remove,
- * picture-kinds.md §6).
+ * picture-kinds.md §6). With asset, a file the hosted service keeps (media-storage.md §2): a
+ * person's choice, never a model's, whose sizes the host gives from the service's record.
  */
 const setSectionPicture: Operation<{
   page: string;
   section: string;
   src?: string;
+  asset?: string;
+  rendition?: { width: number; widths?: number[] };
   alt?: string;
   item?: number;
   was?: string;
@@ -537,6 +549,22 @@ const setSectionPicture: Operation<{
         type: "string",
         description: "The file, e.g. images/team.webp (webp, avif, jpg or png); none removes it.",
       },
+      asset: {
+        type: "string",
+        description: "A stored file's id from the photo library, in place of src.",
+        "x-not-for-models": true,
+      },
+      rendition: {
+        type: "object",
+        description: "The stored file's renditions, from the service's record: never a caller's.",
+        required: ["width"],
+        additionalProperties: false,
+        properties: {
+          width: { type: "integer", minimum: 100, maximum: 4000 },
+          widths: { type: "array", items: { type: "integer", minimum: 1 } },
+        },
+        "x-host": true,
+      },
       alt: {
         type: "string",
         description: "What the picture shows; without it, the one it has.",
@@ -555,19 +583,32 @@ const setSectionPicture: Operation<{
     },
   },
   positional: ["page", "section", "src"],
-  describe: ({ page, section, src, item }) => {
+  describe: ({ page, section, src, asset, item }) => {
     const which = `${item === undefined ? "the picture" : `picture ${item + 1}`} of the ${section} section of ${page}`;
-    return src ? `Use ${src} as ${which}` : `Remove ${which}`;
+    return src
+      ? `Use ${src} as ${which}`
+      : asset
+        ? `Use stored file ${asset} as ${which}`
+        : `Remove ${which}`;
   },
   destructive: () => false,
-  apply({ content, translations }, { page, section, src, alt, item, was }, ir) {
+  apply(
+    { content, translations },
+    { page, section, src: file, asset, rendition, alt, item, was },
+    ir,
+  ) {
+    if (file !== undefined && asset !== undefined)
+      throw new OperationError("Give the picture's file or a stored file, not both.");
+    // Either names the new picture; the checks below that ask whether one is given ask of both.
+    const src = file ?? asset;
     const found = ir.pages.find((p) => p.id === page)?.sections.find((s) => s.name === section);
     if (!found) throw new OperationError(`The ${page} page has no section named "${section}".`);
     const picturePath =
       item === undefined
         ? ["pages", page, section, "image"]
         : ["pages", page, section, "items", String(item), "image"];
-    if (was !== undefined && content.get([...picturePath, "src"]) !== was)
+    const there = content.get([...picturePath, "src"]) ?? content.get([...picturePath, "asset"]);
+    if (was !== undefined && there !== was)
       throw new OperationError(
         `The picture there is no longer ${was}: another change came between. Look again.`,
       );
@@ -602,16 +643,23 @@ const setSectionPicture: Operation<{
       item === undefined ? ["pages", page, section, "image"] : [...items, String(item), "image"];
     if (src === undefined) {
       if (!content.has(path)) throw new OperationError(`The ${section} section has no picture.`);
-      content.removeAndPrune(path, 0);
+      emptyPlace(content, path);
       for (const language of languages) {
         const other = translations.get(language);
-        if (other?.has(path)) other.removeAndPrune(path, 0);
+        if (other?.has(path)) emptyPlace(other, path);
       }
       return [];
     }
-    if (!IMAGE_SRC.test(src))
+    if (asset !== undefined && !ASSET_ID.test(asset))
       throw new OperationError(
-        `"${src}" is not a file under public/images/: give it as images/<file> (webp, avif, jpg or png).`,
+        `"${asset}" is not a stored file's id: m_ and 26 letters and digits.`,
+      );
+    if (file !== undefined && rendition)
+      throw new OperationError("A file under public/images/ has no stored renditions.");
+    const made = rendition && renditionOf(rendition);
+    if (file !== undefined && !IMAGE_SRC.test(file))
+      throw new OperationError(
+        `"${file}" is not a file under public/images/: give it as images/<file> (webp, avif, jpg or png).`,
       );
     const had = content.get([...path, "alt"]);
     const text = alt?.trim() || (typeof had === "string" ? had : "");
@@ -619,10 +667,24 @@ const setSectionPicture: Operation<{
       throw new OperationError("Say what the picture shows (alt), for people who cannot see it.");
     const before = content.get(path);
     const same =
-      !!before && typeof before === "object" && (before as { src?: unknown }).src === src;
+      !!before &&
+      typeof before === "object" &&
+      (asset !== undefined
+        ? (before as { asset?: unknown }).asset === asset
+        : (before as { src?: unknown }).src === file);
+    // A new stored file comes with the sizes the host read; the one already there keeps its own
+    // when only its words change (Studio's Save).
+    if (asset !== undefined && !rendition && !same)
+      throw new OperationError(
+        "A stored file is placed by the hosted service, which knows its sizes: choose it in Photos and videos.",
+      );
+    // A stored file's sizes are the record's at each setting: one the service added since reaches it.
     const image: Record<string, YamlValue> = same
-      ? { ...(before as Record<string, YamlValue>), alt: text }
-      : { src, alt: text };
+      ? { ...(before as Record<string, YamlValue>), alt: text, ...made }
+      : asset !== undefined
+        ? { asset, alt: text, ...made }
+        : { src: file as string, alt: text };
+    if (same && made && !made.widths) delete image.widths;
     if (append) {
       if (content.has(items)) content.appendItem(items, { image });
       else put(content, items, [{ image }]);
@@ -639,10 +701,118 @@ const setSectionPicture: Operation<{
 };
 
 /**
+ * A stored file's renditions as a slot names them (media-storage.md §1): the largest made as
+ * `width`, the others narrowest first as `widths`.
+ */
+function renditionOf({ width, widths = [] }: { width: number; widths?: number[] }) {
+  // The largest copy names the file the page shows, so it is never swapped for a smaller one.
+  if (!Number.isInteger(width) || width < 100 || width > 4000)
+    throw new OperationError("The stored file's largest copy must be 100 to 4000 pixels wide.");
+  // A smaller copy outside the content file's range is left out; at most six, the widest, are kept
+  // (readWidths).
+  const copies = [...new Set(widths)]
+    .filter((w) => Number.isInteger(w) && w >= 100 && w < width)
+    .sort((a, b) => a - b)
+    .slice(-6);
+  return { width, ...(copies.length ? { widths: copies } : {}) };
+}
+
+/**
  * A hero's film (section-film.md): a short silent loop over its picture. Only the name is checked
  * here; the host reads the file's bytes. A new picture drops the film (setSectionPicture), since it
  * was made to play over the old one.
  */
+/**
+ * Takes stored files out of every place that names them, in one change and so one undo step: the
+ * hosted service's take-off after the owner deleted them (media-storage.md §2). A section's own
+ * picture goes; a gallery's or media-and-text section's item goes with its caption, the highest
+ * place first, so the places before it stay as they are; a features card keeps its words and a
+ * tile its label; any other place holding one (a hero's film) goes whole. The same places go in
+ * every language file. A person's choice, never a model's (forModels); each emptied place is its
+ * lostMedia, confirmed like any other.
+ */
+const removeMedia: Operation<{ asset: string[] }> = {
+  name: "removeMedia",
+  summary:
+    "Take stored files out of every place that shows them, in one change: a section's picture, a gallery or media-and-text item with its caption, a features card's or tile's picture, a hero's film.",
+  schema: {
+    type: "object",
+    required: ["asset"],
+    additionalProperties: false,
+    properties: {
+      asset: {
+        type: "array",
+        minItems: 1,
+        items: { type: "string" },
+        description:
+          "The stored files' ids, e.g. m_01hz8k3q4r5s6t7v8w9x0y1z2a; repeat --asset for more.",
+        "x-not-for-models": true,
+      },
+    },
+  },
+  positional: ["...asset"],
+  describe: ({ asset }) =>
+    `Take stored file${asset.length === 1 ? "" : "s"} ${asset.join(", ")} out of every place`,
+  destructive: () => false,
+  apply({ content, translations }, { asset }, ir) {
+    for (const id of asset)
+      if (!ASSET_ID.test(id))
+        throw new OperationError(
+          `"${id}" is not a stored file's id: m_ and 26 letters and digits.`,
+        );
+    const slots = mediaSlots(content.get([])).filter((s) => asset.includes(s.asset));
+    const languages = (content.get(["languages"]) as string[] | undefined) ?? [];
+    const editors = [content, ...languages.flatMap((language) => translations.get(language) ?? [])];
+    // Last first: an item taken out moves only the places after it, which are done by then.
+    for (const { at } of slots.reverse()) {
+      const [top, page, section, list, place, last] = at;
+      const kind = top === "pages" ? sectionKind(ir, page, section) : undefined;
+      if (
+        at.length === 6 &&
+        list === "items" &&
+        last === "image" &&
+        (kind === "gallery" || kind === "mediaText")
+      ) {
+        const items = at.slice(0, 4);
+        const i = Number(place);
+        for (const editor of editors) {
+          const theirs = editor.get(items);
+          if (!Array.isArray(theirs) || i >= theirs.length) continue;
+          if (theirs.length === 1) editor.removeAndPrune(items, 0);
+          else editor.removeItem(items, i);
+        }
+      } else for (const editor of editors) if (editor.has(at)) emptyPlace(editor, at);
+    }
+    const nowhere = asset.filter((id) => !slots.some((s) => s.asset === id));
+    return nowhere.length
+      ? [
+          {
+            note: `${nowhere.join(", ")} ${nowhere.length === 1 ? "is" : "are"} in no place, so nothing of ${nowhere.length === 1 ? "it" : "them"} changed`,
+          },
+        ]
+      : [];
+  },
+};
+
+/**
+ * Takes a picture out of its place. A list item stays, as {} when the picture was all it held, so
+ * a language file's later items keep matching the content file's by place.
+ */
+function emptyPlace(editor: YamlEditor, at: string[]) {
+  const item = editor.get(at.slice(0, 5));
+  if (
+    at[3] === "items" &&
+    at.length === 6 &&
+    item &&
+    typeof item === "object" &&
+    Object.keys(item).length === 1
+  )
+    editor.setItem(at.slice(0, 4), Number(at[4]), {});
+  else editor.removeAndPrune(at, at[3] === "items" ? 5 : 0);
+}
+const sectionKind = (ir: SpecIR, page?: string, section?: string) =>
+  ir.pages.find((p) => p.id === page)?.sections.find((s) => s.name === section)?.kind;
+
 const setSectionFilm: Operation<{ page: string; section: string; src?: string }> = {
   name: "setSectionFilm",
   sets: ["smithable.content.yml:pages.*.*.image.film"],
@@ -857,6 +1027,7 @@ export const contentOperations: AnyOperation[] = [
   setTexts,
   setItems,
   setSectionPicture,
+  removeMedia,
   setSectionFilm,
   keepPicture,
   nameRecords,

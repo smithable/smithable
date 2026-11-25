@@ -537,16 +537,27 @@ export const api = {
         lookProject,
       }),
     ),
-  /** One change of the Look panel, made against the exact revision it was chosen on. */
+  /**
+   * One change of the Look panel, made against the exact revision it was chosen on. `confirm`
+   * when the person's own click on what they see is the confirmation (a stored picture replaced).
+   */
   lookChange: (
     name: string,
     args: Record<string, unknown>,
     revision: string,
     lookProject: string,
     file?: { path: string; data: string },
+    confirm?: true,
   ) =>
     changing(
-      call<Result>("/api/op", { name, args, expectedRevision: revision, lookProject, file }).catch(
+      call<Result>("/api/op", {
+        name,
+        args,
+        expectedRevision: revision,
+        lookProject,
+        file,
+        ...(confirm ? { confirm } : {}),
+      }).catch(
         // /api/op answers 400 only before it runs anything (a file that breaks a rule): nothing changed, so
         // a try-on goes on, where a thrown error would stop it as an uncertain write.
         (error: unknown) => {

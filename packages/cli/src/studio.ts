@@ -51,6 +51,7 @@ import { type Io, tool } from "./io.js";
 import { lookContext } from "./look-context.js";
 import { mintLookTicket } from "./look-ticket.js";
 import { mcpServer } from "./mcp.js";
+import { hostedMediaSource, mediaSyncer } from "./media-cache.js";
 import { milestones, nameMilestone } from "./milestones.js";
 import { modelUsage } from "./model-usage.js";
 import { openQuestions } from "./new.js";
@@ -517,6 +518,15 @@ export class TooLarge extends Error {
 export const projectImage = (dir: string, path: string): Buffer | undefined =>
   readTreeOrNone(join(dir, "public", "images", path), 32 << 20);
 
+/**
+ * A stored file's copy as Studio serves it (media-storage.md): `<id>/w<width>.webp` under
+ * public/media/, where the workspace fetched it; none before the fetch.
+ */
+export const projectMedia = (dir: string, path: string): Buffer | undefined =>
+  /^m_[0-9a-hjkmnp-tv-z]{26}\/w[1-9]\d{1,3}\.webp$/.test(path)
+    ? readTreeOrNone(join(dir, "public", "media", path), 32 << 20)
+    : undefined;
+
 /** A declared plugin's code as Studio serves it to the tab: the project's own file, or none. */
 export const projectPlugin = (dir: string, name: string): Buffer | undefined =>
   declaredPlugins(dir).includes(name) ? readTreeOrNone(pluginPath(dir, name)) : undefined;
@@ -705,7 +715,16 @@ export async function studio(
       await new Promise((r) => setTimeout(r, 300));
     }
   };
-  const changed = (data: unknown) => void settled().then(() => send("changed", data));
+  // The project's stored pictures, fetched in a hosted workspace (media-storage.md §4): each one
+  // cached is asked for again at start, and what a change puts in use is in place before the
+  // preview reloads. Locally there is no source.
+  const mediaSource = hostedMediaSource();
+  const media = mediaSource ? mediaSyncer(dir, mediaSource, (line) => io.err(line)) : undefined;
+  void media?.sync(true);
+  const changed = (data: unknown) =>
+    void settled()
+      .then(() => media?.sync())
+      .then(() => send("changed", data));
   // The sample users (sample-users.md §4–§6), acting in the preview through its door.
   const people = sampleRunner({
     door: doorAt(localPreview, doorSecret, previewHeaders),
@@ -801,7 +820,7 @@ export async function studio(
     if (installed() !== packagesBefore) {
       stopApp();
       startApp();
-      send("changed", {});
+      void Promise.resolve(media?.sync()).then(() => send("changed", {}));
       return;
     }
     reopenDatabase(dir);
@@ -1402,6 +1421,16 @@ export async function studio(
               : `image/${image[2] === "jpg" ? "jpeg" : image[2]}`,
           "Content-Security-Policy": "sandbox; default-src 'none'; style-src 'unsafe-inline'",
           "Cache-Control": "no-cache",
+        });
+        return res.end(bytes);
+      }
+      if (url.pathname.startsWith("/api/media/")) {
+        const bytes = projectMedia(dir, url.pathname.slice("/api/media/".length));
+        if (!bytes) return json({ ok: false }, 404);
+        res.writeHead(200, {
+          "Content-Type": "image/webp",
+          "Content-Security-Policy": "sandbox; default-src 'none'; style-src 'unsafe-inline'",
+          "Cache-Control": "public, max-age=31536000, immutable",
         });
         return res.end(bytes);
       }

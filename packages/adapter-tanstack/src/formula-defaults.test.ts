@@ -23,6 +23,7 @@ models:
         type: date
         default: DATEADD(issuedOn, 30, "day")
       issuedOn: { type: date, default: TODAY() }
+      receivedAt: { type: datetime, default: NOW() }
 pages:
   enquiries: { crud: Enquiry }
 `,
@@ -61,4 +62,8 @@ test("a formula default is filled by checkCreate, so every way of making a recor
   const due = data.indexOf("values.dueOn = enquiryDefaults.dueOn(values)");
   expect(issued).toBeGreaterThan(-1);
   expect(due).toBeGreaterThan(issued);
+  // A datetime column is written from a Date: NOW()'s ISO text would make the insert throw (crm import).
+  expect(data).toContain(
+    "if (values.receivedAt === undefined) values.receivedAt = new Date(enquiryDefaults.receivedAt(values));",
+  );
 });

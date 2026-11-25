@@ -29,6 +29,8 @@ export const SECTION_LOOKS: Partial<
   hero: {
     layout: ["split", "centered", "plain", "cover", "photo", "inset", "stage", "tiles"],
     image: ["right", "left"],
+    // A split or inset hero's framed picture takes all three; one across the hero, its focal point.
+    ...MEDIA_LOOKS,
     overlay: ["brand", "dark"],
     mark: ["title", "logo"],
     eyebrow: ["address", "hours"],

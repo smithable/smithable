@@ -821,6 +821,28 @@
                     "left"
                   ]
                 },
+                "fit": {
+                  "enum": [
+                    "cover",
+                    "contain"
+                  ]
+                },
+                "aspect": {
+                  "enum": [
+                    "landscape",
+                    "portrait",
+                    "square"
+                  ]
+                },
+                "focal": {
+                  "enum": [
+                    "center",
+                    "top",
+                    "bottom",
+                    "left",
+                    "right"
+                  ]
+                },
                 "overlay": {
                   "enum": [
                     "brand",

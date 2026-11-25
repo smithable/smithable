@@ -671,6 +671,12 @@ const section: JsonSchema = {
       },
       properties: {
         src: { type: "string" },
+        asset: {
+          type: "string",
+          pattern: "^m_[0-9a-hjkmnp-tv-z]{26}$",
+          description:
+            "A stored file from the hosted service's photo library, in place of src; set by setSectionPicture, never written by hand.",
+        },
         alt: { type: "string" },
         generated: {
           type: "boolean",
@@ -689,7 +695,7 @@ const section: JsonSchema = {
         },
         width: {
           type: "integer",
-          description: "The file's own width in pixels.",
+          description: "The file's own width in pixels; a stored file's largest rendition.",
           minimum: 100,
           maximum: 4000,
         },
@@ -740,6 +746,12 @@ const section: JsonSchema = {
             },
             properties: {
               src: { type: "string" },
+              asset: {
+                type: "string",
+                pattern: "^m_[0-9a-hjkmnp-tv-z]{26}$",
+                description:
+                  "A stored file from the hosted service's photo library, in place of src; set by setSectionPicture, never written by hand.",
+              },
               alt: { type: "string" },
               generated: {
                 type: "boolean",
@@ -758,7 +770,7 @@ const section: JsonSchema = {
               },
               width: {
                 type: "integer",
-                description: "The file's own width in pixels.",
+                description: "The file's own width in pixels; a stored file's largest rendition.",
                 minimum: 100,
                 maximum: 4000,
               },
@@ -803,6 +815,12 @@ const section: JsonSchema = {
             },
             properties: {
               src: { type: "string" },
+              asset: {
+                type: "string",
+                pattern: "^m_[0-9a-hjkmnp-tv-z]{26}$",
+                description:
+                  "A stored file from the hosted service's photo library, in place of src; set by setSectionPicture, never written by hand.",
+              },
               alt: { type: "string" },
               generated: {
                 type: "boolean",
@@ -821,7 +839,7 @@ const section: JsonSchema = {
               },
               width: {
                 type: "integer",
-                description: "The file's own width in pixels.",
+                description: "The file's own width in pixels; a stored file's largest rendition.",
                 minimum: 100,
                 maximum: 4000,
               },

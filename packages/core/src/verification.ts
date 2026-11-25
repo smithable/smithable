@@ -2,6 +2,7 @@ import { modelAccess, pageAccess } from "./access.js";
 import type { OperationResult, ProjectFiles } from "./apply.js";
 import { type AuthIR, validateAuth } from "./auth.js";
 import type { SpecIR } from "./ir.js";
+import { slotName } from "./media.js";
 import type { Effect, OperationArgs } from "./operation.js";
 import { validateSpec } from "./spec.js";
 
@@ -37,7 +38,7 @@ export interface Check {
 }
 
 export interface Consequence {
-  about: "records" | "access" | "custom-code" | "outside";
+  about: "records" | "access" | "custom-code" | "outside" | "media";
   /** "4 of 31 orders lose their discount code". */
   says: string;
   undo: "full" | "data-snapshot" | "none";
@@ -262,6 +263,13 @@ export function verificationBefore(
     ...accessConsequences(before, after),
     ...customConsequences(v.changed, result.effects, context.custom),
     ...outsideConsequences(before.ir, after.ir),
+    // A stored file taken out of a place: shown before a proposal's Apply as the CLI's confirmation
+    // names it (media-storage.md §2), since the person's Apply is that confirmation.
+    ...(result.lostMedia ?? []).map((slot) => ({
+      about: "media" as const,
+      says: `${slotName(slot)} loses its stored file; the photo library keeps it.`,
+      undo: "full" as const,
+    })),
   ];
   const outside = v.consequences.filter((c) => c.about === "outside");
   if (outside.length)

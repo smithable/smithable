@@ -179,6 +179,43 @@ export interface Operation<A extends OperationArgs = OperationArgs> {
 
 export class OperationError extends Error {}
 
+/**
+ * Who gives an argument (media-storage.md §2). `x-host: true` on an argument's schema: only the
+ * host gives it, from a record of its own (a stored file's sizes); `x-not-for-models: true`: a
+ * person's choice (a stored file's id), which no model is offered or may send. The schemas
+ * offered to models leave both out (plainSchema in @smithable/ai).
+ */
+export function refusedArgs(
+  op: AnyOperation,
+  args: Record<string, unknown>,
+  from: "person" | "model" | "host",
+): string | undefined {
+  if (from === "host") return undefined;
+  const properties = (op.schema.properties ?? {}) as Record<string, Record<string, unknown>>;
+  const refused = Object.keys(args).filter(
+    (name) =>
+      args[name] !== undefined &&
+      (properties[name]?.["x-host"] === true ||
+        (from === "model" && properties[name]?.["x-not-for-models"] === true)),
+  );
+  return refused.length
+    ? `${op.name} takes ${refused.map((name) => `"${name}"`).join(" and ")} from ${refused.some((name) => properties[name]?.["x-host"] === true) ? "the host's own record" : "a person's choice"} only.`
+    : undefined;
+}
+
+/**
+ * An operation a model may be offered: none of its required arguments is one only a host or a
+ * person gives (refusedArgs). removeMedia, whose stored files are a person's choice, is not.
+ */
+export function forModels(op: AnyOperation): boolean {
+  const properties = (op.schema.properties ?? {}) as Record<string, Record<string, unknown>>;
+  const required = (op.schema.required ?? []) as string[];
+  return !required.some(
+    (name) =>
+      properties[name]?.["x-host"] === true || properties[name]?.["x-not-for-models"] === true,
+  );
+}
+
 // Operations are defined with their own argument types and stored in untyped registries.
 // biome-ignore lint/suspicious/noExplicitAny: each operation narrows its own arguments.
 export type AnyOperation = Operation<any>;

@@ -17,3 +17,15 @@ test("a try-on refused before anything ran (400) comes back as a refusal, not an
     StudioRequestError,
   );
 });
+
+test("a try-on confirms only when asked: a picture's form sends confirm, a layout's does not", async () => {
+  const bodies: unknown[] = [];
+  vi.stubGlobal("fetch", async (_: string, init: RequestInit) => {
+    bodies.push(JSON.parse(String(init.body)));
+    // Not ok, so no page event is sent (no window in this test).
+    return new Response(JSON.stringify({ ok: false, output: "" }), { status: 200 });
+  });
+  await api.lookChange("setSectionLook", {}, "r1", "p");
+  await api.lookChange("setSectionPicture", {}, "r1", "p", undefined, true);
+  expect(bodies.map((b) => (b as { confirm?: boolean }).confirm)).toEqual([undefined, true]);
+});

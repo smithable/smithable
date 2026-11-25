@@ -659,7 +659,10 @@ function HeroView({
   facts = [],
   stage,
   film,
-}: {
+  fit,
+  aspect,
+  focal,
+}: MediaLook & {
   title: string;
   logoMark?: string;
   subtitle?: string;
@@ -885,7 +888,10 @@ function HeroView({
             width={1600}
             height={900}
             fetchPriority="high"
-            className="absolute inset-0 -z-10 size-full object-cover"
+            className={cn(
+              "absolute inset-0 -z-10 size-full object-cover",
+              focal && MEDIA_FOCAL[focal],
+            )}
           />
           {across}
           {wash === "dark" ? (
@@ -956,7 +962,10 @@ function HeroView({
               width={1200}
               height={900}
               fetchPriority="high"
-              className="absolute inset-0 -z-10 size-full object-cover"
+              className={cn(
+                "absolute inset-0 -z-10 size-full object-cover",
+                focal && MEDIA_FOCAL[focal],
+              )}
             />
             {across}
             <div
@@ -1047,7 +1056,10 @@ function HeroView({
           width={1600}
           height={900}
           fetchPriority="high"
-          className="absolute inset-0 -z-10 size-full object-cover"
+          className={cn(
+            "absolute inset-0 -z-10 size-full object-cover",
+            focal && MEDIA_FOCAL[focal],
+          )}
         />
         {across}
         <div
@@ -1093,7 +1105,10 @@ function HeroView({
           width={1200}
           height={800}
           fetchPriority="high"
-          className="absolute inset-0 -z-10 size-full object-cover"
+          className={cn(
+            "absolute inset-0 -z-10 size-full object-cover",
+            focal && MEDIA_FOCAL[focal],
+          )}
         />
         {across}
         <div aria-hidden className="absolute inset-0 -z-10 bg-black/60" />
@@ -1181,7 +1196,11 @@ function HeroView({
                 width={960}
                 height={1200}
                 fetchPriority="high"
-                className="aspect-[4/3] w-full rounded-[var(--picture-radius,var(--radius-lg))] object-cover lg:aspect-[4/5]"
+                className={cn(
+                  "w-full rounded-[var(--picture-radius,var(--radius-lg))] object-cover",
+                  aspect ? MEDIA_ASPECT[aspect] : "aspect-[4/3] lg:aspect-[4/5]",
+                  mediaClasses({ fit, focal }),
+                )}
               />,
               "rounded-[var(--picture-radius,var(--radius-lg))]",
             )}
@@ -1225,6 +1244,7 @@ function HeroView({
             fetchPriority="high"
             className={cn(
               "aspect-[3/2] w-full rounded-[var(--picture-radius,var(--radius-xl))] border-(length:--picture-frame) object-cover",
+              mediaClasses({ fit, aspect, focal }),
               imageSide === "right" && "lg:order-2",
             )}
           />,

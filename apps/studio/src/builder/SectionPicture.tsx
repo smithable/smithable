@@ -2,7 +2,7 @@
 // what it shows, Replace with the owner's file, Remove. Each is one setSectionPicture, tried on in
 // the form like a layout (Cancel undoes it); an uploaded file goes in with the change and leaves
 // with its undo.
-import type { ContentImage } from "@smithable/core";
+import { type ContentImage, pictureFile } from "@smithable/core";
 import { useId, useState } from "react";
 
 export const PICTURE_TYPES: Record<string, string> = {
@@ -39,7 +39,10 @@ export function SectionPicture({
   section: string;
   image: ContentImage | undefined;
   label?: string;
-  change: (args: { src?: string; alt?: string }, file?: { path: string; data: string }) => void;
+  change: (
+    args: { src?: string; asset?: string; alt?: string },
+    file?: { path: string; data: string },
+  ) => void;
   busy: boolean;
 }) {
   const [alt, setAlt] = useState(image?.alt ?? "");
@@ -74,7 +77,7 @@ export function SectionPicture({
       <div className="flex items-center gap-2">
         {image ? (
           <img
-            src={`/api/${image.src}`}
+            src={`/api/${pictureFile(image)}`}
             alt=""
             className="h-12 w-16 shrink-0 rounded border border-line object-cover"
           />
@@ -121,7 +124,13 @@ export function SectionPicture({
             type="button"
             disabled={held}
             className="rounded border border-line px-2 py-1 text-sm hover:bg-subtle disabled:opacity-60"
-            onClick={() => change({ src: image.src, alt: alt.trim() })}
+            // The same file, stored or the project's, with new words: never no file, which removes it.
+            onClick={() =>
+              change({
+                ...(image.asset !== undefined ? { asset: image.asset } : { src: image.src }),
+                alt: alt.trim(),
+              })
+            }
           >
             Save
           </button>

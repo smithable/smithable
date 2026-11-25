@@ -16,6 +16,11 @@ import { keepAccessKeys, planDigest, restore, restorePlan, versions } from "./re
 import { captureIo } from "./test-io.js";
 import { undoChange, undoLatest } from "./undo.js";
 
+// Each test runs Git many times and opens the app's database.
+// On a loaded machine (a gate, main's full run) that can take more than the default 5 s;
+// alone it takes a fraction of it (T1481).
+vi.setConfig({ testTimeout: 30_000 });
+
 vi.mock("./generate.js", () => ({ generate: vi.fn(async () => 0) }));
 
 const roots: string[] = [];
@@ -438,7 +443,11 @@ test("§8.5 undo of the apply after a later change takes its sample files back t
   expect(read(dir, "smithable.yml")).toContain("level");
 });
 
-test("§8.6 each refusal leaves the folder, the database and the history as they were", async () => {
+// Its own time: about 20 steps (ten refusals), each git and database work, none over 200 ms; 1.3 s
+// alone (2026-11-24), 5.3 s in CI's full run under load (run 45436871000), past the 5 s default.
+test("§8.6 each refusal leaves the folder, the database and the history as they were", {
+  timeout: 20_000,
+}, async () => {
   const dir = project();
   database(
     dir,
