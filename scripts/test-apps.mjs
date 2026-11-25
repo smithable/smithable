@@ -199,11 +199,38 @@ async function hydrated(page) {
   );
 }
 
-/** Opens a page and waits until it is interactive: the dev server loads code on demand. */
+/**
+ * Opens a page and waits until it is interactive: the dev server loads code on demand. A page that
+ * never gets there says what it saw on the failure's own line (T1568, T1523: a page that did not
+ * hydrate in two minutes): its errors, requests that failed or answered 5xx, and the dev server's
+ * own lines (a dependency optimized mid-load reloads the page).
+ */
 async function open(page, url) {
-  await page.goto(url);
-  await page.waitForLoadState("networkidle");
-  await hydrated(page);
+  const seen = [];
+  const add = (line) => seen.length < 12 && seen.push(line.replace(/\s+/g, " ").slice(0, 160));
+  const onConsole = (m) =>
+    (m.type() === "error" || m.text().startsWith("[vite]")) && add(`${m.type()}: ${m.text()}`);
+  const onError = (e) => add(`pageerror: ${e.message}`);
+  const onFailed = (r) => add(`failed: ${r.url()} ${r.failure()?.errorText ?? ""}`);
+  const onResponse = (r) => r.status() >= 500 && add(`${r.status()}: ${r.url()}`);
+  page.on("console", onConsole);
+  page.on("pageerror", onError);
+  page.on("requestfailed", onFailed);
+  page.on("response", onResponse);
+  try {
+    await page.goto(url);
+    await page.waitForLoadState("networkidle");
+    await hydrated(page);
+  } catch (error) {
+    if (seen.length)
+      error.message = `${error.message.split("\n")[0]} (the page saw: ${seen.join(" | ")})`;
+    throw error;
+  } finally {
+    page.off("console", onConsole);
+    page.off("pageerror", onError);
+    page.off("requestfailed", onFailed);
+    page.off("response", onResponse);
+  }
 }
 
 /** Chooses a related record in a searchable field: type part of its name, click it. */
