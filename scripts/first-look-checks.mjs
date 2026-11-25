@@ -27,11 +27,15 @@ function operations(page) {
 export async function asNewApp(target) {
   await target.route("**/api/project", async (route) => {
     // A request still in flight when Studio stops (the checks' end) is reset: that page is done
-    // with, and an uncaught rejection here would end the whole check.
+    // with, and an uncaught rejection here would end the whole check. The page then sees only
+    // "Failed to fetch", so the reason is said here: mid-check it is the failure's cause (T1609).
     try {
       const response = await route.fetch();
       await route.fulfill({ response, json: { ...(await response.json()), asMade: true } });
-    } catch {
+    } catch (error) {
+      console.log(
+        `    (asNewApp: /api/project not read, ${new Date().toISOString()}: ${error?.message ?? error})`,
+      );
       await route.abort().catch(() => {});
     }
   });
