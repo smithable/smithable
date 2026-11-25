@@ -224,7 +224,9 @@ describe("the fallback to the starter, across restarts and a replacement", () =>
     // The first read Studio answers is the test's: it is the one the one-time notice goes to.
     const end = Date.now() + 30_000;
     for (;;) {
-      const answer = await call("/api/project").catch(() => undefined);
+      const answer = await call("/api/project", { signal: AbortSignal.timeout(5000) }).catch(
+        () => undefined,
+      );
       if (answer?.status === 200)
         return (await answer.json()) as Awaited<ReturnType<typeof project>>;
       if (Date.now() > end) throw new Error("Studio did not answer");
@@ -234,6 +236,7 @@ describe("the fallback to the starter, across restarts and a replacement", () =>
   const stop = async () => {
     expect(await stopStudioFixture(studio, dir)).toBe(true);
     expect(fixturePids(dir)).toEqual([]);
+    studio = undefined;
     rmSync(join(dir, "seen.jsonl"), { force: true });
   };
 
@@ -257,7 +260,8 @@ describe("the fallback to the starter, across restarts and a replacement", () =>
 
   afterAll(async () => {
     try {
-      if (studio && studio.exitCode === null) await stopStudioFixture(studio, dir);
+      // Also when Studio itself has exited: a preview it left is found by its folder and stopped.
+      if (dir) await stopStudioFixture(studio, dir);
     } finally {
       for (const d of [dir, from]) if (d) rmSync(d, { recursive: true, force: true });
     }
