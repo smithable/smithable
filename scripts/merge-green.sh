@@ -56,6 +56,8 @@ release() {
 to_disarm="" watcher=""
 on_exit() {
   local rc=$?
+  # A second signal, here, would cut the disarm and the release short.
+  trap '' INT TERM HUP
   if [ "$rc" != 0 ] && [ -n "$to_disarm" ]; then
     gh pr merge "$pr" "${repo[@]}" --disable-auto >/dev/null 2>&1 ||
       echo "#$pr: could not disarm auto-merge: check by hand that none is armed." >&2
