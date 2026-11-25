@@ -122,6 +122,8 @@ export function BadgeSwitch({
 }) {
   const under = askedUnder(aiBadge, realistic);
   const [openUnder, setOpenUnder] = useState<string | null>(null);
+  // Gone for good once either changes, so a change back does not bring it back unasked.
+  if (openUnder !== null && openUnder !== under) setOpenUnder(null);
   const asking = openUnder === under;
   const setAsking = (open: boolean) => setOpenUnder(open ? under : null);
   return (

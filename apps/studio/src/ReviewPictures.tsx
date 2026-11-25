@@ -22,7 +22,9 @@ export function ReviewPictures({
   revision?: string;
   reload: () => Promise<unknown>;
 }) {
-  const [busy, setBusy] = useState(false);
+  const [working, setBusy] = useState(false);
+  // Without the revision a click could not be guarded: none is offered.
+  const busy = working || !revision;
   const [refused, setRefused] = useState<string>();
   const run = async (
     picture: Picture,

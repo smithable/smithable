@@ -54,13 +54,13 @@ test("a review's stale Remove is refused when a gallery holds its file twice (T1
   const review = releaseReview(dir);
   expect(review.revision).toMatch(/^[a-f0-9]{64}$/);
   const remove = { page: "home", section: "jobs", item: 0, was: "images/jobs/a.webp" };
-  // Another change removes the first picture; the review, read before it, then removes "the first".
-  const io = captureIo();
-  expect(
-    await runOperation(dir, io, "setSectionPicture", remove, { yes: true, reportLater: true }),
-  ).toBe(0);
-  const stale = captureIo();
   const flags = { yes: true, reportLater: true, expectedRevision: review.revision };
+  // The review's click passes; the same click again, from the review read before it, would take
+  // the second copy, and is refused.
+  const io = captureIo();
+  expect(await runOperation(dir, io, "setSectionPicture", remove, flags), io.stderr).toBe(0);
+  expect(readFileSync(join(dir, "smithable.content.yml"), "utf8")).not.toContain("The first roof");
+  const stale = captureIo();
   expect(await runOperation(dir, stale, "setSectionPicture", remove, flags)).toBe(1);
   expect(stale.stderr).toMatch(/changed/);
   expect(readFileSync(join(dir, "smithable.content.yml"), "utf8")).toContain("The second roof");

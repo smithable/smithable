@@ -37,6 +37,7 @@ import { maintenanceInfo } from "./maintenance.js";
 import { lostFields } from "./op.js";
 import { loadPlugins } from "./plugins.js";
 import { privacyStates } from "./privacy-review.js";
+import { projectRevision as opRevision } from "./project-revision.js";
 import { childOptions } from "./secrets.js";
 import type { Level, Result } from "./security.js";
 import { changeTree } from "./tree-files.js";
@@ -483,6 +484,8 @@ export function picturesToReview(
 
 export function releaseReview(dir: string, options: { hosted?: boolean } = {}) {
   const revision = projectRevision(dir);
+  // What /api/op checks a change against (not the files revision above), read before the files.
+  const sourceRevision = opRevision(dir);
   const recorded = { checks: checksRecord(dir), deployment: deploymentRecord(dir) };
   const found: Diagnostic[] = [];
   const current = loadSpec(dir, { out: () => {}, err: () => {} }, [], found);
@@ -624,7 +627,7 @@ export function releaseReview(dir: string, options: { hosted?: boolean } = {}) {
     pictures: current.ir ? picturesToReview(current.ir, current.content, current.ux) : [],
     // The source revision the review was read at: its pictures' Keep and Remove send it, so a
     // change that came between refuses them rather than hitting another place (T1231).
-    revision,
+    revision: sourceRevision,
     // The privacy page: reviewed, changed since its review (and what), or never (§6.4).
     privacy: privacyStates(dir),
     baseline: baseline?.at,
