@@ -121,8 +121,10 @@ export function anthropic(
 
 /**
  * The schema as structured output takes it: every object that lists its properties closed to
- * others (additionalProperties: false), which it requires. A map of any keys stays as it is, and
- * the API refuses it, so the request goes again without structured output.
+ * others (additionalProperties: false), which it requires, and without the bounds it refuses on
+ * each type (REFUSED, T1605). The answer is still checked against the whole schema by its caller,
+ * so a bound left out here is kept there. A map of any keys stays as it is, and the API refuses
+ * it, so the request goes again without structured output.
  */
 export function closed(schema: unknown): unknown {
   if (Array.isArray(schema)) return schema.map(closed);
@@ -140,10 +142,26 @@ export function closed(schema: unknown): unknown {
     ]),
   ) as Record<string, unknown>;
   if (out.properties && out.additionalProperties === undefined) out.additionalProperties = false;
+  for (const type of [out.type].flat())
+    for (const key of REFUSED[type as string] ?? []) delete out[key];
+  if (typeof out.minItems === "number" && out.minItems > 1 && [out.type].flat().includes("array"))
+    delete out.minItems;
   return out;
 }
 
 const VALUES = new Set(["enum", "const", "default", "examples"]);
+
+/**
+ * The keywords structured output refuses with a 400, by the type they sit on (a probe of each,
+ * 2026-11-25); minItems is refused above 1 too. On another type (a string's minimum) they pass.
+ */
+const NUMBER_BOUNDS = ["minimum", "maximum", "exclusiveMinimum", "exclusiveMaximum", "multipleOf"];
+const REFUSED: Record<string, string[]> = {
+  array: ["maxItems", "uniqueItems", "contains", "prefixItems"],
+  number: NUMBER_BOUNDS,
+  integer: NUMBER_BOUNDS,
+  object: ["minProperties", "maxProperties"],
+};
 
 /**
  * Whether structured output can take the schema: a map keyed by an app's own names

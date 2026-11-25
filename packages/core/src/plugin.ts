@@ -259,7 +259,11 @@ export function checkJson(schema: JsonSchema, value: unknown, path: string): str
     /** What a value must be, in words, said instead of the pattern: "an exact version like 4.4.1". */
     "x-expected"?: string;
     minItems?: number;
+    maxItems?: number;
     uniqueItems?: boolean;
+    minimum?: number;
+    maximum?: number;
+    minProperties?: number;
   };
   const kind = Array.isArray(value)
     ? "array"
@@ -275,9 +279,17 @@ export function checkJson(schema: JsonSchema, value: unknown, path: string): str
     return [`"${path}" must be one of ${s.enum.map((v) => JSON.stringify(v)).join(", ")}.`];
   if (s.pattern && typeof value === "string" && !new RegExp(s.pattern).test(value))
     return [`"${path}" must ${s["x-expected"] ? `be ${s["x-expected"]}` : `match ${s.pattern}`}.`];
+  if (typeof value === "number" && s.minimum !== undefined && value < s.minimum)
+    return [`"${path}" must be at least ${s.minimum}.`];
+  if (typeof value === "number" && s.maximum !== undefined && value > s.maximum)
+    return [`"${path}" must be at most ${s.maximum}.`];
   const problems: string[] = [];
   if (kind === "object") {
     const object = value as Record<string, unknown>;
+    if (s.minProperties !== undefined && Object.keys(object).length < s.minProperties)
+      problems.push(
+        `"${path}" needs at least ${s.minProperties} entr${s.minProperties === 1 ? "y" : "ies"}.`,
+      );
     for (const key of s.required ?? [])
       if (object[key] === undefined)
         problems.push(path ? `"${path}" needs "${key}".` : `"${key}" is missing.`);
@@ -295,6 +307,8 @@ export function checkJson(schema: JsonSchema, value: unknown, path: string): str
     const items = value as unknown[];
     if (s.minItems !== undefined && items.length < s.minItems)
       problems.push(`"${path}" needs at least ${s.minItems} item${s.minItems === 1 ? "" : "s"}.`);
+    if (s.maxItems !== undefined && items.length > s.maxItems)
+      problems.push(`"${path}" takes at most ${s.maxItems} item${s.maxItems === 1 ? "" : "s"}.`);
     if (s.uniqueItems && new Set(items.map((i) => JSON.stringify(i))).size < items.length)
       problems.push(`"${path}" has the same item twice.`);
     if (s.items)

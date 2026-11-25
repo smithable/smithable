@@ -146,6 +146,39 @@ test("closed shuts every object schema, and only schemas: a field named properti
   });
 });
 
+test("closed leaves out the bounds structured output refuses on each type, and keeps the rest (T1605)", async () => {
+  const { closed } = await import("./anthropic.js");
+  expect(
+    closed({
+      type: "object",
+      minProperties: 1,
+      properties: {
+        list: {
+          type: "array",
+          minItems: 2,
+          maxItems: 4,
+          uniqueItems: true,
+          items: { type: "string" },
+        },
+        one: { type: "array", minItems: 1, items: { type: "string", minLength: 1, maxLength: 9 } },
+        count: { type: "integer", minimum: 0, maximum: 9, multipleOf: 1 },
+        share: { type: ["number", "null"], exclusiveMinimum: 0, exclusiveMaximum: 1 },
+        word: { type: "string", minimum: 1, pattern: "^a" },
+      },
+    }),
+  ).toEqual({
+    type: "object",
+    additionalProperties: false,
+    properties: {
+      list: { type: "array", items: { type: "string" } },
+      one: { type: "array", minItems: 1, items: { type: "string", minLength: 1, maxLength: 9 } },
+      count: { type: "integer" },
+      share: { type: ["number", "null"] },
+      word: { type: "string", minimum: 1, pattern: "^a" },
+    },
+  });
+});
+
 test("a schema with a map is not sent as structured output: one request, without it (T1597)", async () => {
   const sent: Record<string, unknown>[] = [];
   vi.stubGlobal("fetch", async (_url: string, init: RequestInit) => {
