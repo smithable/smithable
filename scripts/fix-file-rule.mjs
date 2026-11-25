@@ -6,7 +6,8 @@
 // is packages/cli/src/fix-file-rule.ts. Exits 1 with what the change needs.
 // With --local (pnpm lint, T1485) the base is origin/main and the branch's commit messages stand
 // for the pull request's text, so a kit change without its declaration fails before the push; it
-// says nothing when the change passes, leaves CI (CI set) to the step above, and lets CI judge a
+// says nothing when the change passes (or when there is no origin/main or no common history), takes
+// NO_FIX_FILE=true for the label, leaves CI (CI set) to the step above, and lets CI judge a
 // bump whose advisories it could not read.
 import { execFileSync } from "node:child_process";
 import { inRange, readAdvisories } from "../packages/cli/src/advisories.ts";
@@ -16,13 +17,27 @@ const local = process.argv.includes("--local");
 // From where the branch left the base, so the base's own later changes are not counted.
 const git = (...args) => execFileSync("git", args, { encoding: "utf8" });
 if (local && process.env.CI) process.exit(0);
-const base = local ? show("origin/main^{commit}") && "origin/main" : process.env.BASE;
+/** A git answer, or undefined where git refuses (no origin/main, no common history in a shallow clone). */
+const quietly = (...args) => {
+  try {
+    return execFileSync("git", args, {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    }).trim();
+  } catch {
+    return undefined;
+  }
+};
+const base = local
+  ? quietly("rev-parse", "--verify", "-q", "origin/main^{commit}")
+  : process.env.BASE;
 if (!base) {
   if (!local) console.log("Not a pull request: no fix-file rule.");
   process.exit(0);
 }
 // Where the branch left the base: the files as they were then.
-const from = git("merge-base", base, "HEAD").trim();
+const from = local ? quietly("merge-base", base, "HEAD") : git("merge-base", base, "HEAD").trim();
+if (!from) process.exit(0);
 /** A file at a commit, or undefined where it is not there. */
 function show(spec) {
   try {

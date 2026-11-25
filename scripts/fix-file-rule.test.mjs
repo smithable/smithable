@@ -7,7 +7,7 @@ import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 
 const rule = fileURLToPath(new URL("./fix-file-rule.mjs", import.meta.url));
-const { CI: _ci, BASE: _base, ...quiet } = process.env;
+const { CI: _ci, BASE: _base, NO_FIX_FILE: _label, ...quiet } = process.env;
 const env = { ...quiet, GIT_CONFIG_NOSYSTEM: "1", GIT_CONFIG_GLOBAL: "/dev/null" };
 
 test("--local: a kit change fails without its declaration, passes with it, and is CI's in CI", (t) => {
@@ -27,6 +27,7 @@ test("--local: a kit change fails without its declaration, passes with it, and i
   git("init", "-q", "-b", "main");
   git("add", ".");
   git("commit", "-q", "-m", "base");
+  assert.equal(run().status, 0, "no origin/main yet");
   git("update-ref", "refs/remotes/origin/main", "HEAD");
   assert.equal(run().status, 0, "nothing changed");
 
@@ -40,6 +41,14 @@ test("--local: a kit change fails without its declaration, passes with it, and i
   assert.equal(failed.status, 1, "a kit change without a declaration");
   assert.match(failed.stderr, /templates\/src\/kit\/a\.ts/);
   assert.equal(run({ CI: "true" }).status, 0, "CI runs the rule on the pull request instead");
+  assert.equal(run({ NO_FIX_FILE: "true" }).status, 0, "the label, said by hand");
+  git(
+    "update-ref",
+    "refs/remotes/origin/main",
+    git("commit-tree", "-m", "other", git("write-tree").toString().trim()).toString().trim(),
+  );
+  assert.equal(run().status, 0, "no common history with origin/main");
+  git("update-ref", "refs/remotes/origin/main", "HEAD~2");
 
   git(
     "commit",
