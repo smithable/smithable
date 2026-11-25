@@ -702,12 +702,24 @@ const section: JsonSchema = {
         film: {
           type: "object",
           description:
-            "A hero's short silent loop over its picture (an MP4 under public/images/, 3 to 12 seconds, at most 5 MB); the picture shows first and for anyone who gets no film. Set it with setSectionFilm.",
+            "A hero's short silent loop over its picture (an MP4 under public/images/, 3 to 12 seconds, at most 5 MB, or a stored film); the picture shows first and for anyone who gets no film. Set it with setSectionFilm.",
           additionalProperties: false,
-          required: ["src"],
           properties: {
             // FILM_SRC in content.ts: no empty or dot-led part, so no way out of images/.
             src: { type: "string", pattern: "^images/([\\w-][\\w.-]*/)*[\\w-][\\w.-]*\\.mp4$" },
+            asset: {
+              type: "string",
+              pattern: "^m_[0-9a-hjkmnp-tv-z]{26}$",
+              description:
+                "A stored film from the hosted service's library, in place of src; set by setSectionFilm, never written by hand.",
+            },
+            heights: {
+              type: "array",
+              description: "A stored film's renditions by height, lowest first; from its record.",
+              items: { enum: [720, 1080] },
+              minItems: 1,
+              maxItems: 2,
+            },
             generated: {
               type: "boolean",
               description: "Made by an AI: its own origin, not the picture's.",

@@ -3,6 +3,8 @@ import {
   ASSET_ID,
   ASSISTANT_TEXTS,
   derivedTexts,
+  FILM_HEIGHTS,
+  FILM_SECONDS,
   FILM_SRC,
   IMAGE_SRC,
   LANGUAGES,
@@ -718,11 +720,6 @@ function renditionOf({ width, widths = [] }: { width: number; widths?: number[] 
 }
 
 /**
- * A hero's film (section-film.md): a short silent loop over its picture. Only the name is checked
- * here; the host reads the file's bytes. A new picture drops the film (setSectionPicture), since it
- * was made to play over the old one.
- */
-/**
  * Takes stored files out of every place that names them, in one change and so one undo step: the
  * hosted service's take-off after the owner deleted them (media-storage.md §2). A section's own
  * picture goes; a gallery's or media-and-text section's item goes with its caption, the highest
@@ -813,7 +810,28 @@ function emptyPlace(editor: YamlEditor, at: string[]) {
 const sectionKind = (ir: SpecIR, page?: string, section?: string) =>
   ir.pages.find((p) => p.id === page)?.sections.find((s) => s.name === section)?.kind;
 
-const setSectionFilm: Operation<{ page: string; section: string; src?: string }> = {
+/** A stored film's record as the host read it from the service (media-storage.md §7, T1472). */
+interface FilmRecord {
+  width: number;
+  height: number;
+  heights: number[];
+  duration: number;
+  sound: boolean;
+}
+
+/**
+ * A hero's film (section-film.md): a short silent loop over its picture. Only a file's name is
+ * checked here; the host reads its bytes. A stored film (media-storage.md §7) is a person's choice,
+ * never a model's, checked against the record the host gives. A new picture drops the film
+ * (setSectionPicture), since it was made to play over the old one.
+ */
+const setSectionFilm: Operation<{
+  page: string;
+  section: string;
+  src?: string;
+  asset?: string;
+  record?: FilmRecord;
+}> = {
   name: "setSectionFilm",
   sets: ["smithable.content.yml:pages.*.*.image.film"],
   summary:
@@ -832,39 +850,108 @@ const setSectionFilm: Operation<{ page: string; section: string; src?: string }>
         type: "string",
         description: "The file, e.g. images/hero.mp4; none removes the film.",
       },
+      asset: {
+        type: "string",
+        description: "A stored film's id from the photo library, in place of src.",
+        "x-not-for-models": true,
+      },
+      record: {
+        type: "object",
+        description: "The stored film's record from the service: never a caller's.",
+        required: ["width", "height", "heights", "duration", "sound"],
+        additionalProperties: false,
+        properties: {
+          width: { type: "number" },
+          height: { type: "number" },
+          heights: { type: "array", items: { type: "integer" } },
+          duration: { type: "number" },
+          sound: { type: "boolean" },
+        },
+        "x-host": true,
+      },
     },
   },
   positional: ["page", "section", "src"],
-  describe: ({ page, section, src }) =>
-    src
-      ? `Play ${src} over the picture of the ${section} section of ${page}`
+  describe: ({ page, section, src, asset }) =>
+    src || asset
+      ? `Play ${src ?? `stored film ${asset}`} over the picture of the ${section} section of ${page}`
       : `Remove the film of the ${section} section of ${page}`,
   destructive: () => false,
-  apply({ content }, { page, section, src }, ir) {
+  apply({ content }, { page, section, src, asset, record }, ir) {
     const found = ir.pages.find((p) => p.id === page)?.sections.find((s) => s.name === section);
     if (!found) throw new OperationError(`The ${page} page has no section named "${section}".`);
     if (found.kind !== "hero")
       throw new OperationError(`Only a hero takes a film; ${section} is a ${found.kind} section.`);
+    if (src !== undefined && asset !== undefined)
+      throw new OperationError("Give the film's file or a stored film, not both.");
     const film = ["pages", page, section, "image", "film"];
-    if (src === undefined) {
+    if (src === undefined && asset === undefined) {
       if (!content.has(film)) throw new OperationError(`The ${section} section has no film.`);
       content.removeAndPrune(film, 0);
       return [];
     }
-    if (typeof content.get(["pages", page, section, "image", "src"]) !== "string")
+    const image = ["pages", page, section, "image"];
+    if (
+      typeof content.get([...image, "src"]) !== "string" &&
+      typeof content.get([...image, "asset"]) !== "string"
+    )
       throw new OperationError(
         `The ${section} section has no picture: a film plays over one, so set the picture first.`,
       );
-    if (!FILM_SRC.test(src))
+    if (src !== undefined && record)
+      throw new OperationError("A file under public/images/ has no stored record.");
+    if (src !== undefined && !FILM_SRC.test(src))
       throw new OperationError(
         `"${src}" is not an MP4 file under public/images/: give it as images/<file>.mp4.`,
       );
-    // The owner's file: the origin of the film there before says nothing of it.
-    if (content.has(film)) content.set(film, { src });
-    else put(content, film, { src });
+    if (asset !== undefined && !ASSET_ID.test(asset))
+      throw new OperationError(
+        `"${asset}" is not a stored file's id: m_ and 26 letters and digits.`,
+      );
+    const before = content.get(film) as Record<string, YamlValue> | undefined;
+    const same = asset !== undefined && before?.asset === asset;
+    // A new stored film comes with the record the host read; the one already there keeps its own.
+    if (asset !== undefined && !record && !same)
+      throw new OperationError(
+        "A stored film is placed by the hosted service, which knows its record: choose it in Photos and videos.",
+      );
+    // The owner's file: the origin of the film there before says nothing of it. The same stored
+    // film keeps its origin, with its renditions as the record has them now.
+    const value: Record<string, YamlValue> =
+      src !== undefined
+        ? { src }
+        : same
+          ? { ...before, ...(record ? { heights: filmHeights(record) } : {}) }
+          : { asset: asset as string, heights: filmHeights(record as FilmRecord) };
+    if (content.has(film)) content.set(film, value);
+    else put(content, film, value);
     return [];
   },
 };
+
+/**
+ * A stored film's renditions from its record, or why it may not play over a hero
+ * (section-film.md §2, media-storage.md §7). The renditions are the playing rules' size and
+ * silence: the service makes them at most 1080 high and strips their sound, so a larger source, or
+ * one with sound (the record's `sound`, said by the panel), is fine. Only the length is the
+ * source's own. The record says what the service found and made, so no file is read here.
+ */
+function filmHeights({ width, height, heights, duration }: FilmRecord): number[] {
+  if (!(duration >= FILM_SECONDS[0] && duration <= FILM_SECONDS[1]))
+    throw new OperationError(
+      `This video runs ${Number(duration).toFixed(1)} seconds; a hero's film runs ${FILM_SECONDS[0]} to ${FILM_SECONDS[1]}.`,
+    );
+  if (!(width > 0 && height > 0))
+    throw new OperationError(
+      "The service's record of this video has no size. Try again in a moment.",
+    );
+  const made = FILM_HEIGHTS.filter((h) => heights.includes(h));
+  if (!made.length)
+    throw new OperationError(
+      "The service has not made this video's renditions yet. Try again in a moment.",
+    );
+  return made;
+}
 
 /**
  * The release review's Keep (picture-kinds.md §6): the owner keeps a picture an AI made where it

@@ -5,7 +5,7 @@ import type { Spec } from "../engine";
 import { LookSession } from "../first-look";
 import type { Selection } from "../preview";
 import { Button, useMedia } from "../ui";
-import { SectionFilm } from "./SectionFilm";
+import { type FilmChoice, SectionFilm } from "./SectionFilm";
 import { SectionPicture } from "./SectionPicture";
 import { SectionSketch } from "./SectionSketch";
 
@@ -178,7 +178,7 @@ export function SelectedSection({
             picture: pictureValue(section.picture?.image),
             // The film opens with its value too: a film tried on and then removed is undone, not
             // sent again as a removal of a film the section never had.
-            film: section.picture?.image?.film?.src ?? "",
+            film: filmValue(section.picture?.image?.film),
             ...Object.fromEntries(
               section.itemPictures.map(({ index, image }) => [
                 `picture:${index}`,
@@ -262,11 +262,11 @@ export function SelectedSection({
         ),
     );
   // A hero's film, tried on the same way: its file goes in with the change and leaves with its undo.
-  const chooseFilm = (src?: string, file?: { path: string; data: string }) =>
-    attempt("film", src ?? "", (revision) =>
+  const chooseFilm = (picked?: FilmChoice, file?: { path: string; data: string }) =>
+    attempt("film", filmValue(picked), (revision) =>
       api.lookChange(
         "setSectionFilm",
-        { page: section.page, section: section.section, ...(src ? { src } : {}) },
+        { page: section.page, section: section.section, ...picked },
         revision,
         lookProject,
         file,
@@ -398,11 +398,11 @@ export function SelectedSection({
         )}
         {section.kind === "hero" && section.picture?.image && (
           <SectionFilm
-            key={section.picture.image.film?.src ?? ""}
+            key={filmValue(section.picture.image.film)}
             page={section.page}
             section={section.section}
             film={section.picture.image.film}
-            change={(src, file) => void chooseFilm(src, file)}
+            change={(picked, file) => void chooseFilm(picked, file)}
             busy={busy}
           />
         )}
@@ -449,6 +449,10 @@ export function SelectedSection({
 /** A section picture as one value of the form's session: its file and what it shows. */
 const pictureValue = (image: { src?: string; asset?: string; alt?: string } | undefined) =>
   image ? `${image.asset ?? image.src}\n${image.alt ?? ""}` : "";
+
+/** A hero film as one value of the form's session: its file or stored video, or none. */
+const filmValue = (film: { src?: string; asset?: string } | undefined) =>
+  film?.asset ?? film?.src ?? "";
 
 type Box = { left: number; right: number; top: number; bottom: number };
 /**
