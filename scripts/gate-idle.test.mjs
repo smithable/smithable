@@ -67,10 +67,12 @@ test("while its checks run, the log gets the load and the busiest processes", ()
       encoding: "utf8",
     });
     assert.equal(r.status, 0, r.stderr);
-    assert.match(
-      r.stdout,
-      /gate\.sh: \d\d:\d\d load [\d.]+ [\d.]+ [\d.]+; busiest:\n {2}\d+ [\d.]+% \S+ \S+ in /,
-    );
+    assert.match(r.stdout, /gate\.sh: \d\d:\d\d load [\d.]+ [\d.]+ [\d.]+; busiest:\n/);
+    // Under heavy load top may not finish before the gate ends, or a process may exit between top and
+    // ps, so rows are optional (T1553); each row that is there has its pid, its share and a folder.
+    for (const row of r.stdout.split("\n").filter((l) => l.startsWith("  "))) {
+      assert.match(row, /^ {2}\d+ [\d.]+% .* in /);
+    }
     assert.doesNotMatch(r.stdout, / in \//, "no full path");
     assert.equal(idle(home), 0, "the lock is free again");
   } finally {
