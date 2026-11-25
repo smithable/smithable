@@ -6026,6 +6026,7 @@ async function askPanelFlow(dir, base) {
     // The button is on the page before the page runs in the browser, and a click then is lost: click
     // again until the sheet is open.
     await page.reload({ waitUntil: "networkidle" });
+    await hydrated(page);
     for (let tries = 0; tries < 30 * P && !(await sheet.isVisible()); tries++) {
       await page.locator('[data-kit="ask-launch"]').click();
       await sheet.waitFor({ timeout: 1000 }).catch(() => {});
