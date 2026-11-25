@@ -288,7 +288,12 @@ export async function checkStudioSelection(browser, base) {
         response.request().postDataJSON()?.name === "setSectionFilm",
     );
     await filmRow.getByRole("button", { name: "Remove", exact: true }).click();
-    assert.equal((await (await filmRemoved).json()).ok, true);
+    const filmAnswer = await (await filmRemoved).json();
+    assert.equal(
+      filmAnswer.ok,
+      true,
+      `Remove was refused: ${JSON.stringify(filmAnswer).slice(0, 600)}`,
+    );
     await filmRow.getByText("No film: the picture stands still.", { exact: true }).waitFor();
     await sectionForm.getByRole("button", { name: "Cancel", exact: true }).click();
     await sectionForm.waitFor({ state: "hidden" });
