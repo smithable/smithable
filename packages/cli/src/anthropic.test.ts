@@ -146,7 +146,7 @@ test("closed shuts every object schema, and only schemas: a field named properti
   });
 });
 
-test("closed leaves out the bounds structured output refuses on each type, and keeps the rest (T1605)", async () => {
+test("closed leaves out the refused bounds the engine checks on each type, and keeps the rest (T1605)", async () => {
   const { closed } = await import("./anthropic.js");
   expect(
     closed({
@@ -161,8 +161,9 @@ test("closed leaves out the bounds structured output refuses on each type, and k
           items: { type: "string" },
         },
         one: { type: "array", minItems: 1, items: { type: "string", minLength: 1, maxLength: 9 } },
-        count: { type: "integer", minimum: 0, maximum: 9, multipleOf: 1 },
-        share: { type: ["number", "null"], exclusiveMinimum: 0, exclusiveMaximum: 1 },
+        count: { type: "integer", minimum: 0, maximum: 9 },
+        share: { type: ["number", "null"], maximum: 1, exclusiveMinimum: 0 },
+        type: { type: "object", maxProperties: 2, properties: { a: { type: "string" } } },
         word: { type: "string", minimum: 1, pattern: "^a" },
       },
     }),
@@ -173,7 +174,14 @@ test("closed leaves out the bounds structured output refuses on each type, and k
       list: { type: "array", items: { type: "string" } },
       one: { type: "array", minItems: 1, items: { type: "string", minLength: 1, maxLength: 9 } },
       count: { type: "integer" },
-      share: { type: ["number", "null"] },
+      // Checked nowhere, so kept: the API refuses it and the request goes again without it.
+      share: { type: ["number", "null"], exclusiveMinimum: 0 },
+      type: {
+        type: "object",
+        maxProperties: 2,
+        properties: { a: { type: "string" } },
+        additionalProperties: false,
+      },
       word: { type: "string", minimum: 1, pattern: "^a" },
     },
   });

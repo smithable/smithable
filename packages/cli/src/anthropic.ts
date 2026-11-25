@@ -122,7 +122,7 @@ export function anthropic(
 /**
  * The schema as structured output takes it: every object that lists its properties closed to
  * others (additionalProperties: false), which it requires, and without the bounds it refuses on
- * each type (REFUSED, T1605). The answer is still checked against the whole schema by its caller,
+ * each type that the engine checks itself (REFUSED, T1605). The answer is still checked against the whole schema by its caller,
  * so a bound left out here is kept there. A map of any keys stays as it is, and the API refuses
  * it, so the request goes again without structured output.
  */
@@ -143,7 +143,7 @@ export function closed(schema: unknown): unknown {
   ) as Record<string, unknown>;
   if (out.properties && out.additionalProperties === undefined) out.additionalProperties = false;
   for (const type of [out.type].flat())
-    for (const key of REFUSED[type as string] ?? []) delete out[key];
+    for (const key of REFUSED.get(type as string) ?? []) delete out[key];
   if (typeof out.minItems === "number" && out.minItems > 1 && [out.type].flat().includes("array"))
     delete out.minItems;
   return out;
@@ -152,16 +152,19 @@ export function closed(schema: unknown): unknown {
 const VALUES = new Set(["enum", "const", "default", "examples"]);
 
 /**
- * The keywords structured output refuses with a 400, by the type they sit on (a probe of each,
- * 2026-11-25); minItems is refused above 1 too. On another type (a string's minimum) they pass.
+ * The bounds structured output refuses with a 400 (a probe of each keyword, 2026-11-25), by the
+ * type they sit on, that the engine checks on every answer (checkJson in core, or the caller's
+ * own cut); minItems is refused above 1 too. On another type (a string's minimum) they pass. The
+ * other refused bounds (exclusiveMinimum, exclusiveMaximum, multipleOf, maxProperties, contains,
+ * prefixItems) are checked nowhere, so they stay: a schema that uses one is refused and sent again
+ * without structured output, rather than lose its bound.
  */
-const NUMBER_BOUNDS = ["minimum", "maximum", "exclusiveMinimum", "exclusiveMaximum", "multipleOf"];
-const REFUSED: Record<string, string[]> = {
-  array: ["maxItems", "uniqueItems", "contains", "prefixItems"],
-  number: NUMBER_BOUNDS,
-  integer: NUMBER_BOUNDS,
-  object: ["minProperties", "maxProperties"],
-};
+const REFUSED = new Map([
+  ["array", ["maxItems", "uniqueItems"]],
+  ["number", ["minimum", "maximum"]],
+  ["integer", ["minimum", "maximum"]],
+  ["object", ["minProperties"]],
+]);
 
 /**
  * Whether structured output can take the schema: a map keyed by an app's own names
