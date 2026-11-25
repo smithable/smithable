@@ -29,6 +29,8 @@ import {
  * not through Studio.
  */
 const TOKEN = "studio-token-for-the-host-test";
+const FELL_BACK =
+  "The description could not be used this time: no AI model is available. This is the crm starter; describe changes to it below.";
 const root = new URL("../../../", import.meta.url).pathname;
 const bin = join(root, "packages/cli/dist/bin.js");
 
@@ -86,6 +88,9 @@ function hosted(given: "stdin" | "env") {
     mkdirSync(join(dir, "node_modules/.bin"), { recursive: true });
     writeFileSync(join(dir, "node_modules/.bin/vite"), fakeVite);
     chmodSync(join(dir, "node_modules/.bin/vite"), 0o755);
+    // A hosted workspace whose description fell back to the starter leaves why (T1577).
+    mkdirSync(join(dir, "data/.smithable"), { recursive: true });
+    writeFileSync(join(dir, "data/.smithable/notice.txt"), `${FELL_BACK}\n`);
     const args = [bin, "studio", dir, "--host", "127.0.0.1", "--port", String(port)];
     studio = spawn(process.execPath, given === "stdin" ? [...args, "--secrets-stdin"] : args, {
       env: given === "env" ? { ...process.env, SMITHABLE_STUDIO_TOKEN: TOKEN } : process.env,
@@ -146,6 +151,22 @@ function hosted(given: "stdin" | "env") {
     expect(await status({ "x-smithable-studio-token": preview })).toBe(401);
     expect(await status({ [PREVIEW_TOKEN_HEADER]: preview })).toBe(401);
     expect(await status({})).toBe(401);
+  });
+
+  test("a fallback to the starter is said in every read of the project, the notice in one", async () => {
+    const read = async () =>
+      (await (
+        await fetch(`http://127.0.0.1:${port}/api/project`, {
+          headers: { "x-smithable-studio-token": TOKEN },
+        })
+      ).json()) as { notice?: string; fallback?: string };
+    const first = await read();
+    const second = await read();
+    expect(first.fallback).toBe(FELL_BACK);
+    expect(second.fallback).toBe(FELL_BACK);
+    // The page's message comes once, whichever read was first.
+    expect(second.notice).toBeUndefined();
+    expect(existsSync(join(dir, "data/.smithable/notice.txt"))).toBe(false);
   });
 }
 
