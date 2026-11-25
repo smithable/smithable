@@ -541,18 +541,26 @@ export const projectMedia = (dir: string, path: string): Buffer | undefined =>
  */
 export function projectPhotos(dir: string): string[] {
   const images = join(dir, "public", "images");
-  for (const path of [join(dir, "public"), images])
-    if (!existsSync(path) || !lstatSync(path).isDirectory()) return [];
-  // A file removed while the folder is read is left out, never a failed list.
-  const isFile = (name: string) => {
+  // A folder or file removed while it is read is left out, never a failed list.
+  const is = (path: string, kind: "isFile" | "isDirectory") => {
     try {
-      return lstatSync(join(images, name)).isFile();
+      return lstatSync(path)[kind]();
     } catch {
       return false;
     }
   };
-  return readdirSync(images)
-    .filter((name) => /^[\w-][\w.-]*\.(webp|avif|jpe?g|png)$/i.test(name) && isFile(name))
+  if (!is(join(dir, "public"), "isDirectory") || !is(images, "isDirectory")) return [];
+  let names: string[];
+  try {
+    names = readdirSync(images);
+  } catch {
+    return [];
+  }
+  return names
+    .filter(
+      (name) =>
+        /^[\w-][\w.-]*\.(webp|avif|jpe?g|png)$/i.test(name) && is(join(images, name), "isFile"),
+    )
     .sort()
     .map((name) => `images/${name}`);
 }

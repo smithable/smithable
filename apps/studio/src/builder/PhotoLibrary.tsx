@@ -44,12 +44,12 @@ export function PhotoLibrary({
   const held = busy || !!working;
   // Closed or gone (another section chosen): a wait that ends later places nothing.
   const open = useRef(true);
-  useEffect(
-    () => () => {
+  useEffect(() => {
+    open.current = true;
+    return () => {
       open.current = false;
-    },
-    [],
-  );
+    };
+  }, []);
 
   const upload = async (file: File | undefined) => {
     setSaid(undefined);
