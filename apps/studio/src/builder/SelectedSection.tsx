@@ -176,6 +176,9 @@ export function SelectedSection({
           values: {
             ...Object.fromEntries(section.choices.map((c) => [c.key, c.current])),
             picture: pictureValue(section.picture?.image),
+            // The film opens with its value too: a film tried on and then removed is undone, not
+            // sent again as a removal of a film the section never had.
+            film: section.picture?.image?.film?.src ?? "",
             ...Object.fromEntries(
               section.itemPictures.map(({ index, image }) => [
                 `picture:${index}`,

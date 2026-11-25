@@ -1,5 +1,5 @@
-// Studio's words for the AI badge (docs/design/picture-kinds.md §1, §3 and §4). PLACEHOLDER: the
-// overlay's wording is reviewed (Fable's wording task) before it ships; only this file changes then.
+// Studio's words for the AI badge (docs/design/picture-kinds.md §1, §3 and §4), the overlay's in
+// their reviewed wording.
 import type { PictureKind } from "@smithable/core";
 
 export const KIND_WORDS: Record<PictureKind, string> = {
@@ -14,21 +14,19 @@ export const BADGE_WORDS = {
   notYet: "not yet",
   overlayTitle: "The AI badge",
   overlay: [
-    "The badge is the EU's common label for content an AI made: on a large picture the label with its words, on a small one the icon alone.",
-    "It comes from the EU's code of practice on marking and labelling AI-generated content.",
-    "Studio's preview hides it. The published app shows it by default on AI pictures that look real, not on drawn ones.",
-    "You can switch it off. Whether your audience must be told an AI made a picture is your responsibility.",
+    "The badge is one of the EU's icons for labelling content made or altered by AI: on a large picture the icon with its words, on a small one the icon alone.",
+    "It comes from the EU's Code of Practice on Transparency of AI-generated Content. This icon is optional, even where the EU's AI Act requires that people are told.",
+    "Studio's preview hides it. The published app shows it by default on AI pictures that look real, not on drawn ones. That default is Smithable's choice, not a reading of the law.",
+    "You can switch it off. Where the EU's AI Act applies, it requires that people are told when a picture made or altered by AI resembles an existing person, place, object, entity or event and would falsely appear authentic. Studio cannot judge whether a picture meets that test.",
     "Each picture's file says in its own metadata that an AI made it, whatever the switch says.",
   ],
-  // The rule's own page, set with the reviewed wording; no link is drawn while it is empty.
-  rule: "",
+  rule: "https://digital-strategy.ec.europa.eu/en/policies/eu-icons-labelling-ai-generated-content",
   close: "Close",
   switchLabel: "AI badge",
   byKind: "By each picture's kind",
   on: "On every AI picture",
   off: "Off",
-  confirmOff:
-    "The app has AI pictures that look real. Whether its audience must be told an AI made them is your responsibility.",
+  confirmOff: "Switching the badge off does not change what the EU's AI Act requires.",
   confirmOffYes: "Switch it off",
   confirmOffNo: "Keep it",
   showHere: "Show AI badges here",
