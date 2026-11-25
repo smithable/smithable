@@ -210,6 +210,7 @@ async function open(page, url) {
   // public: every line loses an address's query, fragment and sign-in, and anything long enough to
   // be a token.
   const seen = [];
+  const net = [];
   const vite = [];
   const redact = (line) =>
     line
@@ -220,17 +221,20 @@ async function open(page, url) {
   const add = (list, max, line) => list.length < max && list.push(clean(line));
   const where = (address) => address.split(/[?#]/)[0];
   const onConsole = (m) => {
+    // Chrome says each failed request again as "Failed to load resource"; the request lines have it.
+    if (m.text().startsWith("Failed to load resource")) return;
     if (m.type() === "error") add(seen, 10, `error: ${m.text()}`);
     // The last four, so a reload late in the load is not crowded out by the first connects.
     else if (m.text().startsWith("[vite]")) vite.push(clean(m.text())) > 4 && vite.shift();
   };
   const onError = (e) => add(seen, 10, `pageerror: ${e.message}`);
-  // A request a reload cut off is not why a page failed.
+  // Requests have their own cap, so a run of failed ones never hides a page error. One a reload cut
+  // off is not why a page failed.
   const onFailed = (r) => {
     const why = r.failure()?.errorText ?? "";
-    if (!why.includes("ERR_ABORTED")) add(seen, 10, `failed: ${where(r.url())} ${why}`);
+    if (!why.includes("ERR_ABORTED")) add(net, 5, `failed: ${where(r.url())} ${why}`);
   };
-  const onResponse = (r) => r.status() >= 500 && add(seen, 10, `${r.status()}: ${where(r.url())}`);
+  const onResponse = (r) => r.status() >= 500 && add(net, 5, `${r.status()}: ${where(r.url())}`);
   page.on("console", onConsole);
   page.on("pageerror", onError);
   page.on("requestfailed", onFailed);
@@ -241,7 +245,7 @@ async function open(page, url) {
     await hydrated(page);
   } catch (error) {
     // On the first line, the one a failure's report prints; Playwright's call log stays below it.
-    const saw = [...seen, ...vite];
+    const saw = [...seen, ...net, ...vite];
     if (error instanceof Error && saw.length) {
       const [first, ...rest] = error.message.split("\n");
       error.message = [`${redact(first)} (the page saw: ${saw.join(" | ")})`, ...rest].join("\n");
