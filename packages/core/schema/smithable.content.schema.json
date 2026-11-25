@@ -364,11 +364,8 @@
                   "type": "object",
                   "description": "A hero's short silent loop over its picture (an MP4 under public/images/, 3 to 12 seconds, at most 5 MB, or a stored film); the picture shows first and for anyone who gets no film. Set it with setSectionFilm.",
                   "additionalProperties": false,
-                  "oneOf": [
-                    {
-                      "required": [
-                        "src"
-                      ],
+                  "dependencies": {
+                    "src": {
                       "not": {
                         "anyOf": [
                           {
@@ -384,16 +381,27 @@
                         ]
                       }
                     },
+                    "asset": [
+                      "heights"
+                    ],
+                    "heights": [
+                      "asset"
+                    ]
+                  },
+                  "allOf": [
                     {
-                      "required": [
-                        "asset",
-                        "heights"
-                      ],
-                      "not": {
-                        "required": [
-                          "src"
-                        ]
-                      }
+                      "anyOf": [
+                        {
+                          "required": [
+                            "src"
+                          ]
+                        },
+                        {
+                          "required": [
+                            "asset"
+                          ]
+                        }
+                      ]
                     }
                   ],
                   "properties": {
