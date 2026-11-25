@@ -233,6 +233,7 @@ busiest() {
   top -b -n 2 -d 1 -o %CPU -w 250 2>/dev/null | awk '/^top -/ { f++ } f == 2 && $1 ~ /^[0-9]+$/ { print $1, $9 }' |
     head -5 | while read -r pid cpu; do
       dir=$(readlink "/proc/$pid/cwd" 2>/dev/null) || dir=-
+      [ "$dir" != / ] || dir=root
       echo "  $pid $cpu% $(stat -c %U "/proc/$pid" 2>/dev/null) $(ps -o comm= -p "$pid" 2>/dev/null) in ${dir##*/}"
     done
 }
