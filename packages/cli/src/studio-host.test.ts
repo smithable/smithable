@@ -140,6 +140,8 @@ function hosted(given: "stdin" | "env") {
     // Another text acknowledged leaves it.
     expect((await ack("an older notice")).status).toBe(200);
     const still = await read();
+    // Kept on disk until then, for a Studio started again before Builder showed it.
+    expect(existsSync(join(dir, "data/.smithable/notice.txt"))).toBe(true);
     expect((await ack(FELL_BACK)).status).toBe(200);
     const second = await read();
     for (const answer of [probe, first, still, second]) expect(answer.fallback).toBe(FELL_BACK);
@@ -224,6 +226,8 @@ describe("the fallback to the starter, across restarts and a replacement", () =>
   const project = async () =>
     (await (await call("/api/project")).json()) as { notice?: string; fallback?: string };
   const start = async (replaceable: boolean) => {
+    // The warm-up below is this start's own, not the last one's.
+    rmSync(join(dir, "seen.jsonl"), { force: true });
     const args = [bin, "studio", dir, "--host", "127.0.0.1", "--port", String(port)];
     studio = spawn(
       process.execPath,
@@ -291,7 +295,18 @@ describe("the fallback to the starter, across restarts and a replacement", () =>
     expect(first.notice).toBe(FELL_BACK);
     await stop();
 
-    // Started again (a workspace woken): the reason holds, and the one-time notice is not repeated.
+    // Started again before Builder showed it: the notice is still there (T1599).
+    const unseen = await start(true);
+    expect(unseen.fallback).toBe(FELL_BACK);
+    expect(unseen.notice).toBe(FELL_BACK);
+    const seen = await call("/api/notice/seen", {
+      method: "POST",
+      body: JSON.stringify({ text: FELL_BACK }),
+    });
+    expect(seen.status).toBe(200);
+    await stop();
+
+    // Started again (a workspace woken): the reason holds, and the notice shown is not repeated.
     const again = await start(true);
     expect(again.fallback).toBe(FELL_BACK);
     expect(again.notice).toBeUndefined();
