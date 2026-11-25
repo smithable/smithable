@@ -25,6 +25,7 @@ import {
   holdSecretsFromJson,
   loadsNoProjectCode,
   modelKey,
+  ownFolder,
   readOwn,
   readTree,
   readTreeOrNone,
@@ -366,3 +367,58 @@ test("a file of the tree read by this process is not read through a link the pro
   expect(readOwn(join(tree, "plain.txt"))).toBe("a notice");
   expect(() => readOwn(join(tree, "plain.txt"), 4)).toThrow("larger than");
 });
+
+// Studio runs as one uid and its children as the project user's (the workspace); a file Studio
+// writes in the staged app is Studio's own, which a tree read refused on beta (T1614).
+test.runIf(process.platform === "linux" && process.getuid?.() !== 0)(
+  "a folder this process made is read as its own while marked, and nothing through a link",
+  async () => {
+    process.env.SMITHABLE_PROJECT_UID = "0";
+    process.env.SMITHABLE_PROJECT_GID = "0";
+    const base = mkdtempSync(join(tmpdir(), "smithable-own-"));
+    dirs.push(base);
+    const staged = join(base, "project.incoming");
+    const outside = join(base, "project");
+    mkdirSync(staged, { mode: 0o2775 });
+    mkdirSync(outside);
+    // Never a folder through a link, which a project process could have put at the name.
+    symlinkSync(staged, join(base, "linked.incoming"));
+    expect(() => ownFolder(join(base, "linked.incoming"))).toThrow();
+    const content = join(staged, "smithable.content.yml");
+    writeFileSync(content, "smithableContent: 0.1\nhome:\n  hero:\n    image: images/hero.webp\n");
+    writeFileSync(join(outside, "secret.txt"), "not this\n");
+    symlinkSync(outside, join(staged, "node_modules"));
+    symlinkSync(join(outside, "secret.txt"), join(staged, "linked.txt"));
+    writeFileSync(join(staged, "two.txt"), "two names\n");
+    linkSync(join(staged, "two.txt"), join(staged, "also-two.txt"));
+    // Unmarked, the file is this process's, not the project user's: refused, as on beta.
+    expect(() => readTree(content)).toThrow("is not a file the child made");
+    const unmark = ownFolder(staged);
+    // Its group's and no one else's to write in, without the setgid it took from its parent.
+    expect(statSync(staged).mode & 0o7777).toBe(0o755);
+    try {
+      expect(readTree(content)?.toString()).toContain("smithableContent");
+      const { dropMissingPictures } = await import("./pictures.js");
+      const said: string[] = [];
+      dropMissingPictures(staged, { out: () => {}, err: (text) => said.push(text) });
+      expect(readTree(content)?.toString()).not.toContain("hero.webp");
+      // Through the link it holds into the project, at the end or as a folder: the project's rules.
+      expect(() => readTree(join(staged, "node_modules", "secret.txt"))).toThrow(
+        "is not a file the child made",
+      );
+      expect(() => readTree(join(staged, "linked.txt"))).toThrow();
+      expect(() => readTree(join(staged, "two.txt"))).toThrow("is not a file the child made");
+      // Known by the folder held open, not its name: moved away and replaced, the name is not it.
+      renameSync(staged, join(base, "moved"));
+      mkdirSync(staged);
+      writeFileSync(content, "smithableContent: 0.1\n");
+      expect(() => readTree(content)).toThrow("is not a file the child made");
+      expect(readTree(join(base, "moved", "smithable.content.yml"))?.toString()).toContain(
+        "smithableContent",
+      );
+    } finally {
+      unmark();
+    }
+    expect(() => readTree(content)).toThrow("is not a file the child made");
+  },
+);

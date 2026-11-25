@@ -30,7 +30,7 @@ import {
   withoutSampleDomains,
   withTimeZone,
 } from "./new.js";
-import { treeText } from "./secrets.js";
+import { ownFolder, treeText } from "./secrets.js";
 import { removeTree, writeTreeFile } from "./tree-files.js";
 import type { WebsiteGenerationInput, WebsiteGenerationOptions } from "./website-input.js";
 
@@ -285,9 +285,13 @@ export async function replaceProject(
     installed: true,
   };
   const beside = `${resolve(dir)}.incoming`;
+  // Studio's own folder until sync: its files are read as Studio's, not the project user's (T1614).
+  let unmark = () => {};
   const fresh = () => {
+    unmark();
     rmSync(beside, { recursive: true, force: true });
-    mkdirSync(beside, { recursive: true });
+    mkdirSync(beside, { recursive: true, mode: 0o755 });
+    unmark = ownFolder(beside);
     symlinkSync(join(resolve(dir), "node_modules"), join(beside, "node_modules"));
     const lock = join(dir, "pnpm-lock.yaml");
     if (existsSync(lock)) copyFileSync(lock, join(beside, "pnpm-lock.yaml"));
@@ -375,11 +379,13 @@ export async function replaceProject(
     }
     control?.beforeArrival();
     progress("arriving");
+    unmark();
     sync(beside, dir);
     if (!control) removeTree(join(dir, ".git"));
     reopenDatabase(dir);
     return 0;
   } finally {
+    unmark();
     rmSync(beside, { recursive: true, force: true });
   }
 }
