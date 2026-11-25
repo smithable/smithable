@@ -221,17 +221,19 @@ describe("the fallback to the starter, across restarts and a replacement", () =>
         existsSync(join(dir, "seen.jsonl")) &&
         readFileSync(join(dir, "seen.jsonl"), "utf8").includes('"url"'),
     );
-    // The first read Studio answers is the test's: it is the one the one-time notice goes to.
+    // Ready when it refuses a read without the token, which reads nothing; then the test's read
+    // is the first, the one the one-time notice goes to.
     const end = Date.now() + 30_000;
-    for (;;) {
-      const answer = await call("/api/project", { signal: AbortSignal.timeout(5000) }).catch(
-        () => undefined,
+    const refuses = () =>
+      fetch(`http://127.0.0.1:${port}/api/project`, { signal: AbortSignal.timeout(5000) }).then(
+        (answer) => answer.status === 401,
+        () => false,
       );
-      if (answer?.status === 200)
-        return (await answer.json()) as Awaited<ReturnType<typeof project>>;
+    while (!(await refuses())) {
       if (Date.now() > end) throw new Error("Studio did not answer");
       await new Promise((done) => setTimeout(done, 200));
     }
+    return project();
   };
   const stop = async () => {
     expect(await stopStudioFixture(studio, dir)).toBe(true);
