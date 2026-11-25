@@ -199,11 +199,64 @@ async function hydrated(page) {
   );
 }
 
-/** Opens a page and waits until it is interactive: the dev server loads code on demand. */
+/**
+ * Opens a page and waits until it is interactive: the dev server loads code on demand. A page that
+ * never gets there says what it saw on the failure's own line (T1568, T1523: a page that did not
+ * hydrate in two minutes): its errors, requests that failed or answered 5xx, and the dev server's
+ * own lines (a dependency optimized mid-load reloads the page).
+ */
 async function open(page, url) {
-  await page.goto(url);
-  await page.waitForLoadState("networkidle");
-  await hydrated(page);
+  // The dev server's routine lines are capped apart, so they never crowd out an error. CI's log is
+  // public: every line loses an address's query, fragment and sign-in, and anything long enough to
+  // be a token.
+  const seen = [];
+  const net = [];
+  const vite = [];
+  const redact = (line) =>
+    line
+      .replace(/\/\/[^/\s@]+@/g, "//")
+      .replace(/((?:https?:)?\/[^\s?#"'`]*)[?#]\S*/g, "$1?…")
+      .replace(/[A-Za-z0-9_\-+=]{32,}/g, "…");
+  const clean = (line) => redact(line.replace(/\s+/g, " ")).slice(0, 160);
+  const add = (list, max, line) => list.length < max && list.push(clean(line));
+  const where = (address) => address.split(/[?#]/)[0];
+  const onConsole = (m) => {
+    // Chrome says each failed request again as "Failed to load resource"; the request lines have it.
+    if (m.text().startsWith("Failed to load resource")) return;
+    if (m.type() === "error") add(seen, 10, `error: ${m.text()}`);
+    // The last four, so a reload late in the load is not crowded out by the first connects.
+    else if (m.text().startsWith("[vite]")) vite.push(clean(m.text())) > 4 && vite.shift();
+  };
+  const onError = (e) => add(seen, 10, `pageerror: ${e?.message || String(e)}`);
+  // Requests have their own cap, so a run of failed ones never hides a page error. One a reload cut
+  // off is not why a page failed.
+  const onFailed = (r) => {
+    const why = r.failure()?.errorText ?? "";
+    if (!why.includes("ERR_ABORTED")) add(net, 5, `failed: ${where(r.url())} ${why}`);
+  };
+  const onResponse = (r) => r.status() >= 400 && add(net, 5, `${r.status()}: ${where(r.url())}`);
+  page.on("console", onConsole);
+  page.on("pageerror", onError);
+  page.on("requestfailed", onFailed);
+  page.on("response", onResponse);
+  try {
+    await page.goto(url);
+    await page.waitForLoadState("networkidle");
+    await hydrated(page);
+  } catch (error) {
+    // On the first line, the one a failure's report prints; Playwright's call log stays below it.
+    const saw = [...seen, ...net, ...vite];
+    if (error instanceof Error && saw.length) {
+      const [first, ...rest] = error.message.split("\n");
+      error.message = [`${redact(first)} (the page saw: ${saw.join(" | ")})`, ...rest].join("\n");
+    }
+    throw error;
+  } finally {
+    page.off("console", onConsole);
+    page.off("pageerror", onError);
+    page.off("requestfailed", onFailed);
+    page.off("response", onResponse);
+  }
 }
 
 /** Chooses a related record in a searchable field: type part of its name, click it. */
