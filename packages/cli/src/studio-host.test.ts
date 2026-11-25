@@ -117,19 +117,35 @@ function hosted(given: "stdin" | "env") {
   }, 15_000);
 
   // First, so it makes the first read of the project itself.
-  test("a fallback to the starter is said in every read of the project, the notice in one", async () => {
+  test("a fallback to the starter is said in every read of the project, the notice until Builder showed it", async () => {
     const read = async () =>
       (await (
         await fetch(`http://127.0.0.1:${port}/api/project`, {
           headers: { "x-smithable-studio-token": TOKEN },
         })
       ).json()) as { notice?: string; fallback?: string };
+    const ack = (text: string) =>
+      fetch(`http://127.0.0.1:${port}/api/notice/seen`, {
+        method: "POST",
+        headers: {
+          "x-smithable-studio-token": TOKEN,
+          "Content-Type": "application/json",
+          "X-Smithable": "1",
+        },
+        body: JSON.stringify({ text }),
+      });
+    // A probe's read (the release smoke's) does not take the page's message (T1599).
+    const probe = await read();
     const first = await read();
+    // Another text acknowledged leaves it.
+    expect((await ack("an older notice")).status).toBe(200);
+    const still = await read();
+    expect((await ack(FELL_BACK)).status).toBe(200);
     const second = await read();
-    expect(first.fallback).toBe(FELL_BACK);
-    expect(second.fallback).toBe(FELL_BACK);
-    // The page's message comes once, to the first read.
+    for (const answer of [probe, first, still, second]) expect(answer.fallback).toBe(FELL_BACK);
+    expect(probe.notice).toBe(FELL_BACK);
     expect(first.notice).toBe(FELL_BACK);
+    expect(still.notice).toBe(FELL_BACK);
     expect(second.notice).toBeUndefined();
     expect(existsSync(join(dir, "data/.smithable/notice.txt"))).toBe(false);
     // Kept on disk, for a Studio started again on the same app.

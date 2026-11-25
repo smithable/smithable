@@ -1293,9 +1293,9 @@ export async function studio(
           notice =
             "The dev data is back as it was before the fix was opened: what changed in it while the fix was open is gone.";
         }
-        const answer = state();
-        notice = undefined;
-        return json(answer);
+        // The one-time notice stays until Builder says it showed it (/api/notice/seen), so a read
+        // that is not the page's (the release smoke's probe) does not take it (T1599).
+        return json(state());
       }
       // The app card, written from the spec files as `smithable card` writes it (A 233).
       if (url.pathname === "/api/card" && req.method === "GET") return json(cardTexts(dir));
@@ -1761,6 +1761,13 @@ export async function studio(
           ...themeChange,
           ...(diagnostics ? { diagnostics } : {}),
         });
+      }
+      // Builder showed the one-time notice: it is not given again. Only that text, so a newer notice
+      // that came meanwhile stays to be shown (T1599).
+      if (req.method === "POST" && url.pathname === "/api/notice/seen") {
+        const { text } = await body();
+        if (typeof text === "string" && text === notice) notice = undefined;
+        return json({ ok: true });
       }
       // The preview has not answered within Studio's wait: its last log lines, and the failure
       // kept for a report (seen on the hosted beta: a preview that never started).

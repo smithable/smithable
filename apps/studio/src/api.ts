@@ -633,6 +633,8 @@ export const api = {
       choice,
     }),
   /** The preview did not answer: its last log lines, and whether a report is offered or sent. */
+  /** Builder showed Studio's one-time notice: it is not given again (T1599). */
+  noticeSeen: (text: string) => call<{ ok: boolean }>("/api/notice/seen", { text }),
   previewStuck: () => call<{ log: string[]; report?: "offer" }>("/api/preview/stuck", {}),
   previewAnswers: () => call<{ ok: boolean }>("/api/preview/answers"),
   /** Starts the preview's server again; `why` goes to the log. */
