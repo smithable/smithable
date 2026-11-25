@@ -1,0 +1,64 @@
+#!/usr/bin/env bash
+# Refuses a push (T1509) when either check below fails. It is on only in the maintainers' clones
+# (scripts/git-hooks.mjs); an outside contributor's clone and CI never run it.
+#
+#   1. The secret scan: gitleaks, with main's rules, over the commits the remote does not have yet.
+#      It needs Docker.
+#   2. The tests: lint, build and unit tests must have passed on the pushed tree, recorded by
+#      scripts/verify.sh, or by a gate that exits 0. A push needs no record when it is:
+#      - plain documents only (ci.yml's list);
+#      - a merge of main into a branch head that is already on the remote, or whose own tree has one.
+#      CI runs on either of those.
+#
+# Each refusal prints the one command to run.
+set -uo pipefail
+zero=0000000000000000000000000000000000000000
+image=ghcr.io/gitleaks/gitleaks:v8.30.1@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f
+remote=${1:-origin}
+git remote | grep -qxF "$remote" || remote=origin # pushed to a URL
+common=$(git rev-parse --path-format=absolute --git-common-dir)
+refuse() {
+  echo "pre-push: not pushed: $1" >&2
+  echo "Run: $2" >&2
+  exit 1
+}
+marked() { [ -e "$common/verified/$(git rev-parse "$1^{tree}")" ]; }
+plain_docs() { # $1 base, $2 head: 0 when every changed file is on ci.yml's plain-documents list
+  local globs=() excludes=() glob
+  mapfile -t globs < <(git show origin/main:.github/workflows/ci.yml 2>/dev/null |
+    sed -n '/# plain docs: begin/,/# plain docs: end/s/^ *- "\(.*\)"$/\1/p')
+  [ ${#globs[@]} -gt 0 ] || return 1
+  for glob in "${globs[@]}"; do excludes+=(":(glob,exclude)$glob"); done
+  [ -n "$(git diff --name-only --no-renames "$1" "$2")" ] || return 1
+  [ -z "$(git diff --name-only --no-renames "$1" "$2" -- . "${excludes[@]}")" ]
+}
+merge_of_main() { # $1 head, $2 the remote's old head: 0 when $1 only brings main into a tested head
+  local parents
+  read -r -a parents <<<"$(git rev-list --parents -n 1 "$1")"
+  [ ${#parents[@]} -eq 3 ] || return 1
+  git merge-base --is-ancestor "${parents[2]}" origin/main || return 1
+  [ "${parents[1]}" = "$2" ] || marked "${parents[1]}"
+}
+
+while read -r _ lsha _ rsha; do
+  [ "$lsha" = "$zero" ] && continue # a branch deleted
+  docker info >/dev/null 2>&1 ||
+    refuse "the secret scan needs Docker, which is not running." "start Docker, then push again"
+  rules=$(mktemp)
+  git show origin/main:.github/gitleaks.toml > "$rules" 2>/dev/null ||
+    printf '[extend]\nuseDefault = true\n' > "$rules"
+  # The repository's objects are in the main checkout's .git, whichever worktree this runs in.
+  if ! docker run --rm -v "$(dirname "$common"):/repo:ro" -v "$rules:/cfg.toml:ro" "$image" \
+    git /repo --no-banner --config /cfg.toml --log-opts="$lsha --not --remotes=$remote" >&2; then
+    rm -f "$rules"
+    refuse "the secret scan found something in these commits (above), or could not run." \
+      "remove the secret from the commits (a new commit is not enough), then push again"
+  fi
+  rm -f "$rules"
+  marked "$lsha" && continue
+  base=$(git merge-base origin/main "$lsha" 2>/dev/null) && plain_docs "$base" "$lsha" && continue
+  merge_of_main "$lsha" "$rsha" && continue
+  refuse "lint, build and unit tests have not passed on this tree ($(git rev-parse "$lsha^{tree}"))." \
+    "scripts/verify.sh (commit everything first, or run it on the files as they will be committed)"
+done
+exit 0
