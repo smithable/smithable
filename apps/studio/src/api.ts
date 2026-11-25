@@ -122,6 +122,8 @@ export interface ReleaseReview {
    * of sections with "pictures: work" (picture-kinds.md §6). A suggestion; never holds a release.
    */
   pictures?: { page: string; section: string; item?: number; src: string; alt: string }[];
+  /** The source revision the review was read at, which its pictures' Keep and Remove send. */
+  revision?: string;
   /** Each privacy page's review (legal-page.md §6.4). */
   privacy?: {
     page: string;
@@ -183,6 +185,8 @@ export interface Project {
   home?: string;
   /** A message for the first to open Studio, e.g. why a description could not be used. */
   notice?: string;
+  /** This notice's own id, which Builder acknowledges (T1602). */
+  noticeId?: string;
   /** The hosted beta's facts (smith-first.md §8): a sandbox's end, the invite page, the tester guide. */
   beta?: {
     until?: string;
@@ -479,13 +483,26 @@ export const api = {
     mode?: "sensible" | "everything",
   ) => call<PeopleState>("/api/people", { do: what, ...(mode ? { mode } : {}) }),
   change: (id: string, all = false) => call<ChangeDetail>(`/api/change/${id}${all ? "?all" : ""}`),
-  /** `file`: a picture the change brings, written under its path in the project (base64). */
+  /**
+   * `file`: a picture the change brings, written under its path in the project (base64).
+   * `expectedRevision`: the source revision the caller read; refused when the project changed since.
+   */
   operation: (
     name: string,
     args: Record<string, unknown>,
     confirm = false,
     file?: { path: string; data: string },
-  ) => changing(call<Result>("/api/op", { name, args, confirm, file })),
+    expectedRevision?: string,
+  ) =>
+    changing(
+      call<Result>("/api/op", {
+        name,
+        args,
+        confirm,
+        file,
+        ...(expectedRevision ? { expectedRevision } : {}),
+      }),
+    ),
   /**
    * The look editor's Apply or Save: `lookProject` is the project it opened, and for Apply the
    * envelope carries the source revision the draft was opened on and the request's id, beside
@@ -617,6 +634,8 @@ export const api = {
       send,
       choice,
     }),
+  /** Builder showed Studio's one-time notice: it is not given again (T1599). */
+  noticeSeen: (id: string) => call<{ ok: boolean }>("/api/notice/seen", { id }),
   /** The preview did not answer: its last log lines, and whether a report is offered or sent. */
   previewStuck: () => call<{ log: string[]; report?: "offer" }>("/api/preview/stuck", {}),
   previewAnswers: () => call<{ ok: boolean }>("/api/preview/answers"),

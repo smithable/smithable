@@ -72,8 +72,16 @@ export async function checkStudioGuideSpeech(browser, base) {
       body.speech = [{ name: "browser" }];
       // The app as made (T1163), so the picker opens on a project earlier checks changed.
       body.asMade = true;
-      if (notice) body.notice = "Fixture error while editing.";
-      else delete body.notice;
+      // A notice comes with its own id (T1602); Builder shows only one that has it.
+      if (notice)
+        Object.assign(body, {
+          notice: "Fixture error while editing.",
+          noticeId: "fixture-editing",
+        });
+      else {
+        delete body.notice;
+        delete body.noticeId;
+      }
       await route.fulfill({ response, json: body });
     });
     await page.goto(base);

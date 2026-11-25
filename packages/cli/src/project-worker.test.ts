@@ -1,7 +1,7 @@
 import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, expect, test, vi } from "vitest";
+import { afterEach, expect, test } from "vitest";
 import { loadPlugins, NO_PLUGINS_HERE } from "./plugins.js";
 import { shaped, stepsFor, stopWorkers } from "./project-worker.js";
 import {
@@ -11,11 +11,6 @@ import {
   releaseSecretsForTests,
 } from "./secrets.js";
 import { teach } from "./teach.js";
-
-// Each test starts the project worker, a child process.
-// On a loaded machine (a gate, main's full run) that can take more than the default 5 s;
-// alone it takes a fraction of it (T1481).
-vi.setConfig({ testTimeout: 30_000 });
 
 const TOKEN = "studio-token-7f3a";
 const KEY = "model-key-91bc";

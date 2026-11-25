@@ -3,6 +3,8 @@
 import { ASSET_ID } from "./content.js";
 import { YamlEditor } from "./edit.js";
 
+const whole = (n: unknown): n is number => Number.isInteger(n) && (n as number) > 0;
+
 /** A place in the content file that holds a stored file: its path and the file's id. */
 export interface MediaSlot {
   at: string[];
@@ -15,7 +17,10 @@ export interface MediaUse {
   variants: string[];
 }
 
-/** Every stored file in a parsed content file, where it is (a picture's map with an asset). */
+/**
+ * Every stored file in a parsed content file, where it is: a picture's map with an asset, and a
+ * film inside it as a place of its own (media-storage.md §7), so either can go without the other.
+ */
 export function mediaSlots(
   value: unknown,
   at: string[] = [],
@@ -25,8 +30,10 @@ export function mediaSlots(
     for (const [i, v] of value.entries()) mediaSlots(v, [...at, String(i)], found);
   } else if (value && typeof value === "object") {
     const o = value as Record<string, unknown>;
-    if (typeof o.asset === "string") found.push({ at, asset: o.asset });
-    else for (const [key, v] of Object.entries(o)) mediaSlots(v, [...at, key], found);
+    if (typeof o.asset === "string") {
+      found.push({ at, asset: o.asset });
+      if (o.film && typeof o.film === "object") mediaSlots(o.film, [...at, "film"], found);
+    } else for (const [key, v] of Object.entries(o)) mediaSlots(v, [...at, key], found);
   }
   return found;
 }
@@ -72,11 +79,15 @@ export function broughtMedia(before: { content?: string }, after: { content?: st
   return [...uses(after)].find(([asset, n]) => n > (had.get(asset) ?? 0))?.[0];
 }
 
-/** A slot in words: "the picture of hero on home", "picture 2 of gallery on home". */
+/**
+ * A slot in words: "the picture of hero on home", "picture 2 of gallery on home", "the film of
+ * hero on home".
+ */
 export function slotName({ at }: MediaSlot): string {
   const [top, page, section, ...rest] = at;
   if (top !== "pages" || !page || !section) return `the picture at ${at.join(".")}`;
   const where = `${section} on ${page}`;
+  if (rest.at(-1) === "film") return `the film of ${where}`;
   if (rest[0] === "items" && rest[1] !== undefined)
     return `picture ${Number(rest[1]) + 1} of ${where}`;
   if (rest[0] === "tiles" && rest[1] !== undefined)
@@ -86,7 +97,8 @@ export function slotName({ at }: MediaSlot): string {
 
 /**
  * Each stored file a revision's content file names, by id, with the renditions its values need:
- * `w<n>.webp` for `width` and each of `widths`. The same function serves the workspace's fetch and
+ * `w<n>.webp` for `width` and each of `widths`; a film's `<h>.mp4` for each of `heights`, and
+ * `poster.webp`, which the service always makes (§7). The same function serves the workspace's fetch and
  * the service's publish, so the two never disagree on what is in use. Sorted, so the list is the
  * same for the same file.
  */
@@ -97,19 +109,32 @@ export function mediaInUse(files: { content?: string }): MediaUse[] {
     if (Array.isArray(value)) for (const v of value) walk(v);
     else if (value && typeof value === "object") {
       const o = value as Record<string, unknown>;
-      if (typeof o.asset === "string") {
-        if (!ASSET_ID.test(o.asset)) return;
-        const names = variants.get(o.asset) ?? new Set<string>();
-        const widths = [o.width, ...(Array.isArray(o.widths) ? o.widths : [])];
-        for (const w of widths)
-          if (Number.isInteger(w) && (w as number) > 0) names.add(`w${w}.webp`);
-        variants.set(o.asset, names);
-      } else for (const v of Object.values(o)) walk(v);
+      if (typeof o.asset !== "string") {
+        for (const v of Object.values(o)) walk(v);
+        return;
+      }
+      if (o.film && typeof o.film === "object") walk(o.film);
+      if (!ASSET_ID.test(o.asset)) return;
+      const names = variants.get(o.asset) ?? new Set<string>();
+      const sizes = (v: unknown) => (Array.isArray(v) ? v : []).filter(whole);
+      if (Array.isArray(o.heights)) {
+        for (const h of sizes(o.heights)) names.add(`${h}.mp4`);
+        names.add("poster.webp");
+      } else for (const w of sizes([o.width, ...sizes(o.widths)])) names.add(`w${w}.webp`);
+      variants.set(o.asset, names);
     }
   };
   walk(new YamlEditor(files.content).get([]));
-  const byWidth = (a: string, b: string) => Number(a.slice(1, -5)) - Number(b.slice(1, -5));
+  // Pictures' copies by width, then films' by height, then the poster.
+  const rank = (name: string): [number, number] => [
+    name.startsWith("w") ? 0 : name.endsWith(".mp4") ? 1 : 2,
+    Number.parseInt(name.replace(/^w/, ""), 10) || 0,
+  ];
+  const order = (a: string, b: string) => {
+    const [x, y] = [rank(a), rank(b)];
+    return x[0] - y[0] || x[1] - y[1];
+  };
   return [...variants.entries()]
     .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
-    .map(([asset, names]) => ({ asset, variants: [...names].sort(byWidth) }));
+    .map(([asset, names]) => ({ asset, variants: [...names].sort(order) }));
 }

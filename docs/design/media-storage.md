@@ -174,9 +174,12 @@ A hero's film takes `asset` as its picture does: `film: { asset, heights: [720, 
 `heights` names the MP4 renditions the service made (1080 only from a source at least that tall),
 filled by the operation from the record as a picture's `widths` are; `poster.webp` is always made.
 The film's playing rules stay (silent, 3 to 12 seconds, at most 1920 by 1080): they are the hero's
-design, not a storage limit. For a stored film they are checked by the service when it processes
-the upload, whose record holds the duration, the size and whether there is sound; the operation
-refuses an asset whose record breaks them, so no check needs the file at hand. The five-megabyte
+design, not a storage limit. For a stored film the renditions meet the size and the silence: the
+service makes them at most 1080 high and strips their sound, so the source may be larger and may
+have sound (its record says so, and the panel says the film plays without it). The record holds
+the duration, the source's size, whether it had sound and the renditions made; the operation
+refuses an asset whose length is outside 3 to 12 seconds or with no rendition and poster on
+record, so no check needs the file at hand. The five-megabyte
 cap was for the repository's history and does not apply to a stored film, whose size limit is the
 service's per level. Longer videos with sound, in a section of their own, are not part of this note.
 

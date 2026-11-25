@@ -18,6 +18,7 @@ import { join } from "node:path";
 import { afterEach, expect, test } from "vitest";
 import {
   hostedMediaSource,
+  hostRecord,
   type MediaSource,
   mediaFindings,
   mediaSyncer,
@@ -212,6 +213,9 @@ test("§4 the service's source sends the token read at each fetch and checks not
       res.writeHead(200, { "content-type": "application/json" });
       return res.end(
         JSON.stringify({
+          kind: "image",
+          width: 1600,
+          widths: [960, 480, 1600, -2, "x"],
           variants: { "w480.webp": hash("small"), "../x": hash("x"), "w960.webp": "short" },
         }),
       );
@@ -245,6 +249,9 @@ test("§4 the service's source sends the token read at each fetch and checks not
     expect(await s.fetch("../etc", "w480.webp")).toBeUndefined();
     expect(await s.fetch(ID, "../../x")).toBeUndefined();
     expect(seen).toHaveLength(4);
+    // The sizes for setSectionPicture: the record's, checked; none for a refused file.
+    expect(await s.sizes?.(ID)).toEqual({ width: 1600, widths: [480, 960] });
+    expect(await s.sizes?.("m_01hz8k3q4r5s6t7v8w9x0y1z2c")).toBeUndefined();
   } finally {
     server.close();
   }
@@ -330,4 +337,108 @@ pages:
   expect(done.missing).toEqual([`${ID}/w480.webp`]);
   expect(done.written).toEqual([`${OTHER}/w480.webp`]);
   expect(readdirSync(outside)).toEqual([]);
+});
+
+test("§7 the service's film record: only a video's, a height only with its file, none without the poster", async () => {
+  const records: Record<string, unknown> = {
+    [ID]: {
+      kind: "video",
+      width: 3840,
+      height: 2160,
+      heights: [720, 1080, 480, "x"],
+      duration: 6.5,
+      sound: true,
+      variants: { "720.mp4": hash("a"), "poster.webp": hash("p") },
+    },
+    [OTHER]: {
+      kind: "video",
+      width: 1920,
+      height: 1080,
+      heights: [720],
+      duration: 4,
+      sound: false,
+      variants: { "720.mp4": hash("a") },
+    },
+    // Still being made, and an empty file name: neither is a rendition (Astra's read of #1413).
+    m_01hz8k3q4r5s6t7v8w9x0y1z2f: {
+      kind: "video",
+      state: "processing",
+      width: 1920,
+      height: 1080,
+      heights: [720],
+      duration: 4,
+      sound: false,
+      variants: { "720.mp4": hash("a"), "poster.webp": hash("p") },
+    },
+    m_01hz8k3q4r5s6t7v8w9x0y1z2g: {
+      kind: "video",
+      state: "ready",
+      width: 1920,
+      height: 1080,
+      heights: [720, 1080],
+      duration: 4,
+      sound: false,
+      variants: { "720.mp4": "", "1080.mp4": hash("b"), "poster.webp": hash("p") },
+    },
+    m_01hz8k3q4r5s6t7v8w9x0y1z2c: { kind: "image", width: 1600, widths: [480] },
+    m_01hz8k3q4r5s6t7v8w9x0y1z2d: { kind: "video", width: 1920, heights: [720] },
+  };
+  const server = createServer((req, res) => {
+    const record = records[(req.url ?? "").slice("/media/".length)];
+    if (!record) return res.writeHead(404).end();
+    res.writeHead(200, { "content-type": "application/json" });
+    res.end(JSON.stringify(record));
+  });
+  await new Promise<void>((r) => server.listen(0, "127.0.0.1", r));
+  try {
+    const token = join(folder("smithable-media-home-"), "media-token");
+    writeFileSync(token, "t");
+    const url = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+    const s = hostedMediaSource({ SMITHABLE_MEDIA_URL: url }, token);
+    if (!s?.film) throw new Error("no source");
+    expect(await s.film(ID)).toEqual({
+      width: 3840,
+      height: 2160,
+      heights: [720],
+      duration: 6.5,
+      sound: true,
+    });
+    expect((await s.film(OTHER))?.heights).toEqual([]);
+    expect(await s.film("m_01hz8k3q4r5s6t7v8w9x0y1z2c")).toBeUndefined();
+    expect(await s.film("m_01hz8k3q4r5s6t7v8w9x0y1z2d")).toBeUndefined();
+    expect(await s.film("m_01hz8k3q4r5s6t7v8w9x0y1z2e")).toBeUndefined();
+    expect(await s.film("m_01hz8k3q4r5s6t7v8w9x0y1z2f")).toBeUndefined();
+    expect((await s.film("m_01hz8k3q4r5s6t7v8w9x0y1z2g"))?.heights).toEqual([1080]);
+    expect(await s.film("../x")).toBeUndefined();
+  } finally {
+    server.close();
+  }
+});
+
+test("§7 the host fills a stored choice's record from the service, never the caller's", async () => {
+  const film = { width: 1920, height: 1080, heights: [720, 1080], duration: 5, sound: false };
+  const { source: s } = source(
+    {},
+    {
+      sizes: async (asset) => (asset === ID ? { width: 1600, widths: [480] } : undefined),
+      film: async (asset) => (asset === ID ? film : undefined),
+    },
+  );
+  const picture: Record<string, unknown> = { asset: ID, rendition: { width: 9999 } };
+  expect(await hostRecord("setSectionPicture", picture, s)).toBe(true);
+  expect(picture.rendition).toEqual({ width: 1600, widths: [480] });
+  const stranger: Record<string, unknown> = { asset: OTHER, rendition: { width: 9999 } };
+  expect(await hostRecord("setSectionPicture", stranger, s)).toBe(false);
+  expect(stranger).not.toHaveProperty("rendition");
+  const chosen: Record<string, unknown> = { asset: ID, record: { duration: 1 } };
+  expect(await hostRecord("setSectionFilm", chosen, s)).toBe(true);
+  expect(chosen.record).toEqual(film);
+  // A caller's record with a file of its own, or with no source, is dropped and nothing is filled.
+  const own: Record<string, unknown> = { src: "images/a.mp4", record: film };
+  expect(await hostRecord("setSectionFilm", own, s)).toBe(false);
+  expect(own).not.toHaveProperty("record");
+  const none: Record<string, unknown> = { asset: ID, record: film };
+  expect(await hostRecord("setSectionFilm", none, undefined)).toBe(false);
+  expect(none).not.toHaveProperty("record");
+  expect(await hostRecord("setText", { asset: ID }, s)).toBe(false);
 });

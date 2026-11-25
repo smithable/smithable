@@ -102,6 +102,7 @@ export { conceptsWithRules, ruleId } from "./concepts.js";
 export { conditionArgs, conditionText, readCondition } from "./condition.js";
 export type {
   AssistantTexts,
+  ContentFilm,
   ContentImage,
   ContentIR,
   FieldContent,
@@ -116,6 +117,11 @@ export {
   badgedByDefault,
   CONTENT_VERSION,
   emptyContent,
+  FILM_HEIGHTS,
+  FILM_LONG_SIDE,
+  FILM_SECONDS,
+  FILM_SHORT_SIDE,
+  filmFiles,
   IMAGE_SRC,
   imageAt,
   LANGUAGES,

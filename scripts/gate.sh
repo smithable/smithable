@@ -5,6 +5,9 @@
 #   usage (from a worktree): SESSION=<name> TEST_APPS_PORT=… TEST_STUDIO_PORT=… scripts/gate.sh
 #          scripts/gate.sh --queue     who is running and who waits, in order
 #          scripts/gate.sh --idle      exit 0 when no gate runs or waits, else 1 (for a wait loop)
+#          scripts/gate.sh --plan      what a gate would run here
+# Any other argument exits 2 at once, without a ticket: a copy too old to know a flag must not
+# read it as "run a gate" (T1520).
 # Each session has its own ports (its brief says which).
 #
 # Turns go round the sessions: the session that has had the fewest turns since the queue was
@@ -32,6 +35,10 @@ set -u
 # copy that is replaced while gates run from it (it happened, and six gates died of a syntax
 # error) cannot change under them. Replace a copy with mv all the same, never by writing over it.
 {
+case "$#:${1:-}" in
+  0: | 1:--queue | 1:--idle | 1:--plan) ;;
+  *) echo "gate.sh: unknown arguments ($*): no gate started. It takes none, or one of --queue, --idle, --plan." >&2; exit 2 ;;
+esac
 # Night hours, 23:30–07:00 in Mariehamn (Johan, 2026-10-12: a quieter machine at night): a gate
 # started then runs itself again, once, on at most four cores at the lowest priority (systemd-run,
 # else nice). Only while the file $home/night-cap exists (Johan, 2026-10-18: off for now, since a
@@ -217,12 +224,30 @@ if [ -z "${TEST_PATIENCE:-}" ]; then
   echo "gate.sh: load $load on $cores cores: the checks wait ${TEST_PATIENCE} times as long (TEST_PATIENCE=$TEST_PATIENCE)."
 fi
 
-# The plan, then the run. Arguments go to pnpm check as before, which runs everything. GATE_RUN
-# runs another command in the gate's turn instead (the weekly long run of the properties, ci.md).
+# While the checks run, every minute (GATE_LOAD_EVERY seconds), the load and the five busiest
+# processes go into the log (T1522): a check that fails under load then shows whose work loaded the
+# machine. Each row has the process, its user, its command's name and the last folder of its working
+# directory, never its arguments (CI's log is public). A process of another user shows no folder.
+# The sampler ends with the gate, or on its next turn when the gate was killed.
+busiest() {
+  top -b -n 2 -d 1 -o %CPU -w 250 2>/dev/null | awk '/^top -/ { f++ } f == 2 && $1 ~ /^[0-9]+$/ { print $1, $9 }' |
+    head -5 | while read -r pid cpu; do
+      dir=$(readlink "/proc/$pid/cwd" 2>/dev/null) || dir=-
+      [ "$dir" != / ] || dir=root
+      echo "  $pid $cpu% $(stat -c %U "/proc/$pid" 2>/dev/null) $(ps -o comm= -p "$pid" 2>/dev/null) in ${dir##*/}"
+    done
+}
+( while sleep "${GATE_LOAD_EVERY:-60}" && kill -0 $$ 2>/dev/null; do
+    echo "gate.sh: $(date +%H:%M) load $(cut -d' ' -f1-3 /proc/loadavg); busiest:"
+    busiest
+  done ) 2>/dev/null &
+sampler=$!
+
+# The plan, then the run. GATE_RUN runs another command in the gate's turn instead (the weekly long run of the properties, ci.md).
 if [ -n "${GATE_RUN:-}" ]; then
   echo "gate.sh: running $GATE_RUN in the gate's turn."
   bash -c "$GATE_RUN"
-elif [ $# -eq 0 ]; then
+else
   p=$(plan)
   apps=${p#apps=}; apps=${apps%% studio=*}
   studio=${p#*studio=}; studio=${studio%% visual=*}
@@ -236,10 +261,9 @@ elif [ $# -eq 0 ]; then
     esac &&
     { [ "$studio" = no ] || { pnpm test:studio && pnpm test:release-review; }; } &&
     { [ "$visual" = no ] || pnpm test:visual; }
-else
-  pnpm check "$@"
 fi
 status=$?
+pkill -P "$sampler" 2>/dev/null; kill "$sampler" 2>/dev/null; wait "$sampler" 2>/dev/null
 rm -f "$lock.who"
 exit $status
 }
