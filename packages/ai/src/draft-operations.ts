@@ -235,6 +235,30 @@ function describeOperations(operations: AnyOperation[]): string {
     .join("\n");
 }
 
+/**
+ * A schema without its descriptions and titles: the system text already gives each argument's
+ * schema with them, so the answer's schema (the structure decoding keeps to) need not repeat them;
+ * they were 40% of the draft request (T1590). Under "properties" the keys are names (one may be
+ * "description" or "default") and each value a schema; a value ("default", "const", "enum") is
+ * data, kept as it is.
+ */
+export function withoutProse(schema: unknown): unknown {
+  if (Array.isArray(schema)) return schema.map(withoutProse);
+  if (!schema || typeof schema !== "object") return schema;
+  const out: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(schema as Record<string, unknown>)) {
+    if ((key === "description" || key === "title") && typeof value === "string") continue;
+    out[key] = NAMED.has(key)
+      ? Object.fromEntries(Object.entries(value ?? {}).map(([n, v]) => [n, withoutProse(v)]))
+      : VALUES.has(key)
+        ? value
+        : withoutProse(value);
+  }
+  return out;
+}
+const NAMED = new Set(["properties", "patternProperties", "$defs", "definitions"]);
+const VALUES = new Set(["default", "const", "enum", "examples"]);
+
 function answerSchema(operations: AnyOperation[]): object {
   return {
     type: "object",
@@ -248,7 +272,7 @@ function answerSchema(operations: AnyOperation[]): object {
             type: "object",
             required: ["op", "args"],
             additionalProperties: false,
-            properties: { op: { const: op.name }, args: plainSchema(op.schema) },
+            properties: { op: { const: op.name }, args: withoutProse(plainSchema(op.schema)) },
           })),
         },
       },

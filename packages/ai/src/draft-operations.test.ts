@@ -15,6 +15,7 @@ import {
   repairLongField,
   untranslated,
   visitorFlaws,
+  withoutProse,
 } from "./draft-operations.js";
 import { PAGE_START } from "./language.js";
 import type { Provider } from "./provider.js";
@@ -1033,4 +1034,32 @@ test("a website import repairs a draft that only created a privacy page", async 
     kind: "failed",
     message: "The website draft has no landing page.",
   });
+});
+
+test("the answer's schema leaves out the prose the system text already gives (T1590)", () => {
+  const schema = {
+    type: "object",
+    description: "A section.",
+    properties: {
+      description: { type: "string", description: "The app in one sentence." },
+      title: { type: "string", title: "Title", default: { title: "kept" } },
+      look: { enum: ["plain", "card"], description: "How it looks." },
+      default: { type: "string", description: "A field named default." },
+    },
+  };
+  expect(withoutProse(schema)).toEqual({
+    type: "object",
+    properties: {
+      description: { type: "string" },
+      title: { type: "string", default: { title: "kept" } },
+      look: { enum: ["plain", "card"] },
+      default: { type: "string" },
+    },
+  });
+  // Every draft operation's schema keeps its structure and loses at least a third of its length.
+  const all = draftOperations().map((op) => op.schema);
+  const before = JSON.stringify(all).length;
+  const after = JSON.stringify(withoutProse(all)).length;
+  expect(after).toBeLessThan(before * 0.67);
+  expect(JSON.stringify(withoutProse(all))).not.toMatch(/"description":"/);
 });
