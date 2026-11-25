@@ -224,6 +224,22 @@ if [ -z "${TEST_PATIENCE:-}" ]; then
   echo "gate.sh: load $load on $cores cores: the checks wait ${TEST_PATIENCE} times as long (TEST_PATIENCE=$TEST_PATIENCE)."
 fi
 
+# While the checks run, every minute (GATE_LOAD_EVERY seconds), the load and the five busiest
+# processes with their user and working directory go into the log (T1522): a check that fails under
+# load then shows whose work loaded the machine. A process of another user shows no directory. It
+# ends with the gate, or on its next turn when the gate was killed.
+busiest() {
+  top -b -n 2 -d 1 -o %CPU -w 250 2>/dev/null | awk '/^top -/ { f++ } f == 2 && $1 ~ /^[0-9]+$/ { print $1, $9 }' |
+    head -5 | while read -r pid cpu; do
+      echo "  $cpu% $(ps -o user= -p "$pid" 2>/dev/null) in $(readlink "/proc/$pid/cwd" 2>/dev/null || echo -): $(ps -o args= -p "$pid" 2>/dev/null | cut -c1-120)"
+    done
+}
+( while sleep "${GATE_LOAD_EVERY:-60}" && kill -0 $$ 2>/dev/null; do
+    echo "gate.sh: $(date +%H:%M) load $(cut -d' ' -f1-3 /proc/loadavg); busiest:"
+    busiest
+  done ) &
+sampler=$!
+
 # The plan, then the run. GATE_RUN runs another command in the gate's turn instead (the weekly long run of the properties, ci.md).
 if [ -n "${GATE_RUN:-}" ]; then
   echo "gate.sh: running $GATE_RUN in the gate's turn."
@@ -244,6 +260,7 @@ else
     { [ "$visual" = no ] || pnpm test:visual; }
 fi
 status=$?
+pkill -P "$sampler" 2>/dev/null; kill "$sampler" 2>/dev/null; wait "$sampler" 2>/dev/null
 rm -f "$lock.who"
 exit $status
 }

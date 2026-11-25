@@ -52,3 +52,27 @@ test("an argument it does not know exits 2 and queues no gate", () => {
     rmSync(home, { recursive: true, force: true });
   }
 });
+
+test("while its checks run, the log gets the load and the busiest processes", () => {
+  const home = mkdtempSync(join(tmpdir(), "smithable-gate-load-"));
+  try {
+    const r = spawnSync("bash", [gate], {
+      env: {
+        ...process.env,
+        GATE_HOME: home,
+        SESSION: "t",
+        GATE_RUN: "sleep 3.5",
+        GATE_LOAD_EVERY: "1",
+      },
+      encoding: "utf8",
+    });
+    assert.equal(r.status, 0, r.stderr);
+    assert.match(
+      r.stdout,
+      /gate\.sh: \d\d:\d\d load [\d.]+ [\d.]+ [\d.]+; busiest:\n {2}[\d.]+% \S+ in /,
+    );
+    assert.equal(idle(home), 0, "the lock is free again");
+  } finally {
+    rmSync(home, { recursive: true, force: true });
+  }
+});
