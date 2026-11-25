@@ -14,11 +14,6 @@ import { tempDir } from "./test-dir.js";
 import { assetReview } from "./website-assets.js";
 import { digest, installWebsiteInputCommand, parseWebsiteInput } from "./website-input.js";
 
-// Each test builds a website project on disk.
-// On a loaded machine (a gate, main's full run) that can take more than the default 5 s;
-// alone it takes a fraction of it (T1481).
-vi.setConfig({ testTimeout: 30_000 });
-
 const state = vi.hoisted(() => ({
   descriptions: [] as string[],
   artifact: "",
@@ -207,7 +202,7 @@ test("real multi-page extraction feeds only facts into the existing create pipel
   // Last resort (2026-11-08): it runs the real create pipeline once, which takes about 0.9 s
   // alone, 0.7 s of it the test runner loading the modules create reaches, and over 5 s under a
   // gate's load. What it proves is that pipeline end to end; lightening it is open (A's backlog).
-}, 30_000);
+});
 
 test("resumed owner-description fallback ignores ambiguous identity and originals but still checks source copy", async () => {
   const { extractSiteFacts } = await import("./site-facts.js");
