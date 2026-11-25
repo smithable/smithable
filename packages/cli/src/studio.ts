@@ -1,6 +1,14 @@
 import { type ChildProcess, spawn } from "node:child_process";
 import { createHash, randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
-import { existsSync, lstatSync, readFileSync, rmSync, statSync, watchFile } from "node:fs";
+import {
+  existsSync,
+  lstatSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  watchFile,
+} from "node:fs";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { extname, join, normalize, resolve } from "node:path";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
@@ -526,6 +534,36 @@ export const projectMedia = (dir: string, path: string): Buffer | undefined =>
   /^m_[0-9a-hjkmnp-tv-z]{26}\/w[1-9]\d{1,3}\.webp$/.test(path)
     ? readTreeOrNone(join(dir, "public", "media", path), 32 << 20)
     : undefined;
+
+/**
+ * The project's own pictures for the Photos panel (media-storage.md §6): names directly under
+ * public/images/ that are plain files of a picture type, through no link; sorted.
+ */
+export function projectPhotos(dir: string): string[] {
+  const images = join(dir, "public", "images");
+  // A folder or file removed while it is read is left out, never a failed list.
+  const is = (path: string, kind: "isFile" | "isDirectory") => {
+    try {
+      return lstatSync(path)[kind]();
+    } catch {
+      return false;
+    }
+  };
+  if (!is(join(dir, "public"), "isDirectory") || !is(images, "isDirectory")) return [];
+  let names: string[];
+  try {
+    names = readdirSync(images);
+  } catch {
+    return [];
+  }
+  return names
+    .filter(
+      (name) =>
+        /^[\w-][\w.-]*\.(webp|avif|jpe?g|png)$/i.test(name) && is(join(images, name), "isFile"),
+    )
+    .sort()
+    .map((name) => `images/${name}`);
+}
 
 /** A declared plugin's code as Studio serves it to the tab: the project's own file, or none. */
 export const projectPlugin = (dir: string, name: string): Buffer | undefined =>
@@ -1424,6 +1462,8 @@ export async function studio(
         });
         return res.end(bytes);
       }
+      if (url.pathname === "/api/photos" && req.method === "GET")
+        return json({ photos: projectPhotos(dir) });
       if (url.pathname.startsWith("/api/media/")) {
         const bytes = projectMedia(dir, url.pathname.slice("/api/media/".length));
         if (!bytes) return json({ ok: false }, 404);
@@ -1514,6 +1554,27 @@ export async function studio(
             },
             409,
           );
+        // A stored picture's sizes are the service's record's, never the caller's (media-storage.md
+        // §2): read here for setSectionPicture with an asset. Locally there is no record to read,
+        // and the operation refuses a new stored file without them.
+        if (name === "setSectionPicture" && args && typeof args === "object") {
+          const choice = args as Record<string, unknown>;
+          delete choice.rendition;
+          if (typeof choice.asset === "string" && mediaSource?.sizes) {
+            try {
+              const sizes = await mediaSource.sizes(choice.asset);
+              if (sizes) choice.rendition = sizes.widths.length ? sizes : { width: sizes.width };
+            } catch {
+              return json(
+                {
+                  ok: false,
+                  output: "The photo library could not be reached. Try again in a moment.",
+                },
+                503,
+              );
+            }
+          }
+        }
         const offeredPictures =
           typeof pictureOffer === "string" ? pictureOffers.get(pictureOffer) : undefined;
         const preparedInkWash =
