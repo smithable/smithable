@@ -993,6 +993,17 @@ export async function studio(
   let notice = readTreeOrNone(noticeFile, 64 * 1024)
     ?.toString("utf8")
     .trim();
+  // Each notice has an id of its own, so a late acknowledgement of one never takes another in the
+  // same words (T1602); and whether it is the maker's file, which goes once it is seen.
+  let noticeId = randomUUID();
+  let noticeInFile = Boolean(notice);
+  /** An app is coming in: the notice file may be the old app's or the new one's. */
+  let replacing = false;
+  const tell = (text: string) => {
+    notice = text;
+    noticeId = randomUUID();
+    noticeInFile = false;
+  };
   // The maker's message is also why this app is not the one described (a description that fell
   // back to the starter, T1577), and that holds for as long as the app does: kept for every read of
   // /api/project, not only the first, so whoever looks after the page's first read still sees it.
@@ -1011,7 +1022,9 @@ export async function studio(
   if (leftover)
     void fetch(`http://${OLD_HOST}:${leftover.port}/`, { signal: AbortSignal.timeout(3000) }).then(
       () => {
-        notice = `An old version's server from before may still be running (process ${leftover.pid}, port ${leftover.port}). Studio cannot tell it is its own on this system, so it left it; stop it if it is.`;
+        tell(
+          `An old version's server from before may still be running (process ${leftover.pid}, port ${leftover.port}). Studio cannot tell it is its own on this system, so it left it; stop it if it is.`,
+        );
       },
       () => {},
     );
@@ -1081,7 +1094,7 @@ export async function studio(
       ...(hostedLevel() ? { servicePays: true as const } : {}),
       // Where Smith may hear and speak, from the same policy (smith-speech.md §3).
       speech: speechProviders(),
-      ...(notice ? { notice } : {}),
+      ...(notice ? { notice, noticeId } : {}),
       ...(fallback ? { fallback } : {}),
       ...(making ? { making } : {}),
       ...(waiting.length ? { waiting } : {}),
@@ -1101,8 +1114,12 @@ export async function studio(
   let waiting: string[] = [];
   let asked: Asked | undefined;
   const replaceWith = async (to: Asked) => {
-    // An unseen notice of the app being replaced is not the new app's: its maker writes its own.
-    changeTree([{ path: noticeFile, data: null }]);
+    // The notice file comes and goes with the app's other files (replace.ts writes the new app's
+    // tree whole): an app that came in brings its own or none, and a replace refused or failed
+    // before it leaves the old app's notice and its reason as they were, for a Studio started again
+    // too (T1602). Meanwhile an acknowledgement is answered "say it again" and touches nothing: by
+    // then the file may be the new app's.
+    replacing = true;
     const result = await capture((io) =>
       replaceProject(dir, io, to, (stage, draft, assumptions) => {
         if (!making) return;
@@ -1124,21 +1141,27 @@ export async function studio(
         };
         send("making", making);
       }),
-    );
+    ).finally(() => {
+      replacing = false;
+    });
     if (result.ok) lookProject = randomUUID();
     // Refused (nothing was touched) or failed: it can be asked again.
     if (!result.ok) replaceable = true;
     writePreviewConfig();
     delete pending.standard;
     delete pending.referenceHelp;
-    try {
-      notice = readOwn(noticeFile)?.trim();
-    } catch {
-      notice = undefined;
+    if (result.ok) {
+      try {
+        notice = readOwn(noticeFile)?.trim();
+      } catch {
+        notice = undefined;
+      }
+      noticeId = randomUUID();
+      noticeInFile = Boolean(notice);
+      // The app that came in replaces the old one's reason with its own, or with none.
+      fallback = notice;
+      keepFallback(fallback);
     }
-    // The app that came in replaces the old one's reason with its own, or with none.
-    fallback = notice;
-    keepFallback(fallback);
     await settled();
     // The log starts with the person's app: nothing of the app that was here, and nothing
     // of what the dev server said while the files under it were being exchanged.
@@ -1292,8 +1315,9 @@ export async function studio(
         // Back from a held fix's branch: the dev data as it was before it (fix-open.ts), said.
         if (backFromFix(dir)) {
           reopenDatabase(dir);
-          notice =
-            "The dev data is back as it was before the fix was opened: what changed in it while the fix was open is gone.";
+          tell(
+            "The dev data is back as it was before the fix was opened: what changed in it while the fix was open is gone.",
+          );
         }
         // The one-time notice stays until Builder says it showed it (/api/notice/seen), so a read
         // that is not the page's (the release smoke's probe) does not take it (T1599).
@@ -1764,19 +1788,32 @@ export async function studio(
           ...(diagnostics ? { diagnostics } : {}),
         });
       }
-      // Builder showed the one-time notice: it is not given again. Only that text, so a newer notice
-      // that came meanwhile stays to be shown (T1599).
+      // Builder showed the one-time notice: it is not given again. Only that one, by its id, so a
+      // newer notice that came meanwhile stays to be shown, even in the same words (T1599, T1602).
       if (req.method === "POST" && url.pathname === "/api/notice/seen") {
-        const { text } = await body();
-        if (typeof text === "string" && text === notice) {
-          notice = undefined;
-          let kept: string | undefined;
+        const { id } = await body();
+        if (notice && typeof id === "string" && id === noticeId) {
+          // Builder says it again (the next read still has this notice): while an app comes in,
+          // or when the file cannot be read.
+          const again = { message: "Not yet: say it again once the app is in." };
+          if (replacing) return json(again, 409);
+          let file: string | undefined;
           try {
-            kept = readOwn(noticeFile)?.trim();
+            file = readOwn(noticeFile)?.trim() || undefined;
           } catch {
-            kept = undefined;
+            return json(again, 503);
           }
-          if (kept === text) changeTree([{ path: noticeFile, data: null }]);
+          // The maker's file goes with its notice, only while it still says it, and first, so a
+          // failure leaves the notice to be said seen again.
+          if (noticeInFile && file === notice) {
+            changeTree([{ path: noticeFile, data: null }]);
+            file = undefined;
+          }
+          // What the file still says is shown next: the maker's unseen notice that one told over
+          // it (an old server, the dev data back) hid, or a newer one the maker wrote.
+          notice = file;
+          noticeId = randomUUID();
+          noticeInFile = Boolean(file);
         }
         return json({ ok: true });
       }

@@ -123,8 +123,8 @@ function hosted(given: "stdin" | "env") {
         await fetch(`http://127.0.0.1:${port}/api/project`, {
           headers: { "x-smithable-studio-token": TOKEN },
         })
-      ).json()) as { notice?: string; fallback?: string };
-    const ack = (text: string) =>
+      ).json()) as { notice?: string; noticeId?: string; fallback?: string };
+    const ack = (id: string | undefined) =>
       fetch(`http://127.0.0.1:${port}/api/notice/seen`, {
         method: "POST",
         headers: {
@@ -132,17 +132,18 @@ function hosted(given: "stdin" | "env") {
           "Content-Type": "application/json",
           "X-Smithable": "1",
         },
-        body: JSON.stringify({ text }),
+        body: JSON.stringify({ id }),
       });
     // A probe's read (the release smoke's) does not take the page's message (T1599).
     const probe = await read();
     const first = await read();
-    // Another text acknowledged leaves it.
+    // Another notice's id acknowledged leaves it, even one in the same words (T1602).
+    expect(first.noticeId).toBe(probe.noticeId);
     expect((await ack("an older notice")).status).toBe(200);
     const still = await read();
     // Kept on disk until then, for a Studio started again before Builder showed it.
     expect(existsSync(join(dir, "data/.smithable/notice.txt"))).toBe(true);
-    expect((await ack(FELL_BACK)).status).toBe(200);
+    expect((await ack(still.noticeId)).status).toBe(200);
     const second = await read();
     for (const answer of [probe, first, still, second]) expect(answer.fallback).toBe(FELL_BACK);
     expect(probe.notice).toBe(FELL_BACK);
@@ -224,7 +225,11 @@ describe("the fallback to the starter, across restarts and a replacement", () =>
       },
     });
   const project = async () =>
-    (await (await call("/api/project")).json()) as { notice?: string; fallback?: string };
+    (await (await call("/api/project")).json()) as {
+      notice?: string;
+      noticeId?: string;
+      fallback?: string;
+    };
   const start = async (replaceable: boolean) => {
     // The warm-up below is this start's own, not the last one's.
     rmSync(join(dir, "seen.jsonl"), { force: true });
@@ -299,9 +304,17 @@ describe("the fallback to the starter, across restarts and a replacement", () =>
     const unseen = await start(true);
     expect(unseen.fallback).toBe(FELL_BACK);
     expect(unseen.notice).toBe(FELL_BACK);
+    // The same words, but not the notice the last Studio gave: its late acknowledgement leaves it.
+    expect(unseen.noticeId).not.toBe(first.noticeId);
+    const stale = await call("/api/notice/seen", {
+      method: "POST",
+      body: JSON.stringify({ id: first.noticeId }),
+    });
+    expect(stale.status).toBe(200);
+    expect((await project()).notice).toBe(FELL_BACK);
     const seen = await call("/api/notice/seen", {
       method: "POST",
-      body: JSON.stringify({ text: FELL_BACK }),
+      body: JSON.stringify({ id: unseen.noticeId }),
     });
     expect(seen.status).toBe(200);
     await stop();
