@@ -82,9 +82,9 @@ test("the content schema takes a film in one of its two forms only (readFilm; T1
   for (const film of [
     {},
     { asset: id },
-    { heights: [720] },
-    { src: "images/hero.mp4", asset: id, heights: [720] },
-    { src: "images/hero.mp4", heights: [720] },
+    { heights: [720, 1080] },
+    { src: "images/hero.mp4", asset: id, heights: [720, 1080] },
+    { src: "images/hero.mp4", heights: [720, 1080] },
     { src: "images/hero.mp4", asset: id },
   ])
     expect(ok(film), JSON.stringify(film)).toBe(false);
