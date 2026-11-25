@@ -21,11 +21,14 @@ export function Film(props: Parameters<typeof FilmPlayer>[0]) {
 
 function FilmPlayer({
   src,
+  smaller,
   generated,
   kind,
   framed,
 }: {
   src: string;
+  /** A lower rendition of a stored film, for a screen at most 1280 device pixels wide. */
+  smaller?: string;
   /** Made by an AI: the film's own origin, marked while it plays where the picture is marked. */
   generated?: boolean;
   kind?: PictureKind;
@@ -54,7 +57,8 @@ function FilmPlayer({
         return;
       }
       if (inView && !paused && document.visibilityState === "visible") {
-        if (!v.getAttribute("src")) v.src = src;
+        if (!v.getAttribute("src"))
+          v.src = smaller && innerWidth * devicePixelRatio <= 1280 ? smaller : src;
         // A play the page itself stopped (paused, scrolled away) is no failure; a blocked or
         // undecodable one is, and the picture shows.
         v.play().catch((error: Error) => error.name !== "AbortError" && setFailed(true));
@@ -75,7 +79,7 @@ function FilmPlayer({
       document.removeEventListener("visibilitychange", update);
     };
     // ready: the video is there only from the render after it.
-  }, [ready, src, paused, failed]);
+  }, [ready, src, smaller, paused, failed]);
   if (!ready || failed) return null;
   const film = (
     <video

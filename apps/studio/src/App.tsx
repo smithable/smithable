@@ -49,6 +49,7 @@ import { InkWashNotice } from "./InkWashNotice";
 import { LookPanel } from "./LookPanel";
 import { logStore } from "./logs";
 import { Making } from "./Making";
+import { type NoticesSeen, noticeShown, noticeStep } from "./notice";
 import { ApplyVersionDialog, OldVersion, type OpenOld, openOldTab } from "./OldVersion";
 import { OutboxDialog } from "./Outbox";
 import { PeoplePanel } from "./People";
@@ -213,17 +214,39 @@ export function App() {
     report?: "offer";
     /** Something went wrong (not a change refused): the bar offers Troubleshoot. */
     failure?: boolean;
-    /** Left for Studio by the making or the daemon (a description that could not be used). */
-    notice?: boolean;
+    /** Left for Studio by the making or the daemon (a description that could not be used): its id. */
+    notice?: string;
     diagnostics?: PresentedDiagnostic[];
   }>();
   const [reporting, setReporting] = useState(false);
-  // Studio hands a notice to the first read of the project only, so whichever read that is (the
-  // page loading, a reconnect, the catch-up after a change) shows it.
-  const noticed = useCallback((next: Project) => {
-    if (next.notice) setMessage({ ok: false, text: next.notice, notice: true });
-    return next;
+  // Studio keeps its one-time notice in every read of the project until Builder says it showed it,
+  // so whichever read comes first here (the page loading, a reconnect, the catch-up after a change)
+  // shows it, and a read that is not the page's does not take it (T1599).
+  // The notices put on the page, and those whose acknowledgement failed (notice.ts, T1602).
+  // Said seen as it is put on the page: a message that replaces the banner before it renders
+  // does not leave it unsaid, to come back with the next read.
+  const noticesSeen = useRef<NoticesSeen>({ shown: new Set(), failed: new Set() });
+  const acknowledge = useCallback((id: string) => {
+    const seen = noticesSeen.current;
+    seen.shown.add(id);
+    seen.failed.delete(id);
+    api.noticeSeen(id).catch(() => {
+      seen.failed.add(id);
+    });
   }, []);
+  const noticed = useCallback(
+    (next: Project) => {
+      const { notice, noticeId } = next;
+      const step = notice ? noticeStep(noticesSeen.current, noticeId) : "none";
+      if (step === "show" && notice && noticeId) {
+        noticeShown(noticesSeen.current, noticeId);
+        setMessage({ ok: false, text: notice, notice: noticeId });
+      }
+      if (step !== "none" && noticeId) acknowledge(noticeId);
+      return next;
+    },
+    [acknowledge],
+  );
   // A held fix opened from the service's link, ?fix=<id> (A 245): read once, then gone from the address.
   const [fixLine, setFixLine] = useState<string>();
   useEffect(() => {

@@ -9,9 +9,12 @@ import { StudioInkWash } from "./studio-ink-wash.js";
 import { tempDir } from "./test-dir.js";
 
 // The real worker thread starts three times (the offer, a refused fetch, the updated offer), each
-// loading its bundle: about 4 s alone, more under a gate, so past vitest's 5 s default (T1396).
+// loading its bundle: about 4 s alone, 30 s and more at load 30 (T1396, T1562). The test waits
+// for each preparation to end, bounded only by the worker's own 60 s deadline, then checks what
+// it left. Only a run past that deadline fails, as it would fail in Studio too.
+const WORKER_DEADLINE = 60_000;
 test("Studio prepares its offer outside the project and invalidates it after a picture edit", {
-  timeout: 30_000,
+  timeout: 4 * WORKER_DEADLINE,
 }, async () => {
   const drawing = Buffer.from(
     "UklGRlAAAABXRUJQVlA4TEQAAAAvCcABEB8gECByREsSY0dAQrwx2U85ICQgTpnsnAmagKDg/+jiA2SfgoI2kpS7Z351a3JNPoqI6H8CHvBrzbWmfGQhCw==",
@@ -101,15 +104,21 @@ test("Studio prepares its offer outside the project and invalidates it after a p
   const offers = new StudioInkWash();
   try {
     const revision = projectRevision(dir);
-    const ready = () =>
+    // The preparation's end: no longer pending, whatever it left.
+    const settled = () =>
       vi.waitFor(
         () => {
-          const answer = offers.get(dir, "project", revision).offer;
-          if (!answer) throw new Error("The worker has not prepared the drawing yet");
+          const answer = offers.get(dir, "project", revision);
+          if (answer.pending) throw new Error("The worker is still preparing the drawing");
           return answer;
         },
-        { timeout: 8000 },
+        { timeout: WORKER_DEADLINE + 10_000, interval: 100 },
       );
+    const ready = async () => {
+      const { offer } = await settled();
+      if (!offer) throw new Error("The preparation ended without an offer");
+      return offer;
+    };
     expect(offers.get(dir, "project", revision)).toEqual({ pending: true });
     const offer = await ready();
     const staged = offers.read(dir, "project", offer.id);
@@ -122,9 +131,7 @@ test("Studio prepares its offer outside the project and invalidates it after a p
     libraryVersion = "v2";
     vi.setSystemTime(Date.now() + 61_000);
     expect(offers.get(dir, "project", revision)).toEqual({ pending: true });
-    await vi.waitFor(() => expect(offers.get(dir, "project", revision)).toEqual({}), {
-      timeout: 8000,
-    });
+    expect(await settled()).toEqual({});
     expect(updatedPictureRequests).toBe(1);
     vi.setSystemTime(Date.now() + 61_000);
     expect(offers.get(dir, "project", revision)).toEqual({ pending: true });

@@ -16,11 +16,6 @@ import { keepAccessKeys, planDigest, restore, restorePlan, versions } from "./re
 import { captureIo } from "./test-io.js";
 import { undoChange, undoLatest } from "./undo.js";
 
-// Each test runs Git many times and opens the app's database.
-// On a loaded machine (a gate, main's full run) that can take more than the default 5 s;
-// alone it takes a fraction of it (T1481).
-vi.setConfig({ testTimeout: 30_000 });
-
 vi.mock("./generate.js", () => ({ generate: vi.fn(async () => 0) }));
 
 const roots: string[] = [];
@@ -394,7 +389,7 @@ test("Studio binds Apply to the revision and plan it showed and never agrees to 
     }),
   ).toBe(0);
   expect(head(dir)).not.toBe(was.head);
-}, 20_000);
+});
 
 test("§6 undo of an apply whose database copy is gone goes forward, and says the values stay lost", async () => {
   const dir = project();

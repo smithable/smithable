@@ -63,7 +63,7 @@ models: {}
       expect(once, file).not.toMatch(/: \{ |- \{ /);
     }
     // Every example's files, parsed twice: seconds on a loaded machine, so not vitest's five.
-  }, 30_000);
+  });
   it("leaves text that is not YAML alone", () => {
     expect(formatSpec("a: [")).toBe("a: [");
   });

@@ -35,3 +35,69 @@ test("--idle: 0 on an empty queue, 1 while a gate holds the lock or a live one w
   writeFileSync(join(home, ".gate-queue", "2.999999999"), "b\t/tmp/wt\n");
   assert.equal(idle(home), 0, "a ticket whose process is gone is dropped, not counted");
 });
+
+test("an argument it does not know exits 2 and queues no gate", () => {
+  const home = mkdtempSync(join(tmpdir(), "smithable-gate-args-"));
+  try {
+    for (const args of [["--idel"], ["--idle", "now"], ["check"]]) {
+      const r = spawnSync("bash", [gate, ...args], {
+        env: { ...process.env, GATE_HOME: home, SESSION: "t" },
+        encoding: "utf8",
+      });
+      assert.equal(r.status, 2, args.join(" "));
+      assert.match(r.stderr, /no gate started/);
+    }
+    assert.equal(idle(home), 0, "no ticket was left in the queue");
+  } finally {
+    rmSync(home, { recursive: true, force: true });
+  }
+});
+
+test("while its checks run, the log gets the load and the busiest processes", () => {
+  const home = mkdtempSync(join(tmpdir(), "smithable-gate-load-"));
+  try {
+    const r = spawnSync("bash", [gate], {
+      env: {
+        ...process.env,
+        GATE_HOME: home,
+        SESSION: "t",
+        GATE_RUN: "sleep 3.5",
+        GATE_LOAD_EVERY: "1",
+      },
+      encoding: "utf8",
+    });
+    assert.equal(r.status, 0, r.stderr);
+    assert.match(r.stdout, /gate\.sh: \d\d:\d\d load [\d.]+ [\d.]+ [\d.]+; busiest:\n/);
+    // Under heavy load top may not finish before the gate ends, or a process may exit between top and
+    // ps, so rows are optional (T1553); each row that is there has its pid, its share and a folder.
+    for (const row of r.stdout.split("\n").filter((l) => l.startsWith("  "))) {
+      assert.match(row, /^ {2}\d+ [\d.]+% .* in /);
+    }
+    assert.doesNotMatch(r.stdout, / in \//, "no full path");
+    assert.equal(idle(home), 0, "the lock is free again");
+  } finally {
+    rmSync(home, { recursive: true, force: true });
+  }
+});
+
+test("the gate's own status comes back, and the sampler ends with it at once", () => {
+  const home = mkdtempSync(join(tmpdir(), "smithable-gate-status-"));
+  try {
+    const started = Date.now();
+    const r = spawnSync("bash", [gate], {
+      env: {
+        ...process.env,
+        GATE_HOME: home,
+        SESSION: "t",
+        GATE_RUN: "exit 37",
+        GATE_LOAD_EVERY: "60",
+      },
+      encoding: "utf8",
+      timeout: 30000,
+    });
+    assert.equal(r.status, 37, r.stderr);
+    assert.ok(Date.now() - started < 20000, "no sampler kept the output open");
+  } finally {
+    rmSync(home, { recursive: true, force: true });
+  }
+});

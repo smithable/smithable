@@ -437,7 +437,7 @@ test("pure compiler provenance permits typed identity in the whole compiled app"
   // Last resort (2026-11-08): it checks every file of a whole generated app for a false
   // positive, which is its claim; about 1.3 s alone, over 5 s under a gate's load. Checking one
   // file of each kind instead is open (A's backlog).
-}, 30_000);
+});
 
 test("pure compiler provenance rejects identity injected into compiler, custom and public files", async () => {
   const { dir, context, replaceWebsitePersonalArtifacts } = await sharedProvenance();

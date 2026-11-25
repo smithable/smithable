@@ -2,8 +2,10 @@
 import {
   type AuthIR,
   type Condition,
+  type ContentFilm,
   type ContentImage,
   camel,
+  filmFiles,
   humanize,
   isPictures,
   kebab,
@@ -39,6 +41,12 @@ import {
   titleField,
 } from "../shared.js";
 import { LUCIDE, workspaceEntries } from "./root.js";
+
+/** A hero film's player: its file, or a stored film's renditions, and its own origin. */
+const filmTag = (film: ContentFilm) => {
+  const { src, smaller } = filmFiles(film);
+  return `<Film src=${attr(`/${src}`)}${smaller ? ` smaller=${attr(`/${smaller}`)}` : ""}${film.generated ? " generated" : ""}${film.kind ? ` kind=${attr(film.kind)}` : ""} framed={framed} />`;
+};
 
 /** A picture's files by width for the browser to choose from: its copies, and itself when its width is known. */
 const srcSetOf = (image: ContentImage) =>
@@ -275,7 +283,7 @@ export function landingRoute(
             own.image.film
               ? (imports.add("#/kit/Film", "Film"),
                 `
-          film={(framed) => <Film src=${attr(`/${own.image.film.src}`)}${own.image.film.generated ? " generated" : ""}${own.image.film.kind ? ` kind=${attr(own.image.film.kind)}` : ""} framed={framed} />}`)
+          film={(framed) => ${filmTag(own.image.film)}}`)
               : ""
           }`
               : ""
