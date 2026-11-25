@@ -109,7 +109,7 @@ function hosted(given: "stdin" | "env") {
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
-  }, 15_000);
+  });
 
   test("the preview's process never sees Studio's token, only its own credential", () => {
     const lines = seen();
