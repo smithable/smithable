@@ -24,20 +24,33 @@ case "$a" in
   "api repos/o/r/commits/new/status -q .total_count")
     [ -n "$STATUS_ONLY" ] && [ "$(cat "$d/asked")" != 1 ] && echo 1 || echo 0 ;;
   "api repos/o/r/commits/old/"*) echo 1 ;;
-  *"--watch"*) ;;
+  *"--watch"*)
+    if [ -n "$HOLD_WATCH" ]; then
+      echo $$ > "$d/watching"
+      for _ in $(seq 300); do /bin/sleep 0.1; done
+    fi
+    [ -z "$FAIL_WATCH" ] || exit 1 ;;
   "pr checks"*)
     [ -e "$d/listed" ] && exit 1
     touch "$d/listed"; printf 'check\\tpass\\t1m\\thttps://example.invalid\\n' ;;
   "run list"*) echo 1 ;;
   *"--json statusCheckRollup"*) printf 'check\\tCOMPLETED\\tSUCCESS\\n' ;;
-  *"--json state "*|*"--json state") [ -e "$d/armed" ] && echo MERGED || echo OPEN ;;
+  *"--json state "*|*"--json state") [ -e "$d/armed" ] && [ -z "$FAIL_WATCH" ] && echo MERGED || echo OPEN ;;
   *"--json headRefName,baseRefName"*) echo "false c/x main" ;;
   "pr list"*) ;;
   *"--auto"*) touch "$d/armed" ;;
-  *"--disable-auto"*) ;;
+  *"--disable-auto"*) touch "$d/disarmed" ;;
   *) echo "fake gh: unexpected: $a" >&2; exit 1 ;;
 esac
 `;
+
+const fakeEnv = (dir) => ({
+  ...process.env,
+  PATH: `${dir}:${process.env.PATH}`,
+  FAKE_GH: dir,
+  MERGE_LOCK: join(dir, "lock"),
+  SESSION: "test",
+});
 
 function mergeGreen(env = {}) {
   const dir = mkdtempSync(join(tmpdir(), "merge-green-"));
@@ -45,17 +58,11 @@ function mergeGreen(env = {}) {
   // The script's sleeps (and the lock's refresher) take no time here.
   writeFileSync(join(dir, "sleep"), "#!/usr/bin/env bash\nexec /bin/sleep 0.01\n");
   for (const f of ["gh", "sleep"]) chmodSync(join(dir, f), 0o755);
+  if (env.NOT_RUN) return { dir };
   const run = spawnSync("bash", ["scripts/merge-green.sh", "587", "--repo", "o/r"], {
     encoding: "utf8",
     timeout: 60_000,
-    env: {
-      ...process.env,
-      PATH: `${dir}:${process.env.PATH}`,
-      FAKE_GH: dir,
-      MERGE_LOCK: join(dir, "lock"),
-      SESSION: "test",
-      ...env,
-    },
+    env: { ...fakeEnv(dir), ...env },
   });
   return { run, dir };
 }
@@ -67,6 +74,39 @@ test("merge-green waits for the new head's checks after updating the branch (clo
   assert.doesNotMatch(run.stdout, /did not start/);
   assert.equal(readFileSync(join(dir, "asked"), "utf8").trim(), "2");
   assert.ok(!existsSync(join(dir, "lock")));
+  assert.ok(!existsSync(join(dir, "disarmed")), "a merged run disarms nothing");
+});
+
+// Stopped as a plain `kill PID` stops it, while it watches the checks, or as a task stop does (the
+// whole process group): the auto-merge it armed is disarmed and the lock is gone (cloud #625).
+for (const [how, target] of [
+  ["kill of the script alone", "$pid"],
+  ["kill of its process group", "-- -$pid"],
+]) {
+  test(`a stopped merge-green disarms its auto-merge: ${how}`, () => {
+    const { dir } = mergeGreen({ NOT_RUN: "1" });
+    const sh = `set -m
+bash scripts/merge-green.sh 587 --repo o/r > "$FAKE_GH/out" 2>&1 & pid=$!
+for _ in $(seq 200); do [ -s "$FAKE_GH/watching" ] && break; /bin/sleep 0.05; done
+kill -TERM ${target}
+wait $pid; echo $?`;
+    const run = spawnSync("bash", ["-c", sh], {
+      encoding: "utf8",
+      timeout: 20_000,
+      env: { ...fakeEnv(dir), HOLD_WATCH: "1" },
+    });
+    const out = readFileSync(join(dir, "out"), "utf8");
+    assert.equal(run.stdout.trim().split("\n").at(-1), "130", out + run.stderr);
+    assert.ok(existsSync(join(dir, "disarmed")), out);
+    assert.ok(!existsSync(join(dir, "lock")));
+  });
+}
+
+test("a failed check disarms the auto-merge", () => {
+  const { run, dir } = mergeGreen({ FAIL_WATCH: "1" });
+  assert.equal(run.status, 1, run.stdout + run.stderr);
+  assert.match(run.stdout, /a check failed/);
+  assert.ok(existsSync(join(dir, "disarmed")));
 });
 
 test("a head whose only checks are commit statuses has checks", () => {
