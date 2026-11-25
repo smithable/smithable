@@ -21,8 +21,8 @@ const examples = process.argv.slice(2).length
       .filter((e) => e.isDirectory())
       .map((e) => e.name);
 
-// Ten ports per example from the base (TEST_APPS_PORT, default 4400), so two checkouts testing
-// at the same time can keep apart (appBases in ports.mjs, which gate-ports.mjs checks too).
+// Each example its own ports from the base (TEST_APPS_PORT, default 4400); two checkouts testing at
+// the same time keep apart by bases 1000 apart (appBases in ports.mjs, which gate-ports.mjs checks too).
 const ports = appBases(Number(process.env.TEST_APPS_PORT ?? 4400), examples.length);
 
 const children = new Set();

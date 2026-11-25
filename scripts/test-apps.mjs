@@ -29,7 +29,7 @@ import fc from "fast-check";
 import { chromium } from "playwright";
 import { seeded, validateSpec, walk } from "../packages/core/dist/index.js";
 import { startFakeModel } from "./fake-model.mjs";
-import { checkPorts } from "./ports.mjs";
+import { APP_OFFSETS, APP_PORT, checkPorts, claimPort } from "./ports.mjs";
 import { upgradeFlow } from "./upgrade-flow.mjs";
 
 // How long the waits are, times TEST_PATIENCE (the gate sets it from the machine's load, 1 to 3):
@@ -146,6 +146,7 @@ async function serve(dir, port, mode, env = {}) {
   // A fixed port: Vite would otherwise move to another one while the old server is stopping.
   const args =
     mode === "dev" ? ["exec", "vite", "dev", "--port", String(port), "--strictPort"] : ["start"];
+  await claimPort(port, dir, 10_000 * P);
   const server = spawn("pnpm", args, {
     cwd: dir,
     env: { ...process.env, PORT: String(port), ...authEnv(port), ...env },
@@ -9121,7 +9122,10 @@ for (const [index, example] of examples.entries()) {
   dirs.push(dir);
   // Parallel runs (scripts/test-apps-parallel.mjs) give each process its own ports.
   const port = Number(process.env.TEST_APPS_PORT ?? 4400) + index;
-  checkPorts(`${example} (TEST_APPS_PORT)`, [port, port + 100, port + 200, port + 300]);
+  checkPorts(
+    `${example} (TEST_APPS_PORT)`,
+    APP_OFFSETS.map((offset) => port + offset),
+  );
   const reported = failures.length;
   try {
     // Its own administrator: the default is the Git user's address, which on a developer's
@@ -9225,14 +9229,16 @@ for (const [index, example] of examples.entries()) {
       run("pnpm", ["test"], dir),
     );
     step("the generated smoke tests pass: every page opens for every role that may see it", () =>
-      run("pnpm", ["test:smoke"], dir, { SMOKE_PORT: String(port + 200) }),
+      run("pnpm", ["test:smoke"], dir, { SMOKE_PORT: String(port + APP_PORT.smoke) }),
     );
 
     if (existsSync(join(dir, "src/lib/auth.ts")))
       await asyncStep(
         "without BETTER_AUTH_SECRET and BETTER_AUTH_URL, the built app signs nobody in",
         async () => {
-          const env = { ...process.env, PORT: String(port + 300) };
+          const noSecret = port + APP_PORT.noSecret;
+          await claimPort(noSecret, dir, 10_000 * P);
+          const env = { ...process.env, PORT: String(noSecret) };
           delete env.BETTER_AUTH_SECRET;
           delete env.BETTER_AUTH_URL;
           const server = spawn("pnpm", ["start"], { cwd: dir, env });
@@ -9246,7 +9252,7 @@ for (const [index, example] of examples.entries()) {
                 // Any answer at all: an app that refuses to run answers every request with 500.
                 for (let i = 0; i < 120 * P; i++) {
                   const answer = await fetch(
-                    `http://localhost:${port + 300}/api/auth/get-session`,
+                    `http://localhost:${noSecret}/api/auth/get-session`,
                   ).catch(() => undefined);
                   if (answer) return `sign-in answered ${answer.status}`;
                   await new Promise((r) => setTimeout(r, 500));
@@ -9265,18 +9271,18 @@ for (const [index, example] of examples.entries()) {
     if (example === "crm")
       await asyncStep(
         "in the production build an administrator opens a new customer from its address and gets the form, with whom to give it to",
-        () => productionFormFlow(dir, port + 450),
+        () => productionFormFlow(dir, port + APP_PORT.demoFlows),
       );
     if (example === "booking")
       await asyncStep(
         "in the production build a member who opens a staff page by its address gets the refusal, answered 403 (A 214)",
-        () => productionRefusalFlow(dir, port + 450),
+        () => productionRefusalFlow(dir, port + APP_PORT.demoFlows),
       );
 
     if (example === "crm")
       await asyncStep(
         "a demo (DEMO_VISITORS=1) gives each visitor a copy of the data of their own: one visitor's new customer, another never sees; its development door is shut (every /_dev/ path a 404)",
-        () => demoVisitorsFlow(dir, port + 400),
+        () => demoVisitorsFlow(dir, port + APP_PORT.demoVisitors),
       );
 
     // A door secret as a host would give one: a production build still has no door (A 180).
@@ -10452,7 +10458,7 @@ test("the session cookie's name and attributes", async () => {
         },
       );
     const receiver = example === "status" ? await callReceiver() : undefined;
-    stop = await serve(dir, port + 100, "dev", {
+    stop = await serve(dir, port + APP_PORT.dev, "dev", {
       ...receiver?.env,
       DEV_DOOR_SECRET: DOOR_SECRET,
       // The kiosk's staff get a push (notifications.md §4) from a push service on this machine.
@@ -10464,7 +10470,7 @@ test("the session cookie's name and attributes", async () => {
       ...(example === "crm" ? { MAIL_MODE: "outbox" } : {}),
     });
     try {
-      const base = `http://localhost:${port + 100}`;
+      const base = `http://localhost:${port + APP_PORT.dev}`;
       await asyncStep(
         "the dev server hands out no file of the app's data (the database, the outbox)",
         async () => {
