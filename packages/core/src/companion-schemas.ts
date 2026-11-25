@@ -699,6 +699,13 @@ const section: JsonSchema = {
           minItems: 1,
           maxItems: 6,
         },
+        height: {
+          type: "integer",
+          description:
+            "The height in pixels of its width file, beside width, so a page keeps its box before it loads.",
+          minimum: 1,
+          maximum: 16383,
+        },
         film: {
           type: "object",
           description:
@@ -774,6 +781,13 @@ const section: JsonSchema = {
                 minItems: 1,
                 maxItems: 6,
               },
+              height: {
+                type: "integer",
+                description:
+                  "The height in pixels of its width file, beside width, so a page keeps its box before it loads.",
+                minimum: 1,
+                maximum: 16383,
+              },
             },
           },
         },
@@ -842,6 +856,13 @@ const section: JsonSchema = {
                 items: { type: "integer", minimum: 100, maximum: 4000 },
                 minItems: 1,
                 maxItems: 6,
+              },
+              height: {
+                type: "integer",
+                description:
+                  "The height in pixels of its width file, beside width, so a page keeps its box before it loads.",
+                minimum: 1,
+                maximum: 16383,
               },
             },
           },

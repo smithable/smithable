@@ -217,12 +217,32 @@ pages:
     "width: 1536, widths: [1536, 2400]",
     "width: wide",
     "width: 1536.5",
+    // A height measures the width file (T1467): never alone, always a whole number of pixels.
+    "height: 1024",
+    "width: 1536, height: 0",
+    "width: 1536, height: 20000",
+    "width: 1536, height: tall",
     // The file itself is offered too, and its copies are named after it.
     "widths: [800, 2400]",
   ])
     expect(hero(`{ src: images/hero.webp, alt: x, ${bad} }`).diagnostics[0]?.code, bad).toBe(
       "invalid-value",
     );
+  // Its height, the width file's, so a page keeps the picture's box before the file loads.
+  expect(
+    hero("{ src: images/hero.webp, alt: x, width: 1536, height: 1024, widths: [800] }").content
+      ?.pages.home,
+  ).toEqual({
+    sections: {
+      hero: {
+        image: { src: "images/hero.webp", alt: "x", width: 1536, height: 1024, widths: [800] },
+      },
+    },
+  });
+  expect(
+    check("smithableContent: 0.1\nlogo: { src: images/logo.webp, alt: A, height: 80 }\n")
+      .diagnostics[0]?.code,
+  ).toBe("unknown-key");
   for (const src of ["images/HERO.WEBP", "images/hero"])
     expect(
       hero(`{ src: ${src}, alt: x, width: 1536, widths: [800] }`).diagnostics[0]?.code,

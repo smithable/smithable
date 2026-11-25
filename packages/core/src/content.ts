@@ -159,6 +159,12 @@ export interface ContentImage {
    * picture and a phone a small one.
    */
   widths?: number[];
+  /**
+   * The height in pixels of its `width` file, so a page reserves the picture's box before the file
+   * loads (T1467). Filled from what was read, never guessed: a stored file's from the service's
+   * record, a local file's where it could be read. Lost with `width` when the file changes.
+   */
+  height?: number;
   /** A short silent loop over the picture (section-film.md): a hero's only. */
   film?: ContentFilm;
 }
@@ -991,6 +997,7 @@ function readPicture(
   kept?: true;
   kind?: PictureKind;
   width?: number;
+  height?: number;
   widths?: number[];
 } {
   // A mark is shown small: one file.
@@ -999,7 +1006,7 @@ function readPicture(
       "src",
       "alt",
       "generated",
-      ...(sized ? ["asset", "kind", "kept", "width", "widths"] : []),
+      ...(sized ? ["asset", "kind", "kept", "width", "height", "widths"] : []),
       ...(film ? ["film"] : []),
     ],
   });
@@ -1010,17 +1017,26 @@ function readPicture(
   const kind = sort && readPictureKind(ctx, sort.value, where);
   const own = entries.find((e) => e.key === "width");
   const copies = entries.find((e) => e.key === "widths");
+  const tall = entries.find((e) => e.key === "height");
   const texts = readTexts(
     ctx,
     node,
     where,
     ["src", "alt", "asset"],
     entries.filter(
-      (e) => e !== flag && e !== keep && e !== sort && e !== own && e !== copies && e !== reel,
+      (e) =>
+        e !== flag &&
+        e !== keep &&
+        e !== sort &&
+        e !== own &&
+        e !== copies &&
+        e !== tall &&
+        e !== reel,
     ),
   );
   const width = own && readWidths(ctx, own.value, where, false)?.[0];
   const widths = copies && readWidths(ctx, copies.value, where, true);
+  const height = tall && readHeight(ctx, tall.value, where, own !== undefined);
   // The file itself is always offered, or a phone would load the smallest enlargement.
   const misfit =
     widths &&
@@ -1057,8 +1073,38 @@ function readPicture(
     ...(kept && generated ? { kept: true as const } : {}),
     ...(kind ? { kind } : {}),
     ...(width ? { width } : {}),
+    ...(width && height ? { height } : {}),
     ...(widths && !misfit ? { widths } : {}),
   };
+}
+
+/**
+ * A picture's `height`: the height in pixels of its `width` file (T1467), a whole number from 1 to
+ * 16383 (the largest a WebP file can be), and only beside `width`, whose file it measures.
+ */
+function readHeight(
+  ctx: ParseContext,
+  node: ParsedNode | null,
+  where: string,
+  measured: boolean,
+): number | undefined {
+  const value = isScalar(node) ? node.value : undefined;
+  if (!measured) {
+    ctx.error(
+      node,
+      "invalid-value",
+      `"height" of ${where} is the height of its "width" file: it needs "width" beside it.`,
+    );
+    return undefined;
+  }
+  if (typeof value === "number" && Number.isInteger(value) && value >= 1 && value <= 16383)
+    return value;
+  ctx.error(
+    node,
+    "invalid-value",
+    `"height" of ${where} must be the height in pixels of its "width" file, a whole number from 1 to 16383.`,
+  );
+  return undefined;
 }
 
 /** A picture's `kind`: one of PICTURE_KINDS. */
@@ -1116,7 +1162,7 @@ function readImage(
   where: string,
   filmed = false,
 ): ContentImage | undefined {
-  const { src, asset, alt, generated, kept, kind, width, widths, film } = readPicture(
+  const { src, asset, alt, generated, kept, kind, width, height, widths, film } = readPicture(
     ctx,
     node,
     where,
@@ -1158,6 +1204,7 @@ function readImage(
     ...(kept ? { kept } : {}),
     ...(kind ? { kind } : {}),
     ...(width ? { width } : {}),
+    ...(height ? { height } : {}),
     ...(widths ? { widths } : {}),
     ...(film !== undefined ? optional("film", readFilm(ctx, film, `the film of ${where}`)) : {}),
   };

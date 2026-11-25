@@ -134,9 +134,11 @@ test("setSectionPicture places a stored file with the sizes the host read, and o
   const set = place({
     asset: ID,
     alt: "A roof",
-    rendition: { width: 1600, widths: [960, 480, 1600] },
+    rendition: { width: 1600, height: 1067, widths: [960, 480, 1600] },
   });
   if (!set.ok) throw new Error(set.message);
+  // The record's height at that width, so the page keeps the picture's box (T1467).
+  expect(set.files.content).toContain("height: 1067");
   expect(set.files.content).toContain(`asset: ${ID}`);
   expect(set.files.content).toContain("width: 1600");
   expect(set.files.content).toContain("widths: [480, 960]");
@@ -148,6 +150,20 @@ test("setSectionPicture places a stored file with the sizes the host read, and o
   if (!small.ok) throw new Error(small.message);
   expect(small.files.content).not.toContain("widths");
   expect(errors(small.files.content ?? "")).toEqual([]);
+  // A height the content file could not read back is left out; one the record no longer gives
+  // goes when the same file is set again.
+  const odd = place({ asset: ID, alt: "A", rendition: { width: 960, height: 0 } });
+  expect(odd.ok && odd.files.content).not.toContain("height");
+  if (!set.ok) throw new Error("unreachable");
+  const again = applyOperation(set.files, "setSectionPicture", {
+    page: "home",
+    section: "hero",
+    asset: ID,
+    alt: "A roof",
+    rendition: { width: 1600 },
+  });
+  expect(again.ok && again.files.content).not.toMatch(/height|widths/);
+  expect(again.ok && errors(again.files.content ?? "")).toEqual([]);
 
   for (const [args, says] of [
     [{ asset: ID, alt: "A" }, "placed by the hosted service"],

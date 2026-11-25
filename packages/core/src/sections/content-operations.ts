@@ -84,7 +84,7 @@ const setText: Operation<{ path: string[]; text: string; language?: string }> = 
     // the picture loses its mark, its kind and its widths, or wide screens would show the old
     // picture (and a kind left without the mark is an error, picture-kinds.md §2).
     if (path[path.length - 1] === "src" && before !== text)
-      for (const key of ["generated", "kind", "width", "widths"])
+      for (const key of ["generated", "kind", "width", "height", "widths"])
         if (content.has([...parent, key])) content.remove([...parent, key]);
     return [];
   },
@@ -526,7 +526,7 @@ const setSectionPicture: Operation<{
   section: string;
   src?: string;
   asset?: string;
-  rendition?: { width: number; widths?: number[] };
+  rendition?: { width: number; height?: number; widths?: number[] };
   alt?: string;
   item?: number;
   was?: string;
@@ -561,6 +561,7 @@ const setSectionPicture: Operation<{
         additionalProperties: false,
         properties: {
           width: { type: "integer", minimum: 100, maximum: 4000 },
+          height: { type: "integer", minimum: 1, maximum: 16383 },
           widths: { type: "array", items: { type: "integer", minimum: 1 } },
         },
         "x-host": true,
@@ -684,7 +685,9 @@ const setSectionPicture: Operation<{
       : asset !== undefined
         ? { asset, alt: text, ...made }
         : { src: file as string, alt: text };
+    // Sizes the record no longer gives go too: a height is never kept for another width.
     if (same && made && !made.widths) delete image.widths;
+    if (same && made && !made.height) delete image.height;
     if (append) {
       if (content.has(items)) content.appendItem(items, { image });
       else put(content, items, [{ image }]);
@@ -704,7 +707,15 @@ const setSectionPicture: Operation<{
  * A stored file's renditions as a slot names them (media-storage.md §1): the largest made as
  * `width`, the others narrowest first as `widths`.
  */
-function renditionOf({ width, widths = [] }: { width: number; widths?: number[] }) {
+function renditionOf({
+  width,
+  height,
+  widths = [],
+}: {
+  width: number;
+  height?: number;
+  widths?: number[];
+}) {
   // The largest copy names the file the page shows, so it is never swapped for a smaller one.
   if (!Number.isInteger(width) || width < 100 || width > 4000)
     throw new OperationError("The stored file's largest copy must be 100 to 4000 pixels wide.");
@@ -714,7 +725,9 @@ function renditionOf({ width, widths = [] }: { width: number; widths?: number[] 
     .filter((w) => Number.isInteger(w) && w >= 100 && w < width)
     .sort((a, b) => a - b)
     .slice(-6);
-  return { width, ...(copies.length ? { widths: copies } : {}) };
+  // A height the content file could not read back is left out: the page then sizes as before.
+  const tall = Number.isInteger(height) && (height as number) >= 1 && (height as number) <= 16383;
+  return { width, ...(tall ? { height } : {}), ...(copies.length ? { widths: copies } : {}) };
 }
 
 /**

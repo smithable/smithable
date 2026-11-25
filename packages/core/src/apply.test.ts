@@ -700,7 +700,7 @@ test("setText changes a landing section's list texts in place, by their position
     ...invoicing,
     content: (invoicing.content ?? "").replace(
       /src: images\/hero\.webp\n/,
-      "src: images/hero.webp\n        width: 1536\n        widths: [800, 2400]\n",
+      "src: images/hero.webp\n        width: 1536\n        height: 1024\n        widths: [800, 2400]\n",
     ),
   };
   expect(sized.content).toContain("widths: [800, 2400]");
@@ -710,13 +710,16 @@ test("setText changes a landing section's list texts in place, by their position
   });
   expect(swapped.ok && swapped.files.content).toContain("src: images/mine.webp");
   expect(swapped.ok && swapped.files.content).not.toMatch(/\bwidths?:/);
+  // Its height measured the old file: it goes with the width (T1467).
+  expect(swapped.ok && swapped.files.content).not.toMatch(/\bheight:/);
   // The same file typed again is not another file.
   const same = applyOperation(sized, "setText", {
     path: ["pages", "home", "hero", "image", "src"],
     text: "images/hero.webp",
   });
   expect(same.ok && same.files.content).toContain("widths: [800, 2400]");
-  expect(same.ok && same.files.content).toMatch(/hero\.webp\n(.*\n){3}\s*generated: true/);
+  expect(same.ok && same.files.content).toContain("height: 1024");
+  expect(same.ok && same.files.content).toMatch(/hero\.webp\n(.*\n){4}\s*generated: true/);
   // A placed picture's kind goes with the mark: another file is not known to be one.
   const kinded = {
     ...invoicing,
