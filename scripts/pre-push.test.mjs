@@ -61,16 +61,26 @@ esac
   return { work, run };
 }
 
-test("a code change is refused until its tree is marked, then pushed", () => {
+test("a code change is refused until lint is marked; without the test marker it goes with a warning", () => {
   const { run } = scratch();
   run("echo 'export const a = 2;' > code.ts && git commit -qam change");
   let r = run("git push -q origin c/x");
   assert.notEqual(r.status, 0);
-  assert.match(r.stderr, /lint, build and unit tests have not passed/);
-  assert.match(r.stderr, /Run: scripts\/verify\.sh/);
-  assert.equal(run("scripts/mark-verified.sh").status, 0);
+  assert.match(r.stderr, /lint has not passed on this tree/);
+  assert.match(r.stderr, /Run: scripts\/verify\.sh --lint/);
+  assert.equal(run("scripts/mark-verified.sh --lint").status, 0);
   r = run("git push -q origin c/x");
   assert.equal(r.status, 0, r.stderr);
+  assert.match(r.stderr, /warning: the unit tests have no passing run on this tree; CI runs them/);
+});
+
+test("with the test marker the push goes without a warning", () => {
+  const { run } = scratch();
+  run("echo 'export const a = 9;' > code.ts && git commit -qam change");
+  assert.equal(run("scripts/mark-verified.sh").status, 0);
+  const r = run("git push -q origin c/x");
+  assert.equal(r.status, 0, r.stderr);
+  assert.doesNotMatch(r.stderr, /warning/);
 });
 
 test("the marker is for the files as they will be committed, before the commit", () => {

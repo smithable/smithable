@@ -1,11 +1,14 @@
 #!/usr/bin/env bash
-# Lint, build and unit tests, then the marker the pre-push hook asks for (scripts/mark-verified.sh).
-# Arguments go to the unit tests (scripts/verify.sh --maxWorkers=4). The tests in
+# Lint, build and unit tests, then the markers the pre-push hook reads (scripts/mark-verified.sh): the
+# lint marker as soon as lint passes (the hook refuses without it), the test marker at the end (the
+# hook warns without it). scripts/verify.sh --lint runs lint alone and writes its marker. Other
+# arguments go to the unit tests (scripts/verify.sh --maxWorkers=4). The tests in
 # scripts/slow-tests.txt are left out. A gate that exits 0 marks its tree too.
 # vitest is called directly: through "pnpm test --" it reads every option after the -- as nothing.
 set -uo pipefail
 cd "$(git rev-parse --show-toplevel)" || exit 1
 before=$(scripts/mark-verified.sh --tree) || exit 1
+if [ "${1:-}" = --lint ]; then pnpm lint && exec scripts/mark-verified.sh --lint "$before"; exit 1; fi
 # Beside a running or waiting gate, the units take two workers whatever was asked (T1522): a full
 # suite beside a gate's browser phase slows both.
 args=("$@")
@@ -21,7 +24,7 @@ while IFS= read -r line; do
   args+=(--exclude "${line%%  *}")
   echo "verify: left out (slow; CI runs it): ${line%%  *} - ${line#*  }"
 done < scripts/slow-tests.txt
-if ! { pnpm lint && pnpm build && pnpm exec vitest run "${args[@]}"; }; then
+if ! { pnpm lint && { scripts/mark-verified.sh --lint "$before" || :; } && pnpm build && pnpm exec vitest run "${args[@]}"; }; then
   echo "verify: a step failed: no marker written." >&2
   exit 1
 fi

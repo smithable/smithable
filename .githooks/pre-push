@@ -1,14 +1,16 @@
 #!/usr/bin/env bash
-# Refuses a push (T1509) when either check below fails. It is on only in the maintainers' clones
-# (scripts/git-hooks.mjs); an outside contributor's clone and CI never run it.
+# Guards a push (T1509). It is on only in the maintainers' clones (scripts/git-hooks.mjs); an outside
+# contributor's clone and CI never run it. It refuses only on what is fast and deterministic:
 #
 #   1. The secret scan: gitleaks, with main's rules, over the commits the remote does not have yet.
 #      It needs Docker.
-#   2. The tests: lint, build and unit tests must have passed on the pushed tree, recorded by
-#      scripts/verify.sh, or by a gate that exits 0. A push needs no record when it is:
-#      - plain documents only (ci.yml's list);
-#      - a merge of main into a branch head that is already on the remote, or whose own tree has one.
-#      CI runs on either of those.
+#   2. Lint must have passed on the pushed tree, recorded by scripts/verify.sh (--lint for lint
+#      alone), or by a gate that exits 0.
+#   3. The unit tests: without a record that they passed on the tree, one line warns; the push goes,
+#      and CI runs them. Under load a local run fails on timing alone, and a refusal then costs an hour.
+#
+#   A push needs no record when it is plain documents only (ci.yml's list), or a merge of main into a
+#   branch head that is already on the remote, or whose own tree has one. CI runs on either of those.
 #
 # Each refusal prints the one command to run.
 set -uo pipefail
@@ -23,6 +25,7 @@ refuse() {
   exit 1
 }
 marked() { [ -e "$common/verified/$(git rev-parse "$1^{tree}")" ]; }
+linted() { marked "$1" || [ -e "$common/verified/lint/$(git rev-parse "$1^{tree}")" ]; }
 plain_docs() { # $1 base, $2 head: 0 when every changed file is on ci.yml's plain-documents list
   local globs=() excludes=() glob
   mapfile -t globs < <(git show origin/main:.github/workflows/ci.yml 2>/dev/null |
@@ -37,7 +40,7 @@ merge_of_main() { # $1 head, $2 the remote's old head: 0 when $1 only brings mai
   read -r -a parents <<<"$(git rev-list --parents -n 1 "$1")"
   [ ${#parents[@]} -eq 3 ] || return 1
   git merge-base --is-ancestor "${parents[2]}" origin/main || return 1
-  [ "${parents[1]}" = "$2" ] || marked "${parents[1]}"
+  [ "${parents[1]}" = "$2" ] || linted "${parents[1]}"
 }
 
 while read -r _ lsha _ rsha; do
@@ -58,7 +61,9 @@ while read -r _ lsha _ rsha; do
   marked "$lsha" && continue
   base=$(git merge-base origin/main "$lsha" 2>/dev/null) && plain_docs "$base" "$lsha" && continue
   merge_of_main "$lsha" "$rsha" && continue
-  refuse "lint, build and unit tests have not passed on this tree ($(git rev-parse "$lsha^{tree}"))." \
-    "scripts/verify.sh (commit everything first, or run it on the files as they will be committed)"
+  linted "$lsha" ||
+    refuse "lint has not passed on this tree ($(git rev-parse "$lsha^{tree}"))." \
+      "scripts/verify.sh --lint (commit everything first, or run it on the files as they will be committed)"
+  echo "pre-push: warning: the unit tests have no passing run on this tree; CI runs them (scripts/verify.sh runs them here)." >&2
 done
 exit 0
