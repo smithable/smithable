@@ -1135,7 +1135,7 @@ function readImage(
     return { alt: alt ?? "" } as ContentImage;
   }
   if (asset !== undefined) {
-    if (!storedChecks(ctx, node, where, { src, asset, alt, width })) return undefined;
+    if (!storedChecks(ctx, node, where, { src, asset, alt, width, widths })) return undefined;
   } else if (!src || !IMAGE_SRC.test(src)) {
     ctx.error(
       node,
@@ -1172,7 +1172,13 @@ function storedChecks(
   ctx: ParseContext,
   node: ParsedNode | null,
   where: string,
-  { src, asset, alt, width }: { src?: string; asset: string; alt?: string; width?: number },
+  {
+    src,
+    asset,
+    alt,
+    width,
+    widths,
+  }: { src?: string; asset: string; alt?: string; width?: number; widths?: number[] },
 ): boolean {
   const fault =
     src !== undefined
@@ -1181,9 +1187,11 @@ function storedChecks(
         ? `"asset" of ${where} must be a stored file's id: m_ and 26 letters and digits, as the photo library gives it.`
         : !width
           ? `${capitalize(where)} needs "width" beside "asset": the width of its largest copy, which names its file.`
-          : !alt
-            ? `${capitalize(where)} needs "alt": what it shows, for people who cannot see it.`
-            : undefined;
+          : widths?.some((w) => w >= width)
+            ? `"widths" of ${where} must all be narrower than its "width", the largest copy's.`
+            : !alt
+              ? `${capitalize(where)} needs "alt": what it shows, for people who cannot see it.`
+              : undefined;
   if (fault) ctx.error(node, "invalid-value", fault);
   return !fault;
 }

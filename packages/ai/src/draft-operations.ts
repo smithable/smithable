@@ -6,6 +6,7 @@
 import {
   type AnyOperation,
   applyOperation,
+  forModels,
   type Language,
   type OperationArgs,
   operationsFor,
@@ -65,7 +66,7 @@ const NOT_FOR_DRAFTS = new Set([
 ]);
 
 export function draftOperations(): AnyOperation[] {
-  return operationsFor([]).filter((op) => !NOT_FOR_DRAFTS.has(op.name));
+  return operationsFor([]).filter((op) => !NOT_FOR_DRAFTS.has(op.name) && forModels(op));
 }
 
 const draftGuidance = (
