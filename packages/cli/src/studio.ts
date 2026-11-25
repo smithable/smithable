@@ -1015,7 +1015,8 @@ export async function studio(
       },
       () => {},
     );
-  changeTree([{ path: noticeFile, data: null }]);
+  // The maker's file stays until Builder says it showed the notice (/api/notice/seen), so a Studio
+  // started again before that still has it (T1599).
 
   const state = () => {
     const quiet = { out: () => {}, err: () => {} };
@@ -1100,6 +1101,8 @@ export async function studio(
   let waiting: string[] = [];
   let asked: Asked | undefined;
   const replaceWith = async (to: Asked) => {
+    // An unseen notice of the app being replaced is not the new app's: its maker writes its own.
+    changeTree([{ path: noticeFile, data: null }]);
     const result = await capture((io) =>
       replaceProject(dir, io, to, (stage, draft, assumptions) => {
         if (!making) return;
@@ -1136,7 +1139,6 @@ export async function studio(
     // The app that came in replaces the old one's reason with its own, or with none.
     fallback = notice;
     keepFallback(fallback);
-    changeTree([{ path: noticeFile, data: null }]);
     await settled();
     // The log starts with the person's app: nothing of the app that was here, and nothing
     // of what the dev server said while the files under it were being exchanged.
@@ -1293,9 +1295,9 @@ export async function studio(
           notice =
             "The dev data is back as it was before the fix was opened: what changed in it while the fix was open is gone.";
         }
-        const answer = state();
-        notice = undefined;
-        return json(answer);
+        // The one-time notice stays until Builder says it showed it (/api/notice/seen), so a read
+        // that is not the page's (the release smoke's probe) does not take it (T1599).
+        return json(state());
       }
       // The app card, written from the spec files as `smithable card` writes it (A 233).
       if (url.pathname === "/api/card" && req.method === "GET") return json(cardTexts(dir));
@@ -1761,6 +1763,22 @@ export async function studio(
           ...themeChange,
           ...(diagnostics ? { diagnostics } : {}),
         });
+      }
+      // Builder showed the one-time notice: it is not given again. Only that text, so a newer notice
+      // that came meanwhile stays to be shown (T1599).
+      if (req.method === "POST" && url.pathname === "/api/notice/seen") {
+        const { text } = await body();
+        if (typeof text === "string" && text === notice) {
+          notice = undefined;
+          let kept: string | undefined;
+          try {
+            kept = readOwn(noticeFile)?.trim();
+          } catch {
+            kept = undefined;
+          }
+          if (kept === text) changeTree([{ path: noticeFile, data: null }]);
+        }
+        return json({ ok: true });
       }
       // The preview has not answered within Studio's wait: its last log lines, and the failure
       // kept for a report (seen on the hosted beta: a preview that never started).

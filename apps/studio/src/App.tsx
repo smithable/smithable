@@ -218,12 +218,18 @@ export function App() {
     diagnostics?: PresentedDiagnostic[];
   }>();
   const [reporting, setReporting] = useState(false);
-  // Studio hands a notice to the first read of the project only, so whichever read that is (the
-  // page loading, a reconnect, the catch-up after a change) shows it.
+  // Studio keeps its one-time notice in every read of the project until Builder says it showed it,
+  // so whichever read comes first here (the page loading, a reconnect, the catch-up after a change)
+  // shows it, and a read that is not the page's does not take it (T1599).
   const noticed = useCallback((next: Project) => {
     if (next.notice) setMessage({ ok: false, text: next.notice, notice: true });
     return next;
   }, []);
+  // Said seen once the banner is on the page, not when it was only asked for.
+  const shownNotice = message?.notice ? message.text : undefined;
+  useEffect(() => {
+    if (shownNotice) api.noticeSeen(shownNotice).catch(() => {});
+  }, [shownNotice]);
   // A held fix opened from the service's link, ?fix=<id> (A 245): read once, then gone from the address.
   const [fixLine, setFixLine] = useState<string>();
   useEffect(() => {
