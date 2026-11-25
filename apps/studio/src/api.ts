@@ -122,6 +122,8 @@ export interface ReleaseReview {
    * of sections with "pictures: work" (picture-kinds.md §6). A suggestion; never holds a release.
    */
   pictures?: { page: string; section: string; item?: number; src: string; alt: string }[];
+  /** The source revision the review was read at, which its pictures' Keep and Remove send. */
+  revision?: string;
   /** Each privacy page's review (legal-page.md §6.4). */
   privacy?: {
     page: string;
@@ -479,13 +481,26 @@ export const api = {
     mode?: "sensible" | "everything",
   ) => call<PeopleState>("/api/people", { do: what, ...(mode ? { mode } : {}) }),
   change: (id: string, all = false) => call<ChangeDetail>(`/api/change/${id}${all ? "?all" : ""}`),
-  /** `file`: a picture the change brings, written under its path in the project (base64). */
+  /**
+   * `file`: a picture the change brings, written under its path in the project (base64).
+   * `expectedRevision`: the source revision the caller read; refused when the project changed since.
+   */
   operation: (
     name: string,
     args: Record<string, unknown>,
     confirm = false,
     file?: { path: string; data: string },
-  ) => changing(call<Result>("/api/op", { name, args, confirm, file })),
+    expectedRevision?: string,
+  ) =>
+    changing(
+      call<Result>("/api/op", {
+        name,
+        args,
+        confirm,
+        file,
+        ...(expectedRevision ? { expectedRevision } : {}),
+      }),
+    ),
   /**
    * The look editor's Apply or Save: `lookProject` is the project it opened, and for Apply the
    * envelope carries the source revision the draft was opened on and the request's id, beside
