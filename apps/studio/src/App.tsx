@@ -49,6 +49,7 @@ import { InkWashNotice } from "./InkWashNotice";
 import { LookPanel } from "./LookPanel";
 import { logStore } from "./logs";
 import { Making } from "./Making";
+import { type NoticesSeen, noticeStep } from "./notice";
 import { ApplyVersionDialog, OldVersion, type OpenOld, openOldTab } from "./OldVersion";
 import { OutboxDialog } from "./Outbox";
 import { PeoplePanel } from "./People";
@@ -221,23 +222,23 @@ export function App() {
   // Studio keeps its one-time notice in every read of the project until Builder says it showed it,
   // so whichever read comes first here (the page loading, a reconnect, the catch-up after a change)
   // shows it, and a read that is not the page's does not take it (T1599).
-  // The notice on the page, and whether saying so failed: the next read that still has it says it
-  // again, and does not put the banner up again (T1602).
-  const noticeShown = useRef<{ id: string; failed: boolean } | undefined>(undefined);
+  // The notices put on the page, and the one whose acknowledgement failed (notice.ts, T1602).
+  const noticesSeen = useRef<NoticesSeen>({ shown: new Set() });
   const acknowledge = useCallback((id: string) => {
-    noticeShown.current = { id, failed: false };
+    const seen = noticesSeen.current;
+    seen.shown.add(id);
+    if (seen.failed === id) seen.failed = undefined;
     api.noticeSeen(id).catch(() => {
-      if (noticeShown.current?.id === id) noticeShown.current = { id, failed: true };
+      seen.failed = id;
     });
   }, []);
   const noticed = useCallback(
     (next: Project) => {
       const { notice, noticeId } = next;
-      if (notice && noticeId) {
-        const shown = noticeShown.current;
-        if (shown?.id !== noticeId) setMessage({ ok: false, text: notice, notice: noticeId });
-        else if (shown.failed) acknowledge(noticeId);
-      }
+      const step = notice ? noticeStep(noticesSeen.current, noticeId) : "none";
+      if (step === "show" && notice && noticeId)
+        setMessage({ ok: false, text: notice, notice: noticeId });
+      else if (step === "again" && noticeId) acknowledge(noticeId);
       return next;
     },
     [acknowledge],

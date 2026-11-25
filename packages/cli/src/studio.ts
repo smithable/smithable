@@ -997,6 +997,8 @@ export async function studio(
   // same words (T1602); and whether it is the maker's file, which goes once it is seen.
   let noticeId = randomUUID();
   let noticeInFile = Boolean(notice);
+  /** An app is coming in: the notice file may be the old app's or the new one's. */
+  let replacing = false;
   const tell = (text: string) => {
     notice = text;
     noticeId = randomUUID();
@@ -1115,9 +1117,9 @@ export async function studio(
     // The notice file comes and goes with the app's other files (replace.ts writes the new app's
     // tree whole): an app that came in brings its own or none, and a replace refused or failed
     // before it leaves the old app's unseen notice, for a Studio started again too (T1602). Until
-    // it is read again below, an acknowledgement of the old notice leaves the file alone: by then
-    // it may be the new app's.
-    noticeInFile = false;
+    // it is read again below, an acknowledgement neither reads nor removes the file: by then it
+    // may be the new app's.
+    replacing = true;
     const result = await capture((io) =>
       replaceProject(dir, io, to, (stage, draft, assumptions) => {
         if (!making) return;
@@ -1139,7 +1141,10 @@ export async function studio(
         };
         send("making", making);
       }),
-    );
+    ).finally(() => {
+      // Whatever came of it, the file is the app's again (read below, with nothing in between).
+      replacing = false;
+    });
     if (result.ok) lookProject = randomUUID();
     // Refused (nothing was touched) or failed: it can be asked again.
     if (!result.ok) replaceable = true;
@@ -1787,19 +1792,23 @@ export async function studio(
       if (req.method === "POST" && url.pathname === "/api/notice/seen") {
         const { id } = await body();
         if (notice && typeof id === "string" && id === noticeId) {
-          // The maker's file goes first, so a failure leaves the notice to be said seen again.
-          if (noticeInFile) changeTree([{ path: noticeFile, data: null }]);
-          // A notice told over the maker's unseen one (an old server, the dev data back) leaves
-          // that one to be shown next.
-          let next: string | undefined;
+          let file: string | undefined;
           try {
-            next = noticeInFile ? undefined : readOwn(noticeFile)?.trim() || undefined;
+            file = replacing ? undefined : readOwn(noticeFile)?.trim() || undefined;
           } catch {
-            next = undefined;
+            file = undefined;
           }
-          notice = next;
+          // The maker's file goes with its notice, only while it still says it, and first, so a
+          // failure leaves the notice to be said seen again.
+          if (noticeInFile && file === notice) {
+            changeTree([{ path: noticeFile, data: null }]);
+            file = undefined;
+          }
+          // What the file still says is shown next: the maker's unseen notice that one told over
+          // it (an old server, the dev data back) hid, or a newer one the maker wrote.
+          notice = file;
           noticeId = randomUUID();
-          noticeInFile = Boolean(next);
+          noticeInFile = Boolean(file);
         }
         return json({ ok: true });
       }
