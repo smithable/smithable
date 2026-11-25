@@ -35,3 +35,20 @@ test("--idle: 0 on an empty queue, 1 while a gate holds the lock or a live one w
   writeFileSync(join(home, ".gate-queue", "2.999999999"), "b\t/tmp/wt\n");
   assert.equal(idle(home), 0, "a ticket whose process is gone is dropped, not counted");
 });
+
+test("an argument it does not know exits 2 and queues no gate", () => {
+  const home = mkdtempSync(join(tmpdir(), "smithable-gate-args-"));
+  try {
+    for (const args of [["--idel"], ["--idle", "now"], ["check"]]) {
+      const r = spawnSync("bash", [gate, ...args], {
+        env: { ...process.env, GATE_HOME: home, SESSION: "t" },
+        encoding: "utf8",
+      });
+      assert.equal(r.status, 2, args.join(" "));
+      assert.match(r.stderr, /no gate started/);
+    }
+    assert.equal(idle(home), 0, "no ticket was left in the queue");
+  } finally {
+    rmSync(home, { recursive: true, force: true });
+  }
+});
