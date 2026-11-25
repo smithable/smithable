@@ -6227,6 +6227,16 @@ async function filmFlow(dir, base) {
   const hero = page.locator("[data-hero]");
   const playing = hero.locator("video[data-playing]");
   const mark = hero.locator('[data-part="ai-mark"]').first();
+  // The film starts once its player has data: wait for that on the page as opened, not reopen it
+  // at once, so a slow runner gets there (T1573). Each reopen would start the load again.
+  const plays = () =>
+    playing
+      .first()
+      .waitFor({ timeout: 10000 * P })
+      .then(
+        () => true,
+        () => false,
+      );
   try {
     writeFileSync(film, readFileSync(join(repo, "scripts", "fixtures", "film.mp4")));
     change("setSectionFilm", "home", "hero", "images/hero-film.mp4");
@@ -6242,8 +6252,7 @@ async function filmFlow(dir, base) {
       if (layout !== "inset") change("setSectionLook", "home", "hero", "layout", layout);
       await until(
         `${base}/`,
-        async () =>
-          (await hero.getAttribute("data-layout")) === layout && (await playing.count()) > 0,
+        async () => (await hero.getAttribute("data-layout")) === layout && (await plays()),
         `the ${layout} hero's film does not play`,
       );
       if (await mark.isVisible())
@@ -6333,8 +6342,7 @@ async function filmFlow(dir, base) {
     change("setSectionLook", "home", "hero", "layout", "photo");
     await until(
       `${base}/`,
-      async () =>
-        (await hero.getAttribute("data-layout")) === "photo" && (await playing.count()) > 0,
+      async () => (await hero.getAttribute("data-layout")) === "photo" && (await plays()),
       "the photo hero's film does not play",
     );
     const top = await hero.evaluate((section) => {
