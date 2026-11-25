@@ -189,9 +189,12 @@ const own = new Set<number>();
  * group's and no one else's to write in (0755). A file counts as in it where the opened file and
  * the held folder are (Linux's /proc/self/fd, compared as bytes), so a link it holds into the
  * project (the staged app's node_modules) leads to the project's rules. Gives back the function
- * that unmarks it, once.
+ * that unmarks it, once. The project user reads it (sync copies it in as that user), so it is
+ * 0755: it holds only the app being made for that project.
  */
 export function ownFolder(dir: string): () => void {
+  // Without a project user every tree read is a plain one: nothing to mark (and no uid on Windows).
+  if (!projectUser()) return () => {};
   const fd = openSync(
     dir,
     constants.O_RDONLY | (constants.O_DIRECTORY ?? 0) | (constants.O_NOFOLLOW ?? 0),
@@ -269,13 +272,13 @@ function openOwn(path: string, inOwn = false): [number, Stats] {
  * link the project put there cannot show this process's own files. Undefined when it is not there.
  */
 export function readOwn(path: string, max = 64 * 1024): string | undefined {
-  return readOwnBytes(path, max)?.toString("utf8");
+  return readOwnBytes(path, max, false)?.toString("utf8");
 }
 
-function readOwnBytes(path: string, max: number): Buffer | undefined {
+function readOwnBytes(path: string, max: number, inOwn: boolean): Buffer | undefined {
   let opened: [number, Stats];
   try {
-    opened = openOwn(path, true);
+    opened = openOwn(path, inOwn);
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") return undefined;
     throw error;
@@ -297,7 +300,7 @@ function readOwnBytes(path: string, max: number): Buffer | undefined {
  * Undefined when it is not there; an error when it is there but not a plain file of the project's.
  */
 export function readTree(path: string, max = 8 * 1024 * 1024): Buffer | undefined {
-  if (projectUser()) return readOwnBytes(path, max);
+  if (projectUser()) return readOwnBytes(path, max, true);
   return existsSync(path) ? readFileSync(path) : undefined;
 }
 

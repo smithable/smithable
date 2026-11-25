@@ -399,6 +399,8 @@ test.runIf(process.platform === "linux" && process.getuid?.() !== 0)(
     expect(statSync(staged).mode & 0o7777).toBe(0o755);
     try {
       expect(readTree(content)?.toString()).toContain("smithableContent");
+      // Only tree reads: readOwn (the project's notice) keeps the project user's rule.
+      expect(() => readOwn(content)).toThrow("is not a file the child made");
       const said: string[] = [];
       dropMissingPictures(staged, { out: () => {}, err: (text) => said.push(text) });
       expect(readTree(content)?.toString()).not.toContain("hero.webp");
