@@ -704,6 +704,15 @@ const section: JsonSchema = {
           description:
             "A hero's short silent loop over its picture (an MP4 under public/images/, 3 to 12 seconds, at most 5 MB, or a stored film); the picture shows first and for anyone who gets no film. Set it with setSectionFilm.",
           additionalProperties: false,
+          // Its two forms (readFilm in content.ts): a file of its own, or a stored film's id and
+          // renditions, never both and never neither.
+          oneOf: [
+            {
+              required: ["src"],
+              not: { anyOf: [{ required: ["asset"] }, { required: ["heights"] }] },
+            },
+            { required: ["asset", "heights"], not: { required: ["src"] } },
+          ],
           properties: {
             // FILM_SRC in content.ts: no empty or dot-led part, so no way out of images/.
             src: { type: "string", pattern: "^images/([\\w-][\\w.-]*/)*[\\w-][\\w.-]*\\.mp4$" },

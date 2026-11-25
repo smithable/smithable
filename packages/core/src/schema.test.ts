@@ -61,3 +61,30 @@ describe("the JSON Schema rejects what editors should flag", () => {
     expect(validate(parse(text))).toBe(false);
   });
 });
+
+test("the content schema takes a film in one of its two forms only (readFilm; T1557)", () => {
+  const check = new Ajv({ allErrors: true, strict: false }).compile(
+    COMPANION_SCHEMAS["smithable.content.yml"] as object,
+  );
+  const ok = (film: unknown) =>
+    check({
+      smithableContent: 0.1,
+      pages: {
+        home: { hero: { title: "Roofs", image: { src: "images/hero.webp", alt: "A roof", film } } },
+      },
+    });
+  const id = "m_01hz8k3q4r5s6t7v8w9x0y1z2a";
+  expect(ok({ src: "images/hero.mp4" }), JSON.stringify(check.errors)).toBe(true);
+  expect(
+    ok({ asset: id, heights: [720, 1080], generated: true }),
+    JSON.stringify(check.errors),
+  ).toBe(true);
+  for (const film of [
+    {},
+    { asset: id },
+    { heights: [720] },
+    { src: "images/hero.mp4", asset: id, heights: [720] },
+    { src: "images/hero.mp4", heights: [720] },
+  ])
+    expect(ok(film), JSON.stringify(film)).toBe(false);
+});
