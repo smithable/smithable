@@ -49,7 +49,7 @@ import { InkWashNotice } from "./InkWashNotice";
 import { LookPanel } from "./LookPanel";
 import { logStore } from "./logs";
 import { Making } from "./Making";
-import { type NoticesSeen, noticeStep } from "./notice";
+import { type NoticesSeen, noticeShown, noticeStep } from "./notice";
 import { ApplyVersionDialog, OldVersion, type OpenOld, openOldTab } from "./OldVersion";
 import { OutboxDialog } from "./Outbox";
 import { PeoplePanel } from "./People";
@@ -238,8 +238,10 @@ export function App() {
     (next: Project) => {
       const { notice, noticeId } = next;
       const step = notice ? noticeStep(noticesSeen.current, noticeId) : "none";
-      if (step === "show" && notice && noticeId)
+      if (step === "show" && notice && noticeId) {
+        noticeShown(noticesSeen.current, noticeId);
         setMessage({ ok: false, text: notice, notice: noticeId });
+      }
       if (step !== "none" && noticeId) acknowledge(noticeId);
       return next;
     },

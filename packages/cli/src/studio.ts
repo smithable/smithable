@@ -994,14 +994,19 @@ export async function studio(
     ?.toString("utf8")
     .trim();
   // Each notice has an id of its own, so a late acknowledgement of one never takes another in the
-  // same words (T1602); and whether it is the maker's file, which goes once it is seen.
-  let noticeId = randomUUID();
+  // same words (T1602); and whether it is the maker's file, which goes once it is seen. The id is
+  // this run's and a number that only grows ("<run>.<n>"), so the page can tell a late read's older
+  // notice from a newer one and leave the newer on the page (T1604).
+  const noticeRun = randomUUID();
+  let noticeCount = 0;
+  const nextNoticeId = () => `${noticeRun}.${++noticeCount}`;
+  let noticeId = nextNoticeId();
   let noticeInFile = Boolean(notice);
   /** An app is coming in: the notice file may be the old app's or the new one's. */
   let replacing = false;
   const tell = (text: string) => {
     notice = text;
-    noticeId = randomUUID();
+    noticeId = nextNoticeId();
     noticeInFile = false;
   };
   // The maker's message is also why this app is not the one described (a description that fell
@@ -1156,7 +1161,7 @@ export async function studio(
       } catch {
         notice = undefined;
       }
-      noticeId = randomUUID();
+      noticeId = nextNoticeId();
       noticeInFile = Boolean(notice);
       // The app that came in replaces the old one's reason with its own, or with none.
       fallback = notice;
@@ -1812,7 +1817,7 @@ export async function studio(
           // What the file still says is shown next: the maker's unseen notice that one told over
           // it (an old server, the dev data back) hid, or a newer one the maker wrote.
           notice = file;
-          noticeId = randomUUID();
+          noticeId = nextNoticeId();
           noticeInFile = Boolean(file);
         }
         return json({ ok: true });
