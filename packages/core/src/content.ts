@@ -163,9 +163,16 @@ export interface ContentImage {
   film?: ContentFilm;
 }
 
-/** A film over a picture: its file under public/images/ and its own origin, as a picture's. */
+/**
+ * A film over a picture: its file under public/images/, or a stored file (media-storage.md §7)
+ * with the heights of its renditions, and its own origin, as a picture's. Exactly one of `src` and
+ * `asset`.
+ */
 export interface ContentFilm {
-  src: string;
+  src?: string;
+  asset?: string;
+  /** A stored film's renditions, by height, lowest first: `<h>.mp4` each, from the record. */
+  heights?: number[];
   generated?: true;
   kind?: PictureKind;
 }
@@ -178,6 +185,12 @@ export const LOGO_SRC = /^images\/([\w-][\w.-]*\/)*[\w-][\w.-]*\.(webp|avif|jpe?
 export const ASSET_ID = /^m_[0-9a-hjkmnp-tv-z]{26}$/;
 /** A film's file: an MP4 under public/images/; its bytes are the host's to check (section-film.md §2). */
 export const FILM_SRC = /^images\/([\w-][\w.-]*\/)*[\w-][\w.-]*\.mp4$/;
+/** The heights a stored film's renditions may have (media-storage.md §7). */
+export const FILM_HEIGHTS = [720, 1080] as const;
+/** A hero film's rules (section-film.md §2): its length in seconds, and its largest shown size. */
+export const FILM_SECONDS = [3, 12] as const;
+export const FILM_LONG_SIDE = 1920;
+export const FILM_SHORT_SIDE = 1080;
 
 /** Whether a kind of section shows one picture of its own (a hero, a media-and-text section). */
 export const sectionTakesPicture = (kind: string) => SECTION_TEXTS[kind]?.image === true;
@@ -1200,29 +1213,63 @@ const optional = <K extends string, V>(key: K, value: V | undefined) =>
   (value === undefined ? {} : { [key]: value }) as Partial<Record<K, V>>;
 
 /**
- * A film over a picture: `{ src: images/<file>.mp4, generated?, kind? }`. Only its name is checked
- * here; the host reads its bytes (section-film.md §2).
+ * A film over a picture: `{ src: images/<file>.mp4, generated?, kind? }`, or a stored film's
+ * `{ asset, heights }` (media-storage.md §7). Only its name is checked here; the host reads a
+ * file's bytes (section-film.md §2), and the operation checks a stored film's record.
  */
 function readFilm(ctx: ParseContext, node: ParsedNode | null, where: string) {
   const entries = checkKeys(ctx, mapEntries(ctx, node, where) ?? [], where, {
-    allowed: ["src", "generated", "kind"],
+    allowed: ["src", "asset", "heights", "generated", "kind"],
   });
+  const stored = entries.find((e) => e.key === "asset");
+  const rungs = entries.find((e) => e.key === "heights");
   const flag = entries.find((e) => e.key === "generated");
   const sort = entries.find((e) => e.key === "kind");
   const kind = sort && readPictureKind(ctx, sort.value, where);
   const generated = flag && readBoolean(ctx, flag.value, `"generated" of ${where}`) === true;
-  const { src } = readTexts(
+  const { src, asset } = readTexts(
     ctx,
     node,
     where,
-    ["src"],
-    entries.filter((e) => e !== flag && e !== sort),
+    ["src", "asset"],
+    entries.filter((e) => e !== flag && e !== sort && e !== rungs),
   );
   if (kind && (kind === "photograph") === Boolean(generated))
     ctx.error(
       sort?.value ?? null,
       "invalid-value",
       `"kind" of ${where} must agree with "generated": a photograph is not made by an AI, and an AI's film says "generated: true".`,
+    );
+  if (stored) {
+    const node = rungs?.value ?? null;
+    const heights = (isSeq(node) ? node.items : []).map((i) => (isScalar(i) ? i.value : undefined));
+    const fault =
+      src !== undefined
+        ? `${capitalize(where)} names its file twice: "asset" (a stored file) or "src" (a file in public/images/), not both.`
+        : !asset || !ASSET_ID.test(asset)
+          ? `"asset" of ${where} must be a stored file's id: m_ and 26 letters and digits, as the photo library gives it.`
+          : !heights.length ||
+              heights.some(
+                (h, i) =>
+                  !(FILM_HEIGHTS as readonly unknown[]).includes(h) ||
+                  (i > 0 && (h as number) <= (heights[i - 1] as number)),
+              )
+            ? `"heights" of ${where} must list its renditions' heights, lowest first, from ${FILM_HEIGHTS.join(" and ")}, e.g. [720, 1080].`
+            : undefined;
+    if (fault) {
+      ctx.error(node, "invalid-value", fault);
+      return undefined;
+    }
+    const film: ContentFilm = { asset, heights: heights as number[] };
+    if (generated) film.generated = true;
+    if (kind) film.kind = kind;
+    return film;
+  }
+  if (rungs)
+    ctx.error(
+      rungs.value,
+      "invalid-value",
+      `"heights" of ${where} belong to a stored film only, beside its "asset".`,
     );
   if (!src || !FILM_SRC.test(src)) {
     ctx.error(
@@ -1260,6 +1307,17 @@ export const pictureAt = (image: Pick<ContentImage, "src" | "asset">, width: num
   image.asset !== undefined
     ? `media/${image.asset}/w${width}.webp`
     : imageAt(image.src ?? "", width);
+
+/**
+ * A film's files under the app's public/ folder: its own, or a stored film's tallest rendition,
+ * with its lowest beside it for a small screen when there are two (media-storage.md §7).
+ */
+export function filmFiles(film: ContentFilm): { src: string; smaller?: string } {
+  if (film.asset === undefined) return { src: film.src ?? "" };
+  const [low, high] = film.heights ?? [];
+  const at = (h: number | undefined) => `media/${film.asset}/${h}.mp4`;
+  return high === undefined ? { src: at(low) } : { src: at(high), smaller: at(low) };
+}
 
 /** A list of items, each a mapping of texts; a pricing plan's features are a list of texts. */
 function readItems(

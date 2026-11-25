@@ -183,6 +183,11 @@ export async function deleteFile(id: string, fetcher: Fetch = fetch): Promise<bo
   }
 }
 
-/** The small picture of a stored file, from the service; of a project picture, from Studio. */
+/**
+ * The small picture of a stored file, from the service (a video's poster, §7); of a project
+ * picture, from Studio.
+ */
 export const thumbnail = (file: StoredFile | string) =>
-  typeof file === "string" ? `/api/${file}` : `${LIBRARY_PATH}/${file.id}/w480.webp`;
+  typeof file === "string"
+    ? `/api/${file}`
+    : `${LIBRARY_PATH}/${file.id}/${file.kind === "video" ? "poster.webp" : "w480.webp"}`;

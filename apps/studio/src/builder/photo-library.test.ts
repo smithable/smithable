@@ -5,6 +5,7 @@ import {
   grantFile,
   readLibrary,
   storedFile,
+  thumbnail,
   untilReady,
   uploadFile,
 } from "./photo-library";
@@ -150,4 +151,11 @@ test("a file is granted to the project by its /use, 204 only", async () => {
   expect(seen).toEqual([`POST /_smithable/media/${ID}/use`]);
   expect(await grantFile(ID, async () => reply(404))).toBe(false);
   expect(await grantFile("../x", async () => reply(204))).toBe(false);
+});
+
+test("a stored video shows its poster, a picture its smallest copy, a project picture through Studio", () => {
+  const file = { id: ID, name: "a", state: "ready", here: true } as const;
+  expect(thumbnail({ ...file, kind: "video" })).toBe(`/_smithable/media/${ID}/poster.webp`);
+  expect(thumbnail({ ...file, kind: "image" })).toBe(`/_smithable/media/${ID}/w480.webp`);
+  expect(thumbnail("images/a.webp")).toBe("/api/images/a.webp");
 });

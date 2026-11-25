@@ -1,9 +1,15 @@
 // A hero's film in its selection form, under its picture (docs/design/section-film.md §1): the
 // owner's own MP4, tried on like the picture (Cancel undoes it), Remove. Studio's server reads the
 // file's bytes against the rules and names the one it breaks; the form checks only type and size.
+// Hosted, Choose opens Photos and videos for a stored video (media-storage.md §7), whose record the
+// host gives the operation.
 import type { ContentImage } from "@smithable/core";
 import { useState } from "react";
+import { PhotoLibrary } from "./PhotoLibrary";
 import { pictureName } from "./SectionPicture";
+
+/** What the form hands back: a new file of the owner's, a stored video, or nothing (Remove). */
+export type FilmChoice = { src: string } | { asset: string };
 
 export const FILM_MAX_BYTES = 5_000_000;
 
@@ -31,11 +37,12 @@ export function SectionFilm({
   page: string;
   section: string;
   film: ContentImage["film"];
-  change: (src?: string, file?: { path: string; data: string }) => void;
+  change: (picked?: FilmChoice, file?: { path: string; data: string }) => void;
   busy: boolean;
 }) {
   const [refused, setRefused] = useState<string>();
   const [reading, setReading] = useState(false);
+  const [choosing, setChoosing] = useState(false);
   const held = busy || reading;
   const replace = (file: File | undefined) => {
     setRefused(undefined);
@@ -52,7 +59,7 @@ export function SectionFilm({
       setReading(false);
       const data = String(reader.result).split(",")[1] ?? "";
       const src = pictureName(page, section, "mp4", Date.now());
-      change(src, { path: `public/${src}`, data });
+      change({ src }, { path: `public/${src}`, data });
     };
     reader.readAsDataURL(file);
   };
@@ -61,7 +68,11 @@ export function SectionFilm({
       <legend className="text-xs text-muted">Film</legend>
       <div className="flex items-center gap-2">
         <span className="min-w-0 truncate text-sm text-quiet">
-          {film ? film.src.slice("images/".length) : "No film: the picture stands still."}
+          {film?.src
+            ? film.src.slice("images/".length)
+            : film
+              ? "A stored video"
+              : "No film: the picture stands still."}
         </span>
         <label className="ml-auto shrink-0 cursor-pointer rounded border border-line px-2 py-1 text-sm hover:bg-subtle focus-within:ring-2 focus-within:ring-accent has-[:disabled]:opacity-60">
           {film ? "Replace" : "Add a film"}
@@ -76,6 +87,15 @@ export function SectionFilm({
             }}
           />
         </label>
+        <button
+          type="button"
+          disabled={held}
+          aria-expanded={choosing}
+          className="shrink-0 rounded border border-line px-2 py-1 text-sm hover:bg-subtle disabled:opacity-60"
+          onClick={() => setChoosing((open) => !open)}
+        >
+          Choose
+        </button>
         {film && (
           <button
             type="button"
@@ -87,6 +107,18 @@ export function SectionFilm({
           </button>
         )}
       </div>
+      {choosing && (
+        <PhotoLibrary
+          kind="video"
+          current={film?.asset ?? film?.src}
+          choose={(picked) => {
+            setChoosing(false);
+            change(picked);
+          }}
+          close={() => setChoosing(false)}
+          busy={held}
+        />
+      )}
       {refused && (
         <p role="alert" className="text-xs text-red-700">
           {refused}

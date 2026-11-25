@@ -1,6 +1,7 @@
 // The Photos and videos panel as a chooser (docs/design/media-storage.md §6; T1458): the owner's
 // library on the hosted service, with upload and delete; locally the project's own pictures.
-// Choosing one hands it back to the section's form, which runs setSectionPicture.
+// Choosing one hands it back to the section's form, which runs setSectionPicture, or for a hero's
+// film (kind video) setSectionFilm; a video is only ever stored (§7), so locally none is listed.
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   deleteFile,
@@ -20,6 +21,7 @@ export function PhotoLibrary({
   close,
   busy,
   wordsFirst,
+  kind = "image",
 }: {
   /** The section's file now (its asset or src), marked in the list. */
   current: string | undefined;
@@ -28,6 +30,8 @@ export function PhotoLibrary({
   busy: boolean;
   /** Why nothing may be placed yet (the section's words are missing), said before any upload. */
   wordsFirst?: string;
+  /** What may be placed: a picture (the default), or a video for a hero's film. */
+  kind?: "image" | "video";
 }) {
   const [library, setLibrary] = useState<Library>();
   const [said, setSaid] = useState<string>();
@@ -110,7 +114,7 @@ export function PhotoLibrary({
             Upload
             <input
               type="file"
-              accept="image/*"
+              accept={kind === "video" ? ".mp4,video/mp4" : "image/*"}
               className="sr-only"
               disabled={held}
               onChange={(event) => {
@@ -129,20 +133,27 @@ export function PhotoLibrary({
         </button>
       </div>
       {!library && !said && <p className="text-sm text-quiet">Reading the library…</p>}
-      {library && library.files.length === 0 && (
-        <p className="text-sm text-quiet">
-          {library.hosted
-            ? "No photos yet. Upload one to use it here."
-            : "No pictures in public/images/ yet. Use Replace to add one."}
+      {kind === "video" && library?.hosted && (
+        <p className="text-xs text-quiet">
+          A film plays without its sound, at most 1080 high, 3 to 12 seconds long.
         </p>
       )}
-      {library && library.files.length > 0 && (
+      {library && (library.files.length === 0 || (!library.hosted && kind === "video")) && (
+        <p className="text-sm text-quiet">
+          {!library.hosted && kind === "video"
+            ? "Videos are kept by the hosted service. Here, use Add a film."
+            : library.hosted
+              ? `No ${kind === "video" ? "videos" : "photos"} yet. Upload one to use it here.`
+              : "No pictures in public/images/ yet. Use Replace to add one."}
+        </p>
+      )}
+      {library && library.files.length > 0 && (library.hosted || kind === "image") && (
         <ul className="grid grid-cols-3 gap-2">
           {library.files.map((file) => {
             const key = typeof file === "string" ? file : file.id;
             const name = typeof file === "string" ? file.slice("images/".length) : file.name;
             const ready =
-              typeof file === "string" || (file.state === "ready" && file.kind === "image");
+              typeof file === "string" || (file.state === "ready" && file.kind === kind);
             return (
               <li key={key} className="space-y-1">
                 <button
@@ -173,8 +184,10 @@ export function PhotoLibrary({
                     >
                       {typeof file !== "string" && file.state === "failed"
                         ? "Could not be used"
-                        : typeof file !== "string" && file.kind === "video"
-                          ? "Video"
+                        : typeof file !== "string" && file.kind !== kind
+                          ? file.kind === "video"
+                            ? "Video"
+                            : "Photo"
                           : "Being made ready"}
                     </span>
                   )}

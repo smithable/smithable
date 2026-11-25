@@ -44,6 +44,20 @@ export interface MediaSource {
    * when refused, not a picture, or not processed yet.
    */
   sizes?(asset: string): Promise<{ width: number; widths: number[] } | undefined>;
+  /**
+   * A stored film's record (§7), for setSectionFilm's checks: undefined when refused, not a video,
+   * or without the facts the checks need.
+   */
+  film?(asset: string): Promise<FilmRecord | undefined>;
+}
+
+/** What the service recorded of a stored film when it made its renditions (§7). */
+export interface FilmRecord {
+  width: number;
+  height: number;
+  heights: number[];
+  duration: number;
+  sound: boolean;
 }
 
 // The content file's own range (100 to 4000 pixels), so a picture placed with them reads back.
@@ -74,14 +88,35 @@ export function hostedMediaSource(
     if (!answer.ok) throw new Error(`The service answered ${answer.status} for ${path}.`);
     return answer;
   };
+  // A file's record, or undefined when refused or not a record.
+  const recorded = async (asset: string) => {
+    if (!ASSET_ID.test(asset)) return undefined;
+    const answer = await ask(`/media/${asset}`);
+    if (!answer) return undefined;
+    const body: unknown = await answer.json().catch(() => undefined);
+    return body && typeof body === "object" ? (body as Record<string, unknown>) : undefined;
+  };
   return {
+    async film(asset) {
+      const body = await recorded(asset);
+      if (body?.kind !== "video") return undefined;
+      const { width, height, heights, duration, sound } = body;
+      const number = (n: unknown): n is number => typeof n === "number" && Number.isFinite(n);
+      if (!number(width) || !number(height) || !number(duration) || typeof sound !== "boolean")
+        return undefined;
+      // A rendition counts only when the record holds its file, and none without the poster.
+      const files = body.variants && typeof body.variants === "object" ? body.variants : {};
+      const has = (name: string) => typeof (files as Record<string, unknown>)[name] === "string";
+      const made =
+        Array.isArray(heights) && has("poster.webp")
+          ? heights.filter((h) => Number.isInteger(h) && has(`${h}.mp4`))
+          : [];
+      return { width, height, heights: made, duration, sound };
+    },
     async sizes(asset) {
-      if (!ASSET_ID.test(asset)) return undefined;
-      const answer = await ask(`/media/${asset}`);
-      if (!answer) return undefined;
-      const body: unknown = await answer.json().catch(() => undefined);
-      if (!body || typeof body !== "object") return undefined;
-      const { kind, width, widths } = body as Record<string, unknown>;
+      const body = await recorded(asset);
+      if (!body) return undefined;
+      const { kind, width, widths } = body;
       if (kind !== "image" || !isWidth(width)) return undefined;
       const others = Array.isArray(widths) ? widths.filter(isWidth) : [];
       return {
@@ -368,4 +403,37 @@ export function mediaFindings(dir: string): Diagnostic[] {
         ]
       : [];
   });
+}
+
+/**
+ * Fills what only the host gives an operation, from the service's record (§2, §7): a stored
+ * picture's sizes for setSectionPicture, a stored film's record for setSectionFilm. A caller's own
+ * values are dropped first. True when it filled one, so the call runs as the host's; locally there
+ * is no record, and the operation refuses a new stored file without it. Throws when the service
+ * cannot answer just now.
+ */
+export async function hostRecord(
+  name: string,
+  args: unknown,
+  source?: MediaSource,
+): Promise<boolean> {
+  if (!args || typeof args !== "object") return false;
+  const choice = args as Record<string, unknown>;
+  if (name === "setSectionPicture") {
+    delete choice.rendition;
+    if (typeof choice.asset !== "string" || !source?.sizes) return false;
+    const sizes = await source.sizes(choice.asset);
+    if (!sizes) return false;
+    choice.rendition = sizes.widths.length ? sizes : { width: sizes.width };
+    return true;
+  }
+  if (name === "setSectionFilm") {
+    delete choice.record;
+    if (typeof choice.asset !== "string" || !source?.film) return false;
+    const record = await source.film(choice.asset);
+    if (!record) return false;
+    choice.record = record;
+    return true;
+  }
+  return false;
 }

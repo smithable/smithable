@@ -59,7 +59,7 @@ import { type Io, tool } from "./io.js";
 import { lookContext } from "./look-context.js";
 import { mintLookTicket } from "./look-ticket.js";
 import { mcpServer } from "./mcp.js";
-import { hostedMediaSource, mediaSyncer } from "./media-cache.js";
+import { hostedMediaSource, hostRecord, mediaSyncer } from "./media-cache.js";
 import { milestones, nameMilestone } from "./milestones.js";
 import { modelUsage } from "./model-usage.js";
 import { openQuestions } from "./new.js";
@@ -1554,26 +1554,16 @@ export async function studio(
             },
             409,
           );
-        // A stored picture's sizes are the service's record's, never the caller's (media-storage.md
-        // §2): read here for setSectionPicture with an asset. Locally there is no record to read,
-        // and the operation refuses a new stored file without them.
-        if (name === "setSectionPicture" && args && typeof args === "object") {
-          const choice = args as Record<string, unknown>;
-          delete choice.rendition;
-          if (typeof choice.asset === "string" && mediaSource?.sizes) {
-            try {
-              const sizes = await mediaSource.sizes(choice.asset);
-              if (sizes) choice.rendition = sizes.widths.length ? sizes : { width: sizes.width };
-            } catch {
-              return json(
-                {
-                  ok: false,
-                  output: "The photo library could not be reached. Try again in a moment.",
-                },
-                503,
-              );
-            }
-          }
+        // A stored file's sizes or film record are the service's, never the caller's
+        // (media-storage.md §2, §7): read here, and given as the host's.
+        let filled = false;
+        try {
+          filled = await hostRecord(String(name), args, mediaSource);
+        } catch {
+          return json(
+            { ok: false, output: "The photo library could not be reached. Try again in a moment." },
+            503,
+          );
         }
         const offeredPictures =
           typeof pictureOffer === "string" ? pictureOffers.get(pictureOffer) : undefined;
@@ -1680,6 +1670,7 @@ export async function studio(
         const result = await capture((io) =>
           runOperation(dir, io, String(name), (args ?? {}) as OperationArgs, {
             yes: confirm === true,
+            ...(filled ? { from: "host" as const } : {}),
             onResult: (result) => {
               if (!result.ok && result.diagnostics.length) diagnostics = result.diagnostics;
               if (
