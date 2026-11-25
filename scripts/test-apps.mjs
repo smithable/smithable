@@ -235,14 +235,33 @@ async function open(page, url) {
     if (!why.includes("ERR_ABORTED")) add(net, 5, `failed: ${where(r.url())} ${why}`);
   };
   const onResponse = (r) => r.status() >= 400 && add(net, 5, `${r.status()}: ${where(r.url())}`);
+  // Scripts asked for and not yet answered: a page that never comes alive may wait on one (T1623).
+  const scripts = new Map();
+  const onRequest = (r) => r.resourceType() === "script" && scripts.set(r, Date.now());
+  const onSettled = (r) => scripts.delete(r);
   page.on("console", onConsole);
   page.on("pageerror", onError);
   page.on("requestfailed", onFailed);
   page.on("response", onResponse);
+  page.on("request", onRequest);
+  page.on("requestfinished", onSettled);
+  page.on("requestfailed", onSettled);
   try {
     await page.goto(url);
     await page.waitForLoadState("networkidle");
-    await hydrated(page);
+    try {
+      await hydrated(page);
+    } catch (error) {
+      // A page that is there but never live (T1622: no line at all in 180 s, not even Vite's
+      // client) says what it was doing, then is reloaded once. A reload that brings it alive is
+      // said too and still fails the step: a page that needs one is a finding.
+      if (error instanceof Error) {
+        const [first, ...rest] = error.message.split("\n");
+        const why = await notLive(page, scripts, vite.length > 0, where);
+        error.message = [`${first} (${why})`, ...rest].join("\n");
+      }
+      throw error;
+    }
   } catch (error) {
     // On the first line, the one a failure's report prints; Playwright's call log stays below it.
     const saw = [...seen, ...net, ...vite];
@@ -256,7 +275,48 @@ async function open(page, url) {
     page.off("pageerror", onError);
     page.off("requestfailed", onFailed);
     page.off("response", onResponse);
+    page.off("request", onRequest);
+    page.off("requestfinished", onSettled);
+    page.off("requestfailed", onSettled);
   }
+}
+
+/**
+ * What a page that never became live was doing: its readyState, whether Vite's client ran, the
+ * scripts still unanswered, and what one reload did (T1623).
+ */
+async function notLive(page, scripts, viteRan, where) {
+  const ask = (fn) =>
+    Promise.race([
+      page.evaluate(fn),
+      new Promise((resolve) => setTimeout(() => resolve("no answer in 5 s"), 5000).unref()),
+    ]).catch((e) => `no answer (${String(e?.message ?? e).split("\n")[0]})`);
+  const state = await ask(() => document.readyState);
+  const now = Date.now();
+  const waiting = [...scripts].map(
+    ([r, at]) => `${where(r.url())} ${Math.round((now - at) / 1000)} s`,
+  );
+  const lines = [
+    `readyState ${state}`,
+    viteRan ? "Vite's client ran" : "Vite's client said nothing",
+    waiting.length
+      ? `${waiting.length} script(s) unanswered: ${waiting.slice(0, 5).join(", ")}`
+      : "no script unanswered",
+  ];
+  const start = Date.now();
+  try {
+    await page.reload({ timeout: 30_000 * P });
+    await page.waitForLoadState("networkidle", { timeout: 30_000 * P });
+    await page
+      .locator('body[data-hydrated="true"]')
+      .waitFor({ state: "attached", timeout: 30_000 * P });
+    lines.push(
+      `a reload brought it alive in ${Math.round((Date.now() - start) / 1000)} s: the first load needed a reload`,
+    );
+  } catch {
+    lines.push("a reload did not bring it alive either");
+  }
+  return `not live: ${lines.join("; ")}`;
 }
 
 /** Chooses a related record in a searchable field: type part of its name, click it. */
