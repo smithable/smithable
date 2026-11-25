@@ -292,7 +292,10 @@ function assumptionsOf(answer: { assumptions?: unknown }): Assumption[] {
       part: a.part,
       question: a.question.trim(),
       chosen: a.chosen.trim(),
-      options: a.options.filter((o) => typeof o === "string" && o.trim()).map((o) => o.trim()),
+      options: a.options
+        .filter((o) => typeof o === "string" && o.trim())
+        .map((o) => o.trim())
+        .slice(0, 4),
     }))
     .filter((a) => a.question && a.chosen)
     .slice(0, 4);

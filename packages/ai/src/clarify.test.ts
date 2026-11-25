@@ -44,7 +44,7 @@ test("the questions step picks a starter and asks at most three questions; a bad
     {
       starter: "records",
       questions: [
-        { question: "Who will use it?", options: ["Only me", "Anyone"] },
+        { question: "Who will use it?", options: ["Only me", "Anyone", "A team", "Staff", "Five"] },
         { question: "Q2", options: [] },
         { question: "Q3", options: ["a"] },
         { question: "Q4, one too many", options: [] },
@@ -60,6 +60,8 @@ test("the questions step picks a starter and asks at most three questions; a bad
   });
   expect(first.starter).toBe("records");
   expect(first.questions.map((q) => q.question)).toEqual(["Who will use it?", "Q2", "Q3"]);
+  // At most four options: structured output is not told so (T1605), the answer is cut.
+  expect(first.questions[0]?.options).toEqual(["Only me", "Anyone", "A team", "Staff"]);
   expect(model.prompts[0]).toContain(
     "- records: Things and what we know about them. Records: Item.",
   );

@@ -852,7 +852,7 @@ test("the draft's assumptions come back whole, the first answer's, and never a b
             part: "roles",
             question: "Who signs in?",
             chosen: " Your team ",
-            options: ["Only me", "Anyone", ""],
+            options: ["Only me", "Anyone", "", "A team", "Staff", "Five"],
           },
           { part: "elsewhere", question: "Not a part", chosen: "x", options: [] },
           { part: "visitors", question: "", chosen: "nothing", options: [] },
@@ -866,7 +866,8 @@ test("the draft's assumptions come back whole, the first answer's, and never a b
       part: "roles",
       question: "Who signs in?",
       chosen: "Your team",
-      options: ["Only me", "Anyone"],
+      // At most four: structured output is not told so (T1605), the answer is cut.
+      options: ["Only me", "Anyone", "A team", "Staff"],
     },
   ]);
   const none = await draftProjectByOperations({

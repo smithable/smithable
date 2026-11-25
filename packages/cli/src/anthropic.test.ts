@@ -146,6 +146,47 @@ test("closed shuts every object schema, and only schemas: a field named properti
   });
 });
 
+test("closed leaves out the refused bounds the engine checks on each type, and keeps the rest (T1605)", async () => {
+  const { closed } = await import("./anthropic.js");
+  expect(
+    closed({
+      type: "object",
+      minProperties: 1,
+      properties: {
+        list: {
+          type: "array",
+          minItems: 2,
+          maxItems: 4,
+          uniqueItems: true,
+          items: { type: "string" },
+        },
+        one: { type: "array", minItems: 1, items: { type: "string", minLength: 1, maxLength: 9 } },
+        count: { type: "integer", minimum: 0, maximum: 9 },
+        share: { type: ["number", "null"], maximum: 1, exclusiveMinimum: 0 },
+        type: { type: "object", maxProperties: 2, properties: { a: { type: "string" } } },
+        word: { type: "string", minimum: 1, pattern: "^a" },
+      },
+    }),
+  ).toEqual({
+    type: "object",
+    additionalProperties: false,
+    properties: {
+      list: { type: "array", items: { type: "string" } },
+      one: { type: "array", minItems: 1, items: { type: "string", minLength: 1, maxLength: 9 } },
+      count: { type: "integer" },
+      // Checked nowhere, so kept: the API refuses it and the request goes again without it.
+      share: { type: ["number", "null"], exclusiveMinimum: 0 },
+      type: {
+        type: "object",
+        maxProperties: 2,
+        properties: { a: { type: "string" } },
+        additionalProperties: false,
+      },
+      word: { type: "string", minimum: 1, pattern: "^a" },
+    },
+  });
+});
+
 test("a schema with a map is not sent as structured output: one request, without it (T1597)", async () => {
   const sent: Record<string, unknown>[] = [];
   vi.stubGlobal("fetch", async (_url: string, init: RequestInit) => {
