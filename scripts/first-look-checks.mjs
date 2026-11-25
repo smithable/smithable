@@ -29,12 +29,13 @@ export async function asNewApp(target) {
     // A request still in flight when Studio stops (the checks' end) is reset: that page is done
     // with, and an uncaught rejection here would end the whole check. The page then sees only
     // "Failed to fetch", so the reason is said here: mid-check it is the failure's cause (T1609).
+    // Only its first line: Playwright's call log after it can list the request's headers.
     try {
       const response = await route.fetch();
       await route.fulfill({ response, json: { ...(await response.json()), asMade: true } });
     } catch (error) {
       console.log(
-        `    (asNewApp: /api/project not read, ${new Date().toISOString()}: ${error?.message ?? error})`,
+        `    (asNewApp: /api/project not read, ${new Date().toISOString()}: ${String(error?.message ?? error).split("\n")[0]})`,
       );
       await route.abort().catch(() => {});
     }
