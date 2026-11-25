@@ -622,6 +622,9 @@ export function releaseReview(dir: string, options: { hosted?: boolean } = {}) {
     assets: assetReview(dir),
     // Generated pictures that would present the owner's work, each with a choice (§6 of picture-kinds.md).
     pictures: current.ir ? picturesToReview(current.ir, current.content, current.ux) : [],
+    // The source revision the review was read at: its pictures' Keep and Remove send it, so a
+    // change that came between refuses them rather than hitting another place (T1231).
+    revision,
     // The privacy page: reviewed, changed since its review (and what), or never (§6.4).
     privacy: privacyStates(dir),
     baseline: baseline?.at,

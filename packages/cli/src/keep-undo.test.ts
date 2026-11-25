@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { afterEach, expect, test, vi } from "vitest";
 import { ensureRepository } from "./git.js";
 import { runOperation } from "./op.js";
+import { releaseReview } from "./release-review.js";
 import { captureIo } from "./test-io.js";
 import { undo } from "./undo.js";
 
@@ -34,6 +35,36 @@ pages:
         - caption: Det första taket
         - caption: Det andra taket
 `;
+
+test("a review's stale Remove is refused when a gallery holds its file twice (T1231)", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "smithable-keep-stale-"));
+  roots.push(dir);
+  writeFileSync(join(dir, ".gitignore"), "data/\n");
+  writeFileSync(
+    join(dir, "smithable.yml"),
+    "smithable: 0.1\napp: { name: Roofs }\npages:\n  home:\n    route: /\n    landing:\n      hero: {}\n      jobs: { gallery:, pictures: work }\n",
+  );
+  writeFileSync(
+    join(dir, "smithable.content.yml"),
+    content.split("images/jobs/b.webp").join("images/jobs/a.webp"),
+  );
+  mkdirSync(join(dir, ".smithable"), { recursive: true });
+  writeFileSync(join(dir, ".smithable/files.json"), '{"files":{}}\n');
+  ensureRepository(dir);
+  const review = releaseReview(dir);
+  expect(review.revision).toMatch(/^[a-f0-9]{64}$/);
+  const remove = { page: "home", section: "jobs", item: 0, was: "images/jobs/a.webp" };
+  // Another change removes the first picture; the review, read before it, then removes "the first".
+  const io = captureIo();
+  expect(
+    await runOperation(dir, io, "setSectionPicture", remove, { yes: true, reportLater: true }),
+  ).toBe(0);
+  const stale = captureIo();
+  const flags = { yes: true, reportLater: true, expectedRevision: review.revision };
+  expect(await runOperation(dir, stale, "setSectionPicture", remove, flags)).toBe(1);
+  expect(stale.stderr).toMatch(/changed/);
+  expect(readFileSync(join(dir, "smithable.content.yml"), "utf8")).toContain("The second roof");
+});
 
 test("undo of a gallery picture's Remove brings back its caption, its translation and its keep (T1175)", async () => {
   const dir = mkdtempSync(join(tmpdir(), "smithable-keep-undo-"));

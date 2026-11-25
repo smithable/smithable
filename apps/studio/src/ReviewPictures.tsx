@@ -13,9 +13,13 @@ export const pictureWhere = (p: Picture) =>
 
 export function ReviewPictures({
   pictures,
+  revision,
   reload,
 }: {
   pictures: Picture[];
+  /** The revision the review was read at: a gallery may hold one file twice, so the file alone
+   * does not tell its place apart, and any change since refuses the click (T1231). */
+  revision?: string;
   reload: () => Promise<unknown>;
 }) {
   const [busy, setBusy] = useState(false);
@@ -40,6 +44,7 @@ export function ReviewPictures({
         },
         false,
         file,
+        revision,
       )
       .catch((e: Error) => ({ ok: false, output: e.message }));
     if (!result.ok) setRefused(result.output);

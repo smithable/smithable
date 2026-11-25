@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { badgeLine, badgeValue, kindChoices, startingKind, styleKind } from "./AiBadge";
+import { askedUnder, badgeLine, badgeValue, kindChoices, startingKind, styleKind } from "./AiBadge";
 import { BADGE_WORDS } from "./badge-words";
 
 const photos = { id: "photos", generated: 0 };
@@ -31,4 +31,12 @@ test("the badge's three states, and what a style's card says of it", () => {
   expect(badgeLine(true, "ai-drawn")).toBe(BADGE_WORDS.marked);
   expect(badgeLine(false, "ai-realistic")).toBe(BADGE_WORDS.markOff);
   expect(badgeLine(true, "photograph")).toBeUndefined();
+});
+
+test("the off confirmation closes when the badge or the realistic pictures change underneath (T1184)", () => {
+  const asked = askedUnder(undefined, true);
+  expect(askedUnder(undefined, true)).toBe(asked);
+  expect(askedUnder(true, true)).not.toBe(asked);
+  expect(askedUnder(false, true)).not.toBe(asked);
+  expect(askedUnder(undefined, false)).not.toBe(asked);
 });

@@ -99,6 +99,13 @@ export const badgeValue = (aiBadge: boolean | undefined): BadgeValue =>
   aiBadge === undefined ? "default" : aiBadge ? "on" : "off";
 
 /**
+ * What the off confirmation was asked under: the badge and whether realistic AI pictures are
+ * placed. A refresh that changes either closes it (T1184).
+ */
+export const askedUnder = (aiBadge: boolean | undefined, realistic: boolean) =>
+  `${badgeValue(aiBadge)} ${realistic}`;
+
+/**
  * The app's badge: by kind (the key unsaid), on, or off. Off while realistic AI pictures are placed
  * asks first and sends the acknowledgement; the operation refuses it without one.
  */
@@ -113,7 +120,10 @@ export function BadgeSwitch({
   realistic: boolean;
   onChange: (value: BadgeValue, acknowledged: boolean) => void;
 }) {
-  const [asking, setAsking] = useState(false);
+  const under = askedUnder(aiBadge, realistic);
+  const [openUnder, setOpenUnder] = useState<string | null>(null);
+  const asking = openUnder === under;
+  const setAsking = (open: boolean) => setOpenUnder(open ? under : null);
   return (
     <div className="space-y-2 text-sm">
       <div className="flex items-center justify-between gap-3">
