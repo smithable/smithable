@@ -182,14 +182,14 @@ export function sealScratch(dir: string): void {
 const own = new Set<number>();
 
 /**
- * Marks a folder this process has just made, where nothing of the project's may write (the staged
- * app in replace, until sync copies it in as the project user): a file `readTree` opens in it may
- * be this process's own as well as the project user's. The folder is held open and known by that,
- * never by its name or path, which a project process could make or move first (the workspace's
- * /workspace is the project user's, 3775); it must be this process's, and is made its group's and
- * no one else's to write in (0755, no setgid). A file counts as in it where the opened file and
- * the held folder are now (Linux's /proc/self/fd), so a link it holds into the project (the staged
- * app's node_modules) leads to the project's rules. Gives back the function that unmarks it.
+ * Marks a folder this process has just made in a place only it may change (the staged app in
+ * replace, a new temporary folder of its own, until sync copies it in as the project user): a
+ * file `readTree` opens in it may be this process's own as well as the project user's. The folder
+ * is held open and known by that, never by its name; it must be this process's, and is made its
+ * group's and no one else's to write in (0755). A file counts as in it where the opened file and
+ * the held folder are (Linux's /proc/self/fd, compared as bytes), so a link it holds into the
+ * project (the staged app's node_modules) leads to the project's rules. Gives back the function
+ * that unmarks it, once.
  */
 export function ownFolder(dir: string): () => void {
   const fd = openSync(
@@ -208,19 +208,36 @@ export function ownFolder(dir: string): () => void {
     throw error;
   }
   own.add(fd);
+  let open = true;
   return () => {
-    if (own.delete(fd)) closeSync(fd);
+    if (!open) return;
+    open = false;
+    own.delete(fd);
+    closeSync(fd);
   };
+}
+
+/** Where an open file or folder is now, as the kernel names it; undefined when it cannot say. */
+function whereOpen(fd: number): Buffer | undefined {
+  try {
+    const at = readlinkSync(`/proc/self/fd/${fd}`, { encoding: "buffer" });
+    return at.toString("latin1").endsWith(" (deleted)") ? undefined : at;
+  } catch {
+    return undefined;
+  }
 }
 
 /** Whether an open file is this process's own, in a folder it marked as its own. */
 function ownFile(fd: number, stat: Stats): boolean {
   if (!own.size || stat.uid !== process.getuid?.()) return false;
-  try {
-    const at = readlinkSync(`/proc/self/fd/${fd}`);
-    for (const dir of own)
-      if (at.startsWith(`${readlinkSync(`/proc/self/fd/${dir}`)}${sep}`)) return true;
-  } catch {}
+  const at = whereOpen(fd);
+  if (!at) return false;
+  for (const dir of own) {
+    const folder = whereOpen(dir);
+    if (!folder) continue;
+    const prefix = Buffer.concat([folder, Buffer.from(sep)]);
+    if (at.length > prefix.length && at.subarray(0, prefix.length).equals(prefix)) return true;
+  }
   return false;
 }
 

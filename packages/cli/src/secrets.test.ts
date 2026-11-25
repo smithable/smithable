@@ -16,6 +16,7 @@ import { join } from "node:path";
 import { afterEach, expect, test } from "vitest";
 import { git } from "./git.js";
 import { execQuiet } from "./io.js";
+import { dropMissingPictures } from "./pictures.js";
 import {
   capabilityFault,
   childOptions,
@@ -398,7 +399,6 @@ test.runIf(process.platform === "linux" && process.getuid?.() !== 0)(
     expect(statSync(staged).mode & 0o7777).toBe(0o755);
     try {
       expect(readTree(content)?.toString()).toContain("smithableContent");
-      const { dropMissingPictures } = await import("./pictures.js");
       const said: string[] = [];
       dropMissingPictures(staged, { out: () => {}, err: (text) => said.push(text) });
       expect(readTree(content)?.toString()).not.toContain("hero.webp");
@@ -419,6 +419,16 @@ test.runIf(process.platform === "linux" && process.getuid?.() !== 0)(
     } finally {
       unmark();
     }
-    expect(() => readTree(content)).toThrow("is not a file the child made");
+    const marked = join(base, "moved", "smithable.content.yml");
+    expect(() => readTree(marked)).toThrow("is not a file the child made");
+    // Unmarking twice does nothing: a later mark, which may hold the same number, stays.
+    const again = ownFolder(join(base, "moved"));
+    try {
+      unmark();
+      expect(readTree(marked)?.toString()).toContain("smithableContent");
+    } finally {
+      again();
+    }
+    expect(() => readTree(marked)).toThrow("is not a file the child made");
   },
 );

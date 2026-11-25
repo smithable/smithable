@@ -4,9 +4,9 @@
 // stays. Studio allows it once, and only when it was started as replaceable.
 
 import {
-  copyFileSync,
   existsSync,
   mkdirSync,
+  mkdtempSync,
   readdirSync,
   readFileSync,
   renameSync,
@@ -16,6 +16,7 @@ import {
   utimesSync,
   writeFileSync,
 } from "node:fs";
+import { tmpdir } from "node:os";
 import { dirname, join, resolve, sep } from "node:path";
 import type { Assumption, Usage } from "@smithable/ai";
 import { asProject } from "./as-project.js";
@@ -30,7 +31,7 @@ import {
   withoutSampleDomains,
   withTimeZone,
 } from "./new.js";
-import { ownFolder, treeText } from "./secrets.js";
+import { ownFolder, readTree, treeText } from "./secrets.js";
 import { removeTree, writeTreeFile } from "./tree-files.js";
 import type { WebsiteGenerationInput, WebsiteGenerationOptions } from "./website-input.js";
 
@@ -273,8 +274,8 @@ export async function replaceProject(
     io.err('Say what comes in: "from" (a finished project) or "describe".\n');
     return 2;
   }
-  // From a description: made beside the project, on the packages that are installed there (a
-  // link to them), then brought in like a finished one, under the running preview. So the
+  // From a description: made in a folder of Studio's own, on the packages that are installed in
+  // the project (a link to them), then brought in like a finished one, under the running preview. So the
   // preview is not started again for it either, and a description the model could not make an
   // app from never leaves the project empty: the starter is made instead, and the reason said.
   const options = {
@@ -284,17 +285,20 @@ export async function replaceProject(
     yes: true,
     installed: true,
   };
-  const beside = `${resolve(dir)}.incoming`;
-  // Studio's own folder until sync: its files are read as Studio's, not the project user's (T1614).
+  // Studio's own folder until sync, new each time, never beside the project: where the project
+  // runs as its own user (the workspace) that user owns the project's parent and could make or
+  // move a name there first. Its files are read as Studio's, not the project user's (T1614).
+  let beside = "";
   let unmark = () => {};
   const fresh = () => {
     unmark();
-    rmSync(beside, { recursive: true, force: true });
-    mkdirSync(beside, { recursive: true, mode: 0o755 });
+    if (beside) rmSync(beside, { recursive: true, force: true });
+    beside = mkdtempSync(join(tmpdir(), "smithable-staged-"));
     unmark = ownFolder(beside);
     symlinkSync(join(resolve(dir), "node_modules"), join(beside, "node_modules"));
-    const lock = join(dir, "pnpm-lock.yaml");
-    if (existsSync(lock)) copyFileSync(lock, join(beside, "pnpm-lock.yaml"));
+    // The project's lock is the project's file: read as one, never through a link it put there.
+    const lock = readTree(join(dir, "pnpm-lock.yaml"));
+    if (lock) writeFileSync(join(beside, "pnpm-lock.yaml"), lock);
   };
   let said = "";
   // What the build said, for the line it gives when no model is set up (T778).
@@ -386,7 +390,7 @@ export async function replaceProject(
     return 0;
   } finally {
     unmark();
-    rmSync(beside, { recursive: true, force: true });
+    if (beside) rmSync(beside, { recursive: true, force: true });
   }
 }
 

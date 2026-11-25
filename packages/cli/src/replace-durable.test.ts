@@ -36,6 +36,8 @@ test("a durable failed draft keeps the waiting project and never falls back to a
   });
   expect(beforeArrival).not.toHaveBeenCalled();
   expect(readFileSync(join(dir, "smithable.yml"), "utf8")).toBe("The waiting app");
+  // The staged folder, Studio's own temporary one, is gone, and none was made beside the project.
+  expect(existsSync(String(vi.mocked(create).mock.calls[0]?.[0]))).toBe(false);
   expect(existsSync(`${dir}.incoming`)).toBe(false);
   expect(said.join("")).toContain("could not make an app");
 });
