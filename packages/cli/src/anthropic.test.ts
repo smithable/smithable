@@ -145,3 +145,60 @@ test("closed shuts every object schema, and only schemas: a field named properti
     },
   });
 });
+
+test("a schema with a map is not sent as structured output: one request, without it (T1597)", async () => {
+  const sent: Record<string, unknown>[] = [];
+  vi.stubGlobal("fetch", async (_url: string, init: RequestInit) => {
+    const body = JSON.parse(String(init.body)) as Record<string, unknown>;
+    sent.push(body);
+    if (body.output_config)
+      return Response.json({ error: { message: "output_config: maps refused" } }, { status: 400 });
+    return Response.json({
+      content: [{ type: "text", text: "{}" }],
+      stop_reason: "end_turn",
+      usage: { input_tokens: 1, output_tokens: 1 },
+    });
+  });
+  const map = {
+    type: "object",
+    properties: { texts: { type: "object", additionalProperties: { type: "string" } } },
+  };
+  await anthropic("claude-haiku-5-5", "test-key").complete({ system: "s", user: "u", schema: map });
+  expect(sent).toHaveLength(1);
+  expect(sent[0]?.output_config).toBeUndefined();
+});
+
+test("takesSchema refuses maps, and only maps: a field named like a keyword, an enum value", async () => {
+  const { takesSchema } = await import("./anthropic.js");
+  expect(takesSchema({ type: "object", additionalProperties: true })).toBe(false);
+  expect(takesSchema({ type: "object", patternProperties: { "^a": {} } })).toBe(false);
+  expect(takesSchema({ anyOf: [{ type: "string" }, { additionalProperties: {} }] })).toBe(false);
+  expect(takesSchema({ items: { type: "object", unevaluatedProperties: true } })).toBe(false);
+  expect(takesSchema({ type: "string", "x-ui": { additionalProperties: true } })).toBe(true);
+  expect(
+    takesSchema({
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        additionalProperties: { type: "string" },
+        patternProperties: { type: "string" },
+        kind: { enum: [{ additionalProperties: true }] },
+        value: { default: { patternProperties: 1 } },
+      },
+      dependencies: { additionalProperties: ["id"] },
+    }),
+  ).toBe(true);
+});
+
+test("a 400 to a request without structured output is an error, not asked again (T1597)", async () => {
+  let calls = 0;
+  vi.stubGlobal("fetch", async () => {
+    calls++;
+    return Response.json({ error: { message: "additionalProperties: bad" } }, { status: 400 });
+  });
+  const map = { type: "object", additionalProperties: { type: "string" } };
+  await expect(
+    anthropic("claude-haiku-5-5", "test-key").complete({ system: "s", user: "u", schema: map }),
+  ).rejects.toThrow("400");
+  expect(calls).toBe(1);
+});
