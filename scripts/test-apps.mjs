@@ -248,14 +248,14 @@ async function open(page, url) {
   page.on("requestfailed", onSettled);
   try {
     await page.goto(url);
-    await page.waitForLoadState("networkidle");
     try {
+      await page.waitForLoadState("networkidle");
       await hydrated(page);
     } catch (error) {
       // A page that is there but never live (T1622: no line at all in 180 s, not even Vite's
       // client) says what it was doing, then is reloaded once. A reload that brings it alive is
       // said too and still fails the step: a page that needs one is a finding.
-      if (error instanceof Error) {
+      if (error instanceof Error && error.name === "TimeoutError") {
         const [first, ...rest] = error.message.split("\n");
         const why = await notLive(page, scripts, vite.length > 0, where);
         error.message = [`${first} (${why})`, ...rest].join("\n");
@@ -303,18 +303,22 @@ async function notLive(page, scripts, viteRan, where) {
       ? `${waiting.length} script(s) unanswered: ${waiting.slice(0, 5).join(", ")}`
       : "no script unanswered",
   ];
+  // Only the page's own marker is awaited after the reload: a quiet network is not the question.
   const start = Date.now();
+  let step = "the reload";
   try {
-    await page.reload({ timeout: 30_000 * P });
-    await page.waitForLoadState("networkidle", { timeout: 30_000 * P });
+    await page.reload({ waitUntil: "commit", timeout: 30_000 * P });
+    step = "the page after a reload";
     await page
       .locator('body[data-hydrated="true"]')
       .waitFor({ state: "attached", timeout: 30_000 * P });
     lines.push(
       `a reload brought it alive in ${Math.round((Date.now() - start) / 1000)} s: the first load needed a reload`,
     );
-  } catch {
-    lines.push("a reload did not bring it alive either");
+  } catch (e) {
+    lines.push(
+      `a reload did not bring it alive: ${step} timed out or failed (${String(e?.message ?? e).split("\n")[0]})`,
+    );
   }
   return `not live: ${lines.join("; ")}`;
 }
