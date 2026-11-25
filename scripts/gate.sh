@@ -5,6 +5,9 @@
 #   usage (from a worktree): SESSION=<name> TEST_APPS_PORT=… TEST_STUDIO_PORT=… scripts/gate.sh
 #          scripts/gate.sh --queue     who is running and who waits, in order
 #          scripts/gate.sh --idle      exit 0 when no gate runs or waits, else 1 (for a wait loop)
+#          scripts/gate.sh --plan      what a gate would run here
+# Any other argument exits 2 at once, without a ticket: a copy too old to know a flag must not
+# read it as "run a gate" (T1520).
 # Each session has its own ports (its brief says which).
 #
 # Turns go round the sessions: the session that has had the fewest turns since the queue was
@@ -32,6 +35,10 @@ set -u
 # copy that is replaced while gates run from it (it happened, and six gates died of a syntax
 # error) cannot change under them. Replace a copy with mv all the same, never by writing over it.
 {
+case "$#:${1:-}" in
+  0: | 1:--queue | 1:--idle | 1:--plan) ;;
+  *) echo "gate.sh: unknown arguments ($*): no gate started. It takes none, or one of --queue, --idle, --plan." >&2; exit 2 ;;
+esac
 # Night hours, 23:30–07:00 in Mariehamn (Johan, 2026-10-12: a quieter machine at night): a gate
 # started then runs itself again, once, on at most four cores at the lowest priority (systemd-run,
 # else nice). Only while the file $home/night-cap exists (Johan, 2026-10-18: off for now, since a
@@ -217,12 +224,11 @@ if [ -z "${TEST_PATIENCE:-}" ]; then
   echo "gate.sh: load $load on $cores cores: the checks wait ${TEST_PATIENCE} times as long (TEST_PATIENCE=$TEST_PATIENCE)."
 fi
 
-# The plan, then the run. Arguments go to pnpm check as before, which runs everything. GATE_RUN
-# runs another command in the gate's turn instead (the weekly long run of the properties, ci.md).
+# The plan, then the run. GATE_RUN runs another command in the gate's turn instead (the weekly long run of the properties, ci.md).
 if [ -n "${GATE_RUN:-}" ]; then
   echo "gate.sh: running $GATE_RUN in the gate's turn."
   bash -c "$GATE_RUN"
-elif [ $# -eq 0 ]; then
+else
   p=$(plan)
   apps=${p#apps=}; apps=${apps%% studio=*}
   studio=${p#*studio=}; studio=${studio%% visual=*}
@@ -236,8 +242,6 @@ elif [ $# -eq 0 ]; then
     esac &&
     { [ "$studio" = no ] || { pnpm test:studio && pnpm test:release-review; }; } &&
     { [ "$visual" = no ] || pnpm test:visual; }
-else
-  pnpm check "$@"
 fi
 status=$?
 rm -f "$lock.who"
