@@ -57,6 +57,7 @@ jobs:
       engine: ${{ steps.scope.outputs.engine }}
       basics: ${{ steps.scope.outputs.basics }}
       studio: ${{ steps.scope.outputs.studio }}
+      changed: ${{ steps.scope.outputs.changed }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with: { fetch-depth: 0 }
@@ -92,6 +93,12 @@ jobs:
             full=true; studio=true; why="no base to compare with"
           else
             changed=$(git diff --name-only --no-renames "$BASE" HEAD)
+            # For the full job's plan, whose shallow checkout cannot work it out. A very long
+            # list is left out, and the gate then runs everything.
+            if [ "$(wc -l <<< "$changed")" -le 500 ]; then
+              end="end-of-changed-$RANDOM$RANDOM"
+              { echo "changed<<$end"; echo "$changed"; echo "$end"; } >> "$GITHUB_OUTPUT"
+            fi
             if grep -qE "$engine" <<< "$changed"; then
               full=true; why="engine files changed"
             else
@@ -178,8 +185,10 @@ jobs:
   # lint, build, units, the site, every example in parallel, Studio in a real browser. Never for a
   # pull request from a fork: that would run a stranger's code on the machine.
   full:
-    needs: scope
-    if: needs.scope.outputs.full == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+    # After the hosted job: on a pull request its lint and units are not run again here. Not
+    # skipped when that job failed (`check` counts a skipped job as fine): its first step fails.
+    needs: [scope, lint-build-units]
+    if: ${{ !cancelled() && needs.scope.outputs.full == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
     runs-on: [self-hosted, smithable]
     # The job's clock runs while it waits for its turn in the gate queue, up to an hour a gate on
     # a loaded machine; the runner's minutes are free, so the limit is a guard against a hung
@@ -193,6 +202,11 @@ jobs:
       GIT_COMMITTER_NAME: CI
       GIT_COMMITTER_EMAIL: ci@smithable.invalid
     steps:
+      - name: The hosted job passed
+        if: github.event_name == 'pull_request' && needs.lint-build-units.result != 'success'
+        run: |
+          echo "lint-build-units did not pass, and this job does not run its lint and units."
+          exit 1
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       # The machine's Node through fnm (the runner's service has no shell profile).
       - run: echo "$HOME/.local/share/fnm/aliases/default/bin" >> "$GITHUB_PATH"
@@ -207,6 +221,10 @@ jobs:
           npm_config_frozen_lockfile: "false"
           pnpm_config_frozen_lockfile: "false"
           TMPDIR: ${{ runner.temp }}
+          # What the pull request changes (empty on main's runs, which check everything), and
+          # whether the hosted job's lint and units stand for this run's (scripts/gate.sh).
+          GATE_CHANGED: ${{ needs.scope.outputs.changed }}
+          GATE_BASICS_DONE: ${{ github.event_name == 'pull_request' && '1' || '' }}
       # The picture Studio's test takes of a failed step.
       - if: failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
