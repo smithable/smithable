@@ -173,6 +173,8 @@ test("takesSchema refuses maps, and only maps: a field named like a keyword, an 
   expect(takesSchema({ type: "object", additionalProperties: true })).toBe(false);
   expect(takesSchema({ type: "object", patternProperties: { "^a": {} } })).toBe(false);
   expect(takesSchema({ anyOf: [{ type: "string" }, { additionalProperties: {} }] })).toBe(false);
+  expect(takesSchema({ items: { type: "object", unevaluatedProperties: true } })).toBe(false);
+  expect(takesSchema({ type: "string", "x-ui": { additionalProperties: true } })).toBe(true);
   expect(
     takesSchema({
       type: "object",

@@ -147,26 +147,47 @@ const VALUES = new Set(["enum", "const", "default", "examples"]);
 
 /**
  * Whether structured output can take the schema: a map keyed by an app's own names
- * (additionalProperties that is a schema or true, or patternProperties) it refuses with a 400, as
- * the hosted service's gateway knows too (T759). The draft's answer schema holds such maps.
+ * (additionalProperties or unevaluatedProperties that is a schema or true, or patternProperties)
+ * it refuses with a 400, as the hosted service's gateway knows too (T759). The draft's answer
+ * schema holds such maps. Only places that hold schemas are walked, so a value (an enum, a default)
+ * or an unknown keyword (x-ui) is never taken for a map.
  */
 export function takesSchema(schema: unknown): boolean {
   if (Array.isArray(schema)) return schema.every(takesSchema);
   if (!schema || typeof schema !== "object") return true;
   const node = schema as Record<string, unknown>;
   if (node.patternProperties !== undefined) return false;
-  if (node.additionalProperties !== undefined && node.additionalProperties !== false) return false;
+  for (const open of ["additionalProperties", "unevaluatedProperties"])
+    if (node[open] !== undefined && node[open] !== false) return false;
   return Object.entries(node).every(([key, value]) =>
-    VALUES.has(key) || key === "dependentRequired"
-      ? true
-      : NAMED.has(key) && value && typeof value === "object" && !Array.isArray(value)
-        ? Object.values(value).every(takesSchema)
-        : takesSchema(value),
+    NAMED.has(key) && value && typeof value === "object"
+      ? Object.values(value).every(takesSchema)
+      : SCHEMAS.has(key)
+        ? takesSchema(value)
+        : true,
   );
 }
-/** Keywords whose value maps names to schemas (a name may be "additionalProperties"). */
-// (draft-07's dependencies maps a name to a schema or to a list of names, which holds no map.)
+/**
+ * Keywords whose value maps names to schemas (a name may be "additionalProperties"); draft-07's
+ * dependencies maps a name to a schema or to a list of names, which holds no map.
+ */
 const NAMED = new Set(["properties", "$defs", "definitions", "dependentSchemas", "dependencies"]);
+/** Keywords whose value is a schema or a list of schemas. */
+const SCHEMAS = new Set([
+  "items",
+  "prefixItems",
+  "additionalItems",
+  "unevaluatedItems",
+  "contains",
+  "propertyNames",
+  "not",
+  "if",
+  "then",
+  "else",
+  "anyOf",
+  "oneOf",
+  "allOf",
+]);
 
 /** A JSON answer without the Markdown fence a model may put around it. */
 export const unfenced = (text: string): string =>
