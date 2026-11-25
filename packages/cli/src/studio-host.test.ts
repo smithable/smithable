@@ -116,6 +116,26 @@ function hosted(given: "stdin" | "env") {
     }
   }, 15_000);
 
+  // First, so it makes the first read of the project itself.
+  test("a fallback to the starter is said in every read of the project, the notice in one", async () => {
+    const read = async () =>
+      (await (
+        await fetch(`http://127.0.0.1:${port}/api/project`, {
+          headers: { "x-smithable-studio-token": TOKEN },
+        })
+      ).json()) as { notice?: string; fallback?: string };
+    const first = await read();
+    const second = await read();
+    expect(first.fallback).toBe(FELL_BACK);
+    expect(second.fallback).toBe(FELL_BACK);
+    // The page's message comes once, to the first read.
+    expect(first.notice).toBe(FELL_BACK);
+    expect(second.notice).toBeUndefined();
+    expect(existsSync(join(dir, "data/.smithable/notice.txt"))).toBe(false);
+    // Kept on disk, for a Studio started again on the same app.
+    expect(readFileSync(join(dir, "data/.smithable/fallback.txt"), "utf8").trim()).toBe(FELL_BACK);
+  });
+
   test("the preview's process never sees Studio's token, only its own credential", () => {
     const lines = seen();
     const preview = previewTokenOf(TOKEN);
@@ -151,22 +171,6 @@ function hosted(given: "stdin" | "env") {
     expect(await status({ "x-smithable-studio-token": preview })).toBe(401);
     expect(await status({ [PREVIEW_TOKEN_HEADER]: preview })).toBe(401);
     expect(await status({})).toBe(401);
-  });
-
-  test("a fallback to the starter is said in every read of the project, the notice in one", async () => {
-    const read = async () =>
-      (await (
-        await fetch(`http://127.0.0.1:${port}/api/project`, {
-          headers: { "x-smithable-studio-token": TOKEN },
-        })
-      ).json()) as { notice?: string; fallback?: string };
-    const first = await read();
-    const second = await read();
-    expect(first.fallback).toBe(FELL_BACK);
-    expect(second.fallback).toBe(FELL_BACK);
-    // The page's message comes once, whichever read was first.
-    expect(second.notice).toBeUndefined();
-    expect(existsSync(join(dir, "data/.smithable/notice.txt"))).toBe(false);
   });
 }
 

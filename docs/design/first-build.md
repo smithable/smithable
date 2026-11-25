@@ -37,7 +37,7 @@ Status: 2026-09-30, proposed by Fable after Johan's "a site to show my dogs" cam
 
 ### 2.5 The fallback, told
 
-`smithable new --describe` already prints the reason. The workspace start script writes it to `data/.smithable/notice.txt` in the project (`data/` is never committed, so it never reaches a checkpoint), and Studio shows it once as a notice at the top of Builder ("The description could not be used: the demo's AI allowance is used up. This is the CRM starter; describe the changes you want below.") and deletes the file after showing it. Studio keeps the reason as `fallback` in every answer of `/api/project` until another app comes in, so a check that reads the project after the page's first read (the release's described smoke, T1577) still sees why the starter came. The service logs the same line, so it can be seen without reading a container's log.
+`smithable new --describe` already prints the reason. The workspace start script writes it to `data/.smithable/notice.txt` in the project (`data/` is never committed, so it never reaches a checkpoint), and Studio shows it once as a notice at the top of Builder ("The description could not be used: the demo's AI allowance is used up. This is the CRM starter; describe the changes you want below.") and deletes the file after showing it. Studio keeps the reason as `fallback` in every answer of `/api/project` until another app comes in (in `data/.smithable/fallback.txt`, so a Studio started again on the woken workspace has it too), so a check that reads the project after the page's first read (the release's described smoke, T1577) still sees why the starter came. The service logs the same line, so it can be seen without reading a container's log.
 
 ### 2.6 Cost and the demo
 
