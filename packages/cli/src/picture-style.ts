@@ -489,7 +489,7 @@ export async function placeStyle(
 }
 
 /** The width and height of a WebP file, from its header (as the app kit's uploads.ts reads it). */
-function webpSize(bytes: Uint8Array): { width: number; height: number } | undefined {
+export function webpSize(bytes: Uint8Array): { width: number; height: number } | undefined {
   const text = (at: number, n: number) => String.fromCharCode(...bytes.subarray(at, at + n));
   if (bytes.length < 30 || text(0, 4) !== "RIFF" || text(8, 4) !== "WEBP") return undefined;
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);

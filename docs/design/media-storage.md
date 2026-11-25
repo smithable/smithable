@@ -10,7 +10,7 @@ first, video second.
 
 A section's picture already has one place, and it stays the only one. Today a hero's, a
 media-and-text section's, a feature card's and a gallery's picture is written in
-`smithable.content.yml` as `image: { src, alt, generated, kind, width, widths }`, and its crop is
+`smithable.content.yml` as `image: { src, alt, generated, kind, width, height, widths }`, and its crop is
 presentation in `smithable.ux.yml` (`fit`, `aspect`, `focal`). A stored file is one more way to
 say which file it is:
 
@@ -20,14 +20,14 @@ pages:
   home:
     hero:
       image: { asset: m_7f3k2qa9tq0v1m8c4n6p2r5s7w, alt: The shop's front door in winter,
-               width: 2400, widths: [480, 960, 1600] }
+               width: 2400, height: 1600, widths: [480, 960, 1600] }
 ```
 
 | What | Where | Why there |
 | - | - | - |
 | Which stored file (`asset`) | the content file, in place of `src` | it is the picture, as `src` is |
 | Alt text | the content file and the language files, as today | visible text |
-| Its renditions (`width`, `widths`) | the content file, as today | the kit's `srcset` needs them; written by the operation from the service's record, never by a model |
+| Its renditions (`width`, `widths`) and the `width` file's `height` | the content file, as today | the kit's `srcset` needs them, and a page reserves the picture's box by width and height before the file loads; written by the operation from the service's record, never by a model |
 | Crop and focal point | `smithable.ux.yml`: `fit`, `aspect`, `focal`, as today | presentation |
 | The renditions' hashes | the service's record of the asset | see below |
 | Who may use the file | the service only | the project's files never grant anything |
@@ -41,6 +41,15 @@ pages:
   960, 1600, 2400) up to the original's own width; `width` is the largest one made and `widths` the
   others, both copied from the service's record when the slot is set. A size the service adds later
   reaches a slot when the slot is set again; an existing slot keeps naming files that exist.
+- **`height` is the `width` file's height** (T1467), from the record's `height` (the picture's
+  aspect at `width`), copied with `width` and lost with it when the file changes. It is a fact about
+  the file, as `width` is: presentation (`fit`, `aspect`, `focal`) stays in the ux file. Every
+  visitor sees a picture's box jump while its file loads, not only a clone without `public/media/`,
+  and a width and height on the `img` is how a browser reserves that box; so the kit writes them
+  when both are there and the section shows the picture in its own shape (no `aspect` chosen), and
+  keeps its fixed box otherwise. A local picture gets one where its `width` is filled today and its
+  file can be read (a hero from the image library); a picture without it validates and shows as
+  before.
 - **Crop and focal point stay named choices** (`focal: center | top | bottom | left | right`), as
   ARCHITECTURE §2.4 decided for media composition: no authored numbers. A free point (two numbers
   set by dragging) is not added now; it becomes a construct of its own only if a concrete case
@@ -70,9 +79,9 @@ construct in both: a name for fixed files the service made):
 ## 2 Every change through the operation layer
 
 - **`setSectionPicture <page> <section> [item] --asset <id>`** sets a slot to a stored file, as
-  `src` does today; another file loses the old one's `generated`, `kind`, `width` and `widths`, and
-  `alt` stays unless given. The host checks the project's right to the asset with the service and
-  fills `width` and `widths` from its record; a caller cannot give them with `--asset`. `--was`
+  `src` does today; another file loses the old one's `generated`, `kind`, `width`, `height` and
+  `widths`, and `alt` stays unless given. The host checks the project's right to the asset with the
+  service and fills `width`, `height` and `widths` from its record; a caller cannot give them with `--asset`. `--was`
   works as today, so Studio's choice does nothing when another file is there by then.
 - **A model never names an asset.** The operation schemas offered to a model leave `--asset` out,
   and `setText` refuses a picture's `asset`, which is not text, and refuses a `src` on a picture

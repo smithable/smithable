@@ -10,6 +10,7 @@ import {
   atLibrary,
   dropMissingPictures,
   type Fetch,
+  heightAt,
   libraryBase,
   libraryIndex,
   placePictures,
@@ -171,6 +172,8 @@ test("a hero the library has in several widths comes with its copies, and the co
     width: 1536,
     widths: [1600, 2400],
   });
+  // Its height is read from the file (T1467): this test's file is no WebP, so there is none.
+  expect(content.content?.pages.home?.sections?.hero?.image?.height).toBeUndefined();
   // A width the content file would refuse: the hero alone.
   const wide: Record<string, string> = { "smithable.content.yml": "smithableContent: 0.1\n" };
   const alone = await addLibraryPictures({
@@ -183,6 +186,22 @@ test("a hero the library has in several widths comes with its copies, and the co
   });
   expect(alone.map((w) => w.file)).toEqual(["hero.webp"]);
   expect(wide["smithable.content.yml"]).not.toContain("width");
+});
+
+test("a picture's height at its content file's width is read from its WebP header (T1467)", () => {
+  // A lossless WebP's header, as wide and as high as asked.
+  const lossless = (width: number, height: number) => {
+    const bytes = new Uint8Array(30);
+    bytes.set(new TextEncoder().encode("RIFF"), 0);
+    bytes.set(new TextEncoder().encode("WEBPVP8L"), 8);
+    bytes[20] = 0x2f;
+    new DataView(bytes.buffer).setUint32(21, (width - 1) | ((height - 1) << 14), true);
+    return bytes;
+  };
+  expect(heightAt(lossless(1200, 800), 1200)).toBe(800);
+  // The library's width is not the file's own: the height at that width.
+  expect(heightAt(lossless(1200, 800), 1536)).toBe(1024);
+  expect(heightAt(new Uint8Array([1, 2, 3, 4]), 1536)).toBeUndefined();
 });
 
 test("a model with drafted records gets its own pictures, named in its sample file", async () => {

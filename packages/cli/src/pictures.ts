@@ -24,6 +24,7 @@ import {
   rebuildRecords,
   recordsText,
   type VersionEntry,
+  webpSize,
 } from "./picture-style.js";
 import { treeText } from "./secrets.js";
 
@@ -253,12 +254,14 @@ export async function addLibraryPictures(options: {
       const at = ["pages", landing.id, hero.name];
       if (!editor.has([...at, "image"])) {
         const sizes = await heroCopies(picked.hero, fetchFn, written);
+        const height = sizes && heightAt(bytes, sizes.width);
         // Said either way, so a photograph's `generated: false` is in the file, never left out.
         const image = {
           src: "images/hero.webp",
           alt: picked.hero.alt,
           generated: madeByAi(picked.hero),
           ...sizes,
+          ...(height ? { height } : {}),
         };
         if (editor.has(at)) editor.add(at, "image", image);
         else if (editor.has(["pages", landing.id]))
@@ -300,6 +303,17 @@ export async function addLibraryPictures(options: {
         : "No pictures: the app has no picture fields and no landing page with a hero.\n",
   );
   return written;
+}
+
+/**
+ * The height of a picture's file at its content file's `width` (T1467), read from the file itself:
+ * scaled when the library's width is not the file's own, and none when the file cannot be read.
+ */
+export function heightAt(bytes: Uint8Array, width: number): number | undefined {
+  const size = webpSize(bytes);
+  if (!size || size.width < 1 || size.height < 1) return undefined;
+  const height = Math.round((size.height * width) / size.width);
+  return height >= 1 && height <= 16383 ? height : undefined;
 }
 
 /**

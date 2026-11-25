@@ -60,6 +60,8 @@ const picture = (image: ContentImage) => {
     ...(image.generated ? { generated: true } : {}),
     ...(image.kind ? { kind: image.kind } : {}),
     ...(srcSet ? { srcSet } : {}),
+    // Both or neither: a height measures the width file (T1467).
+    ...(image.width && image.height ? { width: image.width, height: image.height } : {}),
   };
 };
 

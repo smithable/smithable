@@ -93,6 +93,9 @@ test("the collage uses the rendered image width with a fallback for each picture
   const files = operation({ spec, content }, "setSectionLook", { key: "layout", value: "collage" });
   const kit = generate(files).find(({ path }) => path === "src/kit/Landing.tsx")?.content ?? "";
   expect(kit).toMatch(/sizes=\{photo.srcSet && collageSizes\}\s+loading="lazy"/);
+  // In its own shape (no aspect chosen) a picture whose size is known keeps that box (T1467).
+  expect(kit).toContain("{...pictureSize(photo, aspect)}");
+  expect(kit).toContain("!aspect && image.width && image.height");
   expect(kit).toMatch(/pictures.length < 2\s+\? "auto, 100vw"/);
   expect(kit).toContain(
     "auto, (min-width: 640px) calc(${Math.ceil(100 / pictures.length)}vw + 1rem), 50vw",

@@ -639,6 +639,9 @@ export interface LandingImage {
   kind?: PictureKind;
   /** Its copies in other widths ("/images/hero.webp 1536w, /images/hero-2400.webp 2400w"), when it has them. */
   srcSet?: string;
+  /** Its file's width and height in pixels, when both are known: its box is kept before it loads. */
+  width?: number;
+  height?: number;
 }
 
 function HeroView({
@@ -2187,6 +2190,12 @@ const mediaSize = (aspect: MediaLook["aspect"]) => ({
   width: 600,
   height: aspect === "portrait" ? 800 : aspect === "square" ? 600 : 400,
 });
+// A picture shown in its own shape (no aspect chosen) keeps that shape's box before its file
+// loads when its size is known; otherwise the box mediaSize guesses, as before.
+const pictureSize = (image: LandingImage, aspect: MediaLook["aspect"]) =>
+  !aspect && image.width && image.height
+    ? { width: image.width, height: image.height }
+    : mediaSize(aspect);
 
 /** Added only when a finite section presentation is chosen; no control-density changes. */
 export function SectionPresentation({
@@ -2324,7 +2333,7 @@ function MediaTextView({
                         srcSet={photo.srcSet}
                         sizes={photo.srcSet && collageSizes}
                         loading="lazy"
-                        {...mediaSize(aspect)}
+                        {...pictureSize(photo, aspect)}
                         className={cn("block w-full", mediaClasses({ fit, aspect, focal }))}
                       />
                     </AiMarked>
@@ -2365,7 +2374,7 @@ function MediaTextView({
                     (layout === "split" ? "(min-width: 1024px) 50vw, 100vw" : "100vw")
                   }
                   loading="lazy"
-                  {...mediaSize(aspect)}
+                  {...pictureSize(image, aspect)}
                   className={cn("block w-full", mediaClasses({ fit, aspect, focal }))}
                 />
               </AiMarked>

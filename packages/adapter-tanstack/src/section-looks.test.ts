@@ -178,7 +178,7 @@ test("a picture in several widths gives the browser its files by width; one with
   const content = validateContent(
     {
       path: "smithable.content.yml",
-      text: "smithableContent: 0.1\npages:\n  home:\n    hero:\n      image: { src: images/hero.webp, alt: A harbour, width: 1536, widths: [800, 2400] }\n    gallery: { items: [{ image: { src: images/a.webp, alt: A table } }] }\n",
+      text: "smithableContent: 0.1\npages:\n  home:\n    hero:\n      image: { src: images/hero.webp, alt: A harbour, width: 1536, widths: [800, 2400] }\n    gallery: { items: [{ image: { src: images/a.webp, alt: A table, width: 1200, height: 900 } }] }\n",
     },
     ir,
   ).content;
@@ -192,6 +192,9 @@ test("a picture in several widths gives the browser its files by width; one with
   );
   // The gallery's picture has one width: no srcSet.
   expect(route.match(/srcSet/g)).toHaveLength(1);
+  // Its size, both or neither, so a picture in its own shape keeps its box (T1467).
+  expect(route).toContain('alt: "A table", width: 1200, height: 900 }');
+  expect(route).not.toMatch(/width: 1536, height/);
 });
 
 test("a stored picture's files are its copies under /media/ by width, and a hero takes fit and focal", () => {
