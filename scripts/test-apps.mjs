@@ -206,16 +206,22 @@ async function hydrated(page) {
  * own lines (a dependency optimized mid-load reloads the page).
  */
 async function open(page, url) {
-  // The dev server's routine lines are capped apart, so they never crowd out an error; an address
-  // is said without its query or fragment (a token there stays out of CI's log).
+  // The dev server's routine lines are capped apart, so they never crowd out an error. CI's log is
+  // public: every line loses an address's query, fragment and sign-in, and anything long enough to
+  // be a token.
   const seen = [];
   const vite = [];
+  const redact = (line) =>
+    line
+      .replace(/\/\/[^/\s@]+@/g, "//")
+      .replace(/[?#][^\s"'`)]*/g, "?…")
+      .replace(/[A-Za-z0-9_\-+=]{32,}/g, "…");
   const add = (list, max, line) =>
-    list.length < max && list.push(line.replace(/\s+/g, " ").slice(0, 160));
+    list.length < max && list.push(redact(line.replace(/\s+/g, " ")).slice(0, 160));
   const where = (address) => address.split(/[?#]/)[0];
   const onConsole = (m) => {
-    if (m.text().startsWith("[vite]")) add(vite, 4, m.text());
-    else if (m.type() === "error") add(seen, 10, `error: ${m.text()}`);
+    if (m.type() === "error") add(seen, 10, `error: ${m.text()}`);
+    else if (m.text().startsWith("[vite]")) add(vite, 4, m.text());
   };
   const onError = (e) => add(seen, 10, `pageerror: ${e.message}`);
   // A request a reload cut off is not why a page failed.
