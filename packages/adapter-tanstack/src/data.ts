@@ -603,7 +603,7 @@ function localized<U extends { label: string; pluralLabel: string; fields: objec
  * computed from another (dueOn from issuedOn) is filled after it. Defaults may read each other
  * (startOn from endOn and endOn from startOn, so either given fills the other): when nothing is
  * ready, the first field on such a cycle in the spec's order goes next, alone, and the sorting
- * resumes, so a field reading into the cycle still comes after it (T1383).
+ * resumes, so a field reading into the cycle still comes after the fields it reads (T1383).
  */
 function defaultOrder(fields: FieldIR[]): FieldIR[] {
   const reads = (f: FieldIR) =>
