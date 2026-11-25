@@ -50,7 +50,20 @@ release() {
   if [ -n "$refresher" ]; then { pkill -P "$refresher"; kill "$refresher"; wait "$refresher"; } 2>/dev/null || true; fi
   if [ "$(cat "$lock" 2>/dev/null)" = "$me" ]; then rm -f "$lock"; fi
 }
-trap release EXIT
+# A run that does not end in 0 (refused, failed or stopped) disarms the auto-merge it armed:
+# GitHub would otherwise merge at green with nobody asking (cloud #625, 2026-11-25). First, before
+# the lock, for a stopper that follows with KILL; KILL itself cannot be caught.
+to_disarm="" watcher=""
+on_exit() {
+  local rc=$?
+  if [ "$rc" != 0 ] && [ -n "$to_disarm" ]; then
+    gh pr merge "$pr" "${repo[@]}" --disable-auto >/dev/null 2>&1 ||
+      echo "#$pr: could not disarm auto-merge: check by hand that none is armed." >&2
+  fi
+  if [ -n "$watcher" ]; then kill "$watcher" 2>/dev/null || true; fi
+  release
+}
+trap on_exit EXIT
 # Stopped by a signal, the script still releases the lock (bash runs the EXIT trap only on exit).
 trap 'exit 130' INT TERM HUP
 take_lock() {
@@ -108,7 +121,7 @@ retarget_stacked() {
   done
 }
 refuse() {
-  gh pr merge "$pr" "${repo[@]}" --disable-auto >/dev/null 2>&1 || true
+  if gh pr merge "$pr" "${repo[@]}" --disable-auto >/dev/null 2>&1; then to_disarm=""; fi
   echo "Not merging #$pr: $1"
   exit 1
 }
@@ -249,6 +262,7 @@ for attempt in 1 2 3 4 5 6 7 8; do
   # cloud #201 on 2026-10-14); that one is merged below by the script itself, once the required
   # check is confirmed green, which is what branch protection asks.
   armed=1
+  to_disarm=1
   gh pr merge "$pr" "${repo[@]}" --auto --merge >/dev/null 2>&1 || armed=0
   # The checks branch protection requires, as GitHub's own merge goes by (here `check`, which
   # reports on every job of its run). Others are not asked: a run that a newer one cancelled
@@ -295,7 +309,13 @@ for attempt in 1 2 3 4 5 6 7 8; do
     [ $((i % 30)) = 0 ] && echo "#$pr: waiting for its required check to be reported"
     sleep 10
   done
-  if ! gh pr checks "$pr" "${repo[@]}" --required --watch --fail-fast >/dev/null; then
+  # In the background: bash runs a trap while it waits, not while a foreground command runs.
+  gh pr checks "$pr" "${repo[@]}" --required --watch --fail-fast >/dev/null &
+  watcher=$!
+  watched=0
+  wait "$watcher" || watched=$?
+  watcher=""
+  if [ "$watched" != 0 ]; then
     merged && { echo "Merged #$pr."; retarget_stacked; exit 0; }
     gh pr checks "$pr" "${repo[@]}" || true
     refuse "a check failed."
