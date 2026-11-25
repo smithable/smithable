@@ -233,8 +233,8 @@ function applyPatch(
 
 /**
  * A small JSON Schema check (type, properties, required, additionalProperties, items, enum,
- * pattern, minItems, uniqueItems), enough for plugin sections, with messages that name the
- * path. Other keywords are not checked.
+ * pattern, minimum, maximum, minItems, maxItems, uniqueItems, minProperties), enough for plugin
+ * sections, with messages that name the path. Other keywords are not checked.
  */
 const TYPE_WORDS: Record<string, string> = {
   array: "a list",
