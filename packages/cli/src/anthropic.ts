@@ -52,9 +52,13 @@ export function anthropic(
               : {}),
           }),
         });
-      let response = await post(true);
-      // A schema structured output cannot hold (a map of any keys): the JSON the prompt asks for.
+      // A schema structured output cannot hold (a map of any keys) is not sent: the JSON the prompt
+      // asks for, without a request the API is known to refuse first (T1597). Any other refusal
+      // of the schema still has the request sent again without it.
+      const format = takesSchema(schema);
+      let response = await post(format);
       if (
+        format &&
         response.status === 400 &&
         /output_config|json_schema|additionalProperties/.test(await response.clone().text())
       )
@@ -140,6 +144,28 @@ export function closed(schema: unknown): unknown {
 }
 
 const VALUES = new Set(["enum", "const", "default", "examples"]);
+
+/**
+ * Whether structured output can take the schema: a map keyed by an app's own names
+ * (additionalProperties that is a schema or true, or patternProperties) it refuses with a 400, as
+ * the hosted service's gateway knows too (T759). The draft's answer schema holds such maps.
+ */
+export function takesSchema(schema: unknown): boolean {
+  if (Array.isArray(schema)) return schema.every(takesSchema);
+  if (!schema || typeof schema !== "object") return true;
+  const node = schema as Record<string, unknown>;
+  if (node.patternProperties !== undefined) return false;
+  if (node.additionalProperties !== undefined && node.additionalProperties !== false) return false;
+  return Object.entries(node).every(([key, value]) =>
+    VALUES.has(key) || key === "dependentRequired"
+      ? true
+      : NAMED.has(key) && value && typeof value === "object" && !Array.isArray(value)
+        ? Object.values(value).every(takesSchema)
+        : takesSchema(value),
+  );
+}
+/** Keywords whose value maps names to schemas (a name may be "additionalProperties"). */
+const NAMED = new Set(["properties", "$defs", "definitions", "dependentSchemas"]);
 
 /** A JSON answer without the Markdown fence a model may put around it. */
 export const unfenced = (text: string): string =>
