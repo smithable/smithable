@@ -11,7 +11,7 @@ import { tempDir } from "./test-dir.js";
 // The real worker thread starts three times (the offer, a refused fetch, the updated offer), each
 // loading its bundle: about 4 s alone, 30 s and more at load 30 (T1396, T1562). The test waits
 // for each preparation to end, bounded only by the worker's own 60 s deadline, then checks what
-// it left, so the machine's speed decides how long it takes and never whether it passes.
+// it left. Only a run past that deadline fails, as it would fail in Studio too.
 const WORKER_DEADLINE = 60_000;
 test("Studio prepares its offer outside the project and invalidates it after a picture edit", {
   timeout: 4 * WORKER_DEADLINE,
