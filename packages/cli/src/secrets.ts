@@ -185,12 +185,15 @@ const own = new Set<number>();
  * Marks a folder this process has just made in a place only it may change (the staged app in
  * replace, a new temporary folder of its own, until sync copies it in as the project user): a
  * file `readTree` opens in it may be this process's own as well as the project user's. The folder
- * is held open and known by that, never by its name; it must be this process's, and is made its
- * group's and no one else's to write in (0755). A file counts as in it where the opened file and
- * the held folder are (Linux's /proc/self/fd, compared as bytes), so a link it holds into the
- * project (the staged app's node_modules) leads to the project's rules. Gives back the function
- * that unmarks it, once. The project user reads it (sync copies it in as that user), so it is
- * 0755: it holds only the app being made for that project.
+ * is held open and known by that, never by its name, and must be this process's. It is made the
+ * project user's group's (2770, as `scratchDir` with a child that writes): the children making
+ * the app run as that user and write in it (git init and its first commit, drizzle-kit's
+ * migration), and sync reads it as that user; no one else may enter it. That loosens nothing for
+ * reads: a file the project user puts there is its own and passes the project's rule anyway, and
+ * it cannot make one of this process's. A file counts as in it where the opened file and the held
+ * folder are (Linux's /proc/self/fd, compared as bytes), so a link in it, the staged app's
+ * node_modules or one a child put there, leads to the project's rules. Gives back the function
+ * that unmarks it, once.
  */
 export function ownFolder(dir: string): () => void {
   // Without a project user every tree read is a plain one: nothing to mark (and no uid on Windows).
@@ -203,9 +206,9 @@ export function ownFolder(dir: string): () => void {
     const stat = fstatSync(fd);
     if (!stat.isDirectory() || stat.uid !== process.getuid?.())
       throw new Error(`${dir} is not a folder this process made.`);
-    const gid = process.getgid?.();
+    const gid = projectUser()?.gid;
     if (gid !== undefined && stat.gid !== gid) fchownSync(fd, -1, gid);
-    fchmodSync(fd, 0o755);
+    fchmodSync(fd, 0o2770);
   } catch (error) {
     closeSync(fd);
     throw error;

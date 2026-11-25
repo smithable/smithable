@@ -374,8 +374,9 @@ test("a file of the tree read by this process is not read through a link the pro
 test.runIf(process.platform === "linux" && process.getuid?.() !== 0)(
   "a folder this process made is read as its own while marked, and nothing through a link",
   async () => {
+    // Another uid, and a group this process is in, as Studio is in the project user's (1000).
     process.env.SMITHABLE_PROJECT_UID = "0";
-    process.env.SMITHABLE_PROJECT_GID = "0";
+    process.env.SMITHABLE_PROJECT_GID = String(process.getgid?.());
     const base = mkdtempSync(join(tmpdir(), "smithable-own-"));
     dirs.push(base);
     const staged = join(base, "project.incoming");
@@ -395,8 +396,9 @@ test.runIf(process.platform === "linux" && process.getuid?.() !== 0)(
     // Unmarked, the file is this process's, not the project user's: refused, as on beta.
     expect(() => readTree(content)).toThrow("is not a file the child made");
     const unmark = ownFolder(staged);
-    // Its group's and no one else's to write in, without the setgid it took from its parent.
-    expect(statSync(staged).mode & 0o7777).toBe(0o755);
+    // The project user's group's to write in (the children making the app), no one else's.
+    expect(statSync(staged).mode & 0o7777).toBe(0o2770);
+    expect(statSync(staged).gid).toBe(process.getgid?.());
     try {
       expect(readTree(content)?.toString()).toContain("smithableContent");
       // Only tree reads: readOwn (the project's notice) keeps the project user's rule.
