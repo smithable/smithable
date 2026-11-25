@@ -225,19 +225,21 @@ if [ -z "${TEST_PATIENCE:-}" ]; then
 fi
 
 # While the checks run, every minute (GATE_LOAD_EVERY seconds), the load and the five busiest
-# processes with their user and working directory go into the log (T1522): a check that fails under
-# load then shows whose work loaded the machine. A process of another user shows no directory. It
-# ends with the gate, or on its next turn when the gate was killed.
+# processes go into the log (T1522): a check that fails under load then shows whose work loaded the
+# machine. Each row has the process, its user, its command's name and the last folder of its working
+# directory, never its arguments (CI's log is public). A process of another user shows no folder.
+# The sampler ends with the gate, or on its next turn when the gate was killed.
 busiest() {
   top -b -n 2 -d 1 -o %CPU -w 250 2>/dev/null | awk '/^top -/ { f++ } f == 2 && $1 ~ /^[0-9]+$/ { print $1, $9 }' |
     head -5 | while read -r pid cpu; do
-      echo "  $cpu% $(ps -o user= -p "$pid" 2>/dev/null) in $(readlink "/proc/$pid/cwd" 2>/dev/null || echo -): $(ps -o args= -p "$pid" 2>/dev/null | cut -c1-120)"
+      dir=$(readlink "/proc/$pid/cwd" 2>/dev/null) || dir=-
+      echo "  $pid $cpu% $(stat -c %U "/proc/$pid" 2>/dev/null) $(ps -o comm= -p "$pid" 2>/dev/null) in ${dir##*/}"
     done
 }
 ( while sleep "${GATE_LOAD_EVERY:-60}" && kill -0 $$ 2>/dev/null; do
     echo "gate.sh: $(date +%H:%M) load $(cut -d' ' -f1-3 /proc/loadavg); busiest:"
     busiest
-  done ) &
+  done ) 2>/dev/null &
 sampler=$!
 
 # The plan, then the run. GATE_RUN runs another command in the gate's turn instead (the weekly long run of the properties, ci.md).
