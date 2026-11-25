@@ -19,7 +19,7 @@ import {
 } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { ASSET_ID, type Diagnostic, mediaInUse } from "@smithable/core";
+import { ASSET_ID, type Diagnostic, findOperation, mediaInUse } from "@smithable/core";
 import { asProject } from "./as-project.js";
 import type { Io } from "./io.js";
 import { treeText } from "./secrets.js";
@@ -413,8 +413,9 @@ export function mediaFindings(dir: string): Diagnostic[] {
 
 /**
  * Fills what only the host gives an operation, from the service's record (§2, §7): a stored
- * picture's sizes for setSectionPicture, a stored film's record for setSectionFilm. A caller's own
- * values are dropped first. True when it filled one, so the call runs as the host's; locally there
+ * picture's sizes for setSectionPicture, a stored film's record for setSectionFilm. Every argument
+ * only the host gives (x-host) is dropped from the caller's first, so the host's origin the change
+ * then runs with lifts nothing but what was filled here. True when it filled one, so the call runs as the host's; locally there
  * is no record, and the operation refuses a new stored file without it. Throws when the service
  * cannot answer just now.
  */
@@ -425,8 +426,13 @@ export async function hostRecord(
 ): Promise<boolean> {
   if (!args || typeof args !== "object") return false;
   const choice = args as Record<string, unknown>;
+  const properties = (findOperation(name)?.schema.properties ?? {}) as Record<
+    string,
+    Record<string, unknown>
+  >;
+  for (const key of Object.keys(choice))
+    if (properties[key]?.["x-host"] === true) delete choice[key];
   if (name === "setSectionPicture") {
-    delete choice.rendition;
     if (typeof choice.asset !== "string" || !source?.sizes) return false;
     const sizes = await source.sizes(choice.asset);
     if (!sizes) return false;
@@ -434,7 +440,6 @@ export async function hostRecord(
     return true;
   }
   if (name === "setSectionFilm") {
-    delete choice.record;
     if (typeof choice.asset !== "string" || !source?.film) return false;
     const record = await source.film(choice.asset);
     if (!record) return false;

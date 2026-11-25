@@ -85,6 +85,11 @@ test("removeMedia takes a deleted film off its hero and leaves the picture", () 
   const done = applyOperation(files, "removeMedia", { asset: [FILM] });
   if (!done.ok) throw new Error(done.message);
   expect(done.files.content).toBe(content(storedPicture()));
+  // Both deleted at once: the film is taken first (last place first), then the picture.
+  const both = applyOperation(files, "removeMedia", { asset: [ID, FILM] });
+  if (!both.ok) throw new Error(both.message);
+  expect(both.files.content).not.toContain("m_");
+  expect(both.files.content).toContain("title: Roofs");
 });
 
 const record = { width: 3840, height: 2160, heights: [720, 1080], duration: 6.2, sound: true };
