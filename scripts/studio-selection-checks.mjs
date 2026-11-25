@@ -281,14 +281,11 @@ export async function checkStudioSelection(browser, base) {
     assert.equal(again.ok, true);
     assert.notEqual(again.src, tried.src);
     assert.equal(await filmServed(again.src), true, "the second film is not in the app");
-    // Remove is tried on too: the row says there is none.
-    const filmRemoved = page.waitForResponse(
-      (response) =>
-        response.url() === `${base}/api/op` &&
-        response.request().postDataJSON()?.name === "setSectionFilm",
-    );
+    // Remove is tried on too: with a film tried on, it undoes that change (the section had none),
+    // and the row says there is none.
+    const filmUndone = page.waitForResponse((response) => response.url() === `${base}/api/undo`);
     await filmRow.getByRole("button", { name: "Remove", exact: true }).click();
-    const filmAnswer = await (await filmRemoved).json();
+    const filmAnswer = await (await filmUndone).json();
     assert.equal(
       filmAnswer.ok,
       true,
