@@ -214,14 +214,15 @@ async function open(page, url) {
   const redact = (line) =>
     line
       .replace(/\/\/[^/\s@]+@/g, "//")
-      .replace(/[?#][^\s"'`)]*/g, "?…")
+      .replace(/((?:https?:)?\/[^\s?#"'`]*)[?#]\S*/g, "$1?…")
       .replace(/[A-Za-z0-9_\-+=]{32,}/g, "…");
-  const add = (list, max, line) =>
-    list.length < max && list.push(redact(line.replace(/\s+/g, " ")).slice(0, 160));
+  const clean = (line) => redact(line.replace(/\s+/g, " ")).slice(0, 160);
+  const add = (list, max, line) => list.length < max && list.push(clean(line));
   const where = (address) => address.split(/[?#]/)[0];
   const onConsole = (m) => {
     if (m.type() === "error") add(seen, 10, `error: ${m.text()}`);
-    else if (m.text().startsWith("[vite]")) add(vite, 4, m.text());
+    // The last four, so a reload late in the load is not crowded out by the first connects.
+    else if (m.text().startsWith("[vite]")) vite.push(clean(m.text())) > 4 && vite.shift();
   };
   const onError = (e) => add(seen, 10, `pageerror: ${e.message}`);
   // A request a reload cut off is not why a page failed.
@@ -243,7 +244,7 @@ async function open(page, url) {
     const saw = [...seen, ...vite];
     if (error instanceof Error && saw.length) {
       const [first, ...rest] = error.message.split("\n");
-      error.message = [`${first} (the page saw: ${saw.join(" | ")})`, ...rest].join("\n");
+      error.message = [`${redact(first)} (the page saw: ${saw.join(" | ")})`, ...rest].join("\n");
     }
     throw error;
   } finally {
