@@ -165,7 +165,8 @@ export function takesSchema(schema: unknown): boolean {
   );
 }
 /** Keywords whose value maps names to schemas (a name may be "additionalProperties"). */
-const NAMED = new Set(["properties", "$defs", "definitions", "dependentSchemas"]);
+// (draft-07's dependencies maps a name to a schema or to a list of names, which holds no map.)
+const NAMED = new Set(["properties", "$defs", "definitions", "dependentSchemas", "dependencies"]);
 
 /** A JSON answer without the Markdown fence a model may put around it. */
 export const unfenced = (text: string): string =>

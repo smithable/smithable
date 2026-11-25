@@ -183,6 +183,20 @@ test("takesSchema refuses maps, and only maps: a field named like a keyword, an 
         kind: { enum: [{ additionalProperties: true }] },
         value: { default: { patternProperties: 1 } },
       },
+      dependencies: { additionalProperties: ["id"] },
     }),
   ).toBe(true);
+});
+
+test("a 400 to a request without structured output is an error, not asked again (T1597)", async () => {
+  let calls = 0;
+  vi.stubGlobal("fetch", async () => {
+    calls++;
+    return Response.json({ error: { message: "additionalProperties: bad" } }, { status: 400 });
+  });
+  const map = { type: "object", additionalProperties: { type: "string" } };
+  await expect(
+    anthropic("claude-haiku-5-5", "test-key").complete({ system: "s", user: "u", schema: map }),
+  ).rejects.toThrow("400");
+  expect(calls).toBe(1);
 });
