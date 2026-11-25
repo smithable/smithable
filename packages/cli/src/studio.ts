@@ -134,6 +134,8 @@ import { warmPreview } from "./warm.js";
 /** The built Studio app (apps/studio), next to the CLI in the repository. */
 /** A message shown once when Studio next opens, e.g. why a description could not be used. */
 export const NOTICE = "data/.smithable/notice.txt";
+/** Why this app is the starter and not the one described, kept while the app is (T1577). */
+export const FALLBACK = "data/.smithable/fallback.txt";
 // Installed from npm, the Studio app travels in the package (studio/, scripts/prepack.mjs); in the
 // repository it is apps/studio's own build.
 const PACKAGED = new URL("../studio/", import.meta.url).pathname;
@@ -991,6 +993,20 @@ export async function studio(
   let notice = readTreeOrNone(noticeFile, 64 * 1024)
     ?.toString("utf8")
     .trim();
+  // The maker's message is also why this app is not the one described (a description that fell
+  // back to the starter, T1577), and that holds for as long as the app does: kept for every read of
+  // /api/project, not only the first, so whoever looks after the page's first read still sees it.
+  // In a file of its own, so a Studio started again on the same app (a workspace woken) has it too.
+  const fallbackFile = join(dir, FALLBACK);
+  const keepFallback = (reason: string | undefined) =>
+    changeTree([{ path: fallbackFile, data: reason ? `${reason}\n` : null }]);
+  let fallback = notice;
+  if (fallback) keepFallback(fallback);
+  else
+    fallback =
+      readTreeOrNone(fallbackFile, 64 * 1024)
+        ?.toString("utf8")
+        .trim() || undefined;
   // A leftover server Studio could not stop: if its port still answers, the person is told.
   if (leftover)
     void fetch(`http://${OLD_HOST}:${leftover.port}/`, { signal: AbortSignal.timeout(3000) }).then(
@@ -1065,6 +1081,7 @@ export async function studio(
       // Where Smith may hear and speak, from the same policy (smith-speech.md §3).
       speech: speechProviders(),
       ...(notice ? { notice } : {}),
+      ...(fallback ? { fallback } : {}),
       ...(making ? { making } : {}),
       ...(waiting.length ? { waiting } : {}),
     };
@@ -1116,6 +1133,9 @@ export async function studio(
     } catch {
       notice = undefined;
     }
+    // The app that came in replaces the old one's reason with its own, or with none.
+    fallback = notice;
+    keepFallback(fallback);
     changeTree([{ path: noticeFile, data: null }]);
     await settled();
     // The log starts with the person's app: nothing of the app that was here, and nothing
