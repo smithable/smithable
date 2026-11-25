@@ -10,7 +10,9 @@ cd "$(git rev-parse --show-toplevel)"
 tree() {
   local idx
   idx=$(mktemp)
-  cp "$(git rev-parse --path-format=absolute --git-path index)" "$idx" 2>/dev/null || : > "$idx"
+  # -p keeps the index's mtime: git re-reads a file changed in the second the index was written only
+  # when the index is not newer than it (racy git), so a fresh mtime hid same-size edits.
+  cp -p "$(git rev-parse --path-format=absolute --git-path index)" "$idx" 2>/dev/null || : > "$idx"
   GIT_INDEX_FILE=$idx git add -A . && GIT_INDEX_FILE=$idx git write-tree
   rm -f "$idx"
 }
