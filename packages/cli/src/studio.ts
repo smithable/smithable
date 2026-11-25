@@ -1114,7 +1114,10 @@ export async function studio(
   const replaceWith = async (to: Asked) => {
     // The notice file comes and goes with the app's other files (replace.ts writes the new app's
     // tree whole): an app that came in brings its own or none, and a replace refused or failed
-    // before it leaves the old app's unseen notice, for a Studio started again too (T1602).
+    // before it leaves the old app's unseen notice, for a Studio started again too (T1602). Until
+    // it is read again below, an acknowledgement of the old notice leaves the file alone: by then
+    // it may be the new app's.
+    noticeInFile = false;
     const result = await capture((io) =>
       replaceProject(dir, io, to, (stage, draft, assumptions) => {
         if (!making) return;
@@ -1784,9 +1787,19 @@ export async function studio(
       if (req.method === "POST" && url.pathname === "/api/notice/seen") {
         const { id } = await body();
         if (notice && typeof id === "string" && id === noticeId) {
-          notice = undefined;
+          // The maker's file goes first, so a failure leaves the notice to be said seen again.
           if (noticeInFile) changeTree([{ path: noticeFile, data: null }]);
-          noticeInFile = false;
+          // A notice told over the maker's unseen one (an old server, the dev data back) leaves
+          // that one to be shown next.
+          let next: string | undefined;
+          try {
+            next = noticeInFile ? undefined : readOwn(noticeFile)?.trim() || undefined;
+          } catch {
+            next = undefined;
+          }
+          notice = next;
+          noticeId = randomUUID();
+          noticeInFile = Boolean(next);
         }
         return json({ ok: true });
       }
