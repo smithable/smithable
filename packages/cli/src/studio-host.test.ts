@@ -176,3 +176,125 @@ function hosted(given: "stdin" | "env") {
 
 describe("the token on standard input", () => hosted("stdin"));
 describe("the token in Studio's environment", () => hosted("env"));
+
+/**
+ * The fallback's life (T1585): a Studio started again on the same app keeps saying why it is the
+ * starter; an app that comes in takes that reason away, and a Studio started after it does not
+ * bring it back.
+ */
+describe("the fallback to the starter, across restarts and a replacement", () => {
+  // Studio and its preview (port + 1), in a range apart from the suites above.
+  const port = 40000 + Math.floor(Math.random() * 9000) * 2;
+  let dir = "";
+  let from = "";
+  let studio: ChildProcess | undefined;
+  const files = [
+    "smithable.yml",
+    "smithable.auth.yml",
+    "smithable.ux.yml",
+    "smithable.content.yml",
+  ];
+  const pkg = JSON.stringify({ name: "fallback-test", private: true });
+  const call = async (path: string, init: RequestInit = {}) =>
+    fetch(`http://127.0.0.1:${port}${path}`, {
+      ...init,
+      // As Studio's own page sends a change.
+      headers: {
+        "x-smithable-studio-token": TOKEN,
+        "x-smithable": "1",
+        "content-type": "application/json",
+      },
+    });
+  const project = async () =>
+    (await (await call("/api/project")).json()) as { notice?: string; fallback?: string };
+  const start = async (replaceable: boolean) => {
+    const args = [bin, "studio", dir, "--host", "127.0.0.1", "--port", String(port)];
+    studio = spawn(
+      process.execPath,
+      [...args, "--secrets-stdin", ...(replaceable ? ["--replaceable"] : [])],
+      { stdio: ["pipe", "ignore", "ignore"], detached: true },
+    );
+    studio.stdin?.end(JSON.stringify({ studioToken: TOKEN }));
+    // Studio's warm-up has reached the preview: stopped before that, it is not yet settled.
+    await until(
+      () =>
+        existsSync(join(dir, "seen.jsonl")) &&
+        readFileSync(join(dir, "seen.jsonl"), "utf8").includes('"url"'),
+    );
+    // Ready when it refuses a read without the token, which reads nothing; then the test's read
+    // is the first, the one the one-time notice goes to.
+    const end = Date.now() + 30_000;
+    const refuses = () =>
+      fetch(`http://127.0.0.1:${port}/api/project`, { signal: AbortSignal.timeout(5000) }).then(
+        (answer) => answer.status === 401,
+        () => false,
+      );
+    while (!(await refuses())) {
+      if (Date.now() > end) throw new Error("Studio did not answer");
+      await new Promise((done) => setTimeout(done, 200));
+    }
+    return project();
+  };
+  const stop = async () => {
+    expect(await stopStudioFixture(studio, dir)).toBe(true);
+    expect(fixturePids(dir)).toEqual([]);
+    studio = undefined;
+    rmSync(join(dir, "seen.jsonl"), { force: true });
+  };
+
+  beforeAll(() => {
+    dir = realpathSync(mkdtempSync(join(tmpdir(), "studio-fallback-")));
+    from = realpathSync(mkdtempSync(join(tmpdir(), "studio-fallback-from-")));
+    for (const name of files) {
+      cpSync(join(root, "examples/records", name), join(dir, name));
+      cpSync(join(root, "examples/records", name), join(from, name));
+    }
+    writeFileSync(join(dir, "package.json"), pkg);
+    writeFileSync(join(from, "package.json"), pkg);
+    // So the app that came in can be told from the one it replaced.
+    writeFileSync(join(from, "came-in.txt"), "the new app\n");
+    mkdirSync(join(dir, "node_modules/.bin"), { recursive: true });
+    writeFileSync(join(dir, "node_modules/.bin/vite"), fakeVite);
+    chmodSync(join(dir, "node_modules/.bin/vite"), 0o755);
+    mkdirSync(join(dir, "data/.smithable"), { recursive: true });
+    writeFileSync(join(dir, "data/.smithable/notice.txt"), `${FELL_BACK}\n`);
+  });
+
+  afterAll(async () => {
+    try {
+      // Also when Studio itself has exited: a preview it left is found by its folder and stopped.
+      if (dir) await stopStudioFixture(studio, dir);
+    } finally {
+      for (const d of [dir, from]) if (d) rmSync(d, { recursive: true, force: true });
+    }
+  }, 15_000);
+
+  test("kept by a Studio started again, cleared by an app that comes in, also after a restart", async () => {
+    const first = await start(true);
+    expect(first.fallback).toBe(FELL_BACK);
+    expect(first.notice).toBe(FELL_BACK);
+    await stop();
+
+    // Started again (a workspace woken): the reason holds, and the one-time notice is not repeated.
+    const again = await start(true);
+    expect(again.fallback).toBe(FELL_BACK);
+    expect(again.notice).toBeUndefined();
+
+    // A finished app takes the starter's place: it is not the starter, so no reason stays.
+    const replaced = await call("/api/project/replace", {
+      method: "POST",
+      body: JSON.stringify({ from }),
+    });
+    expect(replaced.status, await replaced.clone().text()).toBe(200);
+    expect((await project()).fallback).toBeUndefined();
+    expect(existsSync(join(dir, "data/.smithable/fallback.txt"))).toBe(false);
+    expect(readFileSync(join(dir, "came-in.txt"), "utf8")).toBe("the new app\n");
+    await stop();
+
+    const after = await start(false);
+    expect(after.fallback).toBeUndefined();
+    expect(after.notice).toBeUndefined();
+    expect(existsSync(join(dir, "came-in.txt"))).toBe(true);
+    await stop();
+  }, 120_000);
+});
