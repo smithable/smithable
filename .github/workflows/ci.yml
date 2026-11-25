@@ -95,9 +95,9 @@ jobs:
             changed=$(git diff --name-only --no-renames "$BASE" HEAD)
             # For the full job's plan, whose shallow checkout cannot work it out. A very long
             # list is left out, and the gate then runs everything.
-            if [ "$(wc -l <<< "$changed")" -le 500 ]; then
+            if [ "$(wc -l <<< "$changed")" -le 500 ] && [ "${#changed}" -le 60000 ]; then
               end="end-of-changed-$RANDOM$RANDOM"
-              { echo "changed<<$end"; echo "$changed"; echo "$end"; } >> "$GITHUB_OUTPUT"
+              { echo "changed<<$end"; printf '%s\n' "$changed"; echo "$end"; } >> "$GITHUB_OUTPUT"
             fi
             if grep -qE "$engine" <<< "$changed"; then
               full=true; why="engine files changed"
