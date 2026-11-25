@@ -88,13 +88,16 @@ export function hostedMediaSource(
     if (!answer.ok) throw new Error(`The service answered ${answer.status} for ${path}.`);
     return answer;
   };
-  // A file's record, or undefined when refused or not a record.
+  // A file's record, or undefined when refused, not a record, or not ready yet (§9a: a row is
+  // `processing` until its renditions are written, `failed` after).
   const recorded = async (asset: string) => {
     if (!ASSET_ID.test(asset)) return undefined;
     const answer = await ask(`/media/${asset}`);
     if (!answer) return undefined;
     const body: unknown = await answer.json().catch(() => undefined);
-    return body && typeof body === "object" ? (body as Record<string, unknown>) : undefined;
+    if (!body || typeof body !== "object") return undefined;
+    const record = body as Record<string, unknown>;
+    return record.state === undefined || record.state === "ready" ? record : undefined;
   };
   return {
     async film(asset) {
@@ -106,7 +109,10 @@ export function hostedMediaSource(
         return undefined;
       // A rendition counts only when the record holds its file, and none without the poster.
       const files = body.variants && typeof body.variants === "object" ? body.variants : {};
-      const has = (name: string) => typeof (files as Record<string, unknown>)[name] === "string";
+      const has = (name: string) => {
+        const file = (files as Record<string, unknown>)[name];
+        return typeof file === "string" && file !== "";
+      };
       const made =
         Array.isArray(heights) && has("poster.webp")
           ? heights.filter((h) => Number.isInteger(h) && has(`${h}.mp4`))

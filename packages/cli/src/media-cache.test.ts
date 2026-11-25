@@ -359,6 +359,27 @@ test("§7 the service's film record: only a video's, a height only with its file
       sound: false,
       variants: { "720.mp4": hash("a") },
     },
+    // Still being made, and an empty file name: neither is a rendition (Astra's read of #1413).
+    m_01hz8k3q4r5s6t7v8w9x0y1z2f: {
+      kind: "video",
+      state: "processing",
+      width: 1920,
+      height: 1080,
+      heights: [720],
+      duration: 4,
+      sound: false,
+      variants: { "720.mp4": hash("a"), "poster.webp": hash("p") },
+    },
+    m_01hz8k3q4r5s6t7v8w9x0y1z2g: {
+      kind: "video",
+      state: "ready",
+      width: 1920,
+      height: 1080,
+      heights: [720, 1080],
+      duration: 4,
+      sound: false,
+      variants: { "720.mp4": "", "1080.mp4": hash("b"), "poster.webp": hash("p") },
+    },
     m_01hz8k3q4r5s6t7v8w9x0y1z2c: { kind: "image", width: 1600, widths: [480] },
     m_01hz8k3q4r5s6t7v8w9x0y1z2d: { kind: "video", width: 1920, heights: [720] },
   };
@@ -386,6 +407,8 @@ test("§7 the service's film record: only a video's, a height only with its file
     expect(await s.film("m_01hz8k3q4r5s6t7v8w9x0y1z2c")).toBeUndefined();
     expect(await s.film("m_01hz8k3q4r5s6t7v8w9x0y1z2d")).toBeUndefined();
     expect(await s.film("m_01hz8k3q4r5s6t7v8w9x0y1z2e")).toBeUndefined();
+    expect(await s.film("m_01hz8k3q4r5s6t7v8w9x0y1z2f")).toBeUndefined();
+    expect((await s.film("m_01hz8k3q4r5s6t7v8w9x0y1z2g"))?.heights).toEqual([1080]);
     expect(await s.film("../x")).toBeUndefined();
   } finally {
     server.close();
