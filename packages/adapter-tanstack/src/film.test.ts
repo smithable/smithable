@@ -52,3 +52,17 @@ test("a hero's film is handed to the hero, and its code is written only with it 
   expect(others(moving)).toEqual(others(still));
   expect(file(still, "src/routes/index.tsx")).not.toContain("Film");
 });
+
+test("a stored film plays its tallest rendition, and its 720 one on a narrow screen (T1544)", () => {
+  const FILM = "m_7zzzzzzzzzzzzzzzzzzzzzzzzz";
+  const file = (image: string) =>
+    app(image).find((f) => f.path === "src/routes/index.tsx")?.content ?? "";
+  expect(
+    file(`{ src: images/hero.webp, alt: A, film: { asset: ${FILM}, heights: [720, 1080] } }`),
+  ).toContain(
+    `film={(framed) => <Film src="/media/${FILM}/1080.mp4" smaller="/media/${FILM}/720.mp4" framed={framed} />}`,
+  );
+  expect(
+    file(`{ src: images/hero.webp, alt: A, film: { asset: ${FILM}, heights: [720] } }`),
+  ).toContain(`<Film src="/media/${FILM}/720.mp4" framed={framed} />`);
+});
