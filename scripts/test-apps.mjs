@@ -206,13 +206,24 @@ async function hydrated(page) {
  * own lines (a dependency optimized mid-load reloads the page).
  */
 async function open(page, url) {
+  // The dev server's routine lines are capped apart, so they never crowd out an error; an address
+  // is said without its query or fragment (a token there stays out of CI's log).
   const seen = [];
-  const add = (line) => seen.length < 12 && seen.push(line.replace(/\s+/g, " ").slice(0, 160));
-  const onConsole = (m) =>
-    (m.type() === "error" || m.text().startsWith("[vite]")) && add(`${m.type()}: ${m.text()}`);
-  const onError = (e) => add(`pageerror: ${e.message}`);
-  const onFailed = (r) => add(`failed: ${r.url()} ${r.failure()?.errorText ?? ""}`);
-  const onResponse = (r) => r.status() >= 500 && add(`${r.status()}: ${r.url()}`);
+  const vite = [];
+  const add = (list, max, line) =>
+    list.length < max && list.push(line.replace(/\s+/g, " ").slice(0, 160));
+  const where = (address) => address.split(/[?#]/)[0];
+  const onConsole = (m) => {
+    if (m.text().startsWith("[vite]")) add(vite, 4, m.text());
+    else if (m.type() === "error") add(seen, 10, `error: ${m.text()}`);
+  };
+  const onError = (e) => add(seen, 10, `pageerror: ${e.message}`);
+  // A request a reload cut off is not why a page failed.
+  const onFailed = (r) => {
+    const why = r.failure()?.errorText ?? "";
+    if (!why.includes("ERR_ABORTED")) add(seen, 10, `failed: ${where(r.url())} ${why}`);
+  };
+  const onResponse = (r) => r.status() >= 500 && add(seen, 10, `${r.status()}: ${where(r.url())}`);
   page.on("console", onConsole);
   page.on("pageerror", onError);
   page.on("requestfailed", onFailed);
@@ -222,8 +233,12 @@ async function open(page, url) {
     await page.waitForLoadState("networkidle");
     await hydrated(page);
   } catch (error) {
-    if (seen.length)
-      error.message = `${error.message.split("\n")[0]} (the page saw: ${seen.join(" | ")})`;
+    // On the first line, the one a failure's report prints; Playwright's call log stays below it.
+    const saw = [...seen, ...vite];
+    if (error instanceof Error && saw.length) {
+      const [first, ...rest] = error.message.split("\n");
+      error.message = [`${first} (the page saw: ${saw.join(" | ")})`, ...rest].join("\n");
+    }
     throw error;
   } finally {
     page.off("console", onConsole);
