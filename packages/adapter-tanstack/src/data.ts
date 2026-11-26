@@ -184,8 +184,12 @@ export function modelModule(model: ModelIR, t: Texts, ir: SpecIR, auth: AuthIR, 
   const stored = storedFields(model);
   const shown = shownFields(model);
   const formulas = hasFormulas(model);
+  const titleField = shownTitleKey(ir, model.name);
+  // Never the field the title already shows: a card would say the same thing twice.
   const long = (f: FieldIR) =>
-    f.type.kind === "scalar" && ["text", "markdown"].includes(f.type.name);
+    f.type.kind === "scalar" &&
+    ["text", "markdown"].includes(f.type.name) &&
+    dataKey(f) !== titleField;
   // A card's description: a long text called that (or a summary), else the first required one;
   // never an optional note.
   const description =
@@ -195,7 +199,7 @@ export function modelModule(model: ModelIR, t: Texts, ir: SpecIR, auth: AuthIR, 
     model: model.name,
     label: n.label,
     pluralLabel: n.pluralLabel,
-    titleField: shownTitleKey(ir, model.name),
+    titleField,
     ...(description ? { descriptionField: dataKey(description) } : {}),
     columns: columnsOf(model, shown).map(dataKey),
     fields: shown.map((field) => ({

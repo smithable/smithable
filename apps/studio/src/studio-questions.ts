@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { ownerAskedKey, zoneAskedKey } from "./guide";
 import { adminsOf } from "./OwnerCheck";
-import { zoneOf } from "./TimeZoneCheck";
+import { sameClock, zoneOf } from "./TimeZoneCheck";
 
 export interface StudioQuestion {
   id: string;
@@ -26,13 +26,6 @@ const asked = (key: string) => {
     return localStorage.getItem(key) === "1";
   } catch {
     return true;
-  }
-};
-const canonical = (zone: string) => {
-  try {
-    return new Intl.DateTimeFormat("en", { timeZone: zone }).resolvedOptions().timeZone;
-  } catch {
-    return zone;
   }
 };
 const normalized = (text: string) =>
@@ -97,13 +90,13 @@ export function useStudioQuestion({
   if (!done(zoneKey)) {
     const browser = Intl.DateTimeFormat().resolvedOptions().timeZone;
     const zone = zoneOf(spec);
-    const same = zone !== undefined && canonical(zone) === canonical(browser);
+    const same = zone !== undefined && sameClock(zone, browser);
     question = {
       id: zoneKey,
       text: !zone
         ? `This app has no time zone yet, so its times run on UTC. Yours looks like ${browser}.`
         : same
-          ? `Times in this app are in ${zone}, the zone your browser gave.`
+          ? `Times in this app are in ${zone}, the same clock as your browser's.`
           : `Times in this app are in ${zone}. Your browser says ${browser}.`,
       close: () => settle(zoneKey),
       choices: [

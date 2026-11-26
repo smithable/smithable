@@ -120,6 +120,8 @@ test("the trace has each change's id, the person's files it changed and a model'
     expect(added?.files).toEqual(["smithable.yml", "src/custom/actions/merge.ts"]);
     expect(added?.rewritten).toEqual(["src/generated/schema.ts"]);
     expect(added?.request).toBeUndefined();
+    // In UTC, not git's local offset: Studio's thread sorts these beside its own UTC times.
+    expect(added?.at).toBe(new Date(added?.at ?? "").toISOString());
     const detail = changeDetail(dir, added?.id ?? "");
     expect(detail?.patch).toContain("+models: {}");
     expect(detail?.patch).not.toContain("src/generated");
