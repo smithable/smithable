@@ -272,7 +272,9 @@ export async function checkStudioSelection(browser, base) {
     // Its file is in the app while it is tried on, and Cancel takes it out again with its change.
     const preview = await page.locator('iframe[title="App preview"]').getAttribute("src");
     const filmServed = async (src) => {
-      const response = await page.request.get(new URL(`/${src}`, new URL(preview, base)).href);
+      const response = await page.request.get(new URL(`/${src}`, new URL(preview, base)).href, {
+        maxRetries: 1,
+      });
       return response.ok() && (response.headers()["content-type"] ?? "").startsWith("video/mp4");
     };
     assert.equal(await filmServed(tried.src), true, "the film tried on is not in the app");

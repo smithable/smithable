@@ -67,7 +67,7 @@ export async function checkStudioGuideSpeech(browser, base) {
     });
     await page.route("**/vad/**", (route) => route.abort());
     await page.route("**/api/project", async (route) => {
-      const response = await route.fetch();
+      const response = await route.fetch({ maxRetries: 1 });
       const body = await response.json();
       body.speech = [{ name: "browser" }];
       // The app as made (T1163), so the picker opens on a project earlier checks changed.

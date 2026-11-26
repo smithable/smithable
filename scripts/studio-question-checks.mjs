@@ -5,7 +5,7 @@ import { feedSpeechFrames } from "./studio-speech-checks.mjs";
 
 export async function checkStudioQuestions(browser, base) {
   const page = await browser.newPage({ viewport: { width: 1600, height: 1000 } });
-  const project = await (await page.request.get(`${base}/api/project`)).json();
+  const project = await (await page.request.get(`${base}/api/project`, { maxRetries: 1 })).json();
   let asks = 0;
   const admins = [];
   try {
@@ -130,7 +130,7 @@ export async function checkStudioQuestions(browser, base) {
     );
     await page.route("**/vad/**", (route) => route.abort());
     await page.route("**/api/project", async (route) => {
-      const response = await route.fetch();
+      const response = await route.fetch({ maxRetries: 1 });
       const body = await response.json();
       body.speech = [{ name: "browser" }];
       body.home = "https://example.invalid/projects/fixture";
@@ -309,7 +309,7 @@ export async function checkStudioQuestions(browser, base) {
     await openSmith(page);
     await page.getByRole("textbox", { name: "Describe a change, or ask a question" }).waitFor();
     assert.equal(await card.count(), 0, "dismissed questions returned after reload");
-    const after = await (await page.request.get(`${base}/api/project`)).json();
+    const after = await (await page.request.get(`${base}/api/project`, { maxRetries: 1 })).json();
     assert.equal(after.files.spec, project.files.spec);
     assert.equal(after.files.auth, project.files.auth, "closing a question changed its assumption");
     console.log(

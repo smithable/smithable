@@ -11,7 +11,7 @@ export async function checkStudioTimers(browser, base, pictures) {
   const stem = `studio${Date.now()}`;
   const sent = [];
   try {
-    const project = await (await page.request.get(`${base}/api/project`)).json();
+    const project = await (await page.request.get(`${base}/api/project`, { maxRetries: 1 })).json();
     const original = parse(project.files.spec);
     await page.addInitScript((name) => {
       for (const key of ["guideDone", "presented", "zoneAsked", "ownerAsked"])
@@ -71,7 +71,7 @@ export async function checkStudioTimers(browser, base, pictures) {
       return sent.at(-1);
     };
     const timer = async () => {
-      const body = await (await page.request.get(`${base}/api/project`)).json();
+      const body = await (await page.request.get(`${base}/api/project`, { maxRetries: 1 })).json();
       return parse(body.files.spec).timers?.[`${stem}Timer`];
     };
     const timers = await area("timers");
@@ -136,7 +136,9 @@ export async function checkStudioTimers(browser, base, pictures) {
     assert.ok(await saveTimer.isDisabled());
     await edit.getByRole("spinbutton", { name: "Offset amount", exact: true }).fill("2");
     await edit.getByRole("button", { name: "Add a condition", exact: true }).click();
-    const conditionProject = await (await page.request.get(`${base}/api/project`)).json();
+    const conditionProject = await (
+      await page.request.get(`${base}/api/project`, { maxRetries: 1 })
+    ).json();
     const reference = parse(conditionProject.files.spec).models.Order.fields.customer;
     assert.equal(
       typeof reference === "string" ? reference : reference.type,
@@ -233,7 +235,7 @@ export async function checkStudioTimers(browser, base, pictures) {
       assert.ok(result.ok, result.output);
     }
     const restored = parse(
-      (await (await page.request.get(`${base}/api/project`)).json()).files.spec,
+      (await (await page.request.get(`${base}/api/project`, { maxRetries: 1 })).json()).files.spec,
     );
     for (const key of ["outgoing", "payments", "incoming", "queries", "timers"])
       assert.deepEqual(restored[key], original[key], `${key} fixture was not restored`);

@@ -2590,7 +2590,7 @@ try {
         const text = (path) =>
           page
             .context()
-            .request.get(new URL(path, app).toString())
+            .request.get(new URL(path, app).toString(), { maxRetries: 1 })
             .then(
               (r) => r.text(),
               () => "",

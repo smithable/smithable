@@ -129,7 +129,7 @@ test("Review and Publish use current evidence and preserve the release destinati
     const hold = async (route) => {
       const first = !heldOnce;
       heldOnce = true;
-      const response = await route.fetch();
+      const response = await route.fetch({ maxRetries: 1 });
       if (!first) return route.fulfill({ response });
       const previous = await response.json();
       await held;
@@ -350,7 +350,7 @@ test("Review and Publish use current evidence and preserve the release destinati
     let fixtureHosted = true;
     let revision;
     await page.route("**/api/project", async (route) => {
-      const response = await route.fetch();
+      const response = await route.fetch({ maxRetries: 1 });
       const project = await response.json();
       await route.fulfill({
         json: {

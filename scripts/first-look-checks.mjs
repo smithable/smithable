@@ -30,9 +30,13 @@ export async function asNewApp(target) {
     // with, and an uncaught rejection here would end the whole check. The page then sees only
     // "Failed to fetch", so the reason is said here: mid-check it is the failure's cause (T1609).
     // Only its first line: Playwright's call log after it can list the request's headers.
+    // One retry of a reset: Playwright's Node side keeps sockets alive with no idle limit, and a
+    // loaded driver can reuse one just as Studio's server closes it for idling (Node's 5 s and
+    // its 1 s buffer); Chrome resends such a GET itself, so only the test's requests need it
+    // (T1660; every GET the Studio checks make from Node passes the same).
     let step = "fetch";
     try {
-      const response = await route.fetch();
+      const response = await route.fetch({ maxRetries: 1 });
       step = "parse";
       const json = { ...(await response.json()), asMade: true };
       step = "fulfill";
