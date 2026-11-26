@@ -2421,13 +2421,13 @@ export function App() {
               </>
             )}
             {narrow && guiding && !guideBlocked && guideLine && phoneWindow !== "smith" && (
-              // The guide's line where Smith's thread is not on screen: one line at the window's
-              // foot, with its chips (A 172).
+              // The guide's line where Smith's thread is not on screen: at the window's foot, its
+              // text whole and its chips under it (A 172; cut short, it hid what the stop says).
               <div
                 data-guide-card={guideLine.stop.anchor}
-                className="absolute inset-x-0 bottom-0 z-30 flex items-center gap-2 border-t border-line bg-panel px-3 py-2 text-sm"
+                className="absolute inset-x-0 bottom-0 z-30 flex flex-wrap items-center justify-end gap-2 border-t border-line bg-panel px-3 py-2 text-sm"
               >
-                <span className="min-w-0 flex-1 truncate">
+                <span className="min-w-0 basis-full">
                   {guideLine.stop.title}: {guideLine.stop.text}
                 </span>
                 {guideLine.chips.map((chip) => (
