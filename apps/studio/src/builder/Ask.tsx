@@ -432,10 +432,10 @@ export function Ask({
         proposal.kind === "change"
           ? proposal.operations.map((o) => words?.(o.op, o.args) ?? o.description)
           : [];
+      // The thread already says what was done, from the change log: the reply adds only what
+      // it cost, so the change is not told twice.
       setOutput(
-        result.ok && done.length
-          ? `Done: ${done.join("; ")}. ${usageReceipt(proposal.usage, "by")}.`
-          : result.output,
+        result.ok && done.length ? `${usageReceipt(proposal.usage, "done")}.` : result.output,
       );
       setProposal(undefined);
       if (result.ok) {
@@ -519,7 +519,7 @@ export function Ask({
                 : proposal?.kind === "change"
                   ? "pointing"
                   : output
-                    ? output.startsWith("Done: ")
+                    ? output.startsWith("Done")
                       ? "happy"
                       : "sad"
                     : docs || local
@@ -859,6 +859,10 @@ export function Ask({
             aria-label="Describe a change, or ask a question"
             value={request}
             disabled={guiding}
+            // Said in the box itself, so a box that takes no typing never looks broken (T1603).
+            placeholder={
+              guiding ? "The guide is on: finish or skip it to write to Smith." : undefined
+            }
             onChange={(e) => {
               // Any touch of the box keeps a spoken message from going by itself.
               clearTimeout(sendLater.current);
