@@ -4121,6 +4121,30 @@ async function painterFlow(dir, base) {
     );
     await page.getByRole("button", { name: "Send enquiry", exact: true }).waitFor();
 
+    // open: picture: a card's picture opens whole, steps to the next record's, and closes.
+    await open(page, `${base}/jobs`);
+    const cardCovers = page.locator('[data-kit="model-table"] [data-part="cover"]');
+    await cardCovers.nth(1).waitFor();
+    const coverName = async (i) =>
+      (await cardCovers.nth(i).getAttribute("aria-label"))?.replace(/^Open /, "") ?? "";
+    const [firstName, secondName] = [await coverName(0), await coverName(1)];
+    if (!firstName || !secondName || firstName === secondName)
+      throw new Error(`/jobs covers are not named apart: "${firstName}", "${secondName}"`);
+    const captionShows = (name) =>
+      page.waitForFunction(
+        (n) => document.querySelector("dialog[open] figcaption")?.textContent?.includes(n),
+        name,
+      );
+    await cardCovers.first().click();
+    const shownWhole = page.locator("dialog[open] figure");
+    await captionShows(firstName);
+    await loaded(shownWhole.locator("img"));
+    await page.getByRole("button", { name: "Next picture", exact: true }).click();
+    await captionShows(secondName);
+    await loaded(shownWhole.locator("img"));
+    await page.getByRole("button", { name: "Close", exact: true }).click();
+    await page.locator("dialog[open]").waitFor({ state: "detached" });
+
     // One job without pictures among pictured ones keeps the cards even with a placeholder; a
     // filter that leaves only that job shows a text card, never an empty slot.
     write(dir, "UPDATE jobs SET photos = NULL WHERE surface = 'roof'");

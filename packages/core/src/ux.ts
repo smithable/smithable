@@ -158,6 +158,13 @@ export interface PageUx {
   sort?: string;
   /** How the list looks on a wide screen; a phone shows cards anyway. */
   view?: "table" | "cards";
+  /** The picture field on top of each card: unsaid, the model's first (cardCover). Cards only. */
+  cover?: string;
+  /**
+   * `picture`: a card's picture opens whole, and steps through the pictures of the records shown;
+   * the cards are two across and their pictures bigger. Cards only, on a model with a picture.
+   */
+  open?: "picture";
   /**
    * A round mark before each record's title (look-gap §4): its initials on a colour of their own,
    * or the model's first picture. Unsaid, none.
@@ -239,6 +246,20 @@ export function recordPicture(model: ModelIR): FieldIR | undefined {
       f.type.kind === "scalar" &&
       (f.type.name === "picture" || f.type.name === "pictures"),
   );
+}
+
+/**
+ * The picture field on top of a list's cards: the one `cover` names, else the model's first
+ * picture field in the spec's order, never one picked by its name.
+ */
+export function cardCover(
+  model: ModelIR,
+  look: Pick<PageUx, "cover"> | undefined,
+): { field: FieldIR; byRule: boolean } | undefined {
+  const named = look?.cover && model.fields.find((f) => f.name === look.cover);
+  if (named) return { field: named, byRule: false };
+  const first = recordPicture(model);
+  return first && { field: first, byRule: true };
 }
 
 /** How a record page shows a list of related records (`record.lists`). */
@@ -948,6 +969,8 @@ export function validateUx(
         );
         const where = `page "${page.key}"`;
         const result: PageUx = {};
+        // Where `cover` and `open` were said: both are for cards, checked once the view is read.
+        const cardOnly: { key: "cover" | "open"; node: ParsedNode }[] = [];
         // Where the header's look is written, for a check once the sections are read too.
         let headerNode: ParsedNode | null = null;
         const names = (node: ParsedNode | null, what: string, allowComputed: boolean) =>
@@ -1327,7 +1350,17 @@ export function validateUx(
             {
               allowed:
                 part.key === "table"
-                  ? ["columns", "below", "sort", "view", "totals", "mark", "actions"]
+                  ? [
+                      "columns",
+                      "below",
+                      "sort",
+                      "view",
+                      "cover",
+                      "open",
+                      "totals",
+                      "mark",
+                      "actions",
+                    ]
                   : ["fieldOrder", "sections", "columns", "control", "results", "aside"],
               later: part.key === "table" ? ["pageSize"] : [],
             },
@@ -1361,6 +1394,55 @@ export function validateUx(
               if (view === "table" || view === "cards") result.view = view;
               else if (view !== undefined)
                 ctx.error(option.value, "invalid-value", `"view" is table or cards.`);
+            } else if (option.key === "cover") {
+              // The picture on top of each card: a picture field, named; unsaid, the first (cardCover).
+              const cover = readString(ctx, option.value, `"cover" of ${where}`);
+              if (cover === undefined) continue;
+              const field = fields.find((f) => f.name === cover);
+              if (!field)
+                ctx.error(
+                  option.value,
+                  "unknown-field",
+                  `${owner} has no field named "${cover}" to show on its cards.`,
+                  didYouMean(
+                    cover,
+                    fields.map((f) => f.name),
+                  ),
+                );
+              else if (
+                field.formula ||
+                field.type.kind !== "scalar" ||
+                (field.type.name !== "picture" && field.type.name !== "pictures")
+              )
+                ctx.error(
+                  option.value,
+                  "invalid-value",
+                  `A card's cover is a picture field; "${cover}" is not one.`,
+                );
+              else {
+                result.cover = cover;
+                cardOnly.push({ key: "cover", node: option.keyNode });
+              }
+            } else if (option.key === "open") {
+              // A card's picture opens whole: the model needs a picture to show.
+              const open = readString(ctx, option.value, `"open" of ${where}`);
+              const picture = fields.some(
+                (f) =>
+                  !f.formula &&
+                  f.type.kind === "scalar" &&
+                  (f.type.name === "picture" || f.type.name === "pictures"),
+              );
+              if (open === "picture" && picture) {
+                result.open = open;
+                cardOnly.push({ key: "open", node: option.keyNode });
+              } else if (open === "picture")
+                ctx.error(
+                  option.value,
+                  "invalid-value",
+                  `${owner} has no picture field for its cards to open.`,
+                );
+              else if (open !== undefined)
+                ctx.error(option.value, "invalid-value", `"open" of ${where} is picture.`);
             } else if (option.key === "mark") {
               // A picture mark needs a picture to show: the model's first picture field.
               const mark = readString(ctx, option.value, `"mark" of ${where}`);
@@ -1512,6 +1594,14 @@ export function validateUx(
             } else result.fieldOrder = names(option.value, `the field order of ${where}`, false);
           }
         }
+        if (result.view !== "cards")
+          for (const { key, node } of cardOnly)
+            ctx.error(
+              node,
+              "invalid-key",
+              `"${key}" is for cards; ${where} shows a table.`,
+              "Add view: cards.",
+            );
         if (result.sections && result.fieldOrder)
           ctx.error(
             page.keyNode,

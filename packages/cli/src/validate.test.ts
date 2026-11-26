@@ -163,3 +163,32 @@ test("Explain uses the Ink wash cutoff with the effective light primary", async 
   expect(colour.stdout).toContain("Light primary #5c4777, OKLCH chroma 0.080393");
   expect(colour.stdout).toContain("greyscale cutoff: 0.02, inclusive");
 });
+
+test("validate --explain says which picture field cards show on top, by rule or as written", async () => {
+  const dir = tempDir("smithable-cover-explain-");
+  writeFileSync(
+    join(dir, "smithable.yml"),
+    `smithable: 0.1
+app: { name: Builder }
+models:
+  Project:
+    fields: { name: string!, before: picture, photos: pictures }
+pages:
+  projects: { crud: Project }
+  shots: { crud: Project }
+`,
+  );
+  writeFileSync(
+    join(dir, "smithable.ux.yml"),
+    "smithableUx: 0.1\npages:\n  projects:\n    table: { view: cards }\n  shots:\n    table: { view: cards, cover: photos, open: picture }\n",
+  );
+  writeFileSync(join(dir, "smithable.auth.yml"), "smithableAuth: 0.1\nsignIn: none\n");
+  const io = captureIo();
+  expect(await run(["validate", dir, "--explain"], io)).toBe(0);
+  expect(io.stdout).toContain(
+    "projects cards: cover before (by rule: the model's first picture field; say it with cover)",
+  );
+  expect(io.stdout).toContain(
+    "shots cards: cover photos (cover); a card's picture opens whole (open: picture)",
+  );
+});
