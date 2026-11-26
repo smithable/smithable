@@ -95,6 +95,6 @@ test("the command line gives setItems its list of objects as JSON (T1213)", () =
   } as typeof op;
   expect(parseOperationArgs(words, ["--pages", "[draft],home"]).pages).toEqual(["[draft]", "home"]);
   expect(() => parseOperationArgs(op, ["home", "faq", "--items", "[{oops"])).toThrow(
-    "--items is not JSON",
+    /^--items is not JSON: .+\. Give a JSON list, or one JSON object per --items\.$/,
   );
 });
