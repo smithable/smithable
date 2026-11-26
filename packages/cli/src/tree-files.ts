@@ -2,7 +2,7 @@
 // (as-project.ts). Not here as this process: a file it wrote would be its own, 0644 under the usual
 // umask, which the project could not change, a file of the project's it could not overwrite, and
 // a link the project put in the tree would lead its write elsewhere.
-import { existsSync, mkdirSync, renameSync, rmSync, utimesSync, writeFileSync } from "node:fs";
+import { mkdirSync, renameSync, rmSync, utimesSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import { asProject } from "./as-project.js";
 
@@ -61,5 +61,9 @@ export const removeTree = asProject("removeTree", (path: string): void => {
  * a file's times is its owner's: a hosted Studio is only in the project's group (T1614).
  */
 export const markChanged = asProject("markChanged", (path: string): void => {
-  if (existsSync(path)) utimesSync(path, new Date(), new Date());
+  try {
+    utimesSync(path, new Date(), new Date());
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+  }
 });

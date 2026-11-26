@@ -135,7 +135,9 @@ test("given a project user, the app's database and the tree are worked on by a c
   utimesSync(module, new Date(0), new Date(0));
   markChanged(module);
   expect(statSync(module).mtimeMs).toBeGreaterThan(0);
-  expect(childCallsForTests()).toBe(14);
+  // A module that is not there (gone since) is nothing to mark.
+  markChanged(join(dir, "src", "db", "gone.ts"));
+  expect(childCallsForTests()).toBe(15);
 });
 
 test("the child knows where every function run as the project's user lives", async () => {
