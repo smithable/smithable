@@ -4,21 +4,18 @@
 // stays. Studio allows it once, and only when it was started as replaceable.
 
 import {
-  closeSync,
+  chmodSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
-  openSync,
   readdirSync,
   readFileSync,
-  readSync,
   renameSync,
   rmSync,
   statSync,
   symlinkSync,
   utimesSync,
   writeFileSync,
-  writeSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve, sep } from "node:path";
@@ -192,15 +189,13 @@ export function reopenDatabase(dir: string): void {
     utimesSync(module, new Date(), new Date());
   } catch (error) {
     // Setting a file's times is its owner's; a hosted Studio is in the project's group, not its
-    // owner. Writing its first byte back in place marks it as changed with write access alone.
+    // owner. A copy written beside it and renamed over it needs the folder's write access alone,
+    // keeps the mode with the group's write added, and the watcher sees one change.
     if ((error as NodeJS.ErrnoException).code !== "EPERM") throw error;
-    const fd = openSync(module, "r+");
-    try {
-      const first = Buffer.alloc(1);
-      if (readSync(fd, first, 0, 1, 0) === 1) writeSync(fd, first, 0, 1, 0);
-    } finally {
-      closeSync(fd);
-    }
+    const copy = `${module}.${process.pid}.reopen`;
+    writeFileSync(copy, readFileSync(module));
+    chmodSync(copy, (statSync(module).mode & 0o777) | 0o020);
+    renameSync(copy, module);
   }
 }
 
