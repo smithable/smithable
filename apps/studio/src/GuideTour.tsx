@@ -142,8 +142,10 @@ export function Guide({
     onEnd();
   };
   const onward = () => (at === stops.length - 1 ? end() : setAt(at + 1));
+  // Ask me's Next offers one change shown three ways, once: that stop is not the end yet.
+  const offers = current?.stop.anchor === "change" && !!offer && !offered.current;
   const next = () => {
-    if (current?.stop.anchor === "change" && offer && !offered.current) {
+    if (offers) {
       offered.current = true;
       setShown(offer);
       return setStep("offer");
@@ -242,6 +244,8 @@ export function Guide({
 
   // The line said now: a stop of the tour, or a step of the shown change with its own chips.
   const last = at === stops.length - 1;
+  // "Done" only where the tour ends; with Changes closed, Ask me is the last stop and still offers.
+  const ends = last && !offers;
   const line: GuideLine | undefined = current && {
     stop: step
       ? { anchor: current.stop.anchor, title: SHOWN.title, text: SHOWN[step](shown?.label ?? "") }
@@ -298,7 +302,7 @@ export function Guide({
                     { label: "Undo", act: () => leave(false) },
                   ]
                 : [
-                    { label: last ? "Done" : "Next", main: true, act: next },
+                    { label: ends ? "Done" : "Next", main: true, act: next },
                     ...(last ? [] : [{ label: "Skip guide", act: end }]),
                   ],
   };

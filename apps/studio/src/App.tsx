@@ -2799,7 +2799,9 @@ function PhoneRow({
   pan: React.HTMLAttributes<HTMLDivElement>;
   children: React.ReactNode;
 }) {
-  if (!narrow) return <>{children}</>;
+  // The same element on both sides of the breakpoint: a fragment on a wide screen made the grid
+  // and the preview's frame anew at each crossing, and the preview was white while it reloaded.
+  if (!narrow) return <div className="contents">{children}</div>;
   return (
     <div
       className="relative min-h-0 flex-1 overflow-hidden"

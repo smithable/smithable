@@ -259,7 +259,13 @@ if (typeof window !== "undefined" && window.parent !== window) {
     // Studio hears when the page has flashed (with the key it sent), so a change is flashed
     // once however often the page reloads for it, and never lost to a reload without it.
     const key = event.data.key ?? null;
+    // Not before React has hydrated the page: an attribute on the server's HTML before then is a
+    // mismatch React warns of and never patches (T1657). A page that never hydrates (a crash)
+    // is flashed after ten seconds anyway, so Studio hears.
+    const late = Date.now() + 10000;
     const done = (elements) => {
+      if (document.body.dataset.hydrated !== "true" && Date.now() < late)
+        return void setTimeout(() => done(document.querySelectorAll(selector)), 100);
       elements.forEach(flash);
       post({ type: "flashed", key });
     };
