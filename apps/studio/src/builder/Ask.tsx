@@ -851,6 +851,13 @@ export function Ask({
           send();
         }}
       >
+        {guiding && (
+          // Beside the box, not as its placeholder, which a draft in it would hide (T1603): a box
+          // that takes no typing must not look broken.
+          <p id="smith-box-guiding" className="mb-1 text-xs text-muted">
+            The guide is on: finish or skip it to write to Smith.
+          </p>
+        )}
         <div className="flex items-end gap-2">
           {/* Made anew when the face changes, so it bounces (smith-first.md §12.2). */}
           <SmithFace key={mood} mood={mood} />
@@ -859,10 +866,7 @@ export function Ask({
             aria-label="Describe a change, or ask a question"
             value={request}
             disabled={guiding}
-            // Said in the box itself, so a box that takes no typing never looks broken (T1603).
-            placeholder={
-              guiding ? "The guide is on: finish or skip it to write to Smith." : undefined
-            }
+            aria-describedby={guiding ? "smith-box-guiding" : undefined}
             onChange={(e) => {
               // Any touch of the box keeps a spoken message from going by itself.
               clearTimeout(sendLater.current);

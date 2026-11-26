@@ -1968,6 +1968,14 @@ try {
         await page.getByText(/^Done: Customers: added a mobile.*\. (Done by|By) fake-model/).count()
       )
         throw new Error("Smith's reply tells the change again beside the thread's line");
+      // Told once in the thread, by its line from the change log (the thread can be on screen
+      // twice, in his window and his floating panel: the first).
+      const told = page
+        .getByRole("list", { name: "Thread" })
+        .first()
+        .getByText(/Customers: added a mobile \(a phone number\)/);
+      await told.first().waitFor({ timeout: 60000 * P });
+      if ((await told.count()) !== 1) throw new Error("The thread tells the change more than once");
       await trace
         .getByText("Customers: added a mobile (a phone number)")
         .waitFor({ timeout: 60000 * P });
