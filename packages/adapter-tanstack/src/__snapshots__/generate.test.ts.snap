@@ -108665,7 +108665,6 @@ export const incidentUpdateUi: RecordUi<IncidentUpdateRow> = {
   label: "Incident update",
   pluralLabel: "Incident updates",
   titleField: "message",
-  descriptionField: "message",
   columns: ["message", "incidentId", "at", "status"],
   fields: [
     {
@@ -115291,7 +115290,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/generated/incident-update.import.ts": "2512bea4 generated",
   "src/generated/incident-update.schema.ts": "cc47d218 generated",
   "src/generated/incident-update.server.ts": "f9a4754d generated",
-  "src/generated/incident-update.ts": "eefb0ef7 generated",
+  "src/generated/incident-update.ts": "5bd23744 generated",
   "src/generated/incident.import.server.ts": "f466f13d generated",
   "src/generated/incident.import.ts": "f56f7242 generated",
   "src/generated/incident.schema.ts": "45d7d984 generated",
@@ -119016,7 +119015,6 @@ export const messageUi: RecordUi<MessageRow> = {
   label: "Message",
   pluralLabel: "Messages",
   titleField: "content",
-  descriptionField: "content",
   columns: ["content", "sender", "supportCaseId", "agentId", "fromEmail"],
   fields: [
     {
@@ -123393,7 +123391,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/generated/hooks.ts": "1260830e generated",
   "src/generated/message.schema.ts": "4261619c generated",
   "src/generated/message.server.ts": "dcd218ac generated",
-  "src/generated/message.ts": "bbf512fd generated",
+  "src/generated/message.ts": "2a92a5e4 generated",
   "src/generated/my-time.ts": "c315432b generated",
   "src/generated/outgoing.server.ts": "c2c3f44b generated",
   "src/generated/pages.ts": "f7a896bd generated",
