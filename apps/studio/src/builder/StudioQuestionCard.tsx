@@ -19,8 +19,13 @@ export function StudioQuestionCard({
     <section
       data-studio-question={question.id}
       data-part={
-        question.email || question.id.startsWith("ownerAsked:") ? "owner-check" : "time-zone-check"
+        question.acknowledged
+          ? "question-acknowledged"
+          : question.email || question.id.startsWith("ownerAsked:")
+            ? "owner-check"
+            : "time-zone-check"
       }
+      role={question.acknowledged ? "status" : undefined}
       aria-label="A question from Smith"
       className={cx(SMITHS, "relative space-y-3 pr-9")}
     >

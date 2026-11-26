@@ -9,6 +9,8 @@ export interface StudioQuestion {
   text: string;
   choices: { label: string; act: () => void; disabled?: boolean; voice?: false }[];
   close: () => void;
+  /** Smith's word back after an answer that changed nothing, shown briefly in place of the card. */
+  acknowledged?: true;
   answer: (text: string) => boolean;
   spoken: boolean;
   markSpoken: () => void;
@@ -54,6 +56,7 @@ export function useStudioQuestion({
   const [settled, setSettled] = useState<string[]>([]);
   const [spoken, setSpoken] = useState<string[]>([]);
   const [working, setWorking] = useState(false);
+  const [ack, setAck] = useState<{ id: string; text: string }>();
   const [owner, setOwner] = useState({
     app,
     other: false,
@@ -75,6 +78,12 @@ export function useStudioQuestion({
     }
     setSettled((keys) => (keys.includes(key) ? keys : [...keys, key]));
   };
+  // An answer that keeps things as they are closes with a word back, not in silence (T1670).
+  const acknowledge = (key: string, text: string) => {
+    settle(key);
+    setAck({ id: key, text });
+    setTimeout(() => setAck((now) => (now?.id === key ? undefined : now)), 2500);
+  };
   const write = async (key: string, action: () => Promise<boolean>) => {
     if (working) return;
     setWorking(true);
@@ -85,6 +94,17 @@ export function useStudioQuestion({
     }
   };
   if (!ready || !app || !spec) return undefined;
+  if (ack)
+    return {
+      id: `${ack.id}:ack`,
+      text: ack.text,
+      acknowledged: true,
+      choices: [],
+      close: () => setAck(undefined),
+      answer: () => false,
+      spoken: true,
+      markSpoken: () => {},
+    };
   const zoneKey = zoneAskedKey(app);
   let question: Omit<StudioQuestion, "answer" | "spoken" | "markSpoken">;
   if (!done(zoneKey)) {
@@ -109,7 +129,11 @@ export function useStudioQuestion({
               },
             ]
           : []),
-        { label: zone ? `Keep ${zone}` : "Not now", act: () => settle(zoneKey), disabled: working },
+        {
+          label: zone ? `Keep ${zone}` : "Not now",
+          act: () => (zone ? acknowledge(zoneKey, `Times stay in ${zone}.`) : settle(zoneKey)),
+          disabled: working,
+        },
         {
           label: "Choose another",
           act: () => {
@@ -153,7 +177,11 @@ export function useStudioQuestion({
             { label: "Back", disabled: working, act: () => changeOwner({ other: false }) },
           ]
         : [
-            { label: "I will", act: () => settle(key), voice: false },
+            {
+              label: "I will",
+              act: () => acknowledge(key, "Then it is yours to run."),
+              voice: false,
+            },
             { label: "Someone else", act: () => changeOwner({ other: true }) },
           ],
       ...(draft.other
