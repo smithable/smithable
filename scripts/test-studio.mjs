@@ -858,21 +858,28 @@ try {
                 throw new Error("Smith said his change before it was made");
               // "Here it is, in the form": the new field is in the preview's view, not below its
               // fold (T1668).
-              if (place === "shown-smith")
-                await (
-                  await fresh
-                    .locator('iframe[title="App preview"]')
-                    .elementHandle()
-                    .then((e) => e?.contentFrame())
-                )?.waitForFunction(
-                  () =>
-                    [...document.querySelectorAll('[data-sm-concept$=".notes"]')].some((e) => {
-                      const r = e.getBoundingClientRect();
-                      return r.height > 0 && r.top >= 0 && r.bottom <= innerHeight;
-                    }),
-                  undefined,
-                  { timeout: 20000 * P },
-                );
+              // The preview may load again after the change, so the frame is looked up on each try.
+              if (place === "shown-smith") {
+                const body = fresh.frameLocator('iframe[title="App preview"]').locator("body");
+                const until = Date.now() + 20000 * P;
+                const inView = () =>
+                  body
+                    .evaluate(
+                      () =>
+                        [...document.querySelectorAll('[data-sm-concept$=".notes"]')].some((e) => {
+                          const r = e.getBoundingClientRect();
+                          return r.height > 0 && r.top >= 0 && r.bottom <= innerHeight;
+                        }),
+                      undefined,
+                      { timeout: 2000 },
+                    )
+                    .catch(() => false);
+                while (!(await inView())) {
+                  if (Date.now() > until)
+                    throw new Error("Smith's new field is not in the preview's view (T1668)");
+                  await fresh.waitForTimeout(200);
+                }
+              }
               await card.getByRole("button", { name: "Next", exact: true }).click();
             }
             await card.getByRole("button", { name: "Undo", exact: true }).click();
