@@ -362,7 +362,7 @@ try {
       await page.locator("iframe[title='App preview']").waitFor();
       const face = await openSmith(page);
       const hint = page.getByRole("button", {
-        name: "Click Smith to bring him back.",
+        name: "Tap or click Smith to bring him back.",
         exact: true,
       });
       await openSuggestedTopics(page);

@@ -18,6 +18,7 @@ import { useState } from "react";
 import type { Project } from "./api";
 import { listOf, type Run, shorthandOf } from "./builder/ChangeForms";
 import { SpecPart } from "./builder/SpecForm";
+import { PAGE_KINDS } from "./builder/spec-form";
 import type { Spec } from "./engine";
 import { Button, cx, Input, Label, Select } from "./ui";
 
@@ -159,23 +160,6 @@ export const ICON_CHOICES = [
   "truck",
   "list",
 ];
-
-/** A page's kind, as the add form names it. */
-const PAGE_KINDS: Record<string, string> = {
-  crud: "A list of records",
-  landing: "A landing page for visitors",
-  custom: "A page of your own, in code",
-  dashboard: "A dashboard",
-  settings: "Settings of",
-  onboarding: "An onboarding for",
-  users: "Who has access",
-  data: "All the records, for administrators",
-  review: "Files waiting for review",
-  calendar: "A calendar of",
-  articles: "Articles from",
-  calculator: "A calculator",
-  legal: "The privacy page",
-};
 
 /** The selected concept's properties, changed with operations (the Photoshop-like panel). */
 export function Properties({

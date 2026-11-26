@@ -510,7 +510,10 @@ async function checkSmithCall(page) {
   const start = page.getByRole("button", { name: "Start call", exact: true });
   const endHidden = header.getByRole("button", { name: "End call", exact: true });
   const speaking = header.getByRole("status").filter({ hasText: /^Smith is speaking$/ });
-  const hint = header.getByRole("button", { name: "Click Smith to bring him back.", exact: true });
+  const hint = header.getByRole("button", {
+    name: "Tap or click Smith to bring him back.",
+    exact: true,
+  });
   await face.click();
   const buttons = [
     page.getByRole("button", { name: "Mic: off", exact: true }),

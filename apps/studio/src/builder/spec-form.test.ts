@@ -12,6 +12,7 @@ import {
   controlOf,
   finiteAlternatives,
   isRuleList,
+  kindLabel,
   labelOf,
   numberLimits,
   operationFor,
@@ -896,4 +897,13 @@ test("a film's two forms show as one group of keys, with no kind to choose (T155
     "generated",
     "kind",
   ]);
+});
+
+test("a page's kind key reads in Studio's words, not the spec's (T1669)", () => {
+  // The No code page form showed "crud" and "A model to list, view, create, edit and delete".
+  expect(kindLabel(["pages", "orders", "crud"])).toBe("A list of records");
+  expect(kindLabel(["pages", "visits", "calendar"])).toBe("A calendar of");
+  // A key below the kind, or a kind's name elsewhere, keeps its own label.
+  expect(kindLabel(["pages", "visits", "calendar", "model"])).toBeUndefined();
+  expect(kindLabel(["models", "Order", "crud"])).toBeUndefined();
 });
