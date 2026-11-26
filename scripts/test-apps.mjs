@@ -6111,9 +6111,14 @@ async function askPanelFlow(dir, base) {
       .nth(2)
       .getByText("From your records")
       .waitFor({ timeout: 10000 * P });
-    // The button opens the sheet once the page runs in the browser.
+    // The button is on the page before the page runs in the browser, and a click then is lost: click
+    // again until the sheet is open.
     await page.reload({ waitUntil: "networkidle" });
-    await page.locator('[data-kit="ask-launch"]').click();
+    await hydrated(page);
+    for (let tries = 0; tries < 30 * P && !(await sheet.isVisible()); tries++) {
+      await page.locator('[data-kit="ask-launch"]').click();
+      await sheet.waitFor({ timeout: 1000 }).catch(() => {});
+    }
     await sheet.locator("[data-answer]").nth(2).getByText("From your records").waitFor();
     // may: change: the model's proposal is a card in the app's words, made only once confirmed.
     await sheet.getByLabel("Question").fill("start the newsletter draft");
