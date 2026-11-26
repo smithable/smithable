@@ -24,7 +24,7 @@ function page(
   crashed = false,
   records: string[] = [],
   search = "",
-  fields: { flash: boolean }[] = [],
+  fields: { flash: boolean; shown?: number }[] = [],
 ) {
   // The dev server's error overlay, put up by the test; the observers watching for it, and the
   // timers the runtime sets, run by hand.
@@ -100,6 +100,7 @@ function page(
         ? fields.map((field) => ({
             setAttribute: () => (field.flash = true),
             removeAttribute: () => (field.flash = false),
+            scrollIntoView: () => (field.shown = (field.shown ?? 0) + 1),
           }))
         : selector === '[data-part="record-open"][data-record-id]'
           ? records.map((id) => ({ dataset: { recordId: id } }))
@@ -776,4 +777,6 @@ test("a change is flashed once the page is hydrated, never on the server's HTML 
   shown.later();
   expect(field.flash).toBe(true);
   expect(shown.posted.filter((m) => m.type === "flashed").map((m) => m.key)).toEqual([8]);
+  // The flashed field is brought into view once, the first of what matched (T1668).
+  expect(field.shown).toBe(1);
 });

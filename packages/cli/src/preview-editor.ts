@@ -271,6 +271,9 @@ if (typeof window !== "undefined" && window.parent !== window) {
       if ((document.body.dataset.hydrated !== "true" || !now.length) && Date.now() < late)
         return void (pending = setTimeout(done, 100));
       now.forEach(flash);
+      // What the change touched is brought into view: a new field below the fold was flashed
+      // where nobody saw it while the guide said "here it is" (T1668). Nothing moves when it shows.
+      now[0]?.scrollIntoView?.({ block: "nearest", inline: "nearest" });
       post({ type: "flashed", key });
     };
     const selector = (event.data.concepts ?? [])

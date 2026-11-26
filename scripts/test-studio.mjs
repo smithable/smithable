@@ -856,6 +856,23 @@ try {
               // Smith says what he did once it is done: the field is there.
               if (place === "shown-smith" && spec() === before)
                 throw new Error("Smith said his change before it was made");
+              // "Here it is, in the form": the new field is in the preview's view, not below its
+              // fold (T1668).
+              if (place === "shown-smith")
+                await (
+                  await fresh
+                    .locator('iframe[title="App preview"]')
+                    .elementHandle()
+                    .then((e) => e?.contentFrame())
+                )?.waitForFunction(
+                  () =>
+                    [...document.querySelectorAll('[data-sm-concept$=".notes"]')].some((e) => {
+                      const r = e.getBoundingClientRect();
+                      return r.height > 0 && r.top >= 0 && r.bottom <= innerHeight;
+                    }),
+                  undefined,
+                  { timeout: 20000 * P },
+                );
               await card.getByRole("button", { name: "Next", exact: true }).click();
             }
             await card.getByRole("button", { name: "Undo", exact: true }).click();
