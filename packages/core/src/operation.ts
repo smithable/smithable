@@ -56,7 +56,7 @@ export type Effect =
       /** A choice field's old values and what records holding them get instead ("" clears them). */
       renamed?: Record<string, string>;
       /** The field is a picture or pictures field after the change. */
-      picture?: boolean;
+      picture: boolean;
     }
   | { kind: "remove-page"; page: string }
   | { kind: "remove-section"; page: string; section: string }

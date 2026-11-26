@@ -274,6 +274,24 @@ test("a picture field changed to another type takes its cover along, and open wi
   });
   expect(last.ok && last.files.ux).toContain("view: cards");
   expect(last.ok && last.files.ux).not.toMatch(/cover|open/);
+  // The last picture field retyped while it is the cover: one change takes the type, cover and open,
+  // and leaves what it was given untouched, which is what an undo goes back to.
+  const other = applyOperation(cards.files, "changeField", {
+    model: "Project",
+    field: "before",
+    type: "file",
+  });
+  if (!other.ok) throw new Error(other.message);
+  const before = { ...other.files };
+  const both = applyOperation(other.files, "changeField", {
+    model: "Project",
+    field: "photos",
+    type: "files",
+  });
+  expect(both.ok && both.files.spec).not.toBe(before.spec);
+  expect(both.ok && both.files.ux).toContain("view: cards");
+  expect(both.ok && both.files.ux).not.toMatch(/cover|open/);
+  expect(other.files).toEqual(before);
   // Each step leaves a ux file that validates.
   if (last.ok)
     expect(

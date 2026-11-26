@@ -652,6 +652,7 @@ function shapeChange(dir: string, today: SpecIR, then: SpecIR, renames: Renames)
             field: match.name,
             choices: kept,
             renamed: cleared,
+            picture: false,
           });
       }
     }
