@@ -15,7 +15,9 @@ export async function checkStudioDraft(browser, base) {
     const page = await browser.newPage({ viewport: { width: 1600, height: 1000 } });
     let release = () => {};
     try {
-      const project = await (await page.request.get(`${base}/api/project`)).json();
+      const project = await (
+        await page.request.get(`${base}/api/project`, { maxRetries: 1 })
+      ).json();
       await page.addInitScript((name) => {
         for (const key of ["guideDone", "presented", "zoneAsked", "ownerAsked"])
           localStorage.setItem(`${key}:${name}`, "1");

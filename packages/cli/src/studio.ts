@@ -412,7 +412,8 @@ function readTrace(dir: string, named: Map<string, string>): TraceEntry[] {
         description: isUndo
           ? `Undid: ${edited ?? subject.slice(19, -1)}`
           : (edited ?? subject.slice(11)),
-        at,
+        // In UTC like every other time Studio keeps: the thread orders its lines by this text.
+        at: new Date(at).toISOString(),
         // A change a wording rule read, or none a model made: the generator's (tier 0).
         engine: model?.tier ? ENGINES[model.tier] : ("generator" as const),
         tokens: model?.tokens ?? 0,

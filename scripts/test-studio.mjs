@@ -1956,12 +1956,26 @@ try {
       await shown.getByRole("button", { name: "Discard" }).waitFor();
       await shown.getByLabel("Refine the proposal").waitFor();
       await shown.getByRole("button", { name: "Apply" }).click();
+      // Which model made it and what it cost (T721); the trace keeps the tier and tokens. The
+      // change itself is told once, by the thread's line from the change log (T1603); the
+      // history's own receipt (data-receipt) says the same words, so it is left out here.
       await page
-        .getByText(
-          // Which model made it and what it cost (T721); the trace keeps the tier and tokens.
-          /^Done: Customers: added a mobile \(a phone number\)\. By fake-model, cost /,
-        )
+        .getByText(/^Done by fake-model, cost /)
+        .and(page.locator(":not([data-receipt])"))
+        .first()
         .waitFor({ timeout: 60000 * P });
+      if (
+        await page.getByText(/^Done: Customers: added a mobile.*\. (Done by|By) fake-model/).count()
+      )
+        throw new Error("Smith's reply tells the change again beside the thread's line");
+      // Told once in the thread, by its line from the change log (the thread can be on screen
+      // twice, in his window and his floating panel: the first).
+      const told = page
+        .getByRole("list", { name: "Thread" })
+        .first()
+        .getByText(/Customers: added a mobile \(a phone number\)/);
+      await told.first().waitFor({ timeout: 60000 * P });
+      if ((await told.count()) !== 1) throw new Error("The thread tells the change more than once");
       await trace
         .getByText("Customers: added a mobile (a phone number)")
         .waitFor({ timeout: 60000 * P });
@@ -2576,7 +2590,7 @@ try {
         const text = (path) =>
           page
             .context()
-            .request.get(new URL(path, app).toString())
+            .request.get(new URL(path, app).toString(), { maxRetries: 1 })
             .then(
               (r) => r.text(),
               () => "",

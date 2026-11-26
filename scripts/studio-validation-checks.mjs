@@ -12,7 +12,7 @@ export async function checkStudioValidation(browser, base) {
   let plain = true;
   let refused;
   try {
-    const project = await (await page.request.get(`${base}/api/project`)).json();
+    const project = await (await page.request.get(`${base}/api/project`, { maxRetries: 1 })).json();
     const initialTimers = parse(project.files.spec).timers ?? {};
     assert.ok(!Object.hasOwn(initialTimers, "markOverdue"), "fixture timer name is already in use");
     await page.addInitScript(() => {
@@ -150,7 +150,9 @@ export async function checkStudioValidation(browser, base) {
       const text = "The fixture description needs another try.";
       let notice = true;
       await broken.route("**/api/project", async (route) => {
-        const response = await route.fetch();
+        const response = await route.fetch({
+          maxRetries: route.request().method() === "GET" ? 1 : 0,
+        });
         const body = await response.json();
         // A notice comes with its own id (T1602); Builder shows only one that has it.
         if (notice) Object.assign(body, { notice: text, noticeId: "fixture-description" });
@@ -174,7 +176,7 @@ export async function checkStudioValidation(browser, base) {
       await broken.close();
     }
     assert.equal(
-      (await (await page.request.get(`${base}/api/project`)).json()).files.spec,
+      (await (await page.request.get(`${base}/api/project`, { maxRetries: 1 })).json()).files.spec,
       project.files.spec,
       "refused legacy requests changed the shared fixture",
     );
