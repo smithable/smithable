@@ -352,6 +352,8 @@ export function Ask({
   });
   // Right after a request's changes applied, "Undo that" is offered until the next thing is sent.
   const [justApplied, setJustApplied] = useState(false);
+  // One per Smith on screen: his window and his floating panel can both show the guide's reason.
+  const guidingHint = useId();
   // Speech (smith-speech.md, step 1): what is heard goes into the box, and is sent a moment
   // after listening ends during a call unless the box is touched meanwhile.
   const sendLater = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -854,7 +856,7 @@ export function Ask({
         {guiding && (
           // Beside the box, not as its placeholder, which a draft in it would hide (T1603): a box
           // that takes no typing must not look broken.
-          <p id="smith-box-guiding" className="mb-1 text-xs text-muted">
+          <p id={guidingHint} className="mb-1 text-xs text-muted">
             The guide is on: finish or skip it to write to Smith.
           </p>
         )}
@@ -866,7 +868,7 @@ export function Ask({
             aria-label="Describe a change, or ask a question"
             value={request}
             disabled={guiding}
-            aria-describedby={guiding ? "smith-box-guiding" : undefined}
+            aria-describedby={guiding ? guidingHint : undefined}
             onChange={(e) => {
               // Any touch of the box keeps a spoken message from going by itself.
               clearTimeout(sendLater.current);
