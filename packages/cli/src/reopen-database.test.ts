@@ -1,11 +1,13 @@
 import {
   chmodSync,
+  lstatSync,
   mkdirSync,
   mkdtempSync,
   readdirSync,
   readFileSync,
   rmSync,
   statSync,
+  symlinkSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -43,6 +45,18 @@ it("marks the database module changed by a copy renamed over it when its times a
   expect(after.mtimeMs).toBeGreaterThan(before);
   expect(after.mode & 0o777).toBe(0o664);
   expect(readFileSync(module, "utf8")).toBe("export const db = 1;\n");
+  expect(readdirSync(join(dir, "src", "db"))).toEqual(["index.ts"]);
+});
+
+it("leaves a link in the module's place alone", () => {
+  const dir = mkdtempSync(join(tmpdir(), "reopen-"));
+  dirs.push(dir);
+  mkdirSync(join(dir, "src", "db"), { recursive: true });
+  const outside = join(dir, "outside.txt");
+  writeFileSync(outside, "not the project's\n");
+  symlinkSync(outside, join(dir, "src", "db", "index.ts"));
+  reopenDatabase(dir);
+  expect(lstatSync(join(dir, "src", "db", "index.ts")).isSymbolicLink()).toBe(true);
   expect(readdirSync(join(dir, "src", "db"))).toEqual(["index.ts"]);
 });
 
