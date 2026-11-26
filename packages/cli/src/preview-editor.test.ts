@@ -760,7 +760,7 @@ test("on the hosted shape the preview reports its pages to the Studio origin the
 });
 
 test("a change is flashed once the page is hydrated, never on the server's HTML before (T1657)", () => {
-  const field = { flash: false };
+  const field: { flash: boolean; shown?: number } = { flash: false };
   const shown = page("/", {}, false, [], "", [field]);
   // The runtime escapes the concept with the browser's CSS.escape; Node has none.
   const global = globalThis as { CSS?: { escape: (s: string) => string } };
