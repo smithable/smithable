@@ -63,6 +63,29 @@ function followValueKeys(
   }
 }
 
+/**
+ * A field that is no longer a picture field (removed, or its type changed): a card cover naming it
+ * goes, so the rule picks the next picture field, and with no picture field left the cards'
+ * pictures no longer open (open: picture needs one).
+ */
+function losePicture(editor: YamlEditor, ir: SpecIR, m: string, gone: string): void {
+  const isPicture = (f: SpecIR["models"][number]["fields"][number]) =>
+    !f.formula &&
+    f.type.kind === "scalar" &&
+    (f.type.name === "picture" || f.type.name === "pictures");
+  const fields = ir.models.find((x) => x.name === m)?.fields ?? [];
+  const was = fields.find((f) => f.name === gone);
+  if (!was || !isPicture(was)) return;
+  const left = fields.some((f) => f.name !== gone && isPicture(f));
+  for (const page of ir.pages.filter((p) => pageModel(p) === m)) {
+    const cover = ["pages", page.id, "table", "cover"];
+    if (editor.has(cover) && editor.get(cover) === gone) editor.removeAndPrune(cover, 0);
+    const opens = ["pages", page.id, "table", "open"];
+    if (!left && editor.has(opens) && editor.get(opens) === "picture")
+      editor.removeAndPrune(opens, 0);
+  }
+}
+
 const content: Companion = {
   key: "content",
   file: "smithable.content.yml",
@@ -233,12 +256,14 @@ const ux: Companion = {
       // go with them.
       const tones = ["tones", `${effect.model}.${effect.field}`];
       if (editor.has(tones)) followValueKeys(editor, tones, effect, ir);
+      if (!effect.picture) losePicture(editor, ir, effect.model, effect.field);
       return undefined;
     }
     if (effect.kind !== "rename-field" && effect.kind !== "remove-field") return undefined;
     const m = effect.model;
     const from = effect.kind === "rename-field" ? effect.from : effect.field;
     const to = effect.kind === "rename-field" ? effect.to : undefined;
+    if (!to) losePicture(editor, ir, m, from);
     // A week's `by` names its date field (A 215): renamed with it, gone with it.
     for (const page of ir.pages)
       for (const section of page.sections) {
@@ -403,28 +428,9 @@ const ux: Companion = {
         if (next.length) editor.set(path, next);
         else editor.removeAndPrune(path, 0);
       }
-      // The cards' cover follows a rename; removed, the rule picks the next picture field, and
-      // with none left the cards' pictures no longer open (open: picture needs one).
+      // The cards' cover follows a rename; removed, the rule picks the next picture field.
       const cover = ["pages", page.id, "table", "cover"];
-      if (editor.has(cover) && editor.get(cover) === from) {
-        if (to) editor.set(cover, to);
-        else editor.removeAndPrune(cover, 0);
-      }
-      const opens = ["pages", page.id, "table", "open"];
-      if (
-        !to &&
-        editor.has(opens) &&
-        !ir.models
-          .find((x) => x.name === m)
-          ?.fields.some(
-            (f) =>
-              f.name !== from &&
-              !f.formula &&
-              f.type.kind === "scalar" &&
-              (f.type.name === "picture" || f.type.name === "pictures"),
-          )
-      )
-        editor.removeAndPrune(opens, 0);
+      if (to && editor.has(cover) && editor.get(cover) === from) editor.set(cover, to);
       // The list's order, a field's control, and the form's sections follow the field too.
       const sort = ["pages", page.id, "table", "sort"];
       const sorted = editor.has(sort) ? (editor.get(sort) as string) : undefined;
