@@ -2122,6 +2122,15 @@ try {
   await step(
     "Phone toolbar keeps primary controls within the screen and More is keyboard accessible",
     async () => {
+      // The preview's page survives the breakpoint both ways, not loaded again (white meanwhile).
+      const previewPage = () =>
+        page
+          .locator('iframe[title="App preview"]')
+          .elementHandle()
+          .then((e) => e?.contentFrame());
+      await (await previewPage())?.evaluate(() => {
+        window.smithableKept = true;
+      });
       await page.setViewportSize({ width: 390, height: 844 });
       const header = page.locator("[data-studio-header]");
       const more = header.getByRole("button", { name: "More", exact: true });
@@ -2136,6 +2145,11 @@ try {
       if (!(await more.evaluate((button) => document.activeElement === button)))
         throw new Error("Help did not return focus to More");
       await page.setViewportSize({ width: 1920, height: 1000 });
+      await page.waitForFunction(() =>
+        document.querySelector('iframe[title="App preview"]')?.closest(".contents"),
+      );
+      if (!(await (await previewPage())?.evaluate(() => window.smithableKept === true)))
+        throw new Error("the preview was loaded again when the screen changed width");
     },
   );
   await step("the preview keeps its address when settings open or close", async () => {

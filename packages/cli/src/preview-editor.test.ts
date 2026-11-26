@@ -24,6 +24,7 @@ function page(
   crashed = false,
   records: string[] = [],
   search = "",
+  fields: { flash: boolean }[] = [],
 ) {
   // The dev server's error overlay, put up by the test; the observers watching for it, and the
   // timers the runtime sets, run by hand.
@@ -54,6 +55,8 @@ function page(
     followContext?: number;
     navigationId?: number;
     documentId?: string;
+    /** The change a flash answers for. */
+    key?: number | null;
     /** The origin it was posted to. */
     to?: string;
   }[] = [];
@@ -93,19 +96,24 @@ function page(
     addEventListener: (type: string, listener: (event: unknown) => void) =>
       type === "click" && clicks.push(listener),
     querySelectorAll: (selector: string) =>
-      selector === '[data-part="record-open"][data-record-id]'
-        ? records.map((id) => ({ dataset: { recordId: id } }))
-        : selector === "[data-dev-role]"
-          ? buttons
-          : selector === "button"
-            ? signInButtons
-            : selector === "[data-kit=error]" && crashed
-              ? [{}]
-              : selector === "vite-error-overlay" && overlay.shown
+      selector.startsWith("[data-sm-concept=")
+        ? fields.map((field) => ({
+            setAttribute: () => (field.flash = true),
+            removeAttribute: () => (field.flash = false),
+          }))
+        : selector === '[data-part="record-open"][data-record-id]'
+          ? records.map((id) => ({ dataset: { recordId: id } }))
+          : selector === "[data-dev-role]"
+            ? buttons
+            : selector === "button"
+              ? signInButtons
+              : selector === "[data-kit=error]" && crashed
                 ? [{}]
-                : [],
+                : selector === "vite-error-overlay" && overlay.shown
+                  ? [{}]
+                  : [],
     styleSheets: [{ cssRules: [darkRule] }],
-    body: { dataset: { hydrated: "true" } },
+    body: { dataset: { hydrated: "true" } as { hydrated?: string } },
     documentElement: {
       attributes: new Set<string>(),
       toggleAttribute(name: string, on: boolean) {
@@ -175,6 +183,7 @@ function page(
     head,
     darkRule,
     root: document.documentElement,
+    body: document.body,
     clicked,
     scrolled,
     posted,
@@ -747,4 +756,24 @@ test("on the hosted shape the preview reports its pages to the Studio origin the
   } finally {
     delete named.__smithableStudioOrigins;
   }
+});
+
+test("a change is flashed once the page is hydrated, never on the server's HTML before (T1657)", () => {
+  const field = { flash: false };
+  const shown = page("/", {}, false, [], "", [field]);
+  // The runtime escapes the concept with the browser's CSS.escape; Node has none.
+  const global = globalThis as { CSS?: { escape: (s: string) => string } };
+  global.CSS ??= { escape: (s) => s };
+  shown.body.dataset.hydrated = undefined;
+  shown.send({ type: "smithable:highlight", concepts: ["field:Order.notes"], key: 7 });
+  expect(field.flash).toBe(false);
+  expect(shown.posted.some((m) => m.type === "flashed")).toBe(false);
+  shown.later();
+  expect(field.flash).toBe(false);
+  // A newer change before hydration ends the older one's wait: one flash, answered with its key.
+  shown.send({ type: "smithable:highlight", concepts: ["field:Order.notes"], key: 8 });
+  shown.body.dataset.hydrated = "true";
+  shown.later();
+  expect(field.flash).toBe(true);
+  expect(shown.posted.filter((m) => m.type === "flashed").map((m) => m.key)).toEqual([8]);
 });
