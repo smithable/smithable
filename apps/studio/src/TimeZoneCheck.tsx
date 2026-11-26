@@ -17,3 +17,30 @@ export function zoneOf(spec: string | undefined): string | undefined {
   }
   return undefined;
 }
+
+const clocks = new Map<string, boolean>();
+/**
+ * Whether two zones keep the same time all this year and next (Europe/Mariehamn and
+ * Europe/Helsinki): two names for one clock are not a question worth asking.
+ */
+export function sameClock(a: string, b: string, from = new Date()): boolean {
+  const key = `${a}|${b}|${from.getUTCFullYear()}`;
+  const known = clocks.get(key);
+  if (known !== undefined) return known;
+  let same = a === b;
+  try {
+    const clock = (zone: string) => {
+      const format = new Intl.DateTimeFormat("en", { timeZone: zone, timeZoneName: "longOffset" });
+      return (at: number) => format.formatToParts(at).find((p) => p.type === "timeZoneName")?.value;
+    };
+    const [x, y] = [clock(a), clock(b)];
+    const start = Date.UTC(from.getUTCFullYear(), 0, 1);
+    same = true;
+    // Twice a day for two years: every change of offset falls between two of these.
+    for (let at = start; same && at < start + 730 * 864e5; at += 432e5) same = x(at) === y(at);
+  } catch {
+    // A name the browser does not know is not the same clock as one it does.
+  }
+  clocks.set(key, same);
+  return same;
+}
