@@ -15,11 +15,16 @@ import { appBases } from "./ports.mjs";
 const repo = new URL("..", import.meta.url).pathname;
 // The examples named on the command line, or every example (scripts/gate.sh names the ones a
 // change needs).
-const examples = process.argv.slice(2).length
+const named = process.argv.slice(2).length
   ? process.argv.slice(2)
   : readdirSync(join(repo, "examples"), { withFileTypes: true })
       .filter((e) => e.isDirectory())
       .map((e) => e.name);
+// The slowest first, so that none of them starts last and runs alone (CI's times, 2026-11-25);
+// the rest keep their order after them.
+const slowest = ["crm", "booking", "status", "invoicing", "kiosk"];
+const rank = (e) => (slowest.includes(e) ? slowest.indexOf(e) : slowest.length);
+const examples = named.toSorted((a, b) => rank(a) - rank(b));
 
 // Ten ports per example from the base (TEST_APPS_PORT, default 4400), so two checkouts testing
 // at the same time can keep apart (appBases in ports.mjs, which gate-ports.mjs checks too).
