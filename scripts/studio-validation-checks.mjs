@@ -150,7 +150,9 @@ export async function checkStudioValidation(browser, base) {
       const text = "The fixture description needs another try.";
       let notice = true;
       await broken.route("**/api/project", async (route) => {
-        const response = await route.fetch({ maxRetries: 1 });
+        const response = await route.fetch({
+          maxRetries: route.request().method() === "GET" ? 1 : 0,
+        });
         const body = await response.json();
         // A notice comes with its own id (T1602); Builder shows only one that has it.
         if (notice) Object.assign(body, { notice: text, noticeId: "fixture-description" });

@@ -130,7 +130,9 @@ export async function checkStudioQuestions(browser, base) {
     );
     await page.route("**/vad/**", (route) => route.abort());
     await page.route("**/api/project", async (route) => {
-      const response = await route.fetch({ maxRetries: 1 });
+      const response = await route.fetch({
+        maxRetries: route.request().method() === "GET" ? 1 : 0,
+      });
       const body = await response.json();
       body.speech = [{ name: "browser" }];
       body.home = "https://example.invalid/projects/fixture";
