@@ -117,6 +117,7 @@ const FAILED: Record<string, string> = {
   unreadable: "This picture could not be read. Try another.",
   "too-many-pixels": "This picture has too many pixels. Try a smaller one.",
   stuck: "This file took too long to make ready. Upload it again.",
+  "too-heavy": "This file is too much to make ready. Try a shorter or smaller one.",
 };
 /** The sentence for a failed file's code; any other code is the general one. */
 export const failedBecause = (code: string | undefined) =>

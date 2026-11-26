@@ -120,10 +120,17 @@ export async function checkStudioLayout(browser, base, pictures) {
           const anchor = await card.getAttribute("data-guide-card");
           stops.push(anchor);
           const done = card.getByRole("button", { name: "Done", exact: true });
-          const last = (await done.count()) > 0;
-          await (last ? done : card.getByRole("button", { name: "Next", exact: true })).click();
+          // The last stop has no Skip guide; with Changes closed that is Ask me, whose Next
+          // still offers the demonstration (Done is only where the tour ends).
+          const last =
+            (await card.getByRole("button", { name: "Skip guide", exact: true }).count()) === 0;
+          if (anchor === "change")
+            assert.equal(await done.count(), 0, "Ask me offers the demonstration: Next, not Done");
+          await (last && (await done.count()) > 0
+            ? done
+            : card.getByRole("button", { name: "Next", exact: true })
+          ).click();
           if (anchor === "change") {
-            // With Changes closed, Done on Ask me still offers the demonstration.
             await card.getByRole("button", { name: "Yes", exact: true }).waitFor();
             await card.getByRole("button", { name: "Skip", exact: true }).click();
           }
