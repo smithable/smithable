@@ -55,6 +55,8 @@ function page(
     followContext?: number;
     navigationId?: number;
     documentId?: string;
+    /** The change a flash answers for. */
+    key?: number | null;
     /** The origin it was posted to. */
     to?: string;
   }[] = [];
@@ -768,8 +770,10 @@ test("a change is flashed once the page is hydrated, never on the server's HTML 
   expect(shown.posted.some((m) => m.type === "flashed")).toBe(false);
   shown.later();
   expect(field.flash).toBe(false);
+  // A newer change before hydration ends the older one's wait: one flash, answered with its key.
+  shown.send({ type: "smithable:highlight", concepts: ["field:Order.notes"], key: 8 });
   shown.body.dataset.hydrated = "true";
   shown.later();
   expect(field.flash).toBe(true);
-  expect(shown.posted.filter((m) => m.type === "flashed")).toHaveLength(1);
+  expect(shown.posted.filter((m) => m.type === "flashed").map((m) => m.key)).toEqual([8]);
 });

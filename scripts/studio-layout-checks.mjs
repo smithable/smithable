@@ -124,6 +124,8 @@ export async function checkStudioLayout(browser, base, pictures) {
           // still offers the demonstration (Done is only where the tour ends).
           const last =
             (await card.getByRole("button", { name: "Skip guide", exact: true }).count()) === 0;
+          if (anchor === "change")
+            assert.equal(await done.count(), 0, "Ask me offers the demonstration: Next, not Done");
           await (last && (await done.count()) > 0
             ? done
             : card.getByRole("button", { name: "Next", exact: true })
