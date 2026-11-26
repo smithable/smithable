@@ -6,6 +6,7 @@ import {
   type AuthIR,
   applyOperation,
   type Effect,
+  forModels,
   type OperationArgs,
   operationsFor,
   PEOPLE_PATH,
@@ -80,9 +81,12 @@ A record belongs to whoever created it. When the request says it belongs to, is 
 Use the exact names of models, fields and pages from the app. New names are camelCase (fields) or PascalCase (models).
 Field types (shorthand): string, text, email, phone, url, int, decimal, money, bool, date, datetime; choices as "a | b | c"; a reference to another model as "Customer"; a list of related records as "Order[]". Append ! for required, add "unique", and "= value" for a default: "email! unique", "int = 60".`;
 
-/** The operations a model may propose: the project's, its plugins' included, but the whole-file edit. */
+/**
+ * The operations a model may propose: the project's, its plugins' included, but the whole-file
+ * edit and those only a person or a host may call (forModels).
+ */
 const proposable = (plugins?: readonly SpecPlugin[]) =>
-  operationsFor(plugins).filter((o) => o.name !== "editSpec");
+  operationsFor(plugins).filter((o) => o.name !== "editSpec" && forModels(o));
 
 /** The operation's arguments, compactly: names, types, allowed values and hints. */
 export function signature(op: AnyOperation): string {
@@ -93,15 +97,17 @@ export function signature(op: AnyOperation): string {
     >;
     required?: string[];
   };
-  const args = Object.entries(schema.properties ?? {}).map(([name, p]) => {
-    const type = p.enum
-      ? p.enum.map((v) => JSON.stringify(v)).join(" | ")
-      : p.type === "array"
-        ? `${p.items?.type ?? "string"}[]`
-        : (p.type ?? "any");
-    const optional = schema.required?.includes(name) ? "" : "?";
-    return `${name}${optional}: ${type}${p.description ? ` (${p.description})` : ""}`;
-  });
+  const args = Object.entries(schema.properties ?? {})
+    .filter(([, p]) => !notForModels(p))
+    .map(([name, p]) => {
+      const type = p.enum
+        ? p.enum.map((v) => JSON.stringify(v)).join(" | ")
+        : p.type === "array"
+          ? `${p.items?.type ?? "string"}[]`
+          : (p.type ?? "any");
+      const optional = schema.required?.includes(name) ? "" : "?";
+      return `${name}${optional}: ${type}${p.description ? ` (${p.description})` : ""}`;
+    });
   return `- ${op.name} { ${args.join(", ")} }: ${op.summary}`;
 }
 
@@ -199,17 +205,33 @@ export function promptFor(
   };
 }
 
-/** A schema without Smithable's own annotations (x-smithable), which a strict server may refuse. */
+/**
+ * A schema without Smithable's own annotations (x-smithable), which a strict server may refuse,
+ * and without the arguments no model is offered: a host's and a person's own (refusedArgs).
+ */
 export function plainSchema(schema: unknown): unknown {
   if (Array.isArray(schema)) return schema.map(plainSchema);
-  if (schema && typeof schema === "object")
-    return Object.fromEntries(
+  if (schema && typeof schema === "object") {
+    const plain: Record<string, unknown> = Object.fromEntries(
       Object.entries(schema as Record<string, unknown>)
-        .filter(([key]) => !key.startsWith("x-"))
+        .filter(([key, value]) => !key.startsWith("x-") && !notForModels(value))
         .map(([key, value]) => [key, plainSchema(value)]),
     );
+    // An argument left out is not required of the model either.
+    const properties = plain.properties as Record<string, unknown> | undefined;
+    if (properties && Array.isArray(plain.required))
+      plain.required = plain.required.filter((name) => Object.hasOwn(properties, name));
+    return plain;
+  }
   return schema;
 }
+
+/** An argument's schema that only a host or a person may give (refusedArgs in core). */
+const notForModels = (value: unknown) =>
+  !!value &&
+  typeof value === "object" &&
+  ((value as Record<string, unknown>)["x-host"] === true ||
+    (value as Record<string, unknown>)["x-not-for-models"] === true);
 
 interface Answer {
   kind?: string;

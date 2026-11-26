@@ -2,8 +2,9 @@
 // what it shows, Replace with the owner's file, Remove. Each is one setSectionPicture, tried on in
 // the form like a layout (Cancel undoes it); an uploaded file goes in with the change and leaves
 // with its undo.
-import type { ContentImage } from "@smithable/core";
+import { type ContentImage, pictureAt, pictureFile } from "@smithable/core";
 import { useId, useState } from "react";
+import { PhotoLibrary } from "./PhotoLibrary";
 
 export const PICTURE_TYPES: Record<string, string> = {
   "image/webp": "webp",
@@ -39,7 +40,10 @@ export function SectionPicture({
   section: string;
   image: ContentImage | undefined;
   label?: string;
-  change: (args: { src?: string; alt?: string }, file?: { path: string; data: string }) => void;
+  change: (
+    args: { src?: string; asset?: string; alt?: string },
+    file?: { path: string; data: string },
+  ) => void;
   busy: boolean;
 }) {
   const [alt, setAlt] = useState(image?.alt ?? "");
@@ -47,6 +51,14 @@ export function SectionPicture({
   // A file being read: nothing else is sent meanwhile.
   const [reading, setReading] = useState(false);
   const held = busy || reading;
+  const [choosing, setChoosing] = useState(false);
+  // A file chosen in the panel goes in with the words given here, as an upload does.
+  const chosen = (picked: { asset: string } | { src: string }) => {
+    setRefused(undefined);
+    if (!alt.trim()) return setRefused("Say first what the picture shows.");
+    setChoosing(false);
+    change({ ...picked, alt: alt.trim() });
+  };
   const altId = useId();
   const replace = (file: File | undefined) => {
     setRefused(undefined);
@@ -74,7 +86,7 @@ export function SectionPicture({
       <div className="flex items-center gap-2">
         {image ? (
           <img
-            src={`/api/${image.src}`}
+            src={`/api/${image.asset && image.widths?.length ? pictureAt(image, Math.min(...image.widths)) : pictureFile(image)}`}
             alt=""
             className="h-12 w-16 shrink-0 rounded border border-line object-cover"
           />
@@ -94,6 +106,15 @@ export function SectionPicture({
             }}
           />
         </label>
+        <button
+          type="button"
+          disabled={held}
+          aria-expanded={choosing}
+          className="rounded border border-line px-2 py-1 text-sm hover:bg-subtle disabled:opacity-60"
+          onClick={() => setChoosing(!choosing)}
+        >
+          Photos and videos
+        </button>
         {image && (
           <button
             type="button"
@@ -121,12 +142,27 @@ export function SectionPicture({
             type="button"
             disabled={held}
             className="rounded border border-line px-2 py-1 text-sm hover:bg-subtle disabled:opacity-60"
-            onClick={() => change({ src: image.src, alt: alt.trim() })}
+            // The same file, stored or the project's, with new words: never no file, which removes it.
+            onClick={() =>
+              change({
+                ...(image.asset !== undefined ? { asset: image.asset } : { src: image.src }),
+                alt: alt.trim(),
+              })
+            }
           >
             Save
           </button>
         )}
       </div>
+      {choosing && (
+        <PhotoLibrary
+          current={image?.asset ?? image?.src}
+          choose={chosen}
+          close={() => setChoosing(false)}
+          busy={held}
+          wordsFirst={alt.trim() ? undefined : "Say first what the picture shows."}
+        />
+      )}
       {refused && (
         <p role="alert" className="text-xs text-red-700">
           {refused}

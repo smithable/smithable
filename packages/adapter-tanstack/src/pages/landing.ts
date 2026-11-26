@@ -2,10 +2,11 @@
 import {
   type AuthIR,
   type Condition,
+  type ContentFilm,
   type ContentImage,
   camel,
+  filmFiles,
   humanize,
-  imageAt,
   isPictures,
   kebab,
   type LandingSection,
@@ -13,6 +14,8 @@ import {
   pageIcon,
   pageModel,
   pascal,
+  pictureAt,
+  pictureFile,
   plural,
   SECTION_LOOKS,
   type SpecIR,
@@ -39,13 +42,18 @@ import {
 } from "../shared.js";
 import { LUCIDE, workspaceEntries } from "./root.js";
 
-/** A picture's widths as the img's srcset: the file and its copies, from the site's root. */
+/** A hero film's player: its file, or a stored film's renditions, and its own origin. */
+const filmTag = (film: ContentFilm) => {
+  const { src, smaller } = filmFiles(film);
+  return `<Film src=${attr(`/${src}`)}${smaller ? ` smaller=${attr(`/${smaller}`)}` : ""}${film.generated ? " generated" : ""}${film.kind ? ` kind=${attr(film.kind)}` : ""} framed={framed} />`;
+};
+
 /** A picture's files by width for the browser to choose from: its copies, and itself when its width is known. */
-const srcSetOf = ({ src, width, widths }: ContentImage) =>
-  widths &&
+const srcSetOf = (image: ContentImage) =>
+  image.widths &&
   [
-    ...widths.map((w) => [w, `/${imageAt(src, w)}`] as const),
-    ...(width ? [[width, `/${src}`] as const] : []),
+    ...image.widths.map((w) => [w, `/${pictureAt(image, w)}`] as const),
+    ...(image.width ? [[image.width, `/${pictureFile(image)}`] as const] : []),
   ]
     .sort(([a], [b]) => a - b)
     .map(([w, file]) => `${file} ${w}w`)
@@ -55,7 +63,7 @@ const srcSetOf = ({ src, width, widths }: ContentImage) =>
 const picture = (image: ContentImage) => {
   const srcSet = srcSetOf(image);
   return {
-    src: `/${image.src}`,
+    src: `/${pictureFile(image)}`,
     alt: image.alt,
     ...(image.generated ? { generated: true } : {}),
     ...(image.kind ? { kind: image.kind } : {}),
@@ -271,11 +279,11 @@ export function landingRoute(
           }${
             own.image
               ? `
-          image={{ src: ${JSON.stringify(`/${own.image.src}`)}, alt: ${JSON.stringify(own.image.alt)}${own.image.generated ? ", generated: true" : ""}${own.image.kind ? `, kind: ${JSON.stringify(own.image.kind)}` : ""}${srcSetOf(own.image) ? `, srcSet: ${JSON.stringify(srcSetOf(own.image))}` : ""} }}${
+          image={{ src: ${JSON.stringify(`/${pictureFile(own.image)}`)}, alt: ${JSON.stringify(own.image.alt)}${own.image.generated ? ", generated: true" : ""}${own.image.kind ? `, kind: ${JSON.stringify(own.image.kind)}` : ""}${srcSetOf(own.image) ? `, srcSet: ${JSON.stringify(srcSetOf(own.image))}` : ""} }}${
             own.image.film
               ? (imports.add("#/kit/Film", "Film"),
                 `
-          film={(framed) => <Film src=${attr(`/${own.image.film.src}`)}${own.image.film.generated ? " generated" : ""}${own.image.film.kind ? ` kind=${attr(own.image.film.kind)}` : ""} framed={framed} />}`)
+          film={(framed) => ${filmTag(own.image.film)}}`)
               : ""
           }`
               : ""
@@ -299,7 +307,7 @@ export function landingRoute(
                     ).image
                   : undefined;
               const picture = dress?.image ?? borrowed;
-              const shortcut = `{ to: ${JSON.stringify(target.route)}, label: ${dress?.label ? JSON.stringify(dress.label) : t.pageTitleOf(id)}, icon: ${icon}${picture ? `, image: { src: ${JSON.stringify(`/${picture.src}`)}, alt: ${JSON.stringify(picture.alt)}${picture.generated ? ", generated: true" : ""}${picture.kind ? `, kind: ${JSON.stringify(picture.kind)}` : ""}${srcSetOf(picture) ? `, srcSet: ${JSON.stringify(srcSetOf(picture))}` : ""} }` : ""} }`;
+              const shortcut = `{ to: ${JSON.stringify(target.route)}, label: ${dress?.label ? JSON.stringify(dress.label) : t.pageTitleOf(id)}, icon: ${icon}${picture ? `, image: { src: ${JSON.stringify(`/${pictureFile(picture)}`)}, alt: ${JSON.stringify(picture.alt)}${picture.generated ? ", generated: true" : ""}${picture.kind ? `, kind: ${JSON.stringify(picture.kind)}` : ""}${srcSetOf(picture) ? `, srcSet: ${JSON.stringify(srcSetOf(picture))}` : ""} }` : ""} }`;
               // A page behind sign-in is a shortcut only for those who may open it.
               if (!hasSignIn(auth) || auth.public.pages.includes(id)) return shortcut;
               imports.add("#/kit/access", "allows");

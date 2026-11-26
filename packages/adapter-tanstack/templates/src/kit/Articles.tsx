@@ -38,18 +38,24 @@ export function ArticleList({
       <ul className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {items.map((item) => (
           <li key={item.href} data-part="row">
-            <Card className="relative h-full overflow-hidden hover:bg-hover">
+            <Card
+              data-link-card={item.picture ? "" : undefined}
+              className="relative h-full overflow-hidden hover:bg-hover"
+            >
               {item.picture && (
-                <AiMarked generated={item.picture.generated} kind={item.picture.kind}>
-                  <img
-                    src={item.picture.src}
-                    alt={item.picture.alt}
-                    width={item.picture.width}
-                    height={item.picture.height}
-                    loading="lazy"
-                    className="aspect-[3/2] w-full object-cover"
-                  />
-                </AiMarked>
+                <div className="overflow-hidden">
+                  <AiMarked generated={item.picture.generated} kind={item.picture.kind}>
+                    <img
+                      src={item.picture.src}
+                      alt={item.picture.alt}
+                      width={item.picture.width}
+                      height={item.picture.height}
+                      loading="lazy"
+                      data-link-card-image=""
+                      className="aspect-[3/2] w-full object-cover"
+                    />
+                  </AiMarked>
+                </div>
               )}
               <div className="space-y-2 p-card">
                 {item.date && <p className="text-sm text-muted-foreground">{item.date}</p>}

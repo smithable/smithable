@@ -41,7 +41,7 @@ The team page lists who has access and lets administrators invite people by emai
 Sign-up is closed (see \`selfSignUp\` under \`signIn\` in \`smithable.auth.yml\`): only invited addresses and the \`admins\` of \`smithable.auth.yml\` can sign in. Everyone else is refused at sign-in and told to ask an administrator. A demo (\`DEMO_SIGN_IN=1\`) is the exception: its "Try it as" buttons sign in demo users, who join whatever the setting says; set it only on a showcase app whose data is reset.
 ## Mail
 
-Hooks (\`src/custom/hooks.ts\`) and custom code send mail with \`sendMail\` from \`src/kit/mail.ts\`. It reads SMTP settings from the environment: \`SMTP_URL\` (\`smtp://user:password@host:587\`, or \`smtps://\` for TLS from the start) or \`SMTP_HOST\`, \`SMTP_PORT\`, \`SMTP_USER\` and \`SMTP_PASSWORD\`, plus \`MAIL_FROM\` (the sender). Any provider works; give its SPF, DKIM and DMARC records to the sender's domain so the mail arrives. Without settings nothing is sent: mails are written to \`data/mail/outbox\` as \`.eml\` files, which is what development and tests look at.
+Hooks (\`src/custom/hooks.ts\`) and custom code send mail with \`sendMail\` from \`src/kit/mail.ts\`. It reads SMTP settings from the environment: \`SMTP_URL\` (\`smtp://user:password@host:587\`, or \`smtps://\` for TLS from the start) or \`SMTP_HOST\`, \`SMTP_PORT\`, \`SMTP_USER\` and \`SMTP_PASSWORD\`, plus \`MAIL_FROM\` (the sender). Any provider works; give its SPF, DKIM and DMARC records to the sender's domain so the mail arrives. Without settings nothing is sent: mails are written to \`data/mail/outbox\` as \`.eml\` files, which is what development and tests look at. \`MAIL_MODE=outbox\` keeps them there with settings too; started with \`MAIL_MODE\` (\`outbox\`, \`testers\` where the mail server lets only testers through, or \`all\`), the app says on Import what happens to the addresses in a file.
 
 ## Limits
 
@@ -14072,7 +14072,7 @@ exports[`../../../examples/api/smithable.yml > file list and generated code 1`] 
 exports[`../../../examples/api/smithable.yml > the generated files are as reviewed 1`] = `
 {
   ".dockerignore": "daf7c505 scaffold",
-  ".gitignore": "9b776503 scaffold",
+  ".gitignore": "984411d3 scaffold",
   ".mcp.json": "05d20cc7 scaffold",
   "AGENTS.md": "189a41e5 kit",
   "CLAUDE.md": "141c3f5e scaffold",
@@ -14081,13 +14081,13 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "LICENSES/hallmark-MIT.txt": "26d1de6b kit",
   "LICENSES/shadcn-ui.txt": "38dd653a kit",
   "LICENSES/tweakcn-Apache-2.0.txt": "dc4aedc0 kit",
-  "README.md": "c404dd3b generated",
+  "README.md": "66c58e90 generated",
   "drizzle.config.ts": "0987fb48 kit",
   "package.json": "af427030 generated",
   "playwright.config.ts": "5ffef2a7 kit",
   "pnpm-workspace.yaml": "1da1537f scaffold",
   "public/favicon.svg": "ebbd34a1 generated",
-  "server.mjs": "e77d2b28 kit",
+  "server.mjs": "88fa4dc7 kit",
   "smithable.lock": "2c03be87 generated",
   "src/components/ui/badge.tsx": "7c9b048e kit",
   "src/components/ui/button.tsx": "43356a7c kit",
@@ -14148,12 +14148,12 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/Consent.tsx": "c5ee7e50 kit",
   "src/kit/FieldInput.tsx": "39e40fcb kit",
   "src/kit/FileInput.tsx": "5d567f82 kit",
-  "src/kit/ImportDialog.tsx": "d65da47a kit",
+  "src/kit/ImportDialog.tsx": "07f5864f kit",
   "src/kit/InlineRows.tsx": "5a097006 kit",
   "src/kit/Inspector.tsx": "2425cac5 kit",
   "src/kit/Keys.tsx": "f32c246d kit",
   "src/kit/ModelForm.tsx": "f90ea7e8 kit",
-  "src/kit/ModelTable.tsx": "3ed793d6 kit",
+  "src/kit/ModelTable.tsx": "64482825 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "fb5e87dc kit",
   "src/kit/PictureDialog.tsx": "015af7de kit",
@@ -14183,11 +14183,11 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/formats.ts": "2257fcc1 kit",
   "src/kit/formula.ts": "d73c0380 kit",
   "src/kit/grounded.ts": "5513d9ac kit",
-  "src/kit/import.server.ts": "7a5a3701 kit",
+  "src/kit/import.server.ts": "889830b2 kit",
   "src/kit/import.ts": "3f48e858 kit",
   "src/kit/limit.ts": "c9fd41d5 kit",
   "src/kit/log.server.ts": "4d493425 kit",
-  "src/kit/mail.ts": "d005acf1 kit",
+  "src/kit/mail.ts": "f1f04255 kit",
   "src/kit/mcp.server.ts": "2e063918 kit",
   "src/kit/model.ts": "4f517d82 kit",
   "src/kit/now.ts": "5ea87828 kit",
@@ -14210,7 +14210,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "901bdc17 kit",
+  "src/kit/words/en.ts": "846b5c41 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/app-card.server.ts": "9b4d94be generated",
   "src/lib/app-card.ts": "93f0b476 generated",
@@ -14265,7 +14265,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/routes/team/activity.tsx": "f071bc95 generated",
   "src/routes/team/index.tsx": "c1b1e9fc generated",
   "src/start.ts": "6b874d2d kit",
-  "src/styles.css": "1f4ccc9e kit",
+  "src/styles.css": "dcd25010 kit",
   "src/theme.css": "1fd40aa1 generated",
   "tests/smoke.spec.ts": "24a5a8cb generated",
   "tsconfig.json": "802b1b64 kit",
@@ -14310,7 +14310,7 @@ In production, set \`BETTER_AUTH_SECRET\` (at least 32 random characters, e.g. \
 People type their address and get a six-digit code by mail, good for ten minutes and five tries. Signing in and signing up are the same form; who may sign up follows the app's sign-in settings, and anyone else is told the same and gets no mail. At most five codes an hour go to one address (and twenty to one network address): someone asking for a sixth waits. The codes go out through the app's mail settings (\`SMTP_URL\` and \`MAIL_FROM\`, see "Mail"); without them, in development, they land in \`data/mail/outbox\`, and in production the sign-in page says that it cannot send mail.
 ## Mail
 
-Hooks (\`src/custom/hooks.ts\`) and custom code send mail with \`sendMail\` from \`src/kit/mail.ts\`. It reads SMTP settings from the environment: \`SMTP_URL\` (\`smtp://user:password@host:587\`, or \`smtps://\` for TLS from the start) or \`SMTP_HOST\`, \`SMTP_PORT\`, \`SMTP_USER\` and \`SMTP_PASSWORD\`, plus \`MAIL_FROM\` (the sender). Any provider works; give its SPF, DKIM and DMARC records to the sender's domain so the mail arrives. Without settings nothing is sent: mails are written to \`data/mail/outbox\` as \`.eml\` files, which is what development and tests look at.
+Hooks (\`src/custom/hooks.ts\`) and custom code send mail with \`sendMail\` from \`src/kit/mail.ts\`. It reads SMTP settings from the environment: \`SMTP_URL\` (\`smtp://user:password@host:587\`, or \`smtps://\` for TLS from the start) or \`SMTP_HOST\`, \`SMTP_PORT\`, \`SMTP_USER\` and \`SMTP_PASSWORD\`, plus \`MAIL_FROM\` (the sender). Any provider works; give its SPF, DKIM and DMARC records to the sender's domain so the mail arrives. Without settings nothing is sent: mails are written to \`data/mail/outbox\` as \`.eml\` files, which is what development and tests look at. \`MAIL_MODE=outbox\` keeps them there with settings too; started with \`MAIL_MODE\` (\`outbox\`, \`testers\` where the mail server lets only testers through, or \`all\`), the app says on Import what happens to the addresses in a file.
 
 ## Limits
 
@@ -20733,7 +20733,7 @@ exports[`../../../examples/barbers/smithable.yml > file list and generated code 
 import { createFileRoute } from "@tanstack/react-router";
 import { originOf } from "#/kit/origin";
 
-const ROBOTS = "User-agent: *\\nAllow: /$\\nAllow: /privacy\\nAllow: /assets/\\nAllow: /images/\\nAllow: /files/\\nDisallow: /\\n";
+const ROBOTS = "User-agent: *\\nAllow: /$\\nAllow: /privacy\\nAllow: /assets/\\nAllow: /images/\\nAllow: /media/\\nAllow: /files/\\nDisallow: /\\n";
 
 export const Route = createFileRoute("/robots.txt")({
   server: {
@@ -21887,7 +21887,7 @@ exports[`../../../examples/barbers/smithable.yml > file list and generated code 
 exports[`../../../examples/barbers/smithable.yml > the generated files are as reviewed 1`] = `
 {
   ".dockerignore": "daf7c505 scaffold",
-  ".gitignore": "9b776503 scaffold",
+  ".gitignore": "984411d3 scaffold",
   ".mcp.json": "05d20cc7 scaffold",
   "AGENTS.md": "189a41e5 kit",
   "CLAUDE.md": "141c3f5e scaffold",
@@ -21896,13 +21896,13 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "LICENSES/hallmark-MIT.txt": "26d1de6b kit",
   "LICENSES/shadcn-ui.txt": "38dd653a kit",
   "LICENSES/tweakcn-Apache-2.0.txt": "dc4aedc0 kit",
-  "README.md": "b9fcd689 generated",
+  "README.md": "656dcf28 generated",
   "drizzle.config.ts": "0987fb48 kit",
   "package.json": "64efcf6f generated",
   "playwright.config.ts": "5ffef2a7 kit",
   "pnpm-workspace.yaml": "1da1537f scaffold",
   "public/favicon.svg": "3806c8e2 generated",
-  "server.mjs": "e77d2b28 kit",
+  "server.mjs": "88fa4dc7 kit",
   "smithable.lock": "2c03be87 generated",
   "src/components/ui/badge.tsx": "7c9b048e kit",
   "src/components/ui/button.tsx": "43356a7c kit",
@@ -21963,13 +21963,13 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/FieldInput.tsx": "39e40fcb kit",
   "src/kit/FileInput.tsx": "5d567f82 kit",
   "src/kit/Filters.tsx": "0f5bfdfd kit",
-  "src/kit/ImportDialog.tsx": "d65da47a kit",
+  "src/kit/ImportDialog.tsx": "07f5864f kit",
   "src/kit/InlineRows.tsx": "5a097006 kit",
-  "src/kit/Landing.tsx": "57e69c50 kit",
+  "src/kit/Landing.tsx": "35ef7a8a kit",
   "src/kit/LegalPage.tsx": "f9a9df1e kit",
   "src/kit/Live.tsx": "fbaa47cd kit",
   "src/kit/ModelForm.tsx": "f90ea7e8 kit",
-  "src/kit/ModelTable.tsx": "3ed793d6 kit",
+  "src/kit/ModelTable.tsx": "64482825 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "fb5e87dc kit",
   "src/kit/PictureDialog.tsx": "015af7de kit",
@@ -21996,17 +21996,17 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/format.ts": "b9e92275 kit",
   "src/kit/formats.ts": "2257fcc1 kit",
   "src/kit/formula.ts": "d73c0380 kit",
-  "src/kit/import.server.ts": "7a5a3701 kit",
+  "src/kit/import.server.ts": "889830b2 kit",
   "src/kit/import.ts": "3f48e858 kit",
   "src/kit/limit.ts": "c9fd41d5 kit",
   "src/kit/live.server.ts": "474834ab kit",
   "src/kit/log.server.ts": "4d493425 kit",
-  "src/kit/mail.ts": "d005acf1 kit",
+  "src/kit/mail.ts": "f1f04255 kit",
   "src/kit/model.ts": "4f517d82 kit",
   "src/kit/now.ts": "5ea87828 kit",
   "src/kit/origin.ts": "f7090ee4 kit",
-  "src/kit/outgoing.server.ts": "6b16b2aa kit",
-  "src/kit/outgoing.ts": "e1f82237 kit",
+  "src/kit/outgoing.server.ts": "14d20b55 kit",
+  "src/kit/outgoing.ts": "7018c495 kit",
   "src/kit/page-guard.ts": "d8974971 kit",
   "src/kit/params.ts": "65a69da0 kit",
   "src/kit/people-match.ts": "09a0f7dc kit",
@@ -22023,7 +22023,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/uploads.ts": "4e982bfe kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "901bdc17 kit",
+  "src/kit/words/en.ts": "846b5c41 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/app-card.server.ts": "86f8f526 generated",
   "src/lib/app-card.ts": "93f0b476 generated",
@@ -22052,7 +22052,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/index.tsx": "0a5077c9 generated",
   "src/routes/privacy/index.tsx": "9fcb262e generated",
-  "src/routes/robots[.]txt.ts": "a6b36402 generated",
+  "src/routes/robots[.]txt.ts": "21d2d615 generated",
   "src/routes/services/$id.tsx": "bddd0cd6 generated",
   "src/routes/services/index.tsx": "d980917e generated",
   "src/routes/services/new.tsx": "5d1280e4 generated",
@@ -22062,7 +22062,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/routes/time-off/index.tsx": "0126663b generated",
   "src/routes/time-off/new.tsx": "007c55c8 generated",
   "src/start.ts": "6b874d2d kit",
-  "src/styles.css": "1f4ccc9e kit",
+  "src/styles.css": "dcd25010 kit",
   "src/theme.css": "1fd40aa1 generated",
   "tests/smoke.spec.ts": "dabb9af3 generated",
   "tsconfig.json": "802b1b64 kit",
@@ -22107,7 +22107,7 @@ In production, set \`BETTER_AUTH_SECRET\` (at least 32 random characters, e.g. \
 People type their address and get a six-digit code by mail, good for ten minutes and five tries. Signing in and signing up are the same form; who may sign up follows the app's sign-in settings, and anyone else is told the same and gets no mail. At most five codes an hour go to one address (and twenty to one network address): someone asking for a sixth waits. The codes go out through the app's mail settings (\`SMTP_URL\` and \`MAIL_FROM\`, see "Mail"); without them, in development, they land in \`data/mail/outbox\`, and in production the sign-in page says that it cannot send mail.
 ## Mail
 
-Hooks (\`src/custom/hooks.ts\`) and custom code send mail with \`sendMail\` from \`src/kit/mail.ts\`. It reads SMTP settings from the environment: \`SMTP_URL\` (\`smtp://user:password@host:587\`, or \`smtps://\` for TLS from the start) or \`SMTP_HOST\`, \`SMTP_PORT\`, \`SMTP_USER\` and \`SMTP_PASSWORD\`, plus \`MAIL_FROM\` (the sender). Any provider works; give its SPF, DKIM and DMARC records to the sender's domain so the mail arrives. Without settings nothing is sent: mails are written to \`data/mail/outbox\` as \`.eml\` files, which is what development and tests look at.
+Hooks (\`src/custom/hooks.ts\`) and custom code send mail with \`sendMail\` from \`src/kit/mail.ts\`. It reads SMTP settings from the environment: \`SMTP_URL\` (\`smtp://user:password@host:587\`, or \`smtps://\` for TLS from the start) or \`SMTP_HOST\`, \`SMTP_PORT\`, \`SMTP_USER\` and \`SMTP_PASSWORD\`, plus \`MAIL_FROM\` (the sender). Any provider works; give its SPF, DKIM and DMARC records to the sender's domain so the mail arrives. Without settings nothing is sent: mails are written to \`data/mail/outbox\` as \`.eml\` files, which is what development and tests look at. \`MAIL_MODE=outbox\` keeps them there with settings too; started with \`MAIL_MODE\` (\`outbox\`, \`testers\` where the mail server lets only testers through, or \`all\`), the app says on Import what happens to the addresses in a file.
 
 ## Limits
 
@@ -35992,7 +35992,7 @@ exports[`../../../examples/booking/smithable.yml > file list and generated code 
 import { createFileRoute } from "@tanstack/react-router";
 import { originOf } from "#/kit/origin";
 
-const ROBOTS = "User-agent: *\\nAllow: /$\\nAllow: /schedule\\nAllow: /blog\\nAllow: /about\\nAllow: /privacy\\nAllow: /assets/\\nAllow: /images/\\nAllow: /files/\\nDisallow: /\\n";
+const ROBOTS = "User-agent: *\\nAllow: /$\\nAllow: /schedule\\nAllow: /blog\\nAllow: /about\\nAllow: /privacy\\nAllow: /assets/\\nAllow: /images/\\nAllow: /media/\\nAllow: /files/\\nDisallow: /\\n";
 
 export const Route = createFileRoute("/robots.txt")({
   server: {
@@ -37247,7 +37247,7 @@ exports[`../../../examples/booking/smithable.yml > file list and generated code 
 exports[`../../../examples/booking/smithable.yml > the generated files are as reviewed 1`] = `
 {
   ".dockerignore": "daf7c505 scaffold",
-  ".gitignore": "9b776503 scaffold",
+  ".gitignore": "984411d3 scaffold",
   ".mcp.json": "05d20cc7 scaffold",
   "AGENTS.md": "189a41e5 kit",
   "CLAUDE.md": "141c3f5e scaffold",
@@ -37256,13 +37256,13 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "LICENSES/hallmark-MIT.txt": "26d1de6b kit",
   "LICENSES/shadcn-ui.txt": "38dd653a kit",
   "LICENSES/tweakcn-Apache-2.0.txt": "dc4aedc0 kit",
-  "README.md": "20c87bfd generated",
+  "README.md": "3bafa6fc generated",
   "drizzle.config.ts": "0987fb48 kit",
   "package.json": "e27b0ce8 generated",
   "playwright.config.ts": "5ffef2a7 kit",
   "pnpm-workspace.yaml": "1da1537f scaffold",
   "public/favicon.svg": "d6f525dd generated",
-  "server.mjs": "e77d2b28 kit",
+  "server.mjs": "88fa4dc7 kit",
   "smithable.lock": "2c03be87 generated",
   "src/components/ui/badge.tsx": "7c9b048e kit",
   "src/components/ui/button.tsx": "43356a7c kit",
@@ -37335,7 +37335,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/AppLink.tsx": "841a9af0 kit",
   "src/kit/AppShell.tsx": "6dca6653 kit",
   "src/kit/AppearancePicker.tsx": "0cd564d2 kit",
-  "src/kit/Articles.tsx": "f3fb4114 kit",
+  "src/kit/Articles.tsx": "b321bc42 kit",
   "src/kit/Ask.tsx": "e5277427 kit",
   "src/kit/Calculator.tsx": "590a4703 kit",
   "src/kit/Calendar.tsx": "5f787e2e kit",
@@ -37344,16 +37344,16 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/FieldInput.tsx": "39e40fcb kit",
   "src/kit/FileInput.tsx": "5d567f82 kit",
   "src/kit/Filters.tsx": "0f5bfdfd kit",
-  "src/kit/ImportDialog.tsx": "d65da47a kit",
+  "src/kit/ImportDialog.tsx": "07f5864f kit",
   "src/kit/InlineRows.tsx": "5a097006 kit",
   "src/kit/Inspector.tsx": "2425cac5 kit",
-  "src/kit/Landing.tsx": "57e69c50 kit",
+  "src/kit/Landing.tsx": "35ef7a8a kit",
   "src/kit/LegalPage.tsx": "f9a9df1e kit",
   "src/kit/Live.tsx": "fbaa47cd kit",
   "src/kit/Markdown.tsx": "24e2fcd2 kit",
   "src/kit/MarkdownFormatted.tsx": "300ef9a1 kit",
   "src/kit/ModelForm.tsx": "f90ea7e8 kit",
-  "src/kit/ModelTable.tsx": "3ed793d6 kit",
+  "src/kit/ModelTable.tsx": "64482825 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "fb5e87dc kit",
   "src/kit/PictureDialog.tsx": "015af7de kit",
@@ -37386,17 +37386,17 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/formats.ts": "2257fcc1 kit",
   "src/kit/formula.ts": "d73c0380 kit",
   "src/kit/grounded.ts": "5513d9ac kit",
-  "src/kit/import.server.ts": "7a5a3701 kit",
+  "src/kit/import.server.ts": "889830b2 kit",
   "src/kit/import.ts": "3f48e858 kit",
   "src/kit/limit.ts": "c9fd41d5 kit",
   "src/kit/live.server.ts": "474834ab kit",
   "src/kit/log.server.ts": "4d493425 kit",
-  "src/kit/mail.ts": "d005acf1 kit",
+  "src/kit/mail.ts": "f1f04255 kit",
   "src/kit/model.ts": "4f517d82 kit",
   "src/kit/now.ts": "5ea87828 kit",
   "src/kit/origin.ts": "f7090ee4 kit",
-  "src/kit/outgoing.server.ts": "6b16b2aa kit",
-  "src/kit/outgoing.ts": "e1f82237 kit",
+  "src/kit/outgoing.server.ts": "14d20b55 kit",
+  "src/kit/outgoing.ts": "7018c495 kit",
   "src/kit/page-guard.ts": "d8974971 kit",
   "src/kit/params.ts": "65a69da0 kit",
   "src/kit/people-match.ts": "09a0f7dc kit",
@@ -37416,7 +37416,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "901bdc17 kit",
+  "src/kit/words/en.ts": "846b5c41 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/app-card.server.ts": "72496fa8 generated",
   "src/lib/app-card.ts": "93f0b476 generated",
@@ -37481,7 +37481,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/posts/index.tsx": "ce0f7be9 generated",
   "src/routes/posts/new.tsx": "7be9f470 generated",
   "src/routes/privacy/index.tsx": "6236ed29 generated",
-  "src/routes/robots[.]txt.ts": "ded77c86 generated",
+  "src/routes/robots[.]txt.ts": "2d5317f1 generated",
   "src/routes/schedule/index.tsx": "79cdbac7 generated",
   "src/routes/sessions/$id.tsx": "10f389eb generated",
   "src/routes/sessions/index.tsx": "becb08cf generated",
@@ -37489,7 +37489,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/sign-in.tsx": "64dbc342 generated",
   "src/routes/sitemap[.]xml.ts": "018df36b generated",
   "src/start.ts": "6b874d2d kit",
-  "src/styles.css": "1f4ccc9e kit",
+  "src/styles.css": "dcd25010 kit",
   "src/theme.css": "1fd40aa1 generated",
   "tests/smoke.spec.ts": "c6858e63 generated",
   "tsconfig.json": "802b1b64 kit",
@@ -37540,7 +37540,7 @@ The team page lists who has access and lets administrators invite people by emai
 Sign-up is closed (see \`selfSignUp\` under \`signIn\` in \`smithable.auth.yml\`): only invited addresses and the \`admins\` of \`smithable.auth.yml\` can sign in. Everyone else is refused at sign-in and told to ask an administrator. A demo (\`DEMO_SIGN_IN=1\`) is the exception: its "Try it as" buttons sign in demo users, who join whatever the setting says; set it only on a showcase app whose data is reset.
 ## Mail
 
-Hooks (\`src/custom/hooks.ts\`) and custom code send mail with \`sendMail\` from \`src/kit/mail.ts\`. It reads SMTP settings from the environment: \`SMTP_URL\` (\`smtp://user:password@host:587\`, or \`smtps://\` for TLS from the start) or \`SMTP_HOST\`, \`SMTP_PORT\`, \`SMTP_USER\` and \`SMTP_PASSWORD\`, plus \`MAIL_FROM\` (the sender). Any provider works; give its SPF, DKIM and DMARC records to the sender's domain so the mail arrives. Without settings nothing is sent: mails are written to \`data/mail/outbox\` as \`.eml\` files, which is what development and tests look at.
+Hooks (\`src/custom/hooks.ts\`) and custom code send mail with \`sendMail\` from \`src/kit/mail.ts\`. It reads SMTP settings from the environment: \`SMTP_URL\` (\`smtp://user:password@host:587\`, or \`smtps://\` for TLS from the start) or \`SMTP_HOST\`, \`SMTP_PORT\`, \`SMTP_USER\` and \`SMTP_PASSWORD\`, plus \`MAIL_FROM\` (the sender). Any provider works; give its SPF, DKIM and DMARC records to the sender's domain so the mail arrives. Without settings nothing is sent: mails are written to \`data/mail/outbox\` as \`.eml\` files, which is what development and tests look at. \`MAIL_MODE=outbox\` keeps them there with settings too; started with \`MAIL_MODE\` (\`outbox\`, \`testers\` where the mail server lets only testers through, or \`all\`), the app says on Import what happens to the addresses in a file.
 
 ## Limits
 
@@ -43983,7 +43983,7 @@ exports[`../../../examples/builder/smithable.yml > file list and generated code 
 import { createFileRoute } from "@tanstack/react-router";
 import { originOf } from "#/kit/origin";
 
-const ROBOTS = "User-agent: *\\nAllow: /$\\nAllow: /projects\\nAllow: /privacy\\nAllow: /assets/\\nAllow: /images/\\nAllow: /files/\\nDisallow: /\\n";
+const ROBOTS = "User-agent: *\\nAllow: /$\\nAllow: /projects\\nAllow: /privacy\\nAllow: /assets/\\nAllow: /images/\\nAllow: /media/\\nAllow: /files/\\nDisallow: /\\n";
 
 export const Route = createFileRoute("/robots.txt")({
   server: {
@@ -45221,7 +45221,7 @@ exports[`../../../examples/builder/smithable.yml > file list and generated code 
 exports[`../../../examples/builder/smithable.yml > the generated files are as reviewed 1`] = `
 {
   ".dockerignore": "daf7c505 scaffold",
-  ".gitignore": "9b776503 scaffold",
+  ".gitignore": "984411d3 scaffold",
   ".mcp.json": "05d20cc7 scaffold",
   "AGENTS.md": "189a41e5 kit",
   "CLAUDE.md": "141c3f5e scaffold",
@@ -45230,13 +45230,13 @@ exports[`../../../examples/builder/smithable.yml > the generated files are as re
   "LICENSES/hallmark-MIT.txt": "26d1de6b kit",
   "LICENSES/shadcn-ui.txt": "38dd653a kit",
   "LICENSES/tweakcn-Apache-2.0.txt": "dc4aedc0 kit",
-  "README.md": "e87340f0 generated",
+  "README.md": "f66017d9 generated",
   "drizzle.config.ts": "0987fb48 kit",
   "package.json": "3f03ce93 generated",
   "playwright.config.ts": "5ffef2a7 kit",
   "pnpm-workspace.yaml": "1da1537f scaffold",
   "public/favicon.svg": "8a054009 generated",
-  "server.mjs": "e77d2b28 kit",
+  "server.mjs": "88fa4dc7 kit",
   "smithable.lock": "2c03be87 generated",
   "src/components/ui/badge.tsx": "7c9b048e kit",
   "src/components/ui/button.tsx": "43356a7c kit",
@@ -45301,12 +45301,12 @@ exports[`../../../examples/builder/smithable.yml > the generated files are as re
   "src/kit/FieldInput.tsx": "39e40fcb kit",
   "src/kit/FileInput.tsx": "5d567f82 kit",
   "src/kit/Filters.tsx": "0f5bfdfd kit",
-  "src/kit/ImportDialog.tsx": "d65da47a kit",
+  "src/kit/ImportDialog.tsx": "07f5864f kit",
   "src/kit/InlineRows.tsx": "5a097006 kit",
-  "src/kit/Landing.tsx": "57e69c50 kit",
+  "src/kit/Landing.tsx": "35ef7a8a kit",
   "src/kit/LegalPage.tsx": "f9a9df1e kit",
   "src/kit/ModelForm.tsx": "f90ea7e8 kit",
-  "src/kit/ModelTable.tsx": "3ed793d6 kit",
+  "src/kit/ModelTable.tsx": "64482825 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "fb5e87dc kit",
   "src/kit/PictureDialog.tsx": "015af7de kit",
@@ -45333,11 +45333,11 @@ exports[`../../../examples/builder/smithable.yml > the generated files are as re
   "src/kit/format.ts": "b9e92275 kit",
   "src/kit/formats.ts": "2257fcc1 kit",
   "src/kit/formula.ts": "d73c0380 kit",
-  "src/kit/import.server.ts": "7a5a3701 kit",
+  "src/kit/import.server.ts": "889830b2 kit",
   "src/kit/import.ts": "3f48e858 kit",
   "src/kit/limit.ts": "c9fd41d5 kit",
   "src/kit/log.server.ts": "4d493425 kit",
-  "src/kit/mail.ts": "d005acf1 kit",
+  "src/kit/mail.ts": "f1f04255 kit",
   "src/kit/model.ts": "4f517d82 kit",
   "src/kit/now.ts": "5ea87828 kit",
   "src/kit/origin.ts": "f7090ee4 kit",
@@ -45355,7 +45355,7 @@ exports[`../../../examples/builder/smithable.yml > the generated files are as re
   "src/kit/uploads.ts": "4e982bfe kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "901bdc17 kit",
+  "src/kit/words/en.ts": "846b5c41 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/app-card.server.ts": "b498b974 generated",
   "src/lib/app-card.ts": "93f0b476 generated",
@@ -45382,7 +45382,7 @@ exports[`../../../examples/builder/smithable.yml > the generated files are as re
   "src/routes/projects/$id.tsx": "b413344a generated",
   "src/routes/projects/index.tsx": "07e25658 generated",
   "src/routes/projects/new.tsx": "747fcb9b generated",
-  "src/routes/robots[.]txt.ts": "3992ada2 generated",
+  "src/routes/robots[.]txt.ts": "11965935 generated",
   "src/routes/services/$id.tsx": "a5473589 generated",
   "src/routes/services/index.tsx": "d980917e generated",
   "src/routes/services/new.tsx": "5d1280e4 generated",
@@ -45392,7 +45392,7 @@ exports[`../../../examples/builder/smithable.yml > the generated files are as re
   "src/routes/team/activity.tsx": "6b0a8c76 generated",
   "src/routes/team/index.tsx": "66862ce0 generated",
   "src/start.ts": "6b874d2d kit",
-  "src/styles.css": "1f4ccc9e kit",
+  "src/styles.css": "dcd25010 kit",
   "src/theme.css": "1fd40aa1 generated",
   "tests/smoke.spec.ts": "8b39da31 generated",
   "tsconfig.json": "802b1b64 kit",
@@ -45443,7 +45443,7 @@ The team page lists who has access and lets administrators invite people by emai
 Sign-up is closed (see \`selfSignUp\` under \`signIn\` in \`smithable.auth.yml\`): only invited addresses and the \`admins\` of \`smithable.auth.yml\` can sign in. Everyone else is refused at sign-in and told to ask an administrator. A demo (\`DEMO_SIGN_IN=1\`) is the exception: its "Try it as" buttons sign in demo users, who join whatever the setting says; set it only on a showcase app whose data is reset.
 ## Mail
 
-Hooks (\`src/custom/hooks.ts\`) and custom code send mail with \`sendMail\` from \`src/kit/mail.ts\`. It reads SMTP settings from the environment: \`SMTP_URL\` (\`smtp://user:password@host:587\`, or \`smtps://\` for TLS from the start) or \`SMTP_HOST\`, \`SMTP_PORT\`, \`SMTP_USER\` and \`SMTP_PASSWORD\`, plus \`MAIL_FROM\` (the sender). Any provider works; give its SPF, DKIM and DMARC records to the sender's domain so the mail arrives. Without settings nothing is sent: mails are written to \`data/mail/outbox\` as \`.eml\` files, which is what development and tests look at.
+Hooks (\`src/custom/hooks.ts\`) and custom code send mail with \`sendMail\` from \`src/kit/mail.ts\`. It reads SMTP settings from the environment: \`SMTP_URL\` (\`smtp://user:password@host:587\`, or \`smtps://\` for TLS from the start) or \`SMTP_HOST\`, \`SMTP_PORT\`, \`SMTP_USER\` and \`SMTP_PASSWORD\`, plus \`MAIL_FROM\` (the sender). Any provider works; give its SPF, DKIM and DMARC records to the sender's domain so the mail arrives. Without settings nothing is sent: mails are written to \`data/mail/outbox\` as \`.eml\` files, which is what development and tests look at. \`MAIL_MODE=outbox\` keeps them there with settings too; started with \`MAIL_MODE\` (\`outbox\`, \`testers\` where the mail server lets only testers through, or \`all\`), the app says on Import what happens to the addresses in a file.
 
 ## Limits
 
@@ -50529,7 +50529,7 @@ type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
  */
 function withFormulaDefaults<T extends Record<string, unknown>>(given: T): T {
   const values: Record<string, unknown> = { ...given };
-  if (values.placedAt === undefined) values.placedAt = orderDefaults.placedAt(values);
+  if (values.placedAt === undefined) values.placedAt = new Date(orderDefaults.placedAt(values));
   return values as T;
 }
 
@@ -55183,7 +55183,7 @@ exports[`../../../examples/crm/smithable.yml > file list and generated code 1`] 
 exports[`../../../examples/crm/smithable.yml > the generated files are as reviewed 1`] = `
 {
   ".dockerignore": "daf7c505 scaffold",
-  ".gitignore": "9b776503 scaffold",
+  ".gitignore": "984411d3 scaffold",
   ".mcp.json": "05d20cc7 scaffold",
   "AGENTS.md": "189a41e5 kit",
   "CLAUDE.md": "141c3f5e scaffold",
@@ -55192,13 +55192,13 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "LICENSES/hallmark-MIT.txt": "26d1de6b kit",
   "LICENSES/shadcn-ui.txt": "38dd653a kit",
   "LICENSES/tweakcn-Apache-2.0.txt": "dc4aedc0 kit",
-  "README.md": "25ef97a9 generated",
+  "README.md": "8c6db726 generated",
   "drizzle.config.ts": "0987fb48 kit",
   "package.json": "4555df1f generated",
   "playwright.config.ts": "5ffef2a7 kit",
   "pnpm-workspace.yaml": "1da1537f scaffold",
   "public/favicon.svg": "a04fad4d generated",
-  "server.mjs": "e77d2b28 kit",
+  "server.mjs": "88fa4dc7 kit",
   "smithable.lock": "2c03be87 generated",
   "src/components/ui/badge.tsx": "7c9b048e kit",
   "src/components/ui/button.tsx": "43356a7c kit",
@@ -55240,7 +55240,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/generated/order.import.server.ts": "afc9f15e generated",
   "src/generated/order.import.ts": "efdb6114 generated",
   "src/generated/order.schema.ts": "0a39b791 generated",
-  "src/generated/order.server.ts": "1eb61143 generated",
+  "src/generated/order.server.ts": "58022464 generated",
   "src/generated/order.ts": "739e757f generated",
   "src/generated/pages.ts": "93284445 generated",
   "src/generated/roles.ts": "1cc6979a generated",
@@ -55262,13 +55262,13 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/Dashboard.tsx": "98bcd927 kit",
   "src/kit/FieldInput.tsx": "39e40fcb kit",
   "src/kit/Filters.tsx": "0f5bfdfd kit",
-  "src/kit/ImportDialog.tsx": "d65da47a kit",
+  "src/kit/ImportDialog.tsx": "07f5864f kit",
   "src/kit/InlineRows.tsx": "5a097006 kit",
   "src/kit/Inspector.tsx": "2425cac5 kit",
-  "src/kit/Landing.tsx": "57e69c50 kit",
+  "src/kit/Landing.tsx": "35ef7a8a kit",
   "src/kit/MergeDialog.tsx": "9794e745 kit",
   "src/kit/ModelForm.tsx": "f90ea7e8 kit",
-  "src/kit/ModelTable.tsx": "3ed793d6 kit",
+  "src/kit/ModelTable.tsx": "64482825 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "fb5e87dc kit",
   "src/kit/PictureDialog.tsx": "015af7de kit",
@@ -55300,11 +55300,11 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/formats.ts": "2257fcc1 kit",
   "src/kit/formula.ts": "d73c0380 kit",
   "src/kit/grounded.ts": "5513d9ac kit",
-  "src/kit/import.server.ts": "7a5a3701 kit",
+  "src/kit/import.server.ts": "889830b2 kit",
   "src/kit/import.ts": "3f48e858 kit",
   "src/kit/limit.ts": "c9fd41d5 kit",
   "src/kit/log.server.ts": "4d493425 kit",
-  "src/kit/mail.ts": "d005acf1 kit",
+  "src/kit/mail.ts": "f1f04255 kit",
   "src/kit/model.ts": "4f517d82 kit",
   "src/kit/now.ts": "5ea87828 kit",
   "src/kit/origin.ts": "f7090ee4 kit",
@@ -55324,7 +55324,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "901bdc17 kit",
+  "src/kit/words/en.ts": "846b5c41 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/app-card.server.ts": "a5f24452 generated",
   "src/lib/app-card.ts": "93f0b476 generated",
@@ -55362,7 +55362,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/routes/team/index.tsx": "6349287f generated",
   "src/routes/team/trash.tsx": "bbce40d6 generated",
   "src/start.ts": "6b874d2d kit",
-  "src/styles.css": "1f4ccc9e kit",
+  "src/styles.css": "dcd25010 kit",
   "src/theme.css": "1fd40aa1 generated",
   "tests/smoke.spec.ts": "cd6797d3 generated",
   "tsconfig.json": "802b1b64 kit",
@@ -55407,7 +55407,7 @@ In production, set \`BETTER_AUTH_SECRET\` (at least 32 random characters, e.g. \
 People type their address and get a six-digit code by mail, good for ten minutes and five tries. Signing in and signing up are the same form; who may sign up follows the app's sign-in settings, and anyone else is told the same and gets no mail. At most five codes an hour go to one address (and twenty to one network address): someone asking for a sixth waits. The codes go out through the app's mail settings (\`SMTP_URL\` and \`MAIL_FROM\`, see "Mail"); without them, in development, they land in \`data/mail/outbox\`, and in production the sign-in page says that it cannot send mail.
 ## Mail
 
-Hooks (\`src/custom/hooks.ts\`) and custom code send mail with \`sendMail\` from \`src/kit/mail.ts\`. It reads SMTP settings from the environment: \`SMTP_URL\` (\`smtp://user:password@host:587\`, or \`smtps://\` for TLS from the start) or \`SMTP_HOST\`, \`SMTP_PORT\`, \`SMTP_USER\` and \`SMTP_PASSWORD\`, plus \`MAIL_FROM\` (the sender). Any provider works; give its SPF, DKIM and DMARC records to the sender's domain so the mail arrives. Without settings nothing is sent: mails are written to \`data/mail/outbox\` as \`.eml\` files, which is what development and tests look at.
+Hooks (\`src/custom/hooks.ts\`) and custom code send mail with \`sendMail\` from \`src/kit/mail.ts\`. It reads SMTP settings from the environment: \`SMTP_URL\` (\`smtp://user:password@host:587\`, or \`smtps://\` for TLS from the start) or \`SMTP_HOST\`, \`SMTP_PORT\`, \`SMTP_USER\` and \`SMTP_PASSWORD\`, plus \`MAIL_FROM\` (the sender). Any provider works; give its SPF, DKIM and DMARC records to the sender's domain so the mail arrives. Without settings nothing is sent: mails are written to \`data/mail/outbox\` as \`.eml\` files, which is what development and tests look at. \`MAIL_MODE=outbox\` keeps them there with settings too; started with \`MAIL_MODE\` (\`outbox\`, \`testers\` where the mail server lets only testers through, or \`all\`), the app says on Import what happens to the addresses in a file.
 
 ## Limits
 
@@ -64593,7 +64593,7 @@ exports[`../../../examples/invoicing/smithable.yml > file list and generated cod
 import { createFileRoute } from "@tanstack/react-router";
 import { originOf } from "#/kit/origin";
 
-const ROBOTS = "User-agent: *\\nAllow: /$\\nAllow: /privacy\\nAllow: /assets/\\nAllow: /images/\\nAllow: /files/\\nDisallow: /\\n";
+const ROBOTS = "User-agent: *\\nAllow: /$\\nAllow: /privacy\\nAllow: /assets/\\nAllow: /images/\\nAllow: /media/\\nAllow: /files/\\nDisallow: /\\n";
 
 export const Route = createFileRoute("/robots.txt")({
   server: {
@@ -65437,7 +65437,7 @@ exports[`../../../examples/invoicing/smithable.yml > file list and generated cod
 exports[`../../../examples/invoicing/smithable.yml > the generated files are as reviewed 1`] = `
 {
   ".dockerignore": "daf7c505 scaffold",
-  ".gitignore": "9b776503 scaffold",
+  ".gitignore": "984411d3 scaffold",
   ".mcp.json": "05d20cc7 scaffold",
   "AGENTS.md": "189a41e5 kit",
   "CLAUDE.md": "141c3f5e scaffold",
@@ -65446,13 +65446,13 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "LICENSES/hallmark-MIT.txt": "26d1de6b kit",
   "LICENSES/shadcn-ui.txt": "38dd653a kit",
   "LICENSES/tweakcn-Apache-2.0.txt": "dc4aedc0 kit",
-  "README.md": "ad057e8e generated",
+  "README.md": "9393846d generated",
   "drizzle.config.ts": "0987fb48 kit",
   "package.json": "296747cc generated",
   "playwright.config.ts": "5ffef2a7 kit",
   "pnpm-workspace.yaml": "1da1537f scaffold",
   "public/favicon.svg": "07f97e21 generated",
-  "server.mjs": "e77d2b28 kit",
+  "server.mjs": "88fa4dc7 kit",
   "smithable.lock": "2c03be87 generated",
   "src/components/ui/badge.tsx": "7c9b048e kit",
   "src/components/ui/button.tsx": "43356a7c kit",
@@ -65521,14 +65521,14 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/FieldInput.tsx": "39e40fcb kit",
   "src/kit/FileInput.tsx": "5d567f82 kit",
   "src/kit/Filters.tsx": "0f5bfdfd kit",
-  "src/kit/ImportDialog.tsx": "d65da47a kit",
+  "src/kit/ImportDialog.tsx": "07f5864f kit",
   "src/kit/InlineRows.tsx": "5a097006 kit",
   "src/kit/Inspector.tsx": "2425cac5 kit",
-  "src/kit/Landing.tsx": "57e69c50 kit",
+  "src/kit/Landing.tsx": "35ef7a8a kit",
   "src/kit/LegalPage.tsx": "f9a9df1e kit",
   "src/kit/Live.tsx": "fbaa47cd kit",
   "src/kit/ModelForm.tsx": "f90ea7e8 kit",
-  "src/kit/ModelTable.tsx": "3ed793d6 kit",
+  "src/kit/ModelTable.tsx": "64482825 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Onboarding.tsx": "b68216f0 kit",
   "src/kit/Overflow.tsx": "fb5e87dc kit",
@@ -65562,17 +65562,17 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/formats.ts": "2257fcc1 kit",
   "src/kit/formula.ts": "d73c0380 kit",
   "src/kit/grounded.ts": "5513d9ac kit",
-  "src/kit/import.server.ts": "7a5a3701 kit",
+  "src/kit/import.server.ts": "889830b2 kit",
   "src/kit/import.ts": "3f48e858 kit",
   "src/kit/limit.ts": "c9fd41d5 kit",
   "src/kit/live.server.ts": "474834ab kit",
   "src/kit/log.server.ts": "4d493425 kit",
-  "src/kit/mail.ts": "d005acf1 kit",
+  "src/kit/mail.ts": "f1f04255 kit",
   "src/kit/model.ts": "4f517d82 kit",
   "src/kit/now.ts": "5ea87828 kit",
   "src/kit/origin.ts": "f7090ee4 kit",
-  "src/kit/outgoing.server.ts": "6b16b2aa kit",
-  "src/kit/outgoing.ts": "e1f82237 kit",
+  "src/kit/outgoing.server.ts": "14d20b55 kit",
+  "src/kit/outgoing.ts": "7018c495 kit",
   "src/kit/page-guard.ts": "d8974971 kit",
   "src/kit/params.ts": "65a69da0 kit",
   "src/kit/people-match.ts": "09a0f7dc kit",
@@ -65592,7 +65592,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "901bdc17 kit",
+  "src/kit/words/en.ts": "846b5c41 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/app-card.server.ts": "eacbd913 generated",
   "src/lib/app-card.ts": "93f0b476 generated",
@@ -65623,13 +65623,13 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/routes/invoices/new.tsx": "8fcd2b9f generated",
   "src/routes/overview/index.tsx": "254c2c93 generated",
   "src/routes/privacy/index.tsx": "6ef06b81 generated",
-  "src/routes/robots[.]txt.ts": "a6b36402 generated",
+  "src/routes/robots[.]txt.ts": "21d2d615 generated",
   "src/routes/settings/index.tsx": "9fdd2b64 generated",
   "src/routes/sign-in.tsx": "f931fe7c generated",
   "src/routes/sitemap[.]xml.ts": "5c8fa673 generated",
   "src/routes/welcome/index.tsx": "ad2a6a87 generated",
   "src/start.ts": "6b874d2d kit",
-  "src/styles.css": "1f4ccc9e kit",
+  "src/styles.css": "dcd25010 kit",
   "src/theme.css": "1fd40aa1 generated",
   "tests/smoke.spec.ts": "dadec54d generated",
   "tsconfig.json": "802b1b64 kit",
@@ -65680,7 +65680,7 @@ The team page lists who has access and lets administrators invite people by emai
 Sign-up is closed (see \`selfSignUp\` under \`signIn\` in \`smithable.auth.yml\`): only invited addresses and the \`admins\` of \`smithable.auth.yml\` can sign in. Everyone else is refused at sign-in and told to ask an administrator. A demo (\`DEMO_SIGN_IN=1\`) is the exception: its "Try it as" buttons sign in demo users, who join whatever the setting says; set it only on a showcase app whose data is reset.
 ## Mail
 
-Hooks (\`src/custom/hooks.ts\`) and custom code send mail with \`sendMail\` from \`src/kit/mail.ts\`. It reads SMTP settings from the environment: \`SMTP_URL\` (\`smtp://user:password@host:587\`, or \`smtps://\` for TLS from the start) or \`SMTP_HOST\`, \`SMTP_PORT\`, \`SMTP_USER\` and \`SMTP_PASSWORD\`, plus \`MAIL_FROM\` (the sender). Any provider works; give its SPF, DKIM and DMARC records to the sender's domain so the mail arrives. Without settings nothing is sent: mails are written to \`data/mail/outbox\` as \`.eml\` files, which is what development and tests look at.
+Hooks (\`src/custom/hooks.ts\`) and custom code send mail with \`sendMail\` from \`src/kit/mail.ts\`. It reads SMTP settings from the environment: \`SMTP_URL\` (\`smtp://user:password@host:587\`, or \`smtps://\` for TLS from the start) or \`SMTP_HOST\`, \`SMTP_PORT\`, \`SMTP_USER\` and \`SMTP_PASSWORD\`, plus \`MAIL_FROM\` (the sender). Any provider works; give its SPF, DKIM and DMARC records to the sender's domain so the mail arrives. Without settings nothing is sent: mails are written to \`data/mail/outbox\` as \`.eml\` files, which is what development and tests look at. \`MAIL_MODE=outbox\` keeps them there with settings too; started with \`MAIL_MODE\` (\`outbox\`, \`testers\` where the mail server lets only testers through, or \`all\`), the app says on Import what happens to the addresses in a file.
 
 Browser push (\`to: push\`) needs no settings: the app makes a key pair at its first start and keeps it with its data, so a backup keeps everyone's subscriptions. To give your own, set \`PUSH_VAPID_PUBLIC_KEY\` and \`PUSH_VAPID_PRIVATE_KEY\` (and \`PUSH_VAPID_SUBJECT\`, the contact the push services may write to; \`MAIL_FROM\` otherwise). A new pair ends every subscription: people turn notifications on again under their name.
 
@@ -75616,7 +75616,7 @@ exports[`../../../examples/kiosk/smithable.yml > file list and generated code > 
 import { createFileRoute } from "@tanstack/react-router";
 import { originOf } from "#/kit/origin";
 
-const ROBOTS = "User-agent: *\\nAllow: /$\\nAllow: /stops\\nAllow: /where\\nAllow: /catering\\nAllow: /assets/\\nAllow: /images/\\nAllow: /files/\\nDisallow: /\\n";
+const ROBOTS = "User-agent: *\\nAllow: /$\\nAllow: /stops\\nAllow: /where\\nAllow: /catering\\nAllow: /assets/\\nAllow: /images/\\nAllow: /media/\\nAllow: /files/\\nDisallow: /\\n";
 
 export const Route = createFileRoute("/robots.txt")({
   server: {
@@ -76920,7 +76920,7 @@ exports[`../../../examples/kiosk/smithable.yml > file list and generated code 1`
 exports[`../../../examples/kiosk/smithable.yml > the generated files are as reviewed 1`] = `
 {
   ".dockerignore": "daf7c505 scaffold",
-  ".gitignore": "9b776503 scaffold",
+  ".gitignore": "984411d3 scaffold",
   ".mcp.json": "05d20cc7 scaffold",
   "AGENTS.md": "189a41e5 kit",
   "CLAUDE.md": "141c3f5e scaffold",
@@ -76929,7 +76929,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "LICENSES/hallmark-MIT.txt": "26d1de6b kit",
   "LICENSES/shadcn-ui.txt": "38dd653a kit",
   "LICENSES/tweakcn-Apache-2.0.txt": "dc4aedc0 kit",
-  "README.md": "b6f20ec7 generated",
+  "README.md": "278592c6 generated",
   "drizzle.config.ts": "0987fb48 kit",
   "package.json": "457fbbd4 generated",
   "playwright.config.ts": "5ffef2a7 kit",
@@ -76937,7 +76937,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "public/favicon.svg": "70fe2e53 generated",
   "public/manifest.webmanifest": "5ed0ee91 generated",
   "public/sw.js": "107e85e9 generated",
-  "server.mjs": "e77d2b28 kit",
+  "server.mjs": "88fa4dc7 kit",
   "smithable.lock": "2c03be87 generated",
   "src/components/ui/badge.tsx": "7c9b048e kit",
   "src/components/ui/button.tsx": "43356a7c kit",
@@ -77021,12 +77021,12 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/FieldInput.tsx": "39e40fcb kit",
   "src/kit/FileInput.tsx": "5d567f82 kit",
   "src/kit/Filters.tsx": "0f5bfdfd kit",
-  "src/kit/ImportDialog.tsx": "d65da47a kit",
+  "src/kit/ImportDialog.tsx": "07f5864f kit",
   "src/kit/InlineRows.tsx": "5a097006 kit",
-  "src/kit/Landing.tsx": "57e69c50 kit",
+  "src/kit/Landing.tsx": "35ef7a8a kit",
   "src/kit/Live.tsx": "fbaa47cd kit",
   "src/kit/ModelForm.tsx": "f90ea7e8 kit",
-  "src/kit/ModelTable.tsx": "3ed793d6 kit",
+  "src/kit/ModelTable.tsx": "64482825 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/OrderPage.tsx": "247ffe56 kit",
   "src/kit/Overflow.tsx": "fb5e87dc kit",
@@ -77056,17 +77056,17 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/formats.ts": "2257fcc1 kit",
   "src/kit/formula.ts": "d73c0380 kit",
   "src/kit/hours.ts": "fac9ba0f kit",
-  "src/kit/import.server.ts": "7a5a3701 kit",
+  "src/kit/import.server.ts": "889830b2 kit",
   "src/kit/import.ts": "3f48e858 kit",
   "src/kit/limit.ts": "c9fd41d5 kit",
   "src/kit/live.server.ts": "474834ab kit",
   "src/kit/log.server.ts": "4d493425 kit",
-  "src/kit/mail.ts": "d005acf1 kit",
+  "src/kit/mail.ts": "f1f04255 kit",
   "src/kit/model.ts": "4f517d82 kit",
   "src/kit/now.ts": "5ea87828 kit",
   "src/kit/origin.ts": "f7090ee4 kit",
-  "src/kit/outgoing.server.ts": "6b16b2aa kit",
-  "src/kit/outgoing.ts": "e1f82237 kit",
+  "src/kit/outgoing.server.ts": "14d20b55 kit",
+  "src/kit/outgoing.ts": "7018c495 kit",
   "src/kit/page-guard.ts": "d8974971 kit",
   "src/kit/params.ts": "65a69da0 kit",
   "src/kit/people-match.ts": "09a0f7dc kit",
@@ -77085,7 +77085,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/uploads.ts": "4e982bfe kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "901bdc17 kit",
+  "src/kit/words/en.ts": "846b5c41 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/app-card.server.ts": "d20208f8 generated",
   "src/lib/app-card.ts": "93f0b476 generated",
@@ -77116,7 +77116,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/routes/orders/$id.tsx": "eb8a58da generated",
   "src/routes/orders/index.tsx": "4fb12d6e generated",
   "src/routes/orders/new.tsx": "1739d5ad generated",
-  "src/routes/robots[.]txt.ts": "17db52af generated",
+  "src/routes/robots[.]txt.ts": "63cfc100 generated",
   "src/routes/sign-in.tsx": "11f3b277 generated",
   "src/routes/sitemap[.]xml.ts": "2e83acd6 generated",
   "src/routes/stops/$id.tsx": "7d3c395b generated",
@@ -77126,7 +77126,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/routes/team/index.tsx": "d0aa5bca generated",
   "src/routes/where/index.tsx": "7e80c6dc generated",
   "src/start.ts": "6b874d2d kit",
-  "src/styles.css": "1f4ccc9e kit",
+  "src/styles.css": "dcd25010 kit",
   "src/theme.css": "1fd40aa1 generated",
   "tests/smoke.spec.ts": "7ef86ff1 generated",
   "tsconfig.json": "802b1b64 kit",
@@ -77171,7 +77171,7 @@ In production, set \`BETTER_AUTH_SECRET\` (at least 32 random characters, e.g. \
 People type their address and get a six-digit code by mail, good for ten minutes and five tries. Signing in and signing up are the same form; who may sign up follows the app's sign-in settings, and anyone else is told the same and gets no mail. At most five codes an hour go to one address (and twenty to one network address): someone asking for a sixth waits. The codes go out through the app's mail settings (\`SMTP_URL\` and \`MAIL_FROM\`, see "Mail"); without them, in development, they land in \`data/mail/outbox\`, and in production the sign-in page says that it cannot send mail.
 ## Mail
 
-Hooks (\`src/custom/hooks.ts\`) and custom code send mail with \`sendMail\` from \`src/kit/mail.ts\`. It reads SMTP settings from the environment: \`SMTP_URL\` (\`smtp://user:password@host:587\`, or \`smtps://\` for TLS from the start) or \`SMTP_HOST\`, \`SMTP_PORT\`, \`SMTP_USER\` and \`SMTP_PASSWORD\`, plus \`MAIL_FROM\` (the sender). Any provider works; give its SPF, DKIM and DMARC records to the sender's domain so the mail arrives. Without settings nothing is sent: mails are written to \`data/mail/outbox\` as \`.eml\` files, which is what development and tests look at.
+Hooks (\`src/custom/hooks.ts\`) and custom code send mail with \`sendMail\` from \`src/kit/mail.ts\`. It reads SMTP settings from the environment: \`SMTP_URL\` (\`smtp://user:password@host:587\`, or \`smtps://\` for TLS from the start) or \`SMTP_HOST\`, \`SMTP_PORT\`, \`SMTP_USER\` and \`SMTP_PASSWORD\`, plus \`MAIL_FROM\` (the sender). Any provider works; give its SPF, DKIM and DMARC records to the sender's domain so the mail arrives. Without settings nothing is sent: mails are written to \`data/mail/outbox\` as \`.eml\` files, which is what development and tests look at. \`MAIL_MODE=outbox\` keeps them there with settings too; started with \`MAIL_MODE\` (\`outbox\`, \`testers\` where the mail server lets only testers through, or \`all\`), the app says on Import what happens to the addresses in a file.
 
 ## Limits
 
@@ -81424,7 +81424,7 @@ exports[`../../../examples/marketplace/smithable.yml > file list and generated c
 import { createFileRoute } from "@tanstack/react-router";
 import { originOf } from "#/kit/origin";
 
-const ROBOTS = "User-agent: *\\nAllow: /welcome\\nAllow: /$\\nAllow: /assets/\\nAllow: /images/\\nAllow: /files/\\nDisallow: /\\n";
+const ROBOTS = "User-agent: *\\nAllow: /welcome\\nAllow: /$\\nAllow: /assets/\\nAllow: /images/\\nAllow: /media/\\nAllow: /files/\\nDisallow: /\\n";
 
 export const Route = createFileRoute("/robots.txt")({
   server: {
@@ -82418,7 +82418,7 @@ exports[`../../../examples/marketplace/smithable.yml > file list and generated c
 exports[`../../../examples/marketplace/smithable.yml > the generated files are as reviewed 1`] = `
 {
   ".dockerignore": "daf7c505 scaffold",
-  ".gitignore": "9b776503 scaffold",
+  ".gitignore": "984411d3 scaffold",
   ".mcp.json": "05d20cc7 scaffold",
   "AGENTS.md": "189a41e5 kit",
   "CLAUDE.md": "141c3f5e scaffold",
@@ -82427,13 +82427,13 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "LICENSES/hallmark-MIT.txt": "26d1de6b kit",
   "LICENSES/shadcn-ui.txt": "38dd653a kit",
   "LICENSES/tweakcn-Apache-2.0.txt": "dc4aedc0 kit",
-  "README.md": "c693a203 generated",
+  "README.md": "308c834a generated",
   "drizzle.config.ts": "0987fb48 kit",
   "package.json": "9c0c8307 generated",
   "playwright.config.ts": "5ffef2a7 kit",
   "pnpm-workspace.yaml": "1da1537f scaffold",
   "public/favicon.svg": "1c3b511c generated",
-  "server.mjs": "e77d2b28 kit",
+  "server.mjs": "88fa4dc7 kit",
   "smithable.lock": "2c03be87 generated",
   "src/components/ui/badge.tsx": "7c9b048e kit",
   "src/components/ui/button.tsx": "43356a7c kit",
@@ -82478,12 +82478,12 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/FieldInput.tsx": "39e40fcb kit",
   "src/kit/FileInput.tsx": "5d567f82 kit",
   "src/kit/Filters.tsx": "0f5bfdfd kit",
-  "src/kit/ImportDialog.tsx": "d65da47a kit",
+  "src/kit/ImportDialog.tsx": "07f5864f kit",
   "src/kit/InlineRows.tsx": "5a097006 kit",
   "src/kit/Inspector.tsx": "2425cac5 kit",
-  "src/kit/Landing.tsx": "57e69c50 kit",
+  "src/kit/Landing.tsx": "35ef7a8a kit",
   "src/kit/ModelForm.tsx": "f90ea7e8 kit",
-  "src/kit/ModelTable.tsx": "3ed793d6 kit",
+  "src/kit/ModelTable.tsx": "64482825 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "fb5e87dc kit",
   "src/kit/PictureDialog.tsx": "015af7de kit",
@@ -82514,11 +82514,11 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/formats.ts": "2257fcc1 kit",
   "src/kit/formula.ts": "d73c0380 kit",
   "src/kit/grounded.ts": "5513d9ac kit",
-  "src/kit/import.server.ts": "7a5a3701 kit",
+  "src/kit/import.server.ts": "889830b2 kit",
   "src/kit/import.ts": "3f48e858 kit",
   "src/kit/limit.ts": "c9fd41d5 kit",
   "src/kit/log.server.ts": "4d493425 kit",
-  "src/kit/mail.ts": "d005acf1 kit",
+  "src/kit/mail.ts": "f1f04255 kit",
   "src/kit/model.ts": "4f517d82 kit",
   "src/kit/now.ts": "5ea87828 kit",
   "src/kit/origin.ts": "f7090ee4 kit",
@@ -82541,7 +82541,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "901bdc17 kit",
+  "src/kit/words/en.ts": "846b5c41 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/app-card.server.ts": "f87d436f generated",
   "src/lib/app-card.ts": "93f0b476 generated",
@@ -82569,7 +82569,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/routes/new.tsx": "f7a5182d generated",
   "src/routes/review/file.$id.ts": "e0b138f6 generated",
   "src/routes/review/index.tsx": "3fc62105 generated",
-  "src/routes/robots[.]txt.ts": "74de5562 generated",
+  "src/routes/robots[.]txt.ts": "cbf1bff5 generated",
   "src/routes/saved/$id.tsx": "603d45a0 generated",
   "src/routes/saved/index.tsx": "095fc40b generated",
   "src/routes/saved/new.tsx": "6599de80 generated",
@@ -82577,7 +82577,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/routes/sitemap[.]xml.ts": "abb491ed generated",
   "src/routes/welcome/index.tsx": "427e81bc generated",
   "src/start.ts": "6b874d2d kit",
-  "src/styles.css": "1f4ccc9e kit",
+  "src/styles.css": "dcd25010 kit",
   "src/theme.css": "1fd40aa1 generated",
   "tests/smoke.spec.ts": "dcf4060e generated",
   "tsconfig.json": "802b1b64 kit",
@@ -82628,7 +82628,7 @@ The team page lists who has access and lets administrators invite people by emai
 Sign-up is closed (see \`selfSignUp\` under \`signIn\` in \`smithable.auth.yml\`): only invited addresses and the \`admins\` of \`smithable.auth.yml\` can sign in. Everyone else is refused at sign-in and told to ask an administrator. A demo (\`DEMO_SIGN_IN=1\`) is the exception: its "Try it as" buttons sign in demo users, who join whatever the setting says; set it only on a showcase app whose data is reset.
 ## Mail
 
-Hooks (\`src/custom/hooks.ts\`) and custom code send mail with \`sendMail\` from \`src/kit/mail.ts\`. It reads SMTP settings from the environment: \`SMTP_URL\` (\`smtp://user:password@host:587\`, or \`smtps://\` for TLS from the start) or \`SMTP_HOST\`, \`SMTP_PORT\`, \`SMTP_USER\` and \`SMTP_PASSWORD\`, plus \`MAIL_FROM\` (the sender). Any provider works; give its SPF, DKIM and DMARC records to the sender's domain so the mail arrives. Without settings nothing is sent: mails are written to \`data/mail/outbox\` as \`.eml\` files, which is what development and tests look at.
+Hooks (\`src/custom/hooks.ts\`) and custom code send mail with \`sendMail\` from \`src/kit/mail.ts\`. It reads SMTP settings from the environment: \`SMTP_URL\` (\`smtp://user:password@host:587\`, or \`smtps://\` for TLS from the start) or \`SMTP_HOST\`, \`SMTP_PORT\`, \`SMTP_USER\` and \`SMTP_PASSWORD\`, plus \`MAIL_FROM\` (the sender). Any provider works; give its SPF, DKIM and DMARC records to the sender's domain so the mail arrives. Without settings nothing is sent: mails are written to \`data/mail/outbox\` as \`.eml\` files, which is what development and tests look at. \`MAIL_MODE=outbox\` keeps them there with settings too; started with \`MAIL_MODE\` (\`outbox\`, \`testers\` where the mail server lets only testers through, or \`all\`), the app says on Import what happens to the addresses in a file.
 
 ## Limits
 
@@ -88302,7 +88302,7 @@ exports[`../../../examples/painter/smithable.yml > file list and generated code 
 import { createFileRoute } from "@tanstack/react-router";
 import { originOf } from "#/kit/origin";
 
-const ROBOTS = "User-agent: *\\nAllow: /$\\nAllow: /jobs\\nAllow: /privacy\\nAllow: /assets/\\nAllow: /images/\\nAllow: /files/\\nDisallow: /\\n";
+const ROBOTS = "User-agent: *\\nAllow: /$\\nAllow: /jobs\\nAllow: /privacy\\nAllow: /assets/\\nAllow: /images/\\nAllow: /media/\\nAllow: /files/\\nDisallow: /\\n";
 
 export const Route = createFileRoute("/robots.txt")({
   server: {
@@ -89257,7 +89257,7 @@ exports[`../../../examples/painter/smithable.yml > file list and generated code 
 exports[`../../../examples/painter/smithable.yml > the generated files are as reviewed 1`] = `
 {
   ".dockerignore": "daf7c505 scaffold",
-  ".gitignore": "9b776503 scaffold",
+  ".gitignore": "984411d3 scaffold",
   ".mcp.json": "05d20cc7 scaffold",
   "AGENTS.md": "189a41e5 kit",
   "CLAUDE.md": "141c3f5e scaffold",
@@ -89266,13 +89266,13 @@ exports[`../../../examples/painter/smithable.yml > the generated files are as re
   "LICENSES/hallmark-MIT.txt": "26d1de6b kit",
   "LICENSES/shadcn-ui.txt": "38dd653a kit",
   "LICENSES/tweakcn-Apache-2.0.txt": "dc4aedc0 kit",
-  "README.md": "d6fe9018 generated",
+  "README.md": "576863d1 generated",
   "drizzle.config.ts": "0987fb48 kit",
   "package.json": "3705f9b1 generated",
   "playwright.config.ts": "5ffef2a7 kit",
   "pnpm-workspace.yaml": "1da1537f scaffold",
   "public/favicon.svg": "bb99542b generated",
-  "server.mjs": "e77d2b28 kit",
+  "server.mjs": "88fa4dc7 kit",
   "smithable.lock": "2c03be87 generated",
   "src/components/ui/badge.tsx": "7c9b048e kit",
   "src/components/ui/button.tsx": "43356a7c kit",
@@ -89332,12 +89332,12 @@ exports[`../../../examples/painter/smithable.yml > the generated files are as re
   "src/kit/FieldInput.tsx": "39e40fcb kit",
   "src/kit/FileInput.tsx": "5d567f82 kit",
   "src/kit/Filters.tsx": "0f5bfdfd kit",
-  "src/kit/ImportDialog.tsx": "d65da47a kit",
+  "src/kit/ImportDialog.tsx": "07f5864f kit",
   "src/kit/InlineRows.tsx": "5a097006 kit",
-  "src/kit/Landing.tsx": "57e69c50 kit",
+  "src/kit/Landing.tsx": "35ef7a8a kit",
   "src/kit/LegalPage.tsx": "f9a9df1e kit",
   "src/kit/ModelForm.tsx": "f90ea7e8 kit",
-  "src/kit/ModelTable.tsx": "3ed793d6 kit",
+  "src/kit/ModelTable.tsx": "64482825 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "fb5e87dc kit",
   "src/kit/PictureDialog.tsx": "015af7de kit",
@@ -89364,11 +89364,11 @@ exports[`../../../examples/painter/smithable.yml > the generated files are as re
   "src/kit/format.ts": "b9e92275 kit",
   "src/kit/formats.ts": "2257fcc1 kit",
   "src/kit/formula.ts": "d73c0380 kit",
-  "src/kit/import.server.ts": "7a5a3701 kit",
+  "src/kit/import.server.ts": "889830b2 kit",
   "src/kit/import.ts": "3f48e858 kit",
   "src/kit/limit.ts": "c9fd41d5 kit",
   "src/kit/log.server.ts": "4d493425 kit",
-  "src/kit/mail.ts": "d005acf1 kit",
+  "src/kit/mail.ts": "f1f04255 kit",
   "src/kit/model.ts": "4f517d82 kit",
   "src/kit/now.ts": "5ea87828 kit",
   "src/kit/origin.ts": "f7090ee4 kit",
@@ -89386,7 +89386,7 @@ exports[`../../../examples/painter/smithable.yml > the generated files are as re
   "src/kit/uploads.ts": "4e982bfe kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "901bdc17 kit",
+  "src/kit/words/en.ts": "846b5c41 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/app-card.server.ts": "fa86ab68 generated",
   "src/lib/app-card.ts": "93f0b476 generated",
@@ -89413,14 +89413,14 @@ exports[`../../../examples/painter/smithable.yml > the generated files are as re
   "src/routes/jobs/index.tsx": "631b8020 generated",
   "src/routes/jobs/new.tsx": "65893714 generated",
   "src/routes/privacy/index.tsx": "d583618f generated",
-  "src/routes/robots[.]txt.ts": "100b5058 generated",
+  "src/routes/robots[.]txt.ts": "e65ef773 generated",
   "src/routes/sign-in.tsx": "fc26205e generated",
   "src/routes/sitemap[.]xml.ts": "57c0d780 generated",
   "src/routes/start/index.tsx": "973769b9 generated",
   "src/routes/team/activity.tsx": "5a20d270 generated",
   "src/routes/team/index.tsx": "a6bc2c30 generated",
   "src/start.ts": "6b874d2d kit",
-  "src/styles.css": "1f4ccc9e kit",
+  "src/styles.css": "dcd25010 kit",
   "src/theme.css": "1fd40aa1 generated",
   "tests/smoke.spec.ts": "6b877684 generated",
   "tsconfig.json": "802b1b64 kit",
@@ -89465,7 +89465,7 @@ In production, set \`BETTER_AUTH_SECRET\` (at least 32 random characters, e.g. \
 People type their address and get a six-digit code by mail, good for ten minutes and five tries. Signing in and signing up are the same form; who may sign up follows the app's sign-in settings, and anyone else is told the same and gets no mail. At most five codes an hour go to one address (and twenty to one network address): someone asking for a sixth waits. The codes go out through the app's mail settings (\`SMTP_URL\` and \`MAIL_FROM\`, see "Mail"); without them, in development, they land in \`data/mail/outbox\`, and in production the sign-in page says that it cannot send mail.
 ## Mail
 
-Hooks (\`src/custom/hooks.ts\`) and custom code send mail with \`sendMail\` from \`src/kit/mail.ts\`. It reads SMTP settings from the environment: \`SMTP_URL\` (\`smtp://user:password@host:587\`, or \`smtps://\` for TLS from the start) or \`SMTP_HOST\`, \`SMTP_PORT\`, \`SMTP_USER\` and \`SMTP_PASSWORD\`, plus \`MAIL_FROM\` (the sender). Any provider works; give its SPF, DKIM and DMARC records to the sender's domain so the mail arrives. Without settings nothing is sent: mails are written to \`data/mail/outbox\` as \`.eml\` files, which is what development and tests look at.
+Hooks (\`src/custom/hooks.ts\`) and custom code send mail with \`sendMail\` from \`src/kit/mail.ts\`. It reads SMTP settings from the environment: \`SMTP_URL\` (\`smtp://user:password@host:587\`, or \`smtps://\` for TLS from the start) or \`SMTP_HOST\`, \`SMTP_PORT\`, \`SMTP_USER\` and \`SMTP_PASSWORD\`, plus \`MAIL_FROM\` (the sender). Any provider works; give its SPF, DKIM and DMARC records to the sender's domain so the mail arrives. Without settings nothing is sent: mails are written to \`data/mail/outbox\` as \`.eml\` files, which is what development and tests look at. \`MAIL_MODE=outbox\` keeps them there with settings too; started with \`MAIL_MODE\` (\`outbox\`, \`testers\` where the mail server lets only testers through, or \`all\`), the app says on Import what happens to the addresses in a file.
 
 ## Limits
 
@@ -92814,7 +92814,7 @@ exports[`../../../examples/records/smithable.yml > file list and generated code 
 import { createFileRoute } from "@tanstack/react-router";
 import { originOf } from "#/kit/origin";
 
-const ROBOTS = "User-agent: *\\nAllow: /$\\nAllow: /items\\nAllow: /assets/\\nAllow: /images/\\nAllow: /files/\\nDisallow: /\\n";
+const ROBOTS = "User-agent: *\\nAllow: /$\\nAllow: /items\\nAllow: /assets/\\nAllow: /images/\\nAllow: /media/\\nAllow: /files/\\nDisallow: /\\n";
 
 export const Route = createFileRoute("/robots.txt")({
   server: {
@@ -93392,7 +93392,7 @@ exports[`../../../examples/records/smithable.yml > file list and generated code 
 exports[`../../../examples/records/smithable.yml > the generated files are as reviewed 1`] = `
 {
   ".dockerignore": "daf7c505 scaffold",
-  ".gitignore": "9b776503 scaffold",
+  ".gitignore": "984411d3 scaffold",
   ".mcp.json": "05d20cc7 scaffold",
   "AGENTS.md": "189a41e5 kit",
   "CLAUDE.md": "141c3f5e scaffold",
@@ -93401,13 +93401,13 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "LICENSES/hallmark-MIT.txt": "26d1de6b kit",
   "LICENSES/shadcn-ui.txt": "38dd653a kit",
   "LICENSES/tweakcn-Apache-2.0.txt": "dc4aedc0 kit",
-  "README.md": "812ffdb9 generated",
+  "README.md": "dc5f9838 generated",
   "drizzle.config.ts": "0987fb48 kit",
   "package.json": "d808ed91 generated",
   "playwright.config.ts": "5ffef2a7 kit",
   "pnpm-workspace.yaml": "1da1537f scaffold",
   "public/favicon.svg": "d370f823 generated",
-  "server.mjs": "e77d2b28 kit",
+  "server.mjs": "88fa4dc7 kit",
   "smithable.lock": "2c03be87 generated",
   "src/components/ui/badge.tsx": "7c9b048e kit",
   "src/components/ui/button.tsx": "43356a7c kit",
@@ -93448,12 +93448,12 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/Consent.tsx": "c5ee7e50 kit",
   "src/kit/FieldInput.tsx": "39e40fcb kit",
   "src/kit/Filters.tsx": "0f5bfdfd kit",
-  "src/kit/ImportDialog.tsx": "d65da47a kit",
+  "src/kit/ImportDialog.tsx": "07f5864f kit",
   "src/kit/InlineRows.tsx": "5a097006 kit",
   "src/kit/Inspector.tsx": "2425cac5 kit",
-  "src/kit/Landing.tsx": "57e69c50 kit",
+  "src/kit/Landing.tsx": "35ef7a8a kit",
   "src/kit/ModelForm.tsx": "f90ea7e8 kit",
-  "src/kit/ModelTable.tsx": "3ed793d6 kit",
+  "src/kit/ModelTable.tsx": "64482825 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "fb5e87dc kit",
   "src/kit/PictureDialog.tsx": "015af7de kit",
@@ -93482,11 +93482,11 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/formats.ts": "2257fcc1 kit",
   "src/kit/formula.ts": "d73c0380 kit",
   "src/kit/grounded.ts": "5513d9ac kit",
-  "src/kit/import.server.ts": "7a5a3701 kit",
+  "src/kit/import.server.ts": "889830b2 kit",
   "src/kit/import.ts": "3f48e858 kit",
   "src/kit/limit.ts": "c9fd41d5 kit",
   "src/kit/log.server.ts": "4d493425 kit",
-  "src/kit/mail.ts": "d005acf1 kit",
+  "src/kit/mail.ts": "f1f04255 kit",
   "src/kit/model.ts": "4f517d82 kit",
   "src/kit/now.ts": "5ea87828 kit",
   "src/kit/origin.ts": "f7090ee4 kit",
@@ -93506,7 +93506,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "901bdc17 kit",
+  "src/kit/words/en.ts": "846b5c41 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/app-card.server.ts": "57b7eaca generated",
   "src/lib/app-card.ts": "93f0b476 generated",
@@ -93527,11 +93527,11 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/routes/items/$id.tsx": "6a20f2c4 generated",
   "src/routes/items/index.tsx": "dbfe2752 generated",
   "src/routes/items/new.tsx": "6d8d9bc4 generated",
-  "src/routes/robots[.]txt.ts": "01cda266 generated",
+  "src/routes/robots[.]txt.ts": "472c1e51 generated",
   "src/routes/sign-in.tsx": "563d1820 generated",
   "src/routes/sitemap[.]xml.ts": "8c1882fb generated",
   "src/start.ts": "6b874d2d kit",
-  "src/styles.css": "1f4ccc9e kit",
+  "src/styles.css": "dcd25010 kit",
   "src/theme.css": "1fd40aa1 generated",
   "tests/smoke.spec.ts": "b04668e0 generated",
   "tsconfig.json": "802b1b64 kit",
@@ -93582,7 +93582,7 @@ The team page lists who has access and lets administrators invite people by emai
 Sign-up is closed (see \`selfSignUp\` under \`signIn\` in \`smithable.auth.yml\`): only invited addresses and the \`admins\` of \`smithable.auth.yml\` can sign in. Everyone else is refused at sign-in and told to ask an administrator. A demo (\`DEMO_SIGN_IN=1\`) is the exception: its "Try it as" buttons sign in demo users, who join whatever the setting says; set it only on a showcase app whose data is reset.
 ## Mail
 
-Hooks (\`src/custom/hooks.ts\`) and custom code send mail with \`sendMail\` from \`src/kit/mail.ts\`. It reads SMTP settings from the environment: \`SMTP_URL\` (\`smtp://user:password@host:587\`, or \`smtps://\` for TLS from the start) or \`SMTP_HOST\`, \`SMTP_PORT\`, \`SMTP_USER\` and \`SMTP_PASSWORD\`, plus \`MAIL_FROM\` (the sender). Any provider works; give its SPF, DKIM and DMARC records to the sender's domain so the mail arrives. Without settings nothing is sent: mails are written to \`data/mail/outbox\` as \`.eml\` files, which is what development and tests look at.
+Hooks (\`src/custom/hooks.ts\`) and custom code send mail with \`sendMail\` from \`src/kit/mail.ts\`. It reads SMTP settings from the environment: \`SMTP_URL\` (\`smtp://user:password@host:587\`, or \`smtps://\` for TLS from the start) or \`SMTP_HOST\`, \`SMTP_PORT\`, \`SMTP_USER\` and \`SMTP_PASSWORD\`, plus \`MAIL_FROM\` (the sender). Any provider works; give its SPF, DKIM and DMARC records to the sender's domain so the mail arrives. Without settings nothing is sent: mails are written to \`data/mail/outbox\` as \`.eml\` files, which is what development and tests look at. \`MAIL_MODE=outbox\` keeps them there with settings too; started with \`MAIL_MODE\` (\`outbox\`, \`testers\` where the mail server lets only testers through, or \`all\`), the app says on Import what happens to the addresses in a file.
 
 ## Limits
 
@@ -99461,7 +99461,7 @@ exports[`../../../examples/restaurant/smithable.yml > file list and generated co
 import { createFileRoute } from "@tanstack/react-router";
 import { originOf } from "#/kit/origin";
 
-const ROBOTS = "User-agent: *\\nAllow: /$\\nAllow: /menu\\nAllow: /assets/\\nAllow: /images/\\nAllow: /files/\\nDisallow: /\\n";
+const ROBOTS = "User-agent: *\\nAllow: /$\\nAllow: /menu\\nAllow: /assets/\\nAllow: /images/\\nAllow: /media/\\nAllow: /files/\\nDisallow: /\\n";
 
 export const Route = createFileRoute("/robots.txt")({
   server: {
@@ -100706,7 +100706,7 @@ exports[`../../../examples/restaurant/smithable.yml > file list and generated co
 exports[`../../../examples/restaurant/smithable.yml > the generated files are as reviewed 1`] = `
 {
   ".dockerignore": "daf7c505 scaffold",
-  ".gitignore": "9b776503 scaffold",
+  ".gitignore": "984411d3 scaffold",
   ".mcp.json": "05d20cc7 scaffold",
   "AGENTS.md": "189a41e5 kit",
   "CLAUDE.md": "141c3f5e scaffold",
@@ -100715,13 +100715,13 @@ exports[`../../../examples/restaurant/smithable.yml > the generated files are as
   "LICENSES/hallmark-MIT.txt": "26d1de6b kit",
   "LICENSES/shadcn-ui.txt": "38dd653a kit",
   "LICENSES/tweakcn-Apache-2.0.txt": "dc4aedc0 kit",
-  "README.md": "5d1bdf88 generated",
+  "README.md": "38d783e1 generated",
   "drizzle.config.ts": "0987fb48 kit",
   "package.json": "95e709eb generated",
   "playwright.config.ts": "5ffef2a7 kit",
   "pnpm-workspace.yaml": "1da1537f scaffold",
   "public/favicon.svg": "ebbede8f generated",
-  "server.mjs": "e77d2b28 kit",
+  "server.mjs": "88fa4dc7 kit",
   "smithable.lock": "2c03be87 generated",
   "src/components/ui/badge.tsx": "7c9b048e kit",
   "src/components/ui/button.tsx": "43356a7c kit",
@@ -100778,11 +100778,11 @@ exports[`../../../examples/restaurant/smithable.yml > the generated files are as
   "src/kit/Consent.tsx": "c5ee7e50 kit",
   "src/kit/FieldInput.tsx": "39e40fcb kit",
   "src/kit/Filters.tsx": "0f5bfdfd kit",
-  "src/kit/ImportDialog.tsx": "d65da47a kit",
+  "src/kit/ImportDialog.tsx": "07f5864f kit",
   "src/kit/InlineRows.tsx": "5a097006 kit",
-  "src/kit/Landing.tsx": "57e69c50 kit",
+  "src/kit/Landing.tsx": "35ef7a8a kit",
   "src/kit/ModelForm.tsx": "f90ea7e8 kit",
-  "src/kit/ModelTable.tsx": "3ed793d6 kit",
+  "src/kit/ModelTable.tsx": "64482825 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "fb5e87dc kit",
   "src/kit/PictureDialog.tsx": "015af7de kit",
@@ -100807,11 +100807,11 @@ exports[`../../../examples/restaurant/smithable.yml > the generated files are as
   "src/kit/format.ts": "b9e92275 kit",
   "src/kit/formats.ts": "2257fcc1 kit",
   "src/kit/formula.ts": "d73c0380 kit",
-  "src/kit/import.server.ts": "7a5a3701 kit",
+  "src/kit/import.server.ts": "889830b2 kit",
   "src/kit/import.ts": "3f48e858 kit",
   "src/kit/limit.ts": "c9fd41d5 kit",
   "src/kit/log.server.ts": "4d493425 kit",
-  "src/kit/mail.ts": "d005acf1 kit",
+  "src/kit/mail.ts": "f1f04255 kit",
   "src/kit/model.ts": "4f517d82 kit",
   "src/kit/now.ts": "5ea87828 kit",
   "src/kit/origin.ts": "f7090ee4 kit",
@@ -100827,7 +100827,7 @@ exports[`../../../examples/restaurant/smithable.yml > the generated files are as
   "src/kit/unused-samples.ts": "860c6650 kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "901bdc17 kit",
+  "src/kit/words/en.ts": "846b5c41 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/app-card.server.ts": "4e0e6697 generated",
   "src/lib/app-card.ts": "93f0b476 generated",
@@ -100851,7 +100851,7 @@ exports[`../../../examples/restaurant/smithable.yml > the generated files are as
   "src/routes/menus/$id.tsx": "4f4ae484 generated",
   "src/routes/menus/index.tsx": "8acbe075 generated",
   "src/routes/menus/new.tsx": "b1591c18 generated",
-  "src/routes/robots[.]txt.ts": "4252423d generated",
+  "src/routes/robots[.]txt.ts": "82e4d36e generated",
   "src/routes/service-hours/$id.tsx": "6282fccd generated",
   "src/routes/service-hours/index.tsx": "6efae8a3 generated",
   "src/routes/service-hours/new.tsx": "bb3fae1a generated",
@@ -100861,7 +100861,7 @@ exports[`../../../examples/restaurant/smithable.yml > the generated files are as
   "src/routes/team/index.tsx": "9781ccd6 generated",
   "src/routes/venue/index.tsx": "d91537a5 generated",
   "src/start.ts": "6b874d2d kit",
-  "src/styles.css": "1f4ccc9e kit",
+  "src/styles.css": "dcd25010 kit",
   "src/theme.css": "1fd40aa1 generated",
   "tests/smoke.spec.ts": "3a404ee7 generated",
   "tsconfig.json": "802b1b64 kit",
@@ -100912,7 +100912,7 @@ The team page lists who has access and lets administrators invite people by emai
 Sign-up is closed (see \`selfSignUp\` under \`signIn\` in \`smithable.auth.yml\`): only invited addresses and the \`admins\` of \`smithable.auth.yml\` can sign in. Everyone else is refused at sign-in and told to ask an administrator. A demo (\`DEMO_SIGN_IN=1\`) is the exception: its "Try it as" buttons sign in demo users, who join whatever the setting says; set it only on a showcase app whose data is reset.
 ## Mail
 
-Hooks (\`src/custom/hooks.ts\`) and custom code send mail with \`sendMail\` from \`src/kit/mail.ts\`. It reads SMTP settings from the environment: \`SMTP_URL\` (\`smtp://user:password@host:587\`, or \`smtps://\` for TLS from the start) or \`SMTP_HOST\`, \`SMTP_PORT\`, \`SMTP_USER\` and \`SMTP_PASSWORD\`, plus \`MAIL_FROM\` (the sender). Any provider works; give its SPF, DKIM and DMARC records to the sender's domain so the mail arrives. Without settings nothing is sent: mails are written to \`data/mail/outbox\` as \`.eml\` files, which is what development and tests look at.
+Hooks (\`src/custom/hooks.ts\`) and custom code send mail with \`sendMail\` from \`src/kit/mail.ts\`. It reads SMTP settings from the environment: \`SMTP_URL\` (\`smtp://user:password@host:587\`, or \`smtps://\` for TLS from the start) or \`SMTP_HOST\`, \`SMTP_PORT\`, \`SMTP_USER\` and \`SMTP_PASSWORD\`, plus \`MAIL_FROM\` (the sender). Any provider works; give its SPF, DKIM and DMARC records to the sender's domain so the mail arrives. Without settings nothing is sent: mails are written to \`data/mail/outbox\` as \`.eml\` files, which is what development and tests look at. \`MAIL_MODE=outbox\` keeps them there with settings too; started with \`MAIL_MODE\` (\`outbox\`, \`testers\` where the mail server lets only testers through, or \`all\`), the app says on Import what happens to the addresses in a file.
 
 ## Limits
 
@@ -113502,8 +113502,8 @@ export const Route = createFileRoute("/incoming/chatCommand")({
         // The service's setup check: it sends a value and wants it back, nothing else.
         const check = at(body, "challenge");
         if (check) return new Response(check, { status: 200, headers: { "content-type": "text/plain" } });
-        // A call seen in the last day is answered as received and not acted on again.
-        const key = request.headers.get("idempotency-key") ?? \`sig:\${given}\`;
+        // A call seen in the last day is answered as received and not acted on again; signed, its id is what is signed, never a header the signature leaves out.
+        const key = \`sig:\${given}\`;
         // The id is taken before anything is done, in one statement: a second delivery of it, even at the same
         // moment, finds it taken (the index is unique) and is answered as received; one older than a day is forgotten.
         // The time written is this call's mark on the row: only the call that holds it may give it back.
@@ -113986,7 +113986,7 @@ exports[`../../../examples/status/smithable.yml > file list and generated code >
 import { createFileRoute } from "@tanstack/react-router";
 import { originOf } from "#/kit/origin";
 
-const ROBOTS = "User-agent: *\\nAllow: /$\\nAllow: /history\\nAllow: /assets/\\nAllow: /images/\\nAllow: /files/\\nDisallow: /\\n";
+const ROBOTS = "User-agent: *\\nAllow: /$\\nAllow: /history\\nAllow: /assets/\\nAllow: /images/\\nAllow: /media/\\nAllow: /files/\\nDisallow: /\\n";
 
 export const Route = createFileRoute("/robots.txt")({
   server: {
@@ -115240,7 +115240,7 @@ exports[`../../../examples/status/smithable.yml > file list and generated code 1
 exports[`../../../examples/status/smithable.yml > the generated files are as reviewed 1`] = `
 {
   ".dockerignore": "daf7c505 scaffold",
-  ".gitignore": "9b776503 scaffold",
+  ".gitignore": "984411d3 scaffold",
   ".mcp.json": "05d20cc7 scaffold",
   "AGENTS.md": "189a41e5 kit",
   "CLAUDE.md": "141c3f5e scaffold",
@@ -115249,13 +115249,13 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "LICENSES/hallmark-MIT.txt": "26d1de6b kit",
   "LICENSES/shadcn-ui.txt": "38dd653a kit",
   "LICENSES/tweakcn-Apache-2.0.txt": "dc4aedc0 kit",
-  "README.md": "be472d56 generated",
+  "README.md": "07adc3df generated",
   "drizzle.config.ts": "0987fb48 kit",
   "package.json": "258eba1c generated",
   "playwright.config.ts": "5ffef2a7 kit",
   "pnpm-workspace.yaml": "1da1537f scaffold",
   "public/favicon.svg": "44f7ef50 generated",
-  "server.mjs": "e77d2b28 kit",
+  "server.mjs": "88fa4dc7 kit",
   "smithable.lock": "2c03be87 generated",
   "src/components/ui/badge.tsx": "7c9b048e kit",
   "src/components/ui/button.tsx": "43356a7c kit",
@@ -115318,22 +115318,22 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/AppLink.tsx": "841a9af0 kit",
   "src/kit/AppShell.tsx": "6dca6653 kit",
   "src/kit/AppearancePicker.tsx": "0cd564d2 kit",
-  "src/kit/Articles.tsx": "f3fb4114 kit",
+  "src/kit/Articles.tsx": "b321bc42 kit",
   "src/kit/Ask.tsx": "e5277427 kit",
   "src/kit/Combobox.tsx": "c3a18c75 kit",
   "src/kit/Consent.tsx": "c5ee7e50 kit",
   "src/kit/Dashboard.tsx": "98bcd927 kit",
   "src/kit/FieldInput.tsx": "39e40fcb kit",
   "src/kit/Filters.tsx": "0f5bfdfd kit",
-  "src/kit/ImportDialog.tsx": "d65da47a kit",
+  "src/kit/ImportDialog.tsx": "07f5864f kit",
   "src/kit/InlineRows.tsx": "5a097006 kit",
   "src/kit/Inspector.tsx": "2425cac5 kit",
   "src/kit/Keys.tsx": "f32c246d kit",
-  "src/kit/Landing.tsx": "57e69c50 kit",
+  "src/kit/Landing.tsx": "35ef7a8a kit",
   "src/kit/Markdown.tsx": "24e2fcd2 kit",
   "src/kit/MarkdownFormatted.tsx": "300ef9a1 kit",
   "src/kit/ModelForm.tsx": "f90ea7e8 kit",
-  "src/kit/ModelTable.tsx": "3ed793d6 kit",
+  "src/kit/ModelTable.tsx": "64482825 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "fb5e87dc kit",
   "src/kit/PictureDialog.tsx": "015af7de kit",
@@ -115365,11 +115365,11 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/formats.ts": "2257fcc1 kit",
   "src/kit/formula.ts": "d73c0380 kit",
   "src/kit/grounded.ts": "5513d9ac kit",
-  "src/kit/import.server.ts": "7a5a3701 kit",
+  "src/kit/import.server.ts": "889830b2 kit",
   "src/kit/import.ts": "3f48e858 kit",
   "src/kit/limit.ts": "c9fd41d5 kit",
   "src/kit/log.server.ts": "4d493425 kit",
-  "src/kit/mail.ts": "d005acf1 kit",
+  "src/kit/mail.ts": "f1f04255 kit",
   "src/kit/mcp.server.ts": "2e063918 kit",
   "src/kit/model.ts": "4f517d82 kit",
   "src/kit/now.ts": "5ea87828 kit",
@@ -115390,7 +115390,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "901bdc17 kit",
+  "src/kit/words/en.ts": "846b5c41 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/app-card.server.ts": "944abfcc generated",
   "src/lib/app-card.ts": "93f0b476 generated",
@@ -115425,14 +115425,14 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/routes/incidents/$id.tsx": "bf4ecf44 generated",
   "src/routes/incidents/index.tsx": "7c4beb6e generated",
   "src/routes/incidents/new.tsx": "a9f07576 generated",
-  "src/routes/incoming/chatCommand.ts": "9b12c3b5 generated",
+  "src/routes/incoming/chatCommand.ts": "a2f3f35d generated",
   "src/routes/index.tsx": "82ce7233 generated",
   "src/routes/maintenance/$id.tsx": "0ad33c2b generated",
   "src/routes/maintenance/index.tsx": "cf3eb42f generated",
   "src/routes/maintenance/new.tsx": "569f7977 generated",
   "src/routes/mcp.ts": "0d8813db generated",
   "src/routes/overview/index.tsx": "be91b9dc generated",
-  "src/routes/robots[.]txt.ts": "deeaa1e2 generated",
+  "src/routes/robots[.]txt.ts": "296a2c75 generated",
   "src/routes/sign-in.tsx": "11f3b277 generated",
   "src/routes/sitemap[.]xml.ts": "de1b6faa generated",
   "src/routes/team/activity.tsx": "ded514ba generated",
@@ -115441,7 +115441,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/routes/updates/index.tsx": "11c7f442 generated",
   "src/routes/updates/new.tsx": "ac78941b generated",
   "src/start.ts": "6b874d2d kit",
-  "src/styles.css": "1f4ccc9e kit",
+  "src/styles.css": "dcd25010 kit",
   "src/theme.css": "1fd40aa1 generated",
   "tests/smoke.spec.ts": "5de3170c generated",
   "tsconfig.json": "802b1b64 kit",
@@ -115492,7 +115492,7 @@ The team page lists who has access and lets administrators invite people by emai
 Sign-up is closed (see \`selfSignUp\` under \`signIn\` in \`smithable.auth.yml\`): only invited addresses and the \`admins\` of \`smithable.auth.yml\` can sign in. Everyone else is refused at sign-in and told to ask an administrator. A demo (\`DEMO_SIGN_IN=1\`) is the exception: its "Try it as" buttons sign in demo users, who join whatever the setting says; set it only on a showcase app whose data is reset.
 ## Mail
 
-Hooks (\`src/custom/hooks.ts\`) and custom code send mail with \`sendMail\` from \`src/kit/mail.ts\`. It reads SMTP settings from the environment: \`SMTP_URL\` (\`smtp://user:password@host:587\`, or \`smtps://\` for TLS from the start) or \`SMTP_HOST\`, \`SMTP_PORT\`, \`SMTP_USER\` and \`SMTP_PASSWORD\`, plus \`MAIL_FROM\` (the sender). Any provider works; give its SPF, DKIM and DMARC records to the sender's domain so the mail arrives. Without settings nothing is sent: mails are written to \`data/mail/outbox\` as \`.eml\` files, which is what development and tests look at.
+Hooks (\`src/custom/hooks.ts\`) and custom code send mail with \`sendMail\` from \`src/kit/mail.ts\`. It reads SMTP settings from the environment: \`SMTP_URL\` (\`smtp://user:password@host:587\`, or \`smtps://\` for TLS from the start) or \`SMTP_HOST\`, \`SMTP_PORT\`, \`SMTP_USER\` and \`SMTP_PASSWORD\`, plus \`MAIL_FROM\` (the sender). Any provider works; give its SPF, DKIM and DMARC records to the sender's domain so the mail arrives. Without settings nothing is sent: mails are written to \`data/mail/outbox\` as \`.eml\` files, which is what development and tests look at. \`MAIL_MODE=outbox\` keeps them there with settings too; started with \`MAIL_MODE\` (\`outbox\`, \`testers\` where the mail server lets only testers through, or \`all\`), the app says on Import what happens to the addresses in a file.
 
 ## Limits
 
@@ -123347,7 +123347,7 @@ exports[`../../../examples/support/smithable.yml > file list and generated code 
 exports[`../../../examples/support/smithable.yml > the generated files are as reviewed 1`] = `
 {
   ".dockerignore": "daf7c505 scaffold",
-  ".gitignore": "9b776503 scaffold",
+  ".gitignore": "984411d3 scaffold",
   ".mcp.json": "05d20cc7 scaffold",
   "AGENTS.md": "189a41e5 kit",
   "CLAUDE.md": "141c3f5e scaffold",
@@ -123356,13 +123356,13 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "LICENSES/hallmark-MIT.txt": "26d1de6b kit",
   "LICENSES/shadcn-ui.txt": "38dd653a kit",
   "LICENSES/tweakcn-Apache-2.0.txt": "dc4aedc0 kit",
-  "README.md": "5a2b27f0 generated",
+  "README.md": "919e3cd9 generated",
   "drizzle.config.ts": "0987fb48 kit",
   "package.json": "650d1857 generated",
   "playwright.config.ts": "5ffef2a7 kit",
   "pnpm-workspace.yaml": "1da1537f scaffold",
   "public/favicon.svg": "21a3a3f2 generated",
-  "server.mjs": "e77d2b28 kit",
+  "server.mjs": "88fa4dc7 kit",
   "smithable.lock": "2c03be87 generated",
   "src/components/ui/badge.tsx": "7c9b048e kit",
   "src/components/ui/button.tsx": "43356a7c kit",
@@ -123421,12 +123421,12 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/FieldInput.tsx": "39e40fcb kit",
   "src/kit/FileInput.tsx": "5d567f82 kit",
   "src/kit/Filters.tsx": "0f5bfdfd kit",
-  "src/kit/ImportDialog.tsx": "d65da47a kit",
+  "src/kit/ImportDialog.tsx": "07f5864f kit",
   "src/kit/InlineRows.tsx": "5a097006 kit",
   "src/kit/Inspector.tsx": "2425cac5 kit",
   "src/kit/Live.tsx": "fbaa47cd kit",
   "src/kit/ModelForm.tsx": "f90ea7e8 kit",
-  "src/kit/ModelTable.tsx": "3ed793d6 kit",
+  "src/kit/ModelTable.tsx": "64482825 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "fb5e87dc kit",
   "src/kit/PictureDialog.tsx": "015af7de kit",
@@ -123458,17 +123458,17 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/formats.ts": "2257fcc1 kit",
   "src/kit/formula.ts": "d73c0380 kit",
   "src/kit/grounded.ts": "5513d9ac kit",
-  "src/kit/import.server.ts": "7a5a3701 kit",
+  "src/kit/import.server.ts": "889830b2 kit",
   "src/kit/import.ts": "3f48e858 kit",
   "src/kit/limit.ts": "c9fd41d5 kit",
   "src/kit/live.server.ts": "474834ab kit",
   "src/kit/log.server.ts": "4d493425 kit",
-  "src/kit/mail.ts": "d005acf1 kit",
+  "src/kit/mail.ts": "f1f04255 kit",
   "src/kit/model.ts": "4f517d82 kit",
   "src/kit/now.ts": "5ea87828 kit",
   "src/kit/origin.ts": "f7090ee4 kit",
-  "src/kit/outgoing.server.ts": "6b16b2aa kit",
-  "src/kit/outgoing.ts": "e1f82237 kit",
+  "src/kit/outgoing.server.ts": "14d20b55 kit",
+  "src/kit/outgoing.ts": "7018c495 kit",
   "src/kit/page-guard.ts": "d8974971 kit",
   "src/kit/params.ts": "65a69da0 kit",
   "src/kit/people-match.ts": "09a0f7dc kit",
@@ -123488,7 +123488,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "901bdc17 kit",
+  "src/kit/words/en.ts": "846b5c41 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/app-card.server.ts": "eb1c3b3c generated",
   "src/lib/app-card.ts": "93f0b476 generated",
@@ -123519,7 +123519,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/routes/team/activity.tsx": "468cb15a generated",
   "src/routes/team/index.tsx": "b9305ec9 generated",
   "src/start.ts": "6b874d2d kit",
-  "src/styles.css": "1f4ccc9e kit",
+  "src/styles.css": "dcd25010 kit",
   "src/theme.css": "1fd40aa1 generated",
   "tests/smoke.spec.ts": "ed46d289 generated",
   "tsconfig.json": "802b1b64 kit",

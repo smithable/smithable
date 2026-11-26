@@ -52,9 +52,13 @@ export function anthropic(
               : {}),
           }),
         });
-      let response = await post(true);
-      // A schema structured output cannot hold (a map of any keys): the JSON the prompt asks for.
+      // A schema structured output cannot hold (a map of any keys) is not sent: the JSON the prompt
+      // asks for, without a request the API is known to refuse first (T1597). Any other refusal
+      // of the schema still has the request sent again without it.
+      const format = takesSchema(schema);
+      let response = await post(format);
       if (
+        format &&
         response.status === 400 &&
         /output_config|json_schema|additionalProperties/.test(await response.clone().text())
       )
@@ -117,8 +121,10 @@ export function anthropic(
 
 /**
  * The schema as structured output takes it: every object that lists its properties closed to
- * others (additionalProperties: false), which it requires. A map of any keys stays as it is, and
- * the API refuses it, so the request goes again without structured output.
+ * others (additionalProperties: false), which it requires, and without the bounds it refuses on
+ * each type that the engine checks itself (REFUSED, T1605). The answer is still checked against the whole schema by its caller,
+ * so a bound left out here is kept there. A map of any keys stays as it is, and the API refuses
+ * it, so the request goes again without structured output.
  */
 export function closed(schema: unknown): unknown {
   if (Array.isArray(schema)) return schema.map(closed);
@@ -136,10 +142,73 @@ export function closed(schema: unknown): unknown {
     ]),
   ) as Record<string, unknown>;
   if (out.properties && out.additionalProperties === undefined) out.additionalProperties = false;
+  for (const type of [out.type].flat())
+    for (const key of REFUSED.get(type as string) ?? []) delete out[key];
+  if (typeof out.minItems === "number" && out.minItems > 1 && [out.type].flat().includes("array"))
+    delete out.minItems;
   return out;
 }
 
 const VALUES = new Set(["enum", "const", "default", "examples"]);
+
+/**
+ * The bounds structured output refuses with a 400 (a probe of each keyword, 2026-11-25), by the
+ * type they sit on, that the engine checks on every answer (checkJson in core, or the caller's
+ * own cut); minItems is refused above 1 too. On another type (a string's minimum) they pass. The
+ * other refused bounds (exclusiveMinimum, exclusiveMaximum, multipleOf, maxProperties, contains,
+ * prefixItems) are checked nowhere, so they stay: a schema that uses one is refused and sent again
+ * without structured output, rather than lose its bound.
+ */
+const REFUSED = new Map([
+  ["array", ["maxItems", "uniqueItems"]],
+  ["number", ["minimum", "maximum"]],
+  ["integer", ["minimum", "maximum"]],
+  ["object", ["minProperties"]],
+]);
+
+/**
+ * Whether structured output can take the schema: a map keyed by an app's own names
+ * (additionalProperties or unevaluatedProperties that is a schema or true, or patternProperties)
+ * it refuses with a 400, as the hosted service's gateway knows too (T759). The draft's answer
+ * schema holds such maps. Only places that hold schemas are walked, so a value (an enum, a default)
+ * or an unknown keyword (x-ui) is never taken for a map.
+ */
+export function takesSchema(schema: unknown): boolean {
+  if (Array.isArray(schema)) return schema.every(takesSchema);
+  if (!schema || typeof schema !== "object") return true;
+  const node = schema as Record<string, unknown>;
+  if (node.patternProperties !== undefined) return false;
+  for (const open of ["additionalProperties", "unevaluatedProperties"])
+    if (node[open] !== undefined && node[open] !== false) return false;
+  return Object.entries(node).every(([key, value]) =>
+    NAMED.has(key) && value && typeof value === "object"
+      ? Object.values(value).every(takesSchema)
+      : SCHEMAS.has(key)
+        ? takesSchema(value)
+        : true,
+  );
+}
+/**
+ * Keywords whose value maps names to schemas (a name may be "additionalProperties"); draft-07's
+ * dependencies maps a name to a schema or to a list of names, which holds no map.
+ */
+const NAMED = new Set(["properties", "$defs", "definitions", "dependentSchemas", "dependencies"]);
+/** Keywords whose value is a schema or a list of schemas. */
+const SCHEMAS = new Set([
+  "items",
+  "prefixItems",
+  "additionalItems",
+  "unevaluatedItems",
+  "contains",
+  "propertyNames",
+  "not",
+  "if",
+  "then",
+  "else",
+  "anyOf",
+  "oneOf",
+  "allOf",
+]);
 
 /** A JSON answer without the Markdown fence a model may put around it. */
 export const unfenced = (text: string): string =>

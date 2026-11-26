@@ -421,4 +421,4 @@ test("no theme default raises a diagnostic at the file's first line in any examp
       }
   }
   expect(atLineOne).toEqual([]);
-}, 30_000);
+});

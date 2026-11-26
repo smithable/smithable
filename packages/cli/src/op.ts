@@ -5,6 +5,7 @@ import {
   AI_BADGE_OFF_REFUSAL,
   applyOperation,
   applyOperations,
+  broughtMedia,
   checkOf,
   type Depth,
   type Effect,
@@ -19,9 +20,11 @@ import {
   PEOPLE_PATH,
   parseOperationArgs,
   parseTheme,
+  refusedArgs,
   resolveLook,
   type SpecIR,
   setCheck,
+  slotName,
   storageOf,
   translationPath,
   validateAuth,
@@ -112,6 +115,11 @@ export interface OpFlags {
   yes: boolean;
   /** Called through MCP: messages name the tools instead of CLI commands. */
   mcp?: boolean;
+  /**
+   * Who gave the arguments (refusedArgs in core): a person when unsaid; a model's proposal or an
+   * MCP client may not name a stored file, and only the host fills what it reads from a record.
+   */
+  from?: "model" | "host";
   /** An extra commit trailer, e.g. what the model that proposed the change used. */
   trailer?: string;
   /**
@@ -380,6 +388,14 @@ async function applyAndCheckpoint(
     io.err(`Unknown operation "${name}".\n`);
     return 2;
   }
+  for (const step of batch ?? (operation ? [{ op: operation.name, args }] : [])) {
+    const found = findOperation(step.op, plugins);
+    const refusal = found && refusedArgs(found, step.args ?? {}, flags.from ?? "person");
+    if (refusal) {
+      io.err(`${refusal}\n`);
+      return 2;
+    }
+  }
   if (batch?.some((step) => step.op === "applyTheme")) {
     io.err("applyTheme is already atomic; run it as a single operation.\n");
     return 2;
@@ -493,6 +509,13 @@ async function applyAndCheckpoint(
     for (const d of result.diagnostics) io.err(`${formatDiagnostic(d)}\n`);
     // A refusal, said in words: not a failure to report (only what throws below is one).
     return 1;
+  }
+  // A model never brings in a stored file, by any operation (media-storage.md §2): the argument
+  // check above stops the known routes, and this the outcome.
+  const brought = flags.from === "model" && broughtMedia(files, result.files);
+  if (brought) {
+    io.err(`The stored file ${brought} is placed from a person's choice only, never a model's.\n`);
+    return 2;
   }
   if (name === "applyTheme") {
     const unchanged =
@@ -619,8 +642,16 @@ async function applyAndCheckpoint(
     return 1;
   }
   if (destructive && !flags.yes) {
+    // A stored file taken out of its place (media-storage.md §2): each place named; the photo
+    // library keeps the file, and undo puts it back.
+    const places = (result.lostMedia ?? []).map(slotName);
+    const media = places.length
+      ? `this takes the stored file out of ${places.join(", ")}; the photo library keeps it, and undo puts it back.`
+      : "";
+    // The operation's own loss is said whenever it has one, a stored file's beside it.
+    const data = plan || !result.mediaOnly;
     io.err(
-      `${result.description}: ${plan ? `this deletes the ${lost.join(", ")} ${lost.length === 1 ? "column" : "columns"} and the values in ${lost.length === 1 ? "it" : "them"}.` : dataImpact(dir, result.effects, args)}\nRun again with ${flags.mcp ? "confirm: true" : "--yes"} to apply it.\n`,
+      `${result.description}: ${[data ? (plan ? `this deletes the ${lost.join(", ")} ${lost.length === 1 ? "column" : "columns"} and the values in ${lost.length === 1 ? "it" : "them"}.` : dataImpact(dir, result.effects, args)) : "", media].filter(Boolean).join(" ")}\nRun again with ${flags.mcp ? "confirm: true" : "--yes"} to apply it.\n`,
     );
     return 1;
   }
@@ -1205,8 +1236,13 @@ function dataImpact(dir: string, effects: Effect[], args: Record<string, unknown
     return `this removes the ${n} ${n === 1 ? plural(args.model).toLowerCase().replace(/s$/, "") : plural(args.model).toLowerCase()} in the trash for good.`;
   }
   const removed = effects.find((e) => e.kind === "remove-field");
-  const model = String(removed?.model ?? args.model);
-  const field = String(removed?.field ?? args.field);
+  const changed = effects.find((e) => e.kind === "change-field");
+  const model = removed?.model ?? changed?.model ?? args.model;
+  const field = removed?.field ?? changed?.field ?? args.field;
+  // An operation that loses something other than a field's values (a section's kind, a language,
+  // a timer) names it in its own description; no field is invented for it.
+  if (typeof model !== "string" || typeof field !== "string")
+    return "what it takes away is lost; undo brings it back.";
   const { table, column } = columnOf(model, field, removed?.storage === "reference");
   const counts = countValues(dir, table, column);
   const values = counts

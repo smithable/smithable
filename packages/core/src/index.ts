@@ -102,6 +102,7 @@ export { conceptsWithRules, ruleId } from "./concepts.js";
 export { conditionArgs, conditionText, readCondition } from "./condition.js";
 export type {
   AssistantTexts,
+  ContentFilm,
   ContentImage,
   ContentIR,
   FieldContent,
@@ -111,10 +112,16 @@ export type {
 } from "./content.js";
 export {
   AI_BADGE_OFF_REFUSAL,
+  ASSET_ID,
   ASSISTANT_TEXTS,
   badgedByDefault,
   CONTENT_VERSION,
   emptyContent,
+  FILM_HEIGHTS,
+  FILM_LONG_SIDE,
+  FILM_SECONDS,
+  FILM_SHORT_SIDE,
+  filmFiles,
   IMAGE_SRC,
   imageAt,
   LANGUAGES,
@@ -122,6 +129,8 @@ export {
   LOGO_SRC,
   PICTURE_KINDS,
   type PictureKind,
+  pictureAt,
+  pictureFile,
   placeholderProblem,
   RESERVE_TEXTS,
   sectionTakesPicture,
@@ -215,6 +224,15 @@ export {
 export type { UxDefaultFact, UxInherited } from "./look-defaults.js";
 export * from "./look-impact.js";
 export * from "./look-protocol.js";
+export {
+  broughtMedia,
+  lostMedia,
+  type MediaSlot,
+  type MediaUse,
+  mediaInUse,
+  mediaSlots,
+  slotName,
+} from "./media.js";
 export type { MigrateResult, SpecMigration } from "./migrate.js";
 export { MIGRATIONS, migrateSpec } from "./migrate.js";
 export {
@@ -256,7 +274,7 @@ export type {
   OperationArgs,
   Refusal,
 } from "./operation.js";
-export { OperationError, refHint } from "./operation.js";
+export { forModels, OperationError, refHint, refusedArgs } from "./operation.js";
 export type { PagePattern } from "./patterns.js";
 export {
   LANDING_SECTIONS,

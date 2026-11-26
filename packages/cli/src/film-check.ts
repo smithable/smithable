@@ -3,12 +3,10 @@
  * alone: nothing is decoded. Each problem names the rule it breaks. Studio's upload and
  * `smithable validate` both ask this, so a film placed by hand meets the same rules.
  */
+import { FILM_LONG_SIDE, FILM_SECONDS, FILM_SHORT_SIDE } from "@smithable/core";
 
 export const FILM_MAX_BYTES = 5_000_000;
 export const FILM_MAX_BITS_PER_SECOND = 5_000_000;
-export const FILM_SECONDS = [3, 12] as const;
-export const FILM_LONG_SIDE = 1920;
-export const FILM_SHORT_SIDE = 1080;
 
 export interface FilmReading {
   problems: string[];

@@ -384,6 +384,16 @@ export const COMMANDS: Command[] = [
     options: ["json", "dir"],
   },
   {
+    name: "media",
+    usage: "media in-use --json [<dir>]",
+    text: [
+      "The stored pictures <dir>'s smithable.content.yml uses (no other file is read), with the",
+      "renditions each needs,",
+      'as JSON: [{"asset": "m_…", "variants": ["w480.webp", …]}], sorted',
+    ],
+    options: ["json", "dir"],
+  },
+  {
     name: "customize",
     usage: "customize page:<p>",
     text: [

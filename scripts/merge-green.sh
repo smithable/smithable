@@ -16,13 +16,15 @@
 # Conflicts only in generated files (the embedded templates *.gen.ts, Vitest snapshots) it
 # resolves itself when it runs in the pull request's own worktree, clean: those are build outputs,
 # and two branches that touch the kit clash in them every time (#448 was rebased three times in a
-# day for them, 2026-10-08). It rebases on main taking the branch's side of each, runs the build
-# (which regenerates the embedded files) and the snapshot's tests with -u, commits "Rebased on
-# main: generated files refreshed" and pushes, then waits for the new head's checks like any
-# other; CI's units catch a stale snapshot. Any other conflict is refused: rebase it by hand.
+# day for them, 2026-10-08). It merges main into the branch taking main's side of each, runs the
+# build (which regenerates the embedded files) and the snapshot's tests with -u, commits the merge
+# "Merged main: generated files refreshed" and pushes plainly (no session force-pushes; a rebase
+# that finished left REBASE_HEAD behind and was taken for unfinished, #1369 on 2026-11-24), then
+# waits for the new head's checks like any other; CI's units catch a stale snapshot. Any other
+# conflict is refused: merge main into it by hand.
 # The lock ~/repos/.merge-lock (or $MERGE_LOCK), shared with every session and smithable-cloud's
 # merge-green, is held only while this script changes something: the plain documents' scan and
-# merge, the rebase of generated files and its push, bringing a pull request up to date. Waiting
+# merge, the merge of main for generated files and its push, bringing a pull request up to date. Waiting
 # for checks holds nothing (a full check queued on the one runner held it for an hour,
 # 2026-10-11); GitHub's auto-merge merges when they pass. The lock names the pull request,
 # repository, session and time; one untouched for 60 minutes is taken as stale. SESSION names
@@ -48,7 +50,22 @@ release() {
   if [ -n "$refresher" ]; then { pkill -P "$refresher"; kill "$refresher"; wait "$refresher"; } 2>/dev/null || true; fi
   if [ "$(cat "$lock" 2>/dev/null)" = "$me" ]; then rm -f "$lock"; fi
 }
-trap release EXIT
+# A run that does not end in 0 (refused, failed or stopped) disarms the auto-merge it armed:
+# GitHub would otherwise merge at green with nobody asking (cloud #625, 2026-11-25). First, before
+# the lock, for a stopper that follows with KILL; KILL itself cannot be caught.
+to_disarm="" watcher=""
+on_exit() {
+  local rc=$?
+  # A second signal, here, would cut the disarm and the release short.
+  trap '' INT TERM HUP
+  if [ "$rc" != 0 ] && [ -n "$to_disarm" ]; then
+    gh pr merge "$pr" "${repo[@]}" --disable-auto >/dev/null 2>&1 ||
+      echo "#$pr: could not disarm auto-merge: check by hand that none is armed." >&2
+  fi
+  if [ -n "$watcher" ]; then kill "$watcher" 2>/dev/null || true; fi
+  release
+}
+trap on_exit EXIT
 # Stopped by a signal, the script still releases the lock (bash runs the EXIT trap only on exit).
 trap 'exit 130' INT TERM HUP
 take_lock() {
@@ -106,7 +123,7 @@ retarget_stacked() {
   done
 }
 refuse() {
-  gh pr merge "$pr" "${repo[@]}" --disable-auto >/dev/null 2>&1 || true
+  if gh pr merge "$pr" "${repo[@]}" --disable-auto >/dev/null 2>&1; then to_disarm=""; fi
   echo "Not merging #$pr: $1"
   exit 1
 }
@@ -141,7 +158,7 @@ plain_docs() {
 }
 if plain_docs; then
   take_lock
-  [ "$(gh pr view "$pr" --json mergeable -q .mergeable)" = CONFLICTING ] && refuse "it has conflicts: rebase it."
+  [ "$(gh pr view "$pr" --json mergeable -q .mergeable)" = CONFLICTING ] && refuse "it has conflicts: merge main into it."
   docker info >/dev/null 2>&1 || refuse "plain documents merge after a scan for secrets, which needs Docker running."
   rules=$(mktemp)
   git show origin/main:.github/gitleaks.toml > "$rules"
@@ -161,12 +178,13 @@ if plain_docs; then
   exit 0
 fi
 # Conflicts in generated files alone (see the top): 0 when they were resolved and pushed, 1 when
-# the pull request is refused as before. During a rebase "theirs" is the branch's commit.
-rebase_generated() {
+# the pull request is refused as before. During a merge "theirs" is main; the build and the
+# snapshot tests then put the branch's lines back.
+merge_generated() {
   [ ${#repo[@]} -eq 0 ] || return 1
   local branch start f files=() tests=() t
   branch=$(gh pr view "$pr" --json headRefName -q .headRefName)
-  [ "$(git rev-parse --abbrev-ref HEAD)" = "$branch" ] || { echo "#$pr: run this in its own worktree, on $branch, to rebase it."; return 1; }
+  [ "$(git rev-parse --abbrev-ref HEAD)" = "$branch" ] || { echo "#$pr: run this in its own worktree, on $branch, to merge main into it."; return 1; }
   [ -z "$(git status --porcelain)" ] || { echo "#$pr: its worktree has changes: commit or drop them first."; return 1; }
   # Both remote-tracking refs by name (FETCH_HEAD would name main, the first ref fetched): the
   # head check compares with origin's branch, and a failure goes back to this commit, not to main.
@@ -174,34 +192,33 @@ rebase_generated() {
     { echo "#$pr: could not fetch main and $branch from origin."; return 1; }
   start=$(git rev-parse HEAD)
   [ "$start" = "$(git rev-parse "refs/remotes/origin/$branch")" ] || { echo "#$pr: the worktree is not at the branch's head on GitHub."; return 1; }
-  echo "#$pr has conflicts: rebasing on main, where only generated files may clash."
-  if ! git rebase -q origin/main >/dev/null 2>&1; then
-    while :; do
-      mapfile -t files < <(git diff --name-only --diff-filter=U)
-      [ ${#files[@]} -gt 0 ] || break
-      for f in "${files[@]}"; do
-        case "$f" in
-          *.gen.ts) ;;
-          */__snapshots__/*.snap) tests+=("$(dirname "$(dirname "$f")")/$(basename "$f" .snap)") ;;
-          *) git rebase --abort; echo "#$pr: a conflict beyond the generated files: $f"; return 1 ;;
-        esac
-      done
-      git checkout -q --theirs -- "${files[@]}"
-      git add -- "${files[@]}"
-      GIT_EDITOR=true git rebase --continue >/dev/null 2>&1 || true
+  echo "#$pr has conflicts: merging main into it, where only generated files may clash."
+  if ! git merge -q --no-commit --no-ff origin/main >/dev/null 2>&1; then
+    mapfile -t files < <(git diff --name-only --diff-filter=U)
+    [ ${#files[@]} -gt 0 ] || { git reset -q --hard "$start"; echo "#$pr: the merge of main failed."; return 1; }
+    for f in "${files[@]}"; do
+      case "$f" in
+        *.gen.ts) ;;
+        */__snapshots__/*.snap) tests+=("$(dirname "$(dirname "$f")")/$(basename "$f" .snap)") ;;
+        *) git reset -q --hard "$start"; echo "#$pr: a conflict beyond the generated files: $f"; return 1 ;;
+      esac
     done
-    [ -z "$(git rev-parse -q --verify REBASE_HEAD 2>/dev/null)" ] || { git rebase --abort; echo "#$pr: the rebase did not finish."; return 1; }
+    # A generated file main removed has no side to take: refused like any other conflict.
+    { git checkout -q --theirs -- "${files[@]}" && git add -- "${files[@]}"; } ||
+      { git reset -q --hard "$start"; echo "#$pr: the generated files' clash could not be resolved."; return 1; }
   fi
-  pnpm build >/dev/null 2>&1 || { git reset -q --hard "$start"; echo "#$pr: the build failed after the rebase."; return 1; }
+  [ -n "$(git rev-parse -q --verify MERGE_HEAD)" ] || { git reset -q --hard "$start"; echo "#$pr: main is already in it, yet GitHub sees conflicts."; return 1; }
+  pnpm build >/dev/null 2>&1 || { git reset -q --hard "$start"; echo "#$pr: the build failed after merging main."; return 1; }
   for t in $(printf '%s\n' ${tests[@]+"${tests[@]}"} | sort -u); do
-    pnpm exec vitest run -u "$t" >/dev/null 2>&1 || { git reset -q --hard "$start"; echo "#$pr: $t failed after the rebase."; return 1; }
+    pnpm exec vitest run -u "$t" >/dev/null 2>&1 || { git reset -q --hard "$start"; echo "#$pr: $t failed after merging main."; return 1; }
   done
-  if [ -n "$(git status --porcelain)" ]; then
-    git add "packages/adapter-tanstack/src/templates.gen.ts" "packages/cli/src/starters.gen.ts" "packages/adapter-tanstack/src/__snapshots__/generate.test.ts.snap"
-    git commit -q -s -m "Rebased on main: generated files refreshed" --trailer "Co-Authored-By: Claude <noreply@anthropic.com>"
-  fi
-  git push -q --force-with-lease origin "$branch"
-  echo "#$pr rebased and pushed ($(git rev-parse --short HEAD))."
+  mapfile -t files < <(git diff --name-only -- ':(glob)**/*.gen.ts' ':(glob)**/__snapshots__/*.snap')
+  [ ${#files[@]} -eq 0 ] || git add -- "${files[@]}" ||
+    { git reset -q --hard "$start"; echo "#$pr: the regenerated files could not be staged."; return 1; }
+  git commit -q -s -m "Merged main: generated files refreshed" --trailer "Co-Authored-By: Claude <noreply@anthropic.com>" ||
+    { git reset -q --hard "$start"; echo "#$pr: the merge of main could not be committed."; return 1; }
+  git push -q origin "$branch" || { git reset -q --hard "$start"; echo "#$pr: the push of the merge failed."; return 1; }
+  echo "#$pr: main merged in and pushed ($(git rev-parse --short HEAD))."
 }
 for attempt in 1 2 3 4 5 6 7 8; do
   # GitHub says UNKNOWN for a few seconds after a push: wait for a real answer (up to a minute).
@@ -213,7 +230,7 @@ for attempt in 1 2 3 4 5 6 7 8; do
   done
   if [ "$merge_state" = DIRTY ]; then
     take_lock
-    rebase_generated || refuse "it has conflicts: rebase it."
+    merge_generated || refuse "it has conflicts: merge main into it."
     drop_lock
     continue
   fi
@@ -247,6 +264,7 @@ for attempt in 1 2 3 4 5 6 7 8; do
   # cloud #201 on 2026-10-14); that one is merged below by the script itself, once the required
   # check is confirmed green, which is what branch protection asks.
   armed=1
+  to_disarm=1
   gh pr merge "$pr" "${repo[@]}" --auto --merge >/dev/null 2>&1 || armed=0
   # The checks branch protection requires, as GitHub's own merge goes by (here `check`, which
   # reports on every job of its run). Others are not asked: a run that a newer one cancelled
@@ -293,7 +311,13 @@ for attempt in 1 2 3 4 5 6 7 8; do
     [ $((i % 30)) = 0 ] && echo "#$pr: waiting for its required check to be reported"
     sleep 10
   done
-  if ! gh pr checks "$pr" "${repo[@]}" --required --watch --fail-fast >/dev/null; then
+  # In the background: bash runs a trap while it waits, not while a foreground command runs.
+  gh pr checks "$pr" "${repo[@]}" --required --watch --fail-fast >/dev/null &
+  watcher=$!
+  watched=0
+  wait "$watcher" || watched=$?
+  watcher=""
+  if [ "$watched" != 0 ]; then
     merged && { echo "Merged #$pr."; retarget_stacked; exit 0; }
     gh pr checks "$pr" "${repo[@]}" || true
     refuse "a check failed."

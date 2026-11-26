@@ -543,6 +543,31 @@
                       ],
                       "description": "One of right, left; the first is the default."
                     },
+                    "fit": {
+                      "enum": [
+                        "cover",
+                        "contain"
+                      ],
+                      "description": "One of cover, contain; the first is the default."
+                    },
+                    "aspect": {
+                      "enum": [
+                        "landscape",
+                        "portrait",
+                        "square"
+                      ],
+                      "description": "One of landscape, portrait, square; the first is the default."
+                    },
+                    "focal": {
+                      "enum": [
+                        "center",
+                        "top",
+                        "bottom",
+                        "left",
+                        "right"
+                      ],
+                      "description": "One of center, top, bottom, left, right; the first is the default."
+                    },
                     "overlay": {
                       "enum": [
                         "brand",

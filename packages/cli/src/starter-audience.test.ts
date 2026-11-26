@@ -23,6 +23,13 @@ import {
 import { STARTERS } from "./starters.gen.js";
 import { tempDir } from "./test-dir.js";
 
+// The build test keeps only the draft: the build after it (install, drizzle-kit) has nothing
+// installed to run here, and said "Command drizzle-kit not found" on every run.
+vi.mock("./generate.js", async (original) => ({
+  ...(await original<typeof import("./generate.js")>()),
+  generate: vi.fn(async () => 0),
+}));
+
 const PRIVATE = [
   "A recipe collection for a family, with ingredients and shopping lists",
   "A list of our team's equipment and who has what",

@@ -671,6 +671,12 @@ const section: JsonSchema = {
       },
       properties: {
         src: { type: "string" },
+        asset: {
+          type: "string",
+          pattern: "^m_[0-9a-hjkmnp-tv-z]{26}$",
+          description:
+            "A stored file from the hosted service's photo library, in place of src; set by setSectionPicture, never written by hand.",
+        },
         alt: { type: "string" },
         generated: {
           type: "boolean",
@@ -689,7 +695,7 @@ const section: JsonSchema = {
         },
         width: {
           type: "integer",
-          description: "The file's own width in pixels.",
+          description: "The file's own width in pixels; a stored file's largest rendition.",
           minimum: 100,
           maximum: 4000,
         },
@@ -704,12 +710,33 @@ const section: JsonSchema = {
         film: {
           type: "object",
           description:
-            "A hero's short silent loop over its picture (an MP4 under public/images/, 3 to 12 seconds, at most 5 MB); the picture shows first and for anyone who gets no film. Set it with setSectionFilm.",
+            "A hero's short silent loop over its picture (an MP4 under public/images/, 3 to 12 seconds, at most 5 MB, or a stored film); the picture shows first and for anyone who gets no film. Set it with setSectionFilm.",
           additionalProperties: false,
-          required: ["src"],
+          // Its two forms (readFilm in content.ts): a file of its own, or a stored film's id and
+          // renditions, never both and never neither. Not a oneOf: Studio's form reads a oneOf of
+          // required keys as kinds to choose between (controlOf in spec-form.ts).
+          dependencies: {
+            src: { not: { anyOf: [{ required: ["asset"] }, { required: ["heights"] }] } },
+            asset: ["heights"],
+            heights: ["asset"],
+          },
+          allOf: [{ anyOf: [{ required: ["src"] }, { required: ["asset"] }] }],
           properties: {
             // FILM_SRC in content.ts: no empty or dot-led part, so no way out of images/.
             src: { type: "string", pattern: "^images/([\\w-][\\w.-]*/)*[\\w-][\\w.-]*\\.mp4$" },
+            asset: {
+              type: "string",
+              pattern: "^m_[0-9a-hjkmnp-tv-z]{26}$",
+              description:
+                "A stored film from the hosted service's library, in place of src; set by setSectionFilm, never written by hand.",
+            },
+            heights: {
+              type: "array",
+              description: "A stored film's renditions by height, lowest first; from its record.",
+              items: { enum: [720, 1080] },
+              minItems: 1,
+              maxItems: 2,
+            },
             generated: {
               type: "boolean",
               description: "Made by an AI: its own origin, not the picture's.",
@@ -740,6 +767,12 @@ const section: JsonSchema = {
             },
             properties: {
               src: { type: "string" },
+              asset: {
+                type: "string",
+                pattern: "^m_[0-9a-hjkmnp-tv-z]{26}$",
+                description:
+                  "A stored file from the hosted service's photo library, in place of src; set by setSectionPicture, never written by hand.",
+              },
               alt: { type: "string" },
               generated: {
                 type: "boolean",
@@ -758,7 +791,7 @@ const section: JsonSchema = {
               },
               width: {
                 type: "integer",
-                description: "The file's own width in pixels.",
+                description: "The file's own width in pixels; a stored file's largest rendition.",
                 minimum: 100,
                 maximum: 4000,
               },
@@ -803,6 +836,12 @@ const section: JsonSchema = {
             },
             properties: {
               src: { type: "string" },
+              asset: {
+                type: "string",
+                pattern: "^m_[0-9a-hjkmnp-tv-z]{26}$",
+                description:
+                  "A stored file from the hosted service's photo library, in place of src; set by setSectionPicture, never written by hand.",
+              },
               alt: { type: "string" },
               generated: {
                 type: "boolean",
@@ -821,7 +860,7 @@ const section: JsonSchema = {
               },
               width: {
                 type: "integer",
-                description: "The file's own width in pixels.",
+                description: "The file's own width in pixels; a stored file's largest rendition.",
                 minimum: 100,
                 maximum: 4000,
               },

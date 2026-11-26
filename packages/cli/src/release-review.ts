@@ -37,6 +37,7 @@ import { maintenanceInfo } from "./maintenance.js";
 import { lostFields } from "./op.js";
 import { loadPlugins } from "./plugins.js";
 import { privacyStates } from "./privacy-review.js";
+import { projectRevision as opRevision } from "./project-revision.js";
 import { childOptions } from "./secrets.js";
 import type { Level, Result } from "./security.js";
 import { changeTree } from "./tree-files.js";
@@ -454,7 +455,8 @@ export function picturesToReview(
       if (section.kind !== "hero" && section.pictures !== "work") continue;
       const texts = content?.pages[page.id]?.sections?.[section.name];
       const look = (image: ContentImage | undefined, item?: number) => {
-        if (image?.generated && !image.kept)
+        // A stored file is the owner's own picture (media-storage.md §6): only a file's is asked about.
+        if (image?.generated && !image.kept && image.src !== undefined)
           found.push({
             page: page.id,
             section: section.name,
@@ -482,6 +484,8 @@ export function picturesToReview(
 
 export function releaseReview(dir: string, options: { hosted?: boolean } = {}) {
   const revision = projectRevision(dir);
+  // What /api/op checks a change against (not the files revision above), read before the files.
+  const sourceRevision = opRevision(dir);
   const recorded = { checks: checksRecord(dir), deployment: deploymentRecord(dir) };
   const found: Diagnostic[] = [];
   const current = loadSpec(dir, { out: () => {}, err: () => {} }, [], found);
@@ -621,6 +625,9 @@ export function releaseReview(dir: string, options: { hosted?: boolean } = {}) {
     assets: assetReview(dir),
     // Generated pictures that would present the owner's work, each with a choice (§6 of picture-kinds.md).
     pictures: current.ir ? picturesToReview(current.ir, current.content, current.ux) : [],
+    // The source revision the review was read at: its pictures' Keep and Remove send it, so a
+    // change that came between refuses them rather than hitting another place (T1231).
+    revision: sourceRevision,
     // The privacy page: reviewed, changed since its review (and what), or never (§6.4).
     privacy: privacyStates(dir),
     baseline: baseline?.at,

@@ -600,18 +600,36 @@ function localized<U extends { label: string; pluralLabel: string; fields: objec
 
 /**
  * Fields with a formula default, each after the defaulted fields its formula reads, so a default
- * computed from another (dueOn from issuedOn) is filled after it. A cycle keeps the spec's order.
+ * computed from another (dueOn from issuedOn) is filled after it. Defaults may read each other
+ * (startOn from endOn and endOn from startOn, so either given fills the other): when nothing is
+ * ready, the first field on such a cycle in the spec's order goes next, alone, and the sorting
+ * resumes, so a field reading into the cycle still comes after the fields it reads (T1383).
  */
 function defaultOrder(fields: FieldIR[]): FieldIR[] {
+  const reads = (f: FieldIR) =>
+    fieldsUsed(f.defaultFormula as NonNullable<FieldIR["defaultFormula"]>).filter(
+      (name) => name !== f.name,
+    );
   const placed: FieldIR[] = [];
   let left = [...fields];
+  const leftNamed = (name: string) => left.find((o) => o.name === name);
+  // Whether following the reads among the fields left comes back to start.
+  const onCycle = (start: FieldIR) => {
+    const seen = new Set<string>();
+    const walk = (f: FieldIR): boolean =>
+      reads(f).some((name) => {
+        if (name === start.name) return true;
+        const next = leftNamed(name);
+        if (!next || seen.has(name)) return false;
+        seen.add(name);
+        return walk(next);
+      });
+    return walk(start);
+  };
   while (left.length) {
-    const ready = left.filter((f) =>
-      fieldsUsed(f.defaultFormula as NonNullable<FieldIR["defaultFormula"]>).every(
-        (name) => name === f.name || !left.some((o) => o.name === name),
-      ),
-    );
-    const next = ready.length ? ready : left;
+    const ready = left.filter((f) => reads(f).every((name) => !leftNamed(name)));
+    // Nothing ready means every field left waits on another left, so one is on a cycle.
+    const next = ready.length ? ready : [left.find(onCycle) as FieldIR];
     placed.push(...next);
     left = left.filter((f) => !next.includes(f));
   }
@@ -638,10 +656,12 @@ export function dataModule(
   // after another so a default that reads another (dueOn from issuedOn) sees it filled.
   const formulaDefaults = defaultOrder(
     model.fields.filter((f) => f.defaultFormula && !f.formula),
-  ).map(
-    (f) =>
-      `  if (values.${dataKey(f)} === undefined) values.${dataKey(f)} = ${defaultsName(model)}.${f.name}(values);`,
-  );
+  ).map((f) => {
+    // NOW() is an ISO text; a datetime column is written from a Date, as a form or an import gives it.
+    const value = `${defaultsName(model)}.${f.name}(values)`;
+    const instant = f.type.kind === "scalar" && f.type.name === "datetime";
+    return `  if (values.${dataKey(f)} === undefined) values.${dataKey(f)} = ${instant ? `new Date(${value})` : value};`;
+  });
   const signedIn = hasSignIn(auth);
   const owner = ownerKey(model);
   // A data page lists the model's newest records only: its list takes a limit.

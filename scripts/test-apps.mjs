@@ -199,11 +199,64 @@ async function hydrated(page) {
   );
 }
 
-/** Opens a page and waits until it is interactive: the dev server loads code on demand. */
+/**
+ * Opens a page and waits until it is interactive: the dev server loads code on demand. A page that
+ * never gets there says what it saw on the failure's own line (T1568, T1523: a page that did not
+ * hydrate in two minutes): its errors, requests that failed or answered 5xx, and the dev server's
+ * own lines (a dependency optimized mid-load reloads the page).
+ */
 async function open(page, url) {
-  await page.goto(url);
-  await page.waitForLoadState("networkidle");
-  await hydrated(page);
+  // The dev server's routine lines are capped apart, so they never crowd out an error. CI's log is
+  // public: every line loses an address's query, fragment and sign-in, and anything long enough to
+  // be a token.
+  const seen = [];
+  const net = [];
+  const vite = [];
+  const redact = (line) =>
+    line
+      .replace(/\/\/[^/\s@]+@/g, "//")
+      .replace(/((?:https?:)?\/[^\s?#"'`]*)[?#]\S*/g, "$1?…")
+      .replace(/[A-Za-z0-9_\-+=]{32,}/g, "…");
+  const clean = (line) => redact(line.replace(/\s+/g, " ")).slice(0, 160);
+  const add = (list, max, line) => list.length < max && list.push(clean(line));
+  const where = (address) => address.split(/[?#]/)[0];
+  const onConsole = (m) => {
+    // Chrome says each failed request again as "Failed to load resource"; the request lines have it.
+    if (m.text().startsWith("Failed to load resource")) return;
+    if (m.type() === "error") add(seen, 10, `error: ${m.text()}`);
+    // The last four, so a reload late in the load is not crowded out by the first connects.
+    else if (m.text().startsWith("[vite]")) vite.push(clean(m.text())) > 4 && vite.shift();
+  };
+  const onError = (e) => add(seen, 10, `pageerror: ${e?.message || String(e)}`);
+  // Requests have their own cap, so a run of failed ones never hides a page error. One a reload cut
+  // off is not why a page failed.
+  const onFailed = (r) => {
+    const why = r.failure()?.errorText ?? "";
+    if (!why.includes("ERR_ABORTED")) add(net, 5, `failed: ${where(r.url())} ${why}`);
+  };
+  const onResponse = (r) => r.status() >= 400 && add(net, 5, `${r.status()}: ${where(r.url())}`);
+  page.on("console", onConsole);
+  page.on("pageerror", onError);
+  page.on("requestfailed", onFailed);
+  page.on("response", onResponse);
+  try {
+    await page.goto(url);
+    await page.waitForLoadState("networkidle");
+    await hydrated(page);
+  } catch (error) {
+    // On the first line, the one a failure's report prints; Playwright's call log stays below it.
+    const saw = [...seen, ...net, ...vite];
+    if (error instanceof Error && saw.length) {
+      const [first, ...rest] = error.message.split("\n");
+      error.message = [`${redact(first)} (the page saw: ${saw.join(" | ")})`, ...rest].join("\n");
+    }
+    throw error;
+  } finally {
+    page.off("console", onConsole);
+    page.off("pageerror", onError);
+    page.off("requestfailed", onFailed);
+    page.off("response", onResponse);
+  }
 }
 
 /** Chooses a related record in a searchable field: type part of its name, click it. */
@@ -2006,6 +2059,13 @@ async function importFlow(dir, base) {
       buffer: Buffer.from(csv),
     });
     await dialog.getByText("2 records will be added.").waitFor({ timeout: 20000 * P });
+    // Started with MAIL_MODE=outbox: the preview says the file's addresses are mailed nobody.
+    await dialog
+      .getByText(
+        "Mail from this app is held: nobody is mailed, the addresses in this file included.",
+        { exact: true },
+      )
+      .waitFor();
     for (const line of [
       'Line 4, Customer: No record named "No Such Company".',
       "Line 5, Total: Not a number.",
@@ -2027,7 +2087,7 @@ async function importFlow(dir, base) {
     ).n;
     if (left !== 0) throw new Error(`${left} imported orders are still there after the undo`);
     console.log(
-      "  ✓ crm: orders imported from a CSV (a customer by its name, a choice by its label, a decimal comma); the preview names the refused rows by line and column; Undo takes the import back to the trash",
+      "  ✓ crm: orders imported from a CSV (a customer by its name, a choice by its label, a decimal comma); the preview names the refused rows by line and column and says the app's mail is held (MAIL_MODE=outbox); Undo takes the import back to the trash",
     );
   } catch (error) {
     console.log(
@@ -4064,23 +4124,23 @@ async function painterFlow(dir, base) {
     // open: picture: a card's picture opens whole, steps to the next record's, and closes.
     await open(page, `${base}/jobs`);
     const cardCovers = page.locator('[data-kit="model-table"] [data-part="cover"]');
-    await cardCovers.first().waitFor();
-    if ((await cardCovers.count()) < 2)
-      throw new Error("/jobs has fewer than two pictures to open");
-    const firstName = (await cardCovers.first().getAttribute("aria-label"))?.replace(/^Open /, "");
+    await cardCovers.nth(1).waitFor();
+    const coverName = async (i) =>
+      (await cardCovers.nth(i).getAttribute("aria-label"))?.replace(/^Open /, "") ?? "";
+    const [firstName, secondName] = [await coverName(0), await coverName(1)];
+    if (!firstName || !secondName || firstName === secondName)
+      throw new Error(`/jobs covers are not named apart: "${firstName}", "${secondName}"`);
+    const captionShows = (name) =>
+      page.waitForFunction(
+        (n) => document.querySelector("dialog[open] figcaption")?.textContent?.includes(n),
+        name,
+      );
     await cardCovers.first().click();
     const shownWhole = page.locator("dialog[open] figure");
+    await captionShows(firstName);
     await loaded(shownWhole.locator("img"));
-    const caption = shownWhole.locator("figcaption");
-    if (!(await caption.textContent())?.includes(firstName ?? "\u0000"))
-      throw new Error(
-        `/jobs opened a picture captioned "${await caption.textContent()}", not "${firstName}"`,
-      );
     await page.getByRole("button", { name: "Next picture", exact: true }).click();
-    await page.waitForFunction(
-      (name) => !document.querySelector("dialog[open] figcaption")?.textContent?.includes(name),
-      firstName,
-    );
+    await captionShows(secondName);
     await loaded(shownWhole.locator("img"));
     await page.getByRole("button", { name: "Close", exact: true }).click();
     await page.locator("dialog[open]").waitFor({ state: "detached" });
@@ -6244,6 +6304,16 @@ async function filmFlow(dir, base) {
   const hero = page.locator("[data-hero]");
   const playing = hero.locator("video[data-playing]");
   const mark = hero.locator('[data-part="ai-mark"]').first();
+  // The film starts once its player has data: wait for that on the page as opened, not reopen it
+  // at once, so a slow runner gets there (T1573). Each reopen would start the load again.
+  const plays = () =>
+    playing
+      .first()
+      .waitFor({ timeout: 10000 * P })
+      .then(
+        () => true,
+        () => false,
+      );
   try {
     writeFileSync(film, readFileSync(join(repo, "scripts", "fixtures", "film.mp4")));
     change("setSectionFilm", "home", "hero", "images/hero-film.mp4");
@@ -6259,8 +6329,7 @@ async function filmFlow(dir, base) {
       if (layout !== "inset") change("setSectionLook", "home", "hero", "layout", layout);
       await until(
         `${base}/`,
-        async () =>
-          (await hero.getAttribute("data-layout")) === layout && (await playing.count()) > 0,
+        async () => (await hero.getAttribute("data-layout")) === layout && (await plays()),
         `the ${layout} hero's film does not play`,
       );
       if (await mark.isVisible())
@@ -6350,8 +6419,7 @@ async function filmFlow(dir, base) {
     change("setSectionLook", "home", "hero", "layout", "photo");
     await until(
       `${base}/`,
-      async () =>
-        (await hero.getAttribute("data-layout")) === "photo" && (await playing.count()) > 0,
+      async () => (await hero.getAttribute("data-layout")) === "photo" && (await plays()),
       "the photo hero's film does not play",
     );
     const top = await hero.evaluate((section) => {
@@ -10477,6 +10545,8 @@ test("the session cookie's name and attributes", async () => {
       ...(example === "kiosk"
         ? { NODE_EXTRA_CA_CERTS: pushCertificate().cert, PAYMENTS_HOLD_CHECK_SECONDS: "2" }
         : {}),
+      // The crm runs as a host runs a held copy, MAIL_MODE=outbox, and its import says so (T1325).
+      ...(example === "crm" ? { MAIL_MODE: "outbox" } : {}),
     });
     try {
       const base = `http://localhost:${port + 100}`;

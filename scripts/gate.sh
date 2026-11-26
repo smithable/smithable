@@ -4,6 +4,10 @@
 # out) and push memory until Claude Code stops background work.
 #   usage (from a worktree): SESSION=<name> TEST_APPS_PORT=… TEST_STUDIO_PORT=… scripts/gate.sh
 #          scripts/gate.sh --queue     who is running and who waits, in order
+#          scripts/gate.sh --idle      exit 0 when no gate runs or waits, else 1 (for a wait loop)
+#          scripts/gate.sh --plan      what a gate would run here
+# Any other argument exits 2 at once, without a ticket: a copy too old to know a flag must not
+# read it as "run a gate" (T1520).
 # Each session has its own ports (its brief says which).
 #
 # Turns go round the sessions: the session that has had the fewest turns since the queue was
@@ -23,6 +27,9 @@
 # the visual matrix (pnpm test:visual, fourteen cases in a browser, three to four minutes) only
 # when the kit's templates, the adapter's page patterns or themes, the look editor or the visual
 # check itself changed. With nothing changed (CI's run on main) everything runs.
+# CI's full job on a pull request sets GATE_BASICS_DONE=1: the hosted job of the same run has
+# linted and run the units on the same commit, so the gate builds and goes on (the site only for
+# Studio's check, which reads it). Read only with SESSION=ci; no session's gate skips them.
 # "scripts/gate.sh --plan" prints the plan without a ticket or the lock. The exit status is the
 # check's, or 75 (too many ahead) or 76 (one of its ports is taken, scripts/gate-ports.mjs). The
 # lock is released when the gate ends, however it ends.
@@ -31,6 +38,10 @@ set -u
 # copy that is replaced while gates run from it (it happened, and six gates died of a syntax
 # error) cannot change under them. Replace a copy with mv all the same, never by writing over it.
 {
+case "$#:${1:-}" in
+  0: | 1:--queue | 1:--idle | 1:--plan) ;;
+  *) echo "gate.sh: unknown arguments ($*): no gate started. It takes none, or one of --queue, --idle, --plan." >&2; exit 2 ;;
+esac
 # Night hours, 23:30–07:00 in Mariehamn (Johan, 2026-10-12: a quieter machine at night): a gate
 # started then runs itself again, once, on at most four cores at the lowest priority (systemd-run,
 # else nice). Only while the file $home/night-cap exists (Johan, 2026-10-18: off for now, since a
@@ -38,7 +49,7 @@ set -u
 # quiet nights again, remove it to stop). The runner's own service (SESSION=ci) is capped by its
 # timer instead (smithable-runner-cap.timer, enabled and disabled with systemctl). GATE_CLOCK
 # (HHMM) stands for the time, for a test.
-if [ "${1:-}" != "--queue" ] && [ "${SESSION:-}" != "ci" ] && [ -z "${GATE_NIGHT_CAPPED:-}" ] && [ -e "${GATE_HOME:-/var/lib/smithable-gate}/night-cap" ]; then
+if [ "${1:-}" != "--queue" ] && [ "${1:-}" != "--idle" ] && [ "${SESSION:-}" != "ci" ] && [ -z "${GATE_NIGHT_CAPPED:-}" ] && [ -e "${GATE_HOME:-/var/lib/smithable-gate}/night-cap" ]; then
   now=$((10#${GATE_CLOCK:-$(TZ=Europe/Mariehamn date +%H%M)}))
   if [ "$now" -ge 2330 ] || [ "$now" -lt 700 ]; then
     export GATE_NIGHT_CAPPED=1
@@ -124,6 +135,9 @@ plan() {
   if ! printf '%s\n' "$rest" | grep -qvE '^(apps/studio/|scripts/test-studio\.mjs$)'; then
     echo "apps=none studio=yes visual=$visual why=only Studio's web app changed"; return
   fi
+  if ! printf '%s\n' "$rest" | grep -qvE '^scripts/test-apps[^/]*\.mjs$'; then
+    echo "apps=all studio=no visual=$visual why=only the example apps' check changed"; return
+  fi
   if ! printf '%s\n' "$rest" | grep -qvE '^examples/[^/]+/'; then
     apps=$(printf '%s\n' "$rest" | sed -nE 's#^examples/([^/]+)/.*#\1#p' | sort -u | tr '\n' ' ')
     studio=no; printf '%s\n' $apps | grep -qx crm && studio=yes
@@ -144,8 +158,21 @@ plan() {
   echo "apps=all studio=yes visual=$visual why=the change reaches every app"
 }
 
+basics_done=no
+[ "${GATE_BASICS_DONE:-}" != 1 ] || [ "${SESSION:-}" != ci ] || basics_done=yes
+skipped="lint and the units are skipped: the hosted job ran them on this commit."
+
 if [ "${1:-}" = --plan ]; then
   plan
+  [ "$basics_done" = no ] || echo "$skipped"
+  exit 0
+fi
+
+# For a loop that waits for a quiet machine: --queue's "running: nothing" reads as busy to a grep
+# for "running" (a three-hour wait on an empty queue, 2026-11-25), so the answer is the exit status.
+if [ "${1:-}" = --idle ]; then
+  # The queue first: a gate takes the lock before its ticket goes, so it is seen in one or the other.
+  if [ -n "$(waiting)" ] || running; then exit 1; fi
   exit 0
 fi
 
@@ -208,18 +235,55 @@ if [ -z "${TEST_PATIENCE:-}" ]; then
   echo "gate.sh: load $load on $cores cores: the checks wait ${TEST_PATIENCE} times as long (TEST_PATIENCE=$TEST_PATIENCE)."
 fi
 
-# The plan, then the run. Arguments go to pnpm check as before, which runs everything. GATE_RUN
-# runs another command in the gate's turn instead (the weekly long run of the properties, ci.md).
+# While the checks run, every minute (GATE_LOAD_EVERY seconds), the load and the five busiest
+# processes go into the log (T1522): a check that fails under load then shows whose work loaded the
+# machine. Each row has the process, its user, its command's name and the last folder of its working
+# directory, never its arguments (CI's log is public). A process of another user shows no folder.
+# The sampler ends with the gate, or on its next turn when the gate was killed.
+busiest() {
+  top -b -n 2 -d 1 -o %CPU -w 250 2>/dev/null | awk '/^top -/ { f++ } f == 2 && $1 ~ /^[0-9]+$/ { print $1, $9 }' |
+    head -5 | while read -r pid cpu; do
+      dir=$(readlink "/proc/$pid/cwd" 2>/dev/null) || dir=-
+      [ "$dir" != / ] || dir=root
+      echo "  $pid $cpu% $(stat -c %U "/proc/$pid" 2>/dev/null) $(ps -o comm= -p "$pid" 2>/dev/null) in ${dir##*/}"
+    done
+}
+# Beside them, how long work stalled for want of a cpu, the disk or memory in the last minute
+# (Linux's pressure figures, percent: some task stalled / all tasks stalled), where there are any.
+pressure() {
+  local what line=
+  for what in cpu io memory; do
+    [ -r "/proc/pressure/$what" ] || continue
+    line="$line $what $(awk '{ split($3, a, "="); printf "%s%s", sep, a[2]; sep = "/" }' "/proc/pressure/$what" 2>/dev/null)"
+  done
+  [ -z "$line" ] || echo "gate.sh: $(date +%H:%M) pressure, last minute:$line"
+}
+( while sleep "${GATE_LOAD_EVERY:-60}" && kill -0 $$ 2>/dev/null; do
+    pressure
+    echo "gate.sh: $(date +%H:%M) load $(cut -d' ' -f1-3 /proc/loadavg); busiest:"
+    busiest
+  done ) 2>/dev/null &
+sampler=$!
+
+# The plan, then the run. GATE_RUN runs another command in the gate's turn instead (the weekly long run of the properties, ci.md).
 if [ -n "${GATE_RUN:-}" ]; then
   echo "gate.sh: running $GATE_RUN in the gate's turn."
   bash -c "$GATE_RUN"
-elif [ $# -eq 0 ]; then
+else
   p=$(plan)
   apps=${p#apps=}; apps=${apps%% studio=*}
   studio=${p#*studio=}; studio=${studio%% visual=*}
   visual=${p#*visual=}; visual=${visual%% why=*}
   echo "gate.sh: ${p#*why=}: apps $apps, Studio's check $studio, the visual matrix $visual."
-  pnpm lint && pnpm build && pnpm test && pnpm site &&
+  basics() {
+    if [ "$basics_done" = no ]; then
+      pnpm lint && pnpm build && pnpm test && pnpm site
+    else
+      echo "gate.sh: $skipped"
+      pnpm build && { [ "$studio" = no ] || pnpm site; }
+    fi
+  }
+  basics &&
     case $apps in
       all) pnpm test:apps ;;
       none) true ;;
@@ -227,10 +291,9 @@ elif [ $# -eq 0 ]; then
     esac &&
     { [ "$studio" = no ] || { pnpm test:studio && pnpm test:release-review; }; } &&
     { [ "$visual" = no ] || pnpm test:visual; }
-else
-  pnpm check "$@"
 fi
 status=$?
+pkill -P "$sampler" 2>/dev/null; kill "$sampler" 2>/dev/null; wait "$sampler" 2>/dev/null
 rm -f "$lock.who"
 exit $status
 }

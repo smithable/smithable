@@ -99,7 +99,9 @@ export function ReleaseReview({
         ))}
       </ul>
     ),
-    pictures: <ReviewPictures pictures={review.pictures ?? []} reload={reload} />,
+    pictures: (
+      <ReviewPictures pictures={review.pictures ?? []} revision={review.revision} reload={reload} />
+    ),
     access: (
       <>
         {review.noSignIn && (

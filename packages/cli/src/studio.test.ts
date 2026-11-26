@@ -1,8 +1,16 @@
 import { spawnSync } from "node:child_process";
-import { mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "vitest";
-import { changeDetail, pictureRefusal, refusal, studio, trace, unchangedEdit } from "./studio.js";
+import {
+  changeDetail,
+  pictureRefusal,
+  projectPhotos,
+  refusal,
+  studio,
+  trace,
+  unchangedEdit,
+} from "./studio.js";
 import { tempDir } from "./test-dir.js";
 import { captureIo } from "./test-io.js";
 
@@ -124,7 +132,7 @@ test("the trace has each change's id, the person's files it changed and a model'
     rmSync(dir, { recursive: true, force: true });
   }
   // A real project's trace: seconds on a loaded machine, so not vitest's five.
-}, 30_000);
+});
 
 test("a request's body is refused past its limit, before it is read in full", async () => {
   const { readJson, TooLarge } = await import("./studio.js");
@@ -229,4 +237,14 @@ test("a section's picture comes as a new picture file named as its src", () => {
   expect(
     pictureRefusal("setSectionPicture", "public/images/a.webp", webp, { src: "images/b.webp" }),
   ).toMatch(/at most 2 MB/);
+});
+
+test("the Photos panel's local list: plain pictures directly under public/images/, no links", () => {
+  const dir = tempDir("photos-");
+  expect(projectPhotos(dir)).toEqual([]);
+  mkdirSync(join(dir, "public", "images", "deep"), { recursive: true });
+  for (const name of ["b.webp", "a.JPG", ".hidden.png", "notes.txt", "c.svg"])
+    writeFileSync(join(dir, "public", "images", name), "x");
+  symlinkSync("/etc/hostname", join(dir, "public", "images", "link.png"));
+  expect(projectPhotos(dir)).toEqual(["images/a.JPG", "images/b.webp"]);
 });

@@ -21,6 +21,9 @@ const HOME: Record<string, () => Promise<unknown>> = {
   sync: () => import("./replace.js"),
   removeTree: () => import("./tree-files.js"),
   changeTree: () => import("./tree-files.js"),
+  cachedMedia: () => import("./media-cache.js"),
+  placeMedia: () => import("./media-cache.js"),
+  dropMedia: () => import("./media-cache.js"),
 };
 
 const text = readFileSync(0, "utf8");
