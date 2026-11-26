@@ -29,6 +29,8 @@ import {
  * not through Studio.
  */
 const TOKEN = "studio-token-for-the-host-test";
+const FELL_BACK =
+  "The description could not be used this time: no AI model is available. This is the crm starter; describe changes to it below.";
 const root = new URL("../../../", import.meta.url).pathname;
 const bin = join(root, "packages/cli/dist/bin.js");
 
@@ -86,6 +88,9 @@ function hosted(given: "stdin" | "env") {
     mkdirSync(join(dir, "node_modules/.bin"), { recursive: true });
     writeFileSync(join(dir, "node_modules/.bin/vite"), fakeVite);
     chmodSync(join(dir, "node_modules/.bin/vite"), 0o755);
+    // A hosted workspace whose description fell back to the starter leaves why (T1577).
+    mkdirSync(join(dir, "data/.smithable"), { recursive: true });
+    writeFileSync(join(dir, "data/.smithable/notice.txt"), `${FELL_BACK}\n`);
     const args = [bin, "studio", dir, "--host", "127.0.0.1", "--port", String(port)];
     studio = spawn(process.execPath, given === "stdin" ? [...args, "--secrets-stdin"] : args, {
       env: given === "env" ? { ...process.env, SMITHABLE_STUDIO_TOKEN: TOKEN } : process.env,
@@ -110,6 +115,45 @@ function hosted(given: "stdin" | "env") {
       rmSync(dir, { recursive: true, force: true });
     }
   }, 15_000);
+
+  // First, so it makes the first read of the project itself.
+  test("a fallback to the starter is said in every read of the project, the notice until Builder showed it", async () => {
+    const read = async () =>
+      (await (
+        await fetch(`http://127.0.0.1:${port}/api/project`, {
+          headers: { "x-smithable-studio-token": TOKEN },
+        })
+      ).json()) as { notice?: string; noticeId?: string; fallback?: string };
+    const ack = (id: string | undefined) =>
+      fetch(`http://127.0.0.1:${port}/api/notice/seen`, {
+        method: "POST",
+        headers: {
+          "x-smithable-studio-token": TOKEN,
+          "Content-Type": "application/json",
+          "X-Smithable": "1",
+        },
+        body: JSON.stringify({ id }),
+      });
+    // A probe's read (the release smoke's) does not take the page's message (T1599).
+    const probe = await read();
+    const first = await read();
+    // Another notice's id acknowledged leaves it, even one in the same words (T1602).
+    expect(first.noticeId).toBe(probe.noticeId);
+    expect((await ack("an older notice")).status).toBe(200);
+    const still = await read();
+    // Kept on disk until then, for a Studio started again before Builder showed it.
+    expect(existsSync(join(dir, "data/.smithable/notice.txt"))).toBe(true);
+    expect((await ack(still.noticeId)).status).toBe(200);
+    const second = await read();
+    for (const answer of [probe, first, still, second]) expect(answer.fallback).toBe(FELL_BACK);
+    expect(probe.notice).toBe(FELL_BACK);
+    expect(first.notice).toBe(FELL_BACK);
+    expect(still.notice).toBe(FELL_BACK);
+    expect(second.notice).toBeUndefined();
+    expect(existsSync(join(dir, "data/.smithable/notice.txt"))).toBe(false);
+    // Kept on disk, for a Studio started again on the same app.
+    expect(readFileSync(join(dir, "data/.smithable/fallback.txt"), "utf8").trim()).toBe(FELL_BACK);
+  });
 
   test("the preview's process never sees Studio's token, only its own credential", () => {
     const lines = seen();
@@ -151,3 +195,150 @@ function hosted(given: "stdin" | "env") {
 
 describe("the token on standard input", () => hosted("stdin"));
 describe("the token in Studio's environment", () => hosted("env"));
+
+/**
+ * The fallback's life (T1585): a Studio started again on the same app keeps saying why it is the
+ * starter; an app that comes in takes that reason away, and a Studio started after it does not
+ * bring it back.
+ */
+describe("the fallback to the starter, across restarts and a replacement", () => {
+  // Studio and its preview (port + 1), in a range apart from the suites above.
+  const port = 40000 + Math.floor(Math.random() * 9000) * 2;
+  let dir = "";
+  let from = "";
+  let studio: ChildProcess | undefined;
+  const files = [
+    "smithable.yml",
+    "smithable.auth.yml",
+    "smithable.ux.yml",
+    "smithable.content.yml",
+  ];
+  const pkg = JSON.stringify({ name: "fallback-test", private: true });
+  const call = async (path: string, init: RequestInit = {}) =>
+    fetch(`http://127.0.0.1:${port}${path}`, {
+      ...init,
+      // As Studio's own page sends a change.
+      headers: {
+        "x-smithable-studio-token": TOKEN,
+        "x-smithable": "1",
+        "content-type": "application/json",
+      },
+    });
+  const project = async () =>
+    (await (await call("/api/project")).json()) as {
+      notice?: string;
+      noticeId?: string;
+      fallback?: string;
+    };
+  const start = async (replaceable: boolean) => {
+    // The warm-up below is this start's own, not the last one's.
+    rmSync(join(dir, "seen.jsonl"), { force: true });
+    const args = [bin, "studio", dir, "--host", "127.0.0.1", "--port", String(port)];
+    studio = spawn(
+      process.execPath,
+      [...args, "--secrets-stdin", ...(replaceable ? ["--replaceable"] : [])],
+      { stdio: ["pipe", "ignore", "ignore"], detached: true },
+    );
+    studio.stdin?.end(JSON.stringify({ studioToken: TOKEN }));
+    // Studio's warm-up has reached the preview: stopped before that, it is not yet settled.
+    await until(
+      () =>
+        existsSync(join(dir, "seen.jsonl")) &&
+        readFileSync(join(dir, "seen.jsonl"), "utf8").includes('"url"'),
+    );
+    // Ready when it refuses a read without the token, which reads nothing; then the test's read
+    // is the first, the one the one-time notice goes to.
+    const end = Date.now() + 30_000;
+    const refuses = () =>
+      fetch(`http://127.0.0.1:${port}/api/project`, { signal: AbortSignal.timeout(5000) }).then(
+        (answer) => answer.status === 401,
+        () => false,
+      );
+    while (!(await refuses())) {
+      if (Date.now() > end) throw new Error("Studio did not answer");
+      await new Promise((done) => setTimeout(done, 200));
+    }
+    return project();
+  };
+  const stop = async () => {
+    expect(await stopStudioFixture(studio, dir)).toBe(true);
+    expect(fixturePids(dir)).toEqual([]);
+    studio = undefined;
+    rmSync(join(dir, "seen.jsonl"), { force: true });
+  };
+
+  beforeAll(() => {
+    dir = realpathSync(mkdtempSync(join(tmpdir(), "studio-fallback-")));
+    from = realpathSync(mkdtempSync(join(tmpdir(), "studio-fallback-from-")));
+    for (const name of files) {
+      cpSync(join(root, "examples/records", name), join(dir, name));
+      cpSync(join(root, "examples/records", name), join(from, name));
+    }
+    writeFileSync(join(dir, "package.json"), pkg);
+    writeFileSync(join(from, "package.json"), pkg);
+    // So the app that came in can be told from the one it replaced.
+    writeFileSync(join(from, "came-in.txt"), "the new app\n");
+    mkdirSync(join(dir, "node_modules/.bin"), { recursive: true });
+    writeFileSync(join(dir, "node_modules/.bin/vite"), fakeVite);
+    chmodSync(join(dir, "node_modules/.bin/vite"), 0o755);
+    mkdirSync(join(dir, "data/.smithable"), { recursive: true });
+    writeFileSync(join(dir, "data/.smithable/notice.txt"), `${FELL_BACK}\n`);
+  });
+
+  afterAll(async () => {
+    try {
+      // Also when Studio itself has exited: a preview it left is found by its folder and stopped.
+      if (dir) await stopStudioFixture(studio, dir);
+    } finally {
+      for (const d of [dir, from]) if (d) rmSync(d, { recursive: true, force: true });
+    }
+  }, 15_000);
+
+  test("kept by a Studio started again, cleared by an app that comes in, also after a restart", async () => {
+    const first = await start(true);
+    expect(first.fallback).toBe(FELL_BACK);
+    expect(first.notice).toBe(FELL_BACK);
+    await stop();
+
+    // Started again before Builder showed it: the notice is still there (T1599).
+    const unseen = await start(true);
+    expect(unseen.fallback).toBe(FELL_BACK);
+    expect(unseen.notice).toBe(FELL_BACK);
+    // The same words, but not the notice the last Studio gave: its late acknowledgement leaves it.
+    expect(unseen.noticeId).not.toBe(first.noticeId);
+    const stale = await call("/api/notice/seen", {
+      method: "POST",
+      body: JSON.stringify({ id: first.noticeId }),
+    });
+    expect(stale.status).toBe(200);
+    expect((await project()).notice).toBe(FELL_BACK);
+    const seen = await call("/api/notice/seen", {
+      method: "POST",
+      body: JSON.stringify({ id: unseen.noticeId }),
+    });
+    expect(seen.status).toBe(200);
+    await stop();
+
+    // Started again (a workspace woken): the reason holds, and the notice shown is not repeated.
+    const again = await start(true);
+    expect(again.fallback).toBe(FELL_BACK);
+    expect(again.notice).toBeUndefined();
+
+    // A finished app takes the starter's place: it is not the starter, so no reason stays.
+    const replaced = await call("/api/project/replace", {
+      method: "POST",
+      body: JSON.stringify({ from }),
+    });
+    expect(replaced.status, await replaced.clone().text()).toBe(200);
+    expect((await project()).fallback).toBeUndefined();
+    expect(existsSync(join(dir, "data/.smithable/fallback.txt"))).toBe(false);
+    expect(readFileSync(join(dir, "came-in.txt"), "utf8")).toBe("the new app\n");
+    await stop();
+
+    const after = await start(false);
+    expect(after.fallback).toBeUndefined();
+    expect(after.notice).toBeUndefined();
+    expect(existsSync(join(dir, "came-in.txt"))).toBe(true);
+    await stop();
+  }, 120_000);
+});

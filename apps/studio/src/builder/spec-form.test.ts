@@ -872,3 +872,28 @@ models:
   if (!result.ok) throw Error(result.message);
   expect(parse(result.files.spec).models.Room.schedule).toEqual({ hours: { mon: "09:00-17:00" } });
 });
+
+test("a film's two forms show as one group of keys, with no kind to choose (T1557)", () => {
+  const find = (node: unknown): Record<string, unknown> | undefined => {
+    if (!node || typeof node !== "object") return undefined;
+    const film = (node as { properties?: Record<string, unknown> }).properties?.film;
+    if (film) return film as Record<string, unknown>;
+    for (const child of Object.values(node)) {
+      const found = find(child);
+      if (found) return found;
+    }
+    return undefined;
+  };
+  const film = find(COMPANION_SCHEMAS["smithable.content.yml"]);
+  expect(film).toBeDefined();
+  const control = controlOf(film as Parameters<typeof controlOf>[0]);
+  expect(control?.kind).toBe("group");
+  expect(control && "kinds" in control ? control.kinds : undefined).toBeUndefined();
+  expect(control && "keys" in control ? control.keys.map(([key]) => key) : []).toEqual([
+    "src",
+    "asset",
+    "heights",
+    "generated",
+    "kind",
+  ]);
+});

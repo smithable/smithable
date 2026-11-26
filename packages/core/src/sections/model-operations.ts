@@ -371,6 +371,10 @@ const changeField: Operation<{ model: string; field: string; type: string; renam
         field: f,
         choices,
         ...(Object.keys(renamed).length ? { renamed } : {}),
+        picture:
+          parsed.ok &&
+          parsed.value.type.kind === "scalar" &&
+          (parsed.value.type.name === "picture" || parsed.value.type.name === "pictures"),
       },
     ];
   },

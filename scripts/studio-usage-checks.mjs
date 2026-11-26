@@ -5,10 +5,10 @@ import { openSmith } from "./studio-form-checks.mjs";
 export async function checkStudioUsage(browser, base) {
   const page = await browser.newPage({ viewport: { width: 1600, height: 1000 } });
   try {
-    const local = await page.request.get(`${base}/api/model-usage`);
+    const local = await page.request.get(`${base}/api/model-usage`, { maxRetries: 1 });
     assert.equal(local.headers()["cache-control"], "no-store");
     assert.deepEqual(await local.json(), {}, "a local Studio invented account figures");
-    const project = await (await page.request.get(`${base}/api/project`)).json();
+    const project = await (await page.request.get(`${base}/api/project`, { maxRetries: 1 })).json();
     await page.addInitScript(
       ({ name }) => {
         for (const key of ["guideDone", "presented", "zoneAsked", "ownerAsked"])

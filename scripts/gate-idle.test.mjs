@@ -101,3 +101,24 @@ test("the gate's own status comes back, and the sampler ends with it at once", (
     rmSync(home, { recursive: true, force: true });
   }
 });
+
+const plan = (changed, env = {}) =>
+  spawnSync("bash", [gate, "--plan"], {
+    env: { ...process.env, SESSION: "t", GATE_BASICS_DONE: "", GATE_CHANGED: changed, ...env },
+    encoding: "utf8",
+  }).stdout;
+
+test("a change to the example apps' check alone runs no Studio check", () => {
+  assert.match(
+    plan("scripts/test-apps.mjs\nscripts/test-apps-parallel.mjs"),
+    /^apps=all studio=no /,
+  );
+  assert.match(plan("scripts/test-apps.mjs\npackages/core/src/a.ts"), /^apps=all studio=yes /);
+});
+
+test("only CI's gate skips lint and the units, and only when told", () => {
+  const changed = "packages/core/src/a.ts";
+  assert.match(plan(changed, { SESSION: "ci", GATE_BASICS_DONE: "1" }), /units are skipped/);
+  assert.doesNotMatch(plan(changed, { GATE_BASICS_DONE: "1" }), /skipped/);
+  assert.doesNotMatch(plan(changed, { SESSION: "ci" }), /skipped/);
+});

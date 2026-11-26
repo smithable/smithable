@@ -9,7 +9,7 @@ export const STACK_PROFILE = {
     "@tailwindcss/vite": "4.3.5",
     "@tanstack/react-router": "1.170.46",
     "@tanstack/react-start": "1.169.7",
-    "better-auth": "1.7.27",
+    "better-auth": "1.7.28",
     // 12.x ships prebuilt binaries; 13.x always compiles from source (needs Python and a C++ compiler).
     "better-sqlite3": "12.11.1",
     "class-variance-authority": "0.7.1",
@@ -83,7 +83,7 @@ export const STACK_PROFILE = {
     "@types/better-sqlite3": "9.6.0",
     "@types/nodemailer": "8.0.2",
     "@types/node": "24.19.2",
-    "@types/react": "19.3.0",
+    "@types/react": "19.3.1",
     "@types/react-dom": "19.3.0",
     "@vitejs/plugin-react": "6.1.2",
     "drizzle-kit": "0.31.11",

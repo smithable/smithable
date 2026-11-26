@@ -27,6 +27,9 @@
 # the visual matrix (pnpm test:visual, fourteen cases in a browser, three to four minutes) only
 # when the kit's templates, the adapter's page patterns or themes, the look editor or the visual
 # check itself changed. With nothing changed (CI's run on main) everything runs.
+# CI's full job on a pull request sets GATE_BASICS_DONE=1: the hosted job of the same run has
+# linted and run the units on the same commit, so the gate builds and goes on (the site only for
+# Studio's check, which reads it). Read only with SESSION=ci; no session's gate skips them.
 # "scripts/gate.sh --plan" prints the plan without a ticket or the lock. The exit status is the
 # check's, or 75 (too many ahead) or 76 (one of its ports is taken, scripts/gate-ports.mjs). The
 # lock is released when the gate ends, however it ends.
@@ -132,6 +135,9 @@ plan() {
   if ! printf '%s\n' "$rest" | grep -qvE '^(apps/studio/|scripts/test-studio\.mjs$)'; then
     echo "apps=none studio=yes visual=$visual why=only Studio's web app changed"; return
   fi
+  if ! printf '%s\n' "$rest" | grep -qvE '^scripts/test-apps[^/]*\.mjs$'; then
+    echo "apps=all studio=no visual=$visual why=only the example apps' check changed"; return
+  fi
   if ! printf '%s\n' "$rest" | grep -qvE '^examples/[^/]+/'; then
     apps=$(printf '%s\n' "$rest" | sed -nE 's#^examples/([^/]+)/.*#\1#p' | sort -u | tr '\n' ' ')
     studio=no; printf '%s\n' $apps | grep -qx crm && studio=yes
@@ -152,8 +158,13 @@ plan() {
   echo "apps=all studio=yes visual=$visual why=the change reaches every app"
 }
 
+basics_done=no
+[ "${GATE_BASICS_DONE:-}" != 1 ] || [ "${SESSION:-}" != ci ] || basics_done=yes
+skipped="lint and the units are skipped: the hosted job ran them on this commit."
+
 if [ "${1:-}" = --plan ]; then
   plan
+  [ "$basics_done" = no ] || echo "$skipped"
   exit 0
 fi
 
@@ -237,7 +248,18 @@ busiest() {
       echo "  $pid $cpu% $(stat -c %U "/proc/$pid" 2>/dev/null) $(ps -o comm= -p "$pid" 2>/dev/null) in ${dir##*/}"
     done
 }
+# Beside them, how long work stalled for want of a cpu, the disk or memory in the last minute
+# (Linux's pressure figures, percent: some task stalled / all tasks stalled), where there are any.
+pressure() {
+  local what line=
+  for what in cpu io memory; do
+    [ -r "/proc/pressure/$what" ] || continue
+    line="$line $what $(awk '{ split($3, a, "="); printf "%s%s", sep, a[2]; sep = "/" }' "/proc/pressure/$what" 2>/dev/null)"
+  done
+  [ -z "$line" ] || echo "gate.sh: $(date +%H:%M) pressure, last minute:$line"
+}
 ( while sleep "${GATE_LOAD_EVERY:-60}" && kill -0 $$ 2>/dev/null; do
+    pressure
     echo "gate.sh: $(date +%H:%M) load $(cut -d' ' -f1-3 /proc/loadavg); busiest:"
     busiest
   done ) 2>/dev/null &
@@ -255,7 +277,15 @@ else
   studio=${p#*studio=}; studio=${studio%% visual=*}
   visual=${p#*visual=}; visual=${visual%% why=*}
   echo "gate.sh: ${p#*why=}: apps $apps, Studio's check $studio, the visual matrix $visual."
-  pnpm lint && pnpm build && pnpm test && pnpm site &&
+  basics() {
+    if [ "$basics_done" = no ]; then
+      pnpm lint && pnpm build && pnpm test && pnpm site
+    else
+      echo "gate.sh: $skipped"
+      pnpm build && { [ "$studio" = no ] || pnpm site; }
+    fi
+  }
+  basics &&
     case $apps in
       all) pnpm test:apps ;;
       none) true ;;

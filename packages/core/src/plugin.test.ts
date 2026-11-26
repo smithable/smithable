@@ -117,6 +117,22 @@ test("the schema check covers patterns, minimum items and repeated items", () =>
   ]);
 });
 
+test("the schema check covers number bounds, most items and fewest entries (T1605)", () => {
+  expect(checkJson({ type: "integer", minimum: 1, maximum: 365 }, 0, "days")).toEqual([
+    `"days" must be at least 1.`,
+  ]);
+  expect(checkJson({ type: "integer", minimum: 1, maximum: 365 }, 400, "days")).toEqual([
+    `"days" must be at most 365.`,
+  ]);
+  expect(checkJson({ type: "integer", minimum: 1, maximum: 365 }, 365, "days")).toEqual([]);
+  expect(checkJson({ type: "array", maxItems: 2 }, [1, 2, 3], "items")).toEqual([
+    `"items" takes at most 2 items.`,
+  ]);
+  expect(checkJson({ type: "object", minProperties: 1 }, {}, "fields")).toEqual([
+    `"fields" needs at least 1 entry.`,
+  ]);
+});
+
 const subscribeSpec = `smithable: 0.1
 app: { name: Studio }
 models:

@@ -47,7 +47,6 @@ test("a request's changes name the model and sum the cost", () => {
 test("the receipt of a request reads the engine's usage line", () => {
   const line = "Frontier model (claude-opus-5-5) · 1,200 tokens (1,000 in, 200 out) · €0.0042";
   expect(usageReceipt(line, "done")).toBe("Done by claude-opus-5-5, cost €0.0042");
-  expect(usageReceipt(line, "by")).toBe("By claude-opus-5-5, cost €0.0042");
   expect(usageReceipt(line, "proposed")).toBe("Proposed by claude-opus-5-5, cost €0.0042");
   expect(usageReceipt(line, "nothing")).toBe("Nothing changed; AI was asked, cost €0.0042");
   expect(usageReceipt("Generator (wording rules) · 0 tokens", "done")).toBe(

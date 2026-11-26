@@ -12,19 +12,26 @@ export function PictureDialog({
   pictures,
   open,
   show,
+  onClose,
 }: {
   dialog: React.RefObject<HTMLDialogElement | null>;
   pictures: {
     image: { src: string; alt: string; generated?: boolean; kind?: PictureKind };
     caption?: string;
+    /** Something to do under the caption (a record's Open). */
+    action?: React.ReactNode;
   }[];
+  /** The picture shown; outside the list (-1), none. */
   open: number;
   show: (index: number) => void;
+  /** Called once the dialog closed, whichever way. */
+  onClose?: () => void;
 }) {
   const current = pictures[open];
   return (
     <dialog
       ref={dialog}
+      onClose={onClose}
       aria-label={current?.image.alt}
       className="m-auto max-h-[92vh] w-[min(1200px,94vw)] bg-transparent p-0 backdrop:bg-black/85"
       onClick={(e) => e.target === e.currentTarget && dialog.current?.close()}
@@ -48,8 +55,11 @@ export function PictureDialog({
               className="mx-auto block max-h-[80vh] max-w-full rounded-lg object-contain"
             />
           </AiMarked>
-          {current.caption && (
-            <figcaption className="mt-3 text-center text-white">{current.caption}</figcaption>
+          {(current.caption || current.action) && (
+            <figcaption className="mt-3 flex justify-center gap-3 text-center text-white">
+              {current.caption}
+              {current.action}
+            </figcaption>
           )}
           <div className="mt-3 flex justify-center gap-2">
             {pictures.length > 1 && (

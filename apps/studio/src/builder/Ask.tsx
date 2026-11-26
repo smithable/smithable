@@ -352,6 +352,8 @@ export function Ask({
   });
   // Right after a request's changes applied, "Undo that" is offered until the next thing is sent.
   const [justApplied, setJustApplied] = useState(false);
+  // One per Smith on screen: his window and his floating panel can both show the guide's reason.
+  const guidingHint = useId();
   // Speech (smith-speech.md, step 1): what is heard goes into the box, and is sent a moment
   // after listening ends during a call unless the box is touched meanwhile.
   const sendLater = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -432,10 +434,10 @@ export function Ask({
         proposal.kind === "change"
           ? proposal.operations.map((o) => words?.(o.op, o.args) ?? o.description)
           : [];
+      // The thread already says what was done, from the change log: the reply adds only what
+      // it cost, so the change is not told twice.
       setOutput(
-        result.ok && done.length
-          ? `Done: ${done.join("; ")}. ${usageReceipt(proposal.usage, "by")}.`
-          : result.output,
+        result.ok && done.length ? `${usageReceipt(proposal.usage, "done")}.` : result.output,
       );
       setProposal(undefined);
       if (result.ok) {
@@ -519,7 +521,7 @@ export function Ask({
                 : proposal?.kind === "change"
                   ? "pointing"
                   : output
-                    ? output.startsWith("Done: ")
+                    ? output.startsWith("Done")
                       ? "happy"
                       : "sad"
                     : docs || local
@@ -851,6 +853,13 @@ export function Ask({
           send();
         }}
       >
+        {guiding && (
+          // Beside the box, not as its placeholder, which a draft in it would hide (T1603): a box
+          // that takes no typing must not look broken.
+          <p id={guidingHint} className="mb-1 text-xs text-muted">
+            The guide is on: finish or skip it to write to Smith.
+          </p>
+        )}
         <div className="flex items-end gap-2">
           {/* Made anew when the face changes, so it bounces (smith-first.md §12.2). */}
           <SmithFace key={mood} mood={mood} />
@@ -859,6 +868,7 @@ export function Ask({
             aria-label="Describe a change, or ask a question"
             value={request}
             disabled={guiding}
+            aria-describedby={guiding ? guidingHint : undefined}
             onChange={(e) => {
               // Any touch of the box keeps a spoken message from going by itself.
               clearTimeout(sendLater.current);

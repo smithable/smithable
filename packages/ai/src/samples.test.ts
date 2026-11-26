@@ -71,6 +71,17 @@ test("a model's records are drafted by its fields; one that needs a user is left
   expect(asked[0]?.user).toContain("A bistro with dishes of the day");
 });
 
+test("more rows than asked for are cut to the count: structured output is not told it (T1605)", async () => {
+  const chefs = ["Amaia", "Bixente", "Cécile"].map((name) => ({ name }));
+  const drafted = await draftSamples({
+    description: "A bistro",
+    ir,
+    count: 2,
+    providers: [fake({ Dish: [], Chef: chefs })],
+  });
+  expect(drafted.samples.Chef).toEqual(chefs.slice(0, 2));
+});
+
 test("no model, or a failing one: no records, the generated rows stay", async () => {
   expect((await draftSamples({ description: "x", ir, providers: [] })).samples).toEqual({});
   const failing: Provider = {

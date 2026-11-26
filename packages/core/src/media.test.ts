@@ -157,7 +157,8 @@ test("setSectionPicture places a stored file with the sizes the host read, and o
     // The content file's own range (100 to 4000 pixels), so what is written always reads back.
     [{ asset: ID, alt: "A", rendition: { width: 9000 } }, ""],
     // The largest copy is never swapped for a smaller one that is in range.
-    [{ asset: ID, alt: "A", rendition: { width: 9000, widths: [480] } }, "100 to 4000"],
+    // The argument's own bound now says it first (T1605).
+    [{ asset: ID, alt: "A", rendition: { width: 9000, widths: [480] } }, "at most 4000"],
   ] as const) {
     const refused = place(args);
     expect(refused.ok, JSON.stringify(args)).toBe(false);

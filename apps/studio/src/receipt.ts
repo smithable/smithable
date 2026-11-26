@@ -65,16 +65,13 @@ function spentOn(usage: string): Spent {
 /** The receipt of a request from its usage line: done, still a proposal, or nothing changed. */
 export function usageReceipt(
   usage: string,
-  state: "done" | "by" | "proposed" | "answered" | "nothing",
+  state: "done" | "proposed" | "answered" | "nothing",
 ): string {
   const spent = spentOn(usage);
   if (state === "nothing")
     return spent.model
       ? `Nothing changed; AI was asked${priced ? `, cost ${cost(spent)}` : ""}`
       : `Nothing changed${priced ? ", cost 0" : ""}`;
-  // "by" follows a sentence that already says Done (after Apply).
-  const verb = { done: "Done by", by: "By", proposed: "Proposed by", answered: "Answered by" }[
-    state
-  ];
+  const verb = { done: "Done by", proposed: "Proposed by", answered: "Answered by" }[state];
   return `${verb} ${by(spent)}`;
 }
