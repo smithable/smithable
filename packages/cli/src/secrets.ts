@@ -10,6 +10,8 @@ import {
   closeSync,
   constants,
   existsSync,
+  fchmodSync,
+  fchownSync,
   fstatSync,
   lstatSync,
   mkdirSync,
@@ -17,11 +19,12 @@ import {
   openSync,
   readdirSync,
   readFileSync,
+  readlinkSync,
   readSync,
   writeSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, sep } from "node:path";
 
 const NAMES = ["SMITHABLE_STUDIO_TOKEN", "SMITHABLE_MODEL_KEY"] as const;
 type SecretName = (typeof NAMES)[number];
@@ -175,8 +178,80 @@ export function sealScratch(dir: string): void {
   if (projectUser()) chmodSync(dir, 0o2750);
 }
 
-/** A file of the project's opened as `copyBack` and `readOwn` open it, or an error. */
-function openOwn(path: string): [number, Stats] {
+/** Folders this process made and alone writes in, held open until handed on (the staged app in replace). */
+const own = new Set<number>();
+
+/**
+ * Marks a folder this process has just made in a place only it may change (the staged app in
+ * replace, a new temporary folder of its own, until sync copies it in as the project user): a
+ * file `readTree` opens in it may be this process's own as well as the project user's. The folder
+ * is held open and known by that, never by its name, and must be this process's. It is made the
+ * project user's group's (2770, as `scratchDir` with a child that writes): the children making
+ * the app run as that user and write in it (git init and its first commit, drizzle-kit's
+ * migration), and sync reads it as that user; no one else may enter it. That loosens nothing for
+ * reads: a file the project user puts there is its own and passes the project's rule anyway, and
+ * it cannot make one of this process's. A file counts as in it where the opened file and the held
+ * folder are (Linux's /proc/self/fd, compared as bytes), so a link in it, the staged app's
+ * node_modules or one a child put there, leads to the project's rules. Gives back the function
+ * that unmarks it, once.
+ */
+export function ownFolder(dir: string): () => void {
+  // Without a project user every tree read is a plain one: nothing to mark (and no uid on Windows).
+  if (!projectUser()) return () => {};
+  const fd = openSync(
+    dir,
+    constants.O_RDONLY | (constants.O_DIRECTORY ?? 0) | (constants.O_NOFOLLOW ?? 0),
+  );
+  try {
+    const stat = fstatSync(fd);
+    if (!stat.isDirectory() || stat.uid !== process.getuid?.())
+      throw new Error(`${dir} is not a folder this process made.`);
+    const gid = projectUser()?.gid;
+    if (gid !== undefined && stat.gid !== gid) fchownSync(fd, -1, gid);
+    fchmodSync(fd, 0o2770);
+  } catch (error) {
+    closeSync(fd);
+    throw error;
+  }
+  own.add(fd);
+  let open = true;
+  return () => {
+    if (!open) return;
+    open = false;
+    own.delete(fd);
+    closeSync(fd);
+  };
+}
+
+/** Where an open file or folder is now, as the kernel names it; undefined when it cannot say. */
+function whereOpen(fd: number): Buffer | undefined {
+  try {
+    const at = readlinkSync(`/proc/self/fd/${fd}`, { encoding: "buffer" });
+    return at.toString("latin1").endsWith(" (deleted)") ? undefined : at;
+  } catch {
+    return undefined;
+  }
+}
+
+/** Whether an open file is this process's own, in a folder it marked as its own. */
+function ownFile(fd: number, stat: Stats): boolean {
+  if (!own.size || stat.uid !== process.getuid?.()) return false;
+  const at = whereOpen(fd);
+  if (!at) return false;
+  for (const dir of own) {
+    const folder = whereOpen(dir);
+    if (!folder) continue;
+    const prefix = Buffer.concat([folder, Buffer.from(sep)]);
+    if (at.length > prefix.length && at.subarray(0, prefix.length).equals(prefix)) return true;
+  }
+  return false;
+}
+
+/**
+ * A file of the project's opened as `copyBack` and `readOwn` open it, or an error; with
+ * `inOwn`, one of this process's in a folder it marked (`ownFolder`) is taken too.
+ */
+function openOwn(path: string, inOwn = false): [number, Stats] {
   const fd = openSync(
     path,
     constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0) | (constants.O_NONBLOCK ?? 0),
@@ -184,7 +259,8 @@ function openOwn(path: string): [number, Stats] {
   try {
     const stat = fstatSync(fd);
     const owner = projectUser()?.uid ?? process.getuid?.() ?? stat.uid;
-    if (stat.isFile() && stat.nlink === 1 && stat.uid === owner) return [fd, stat];
+    if (stat.isFile() && stat.nlink === 1 && (stat.uid === owner || (inOwn && ownFile(fd, stat))))
+      return [fd, stat];
   } catch (error) {
     closeSync(fd);
     throw error;
@@ -199,13 +275,13 @@ function openOwn(path: string): [number, Stats] {
  * link the project put there cannot show this process's own files. Undefined when it is not there.
  */
 export function readOwn(path: string, max = 64 * 1024): string | undefined {
-  return readOwnBytes(path, max)?.toString("utf8");
+  return readOwnBytes(path, max, false)?.toString("utf8");
 }
 
-function readOwnBytes(path: string, max: number): Buffer | undefined {
+function readOwnBytes(path: string, max: number, inOwn: boolean): Buffer | undefined {
   let opened: [number, Stats];
   try {
-    opened = openOwn(path);
+    opened = openOwn(path, inOwn);
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") return undefined;
     throw error;
@@ -227,7 +303,7 @@ function readOwnBytes(path: string, max: number): Buffer | undefined {
  * Undefined when it is not there; an error when it is there but not a plain file of the project's.
  */
 export function readTree(path: string, max = 8 * 1024 * 1024): Buffer | undefined {
-  if (projectUser()) return readOwnBytes(path, max);
+  if (projectUser()) return readOwnBytes(path, max, true);
   return existsSync(path) ? readFileSync(path) : undefined;
 }
 

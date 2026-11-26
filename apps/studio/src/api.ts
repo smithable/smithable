@@ -185,6 +185,8 @@ export interface Project {
   home?: string;
   /** A message for the first to open Studio, e.g. why a description could not be used. */
   notice?: string;
+  /** This notice's own id, which Builder acknowledges (T1602). */
+  noticeId?: string;
   /** The hosted beta's facts (smith-first.md §8): a sandbox's end, the invite page, the tester guide. */
   beta?: {
     until?: string;
@@ -632,6 +634,8 @@ export const api = {
       send,
       choice,
     }),
+  /** Builder showed Studio's one-time notice: it is not given again (T1599). */
+  noticeSeen: (id: string) => call<{ ok: boolean }>("/api/notice/seen", { id }),
   /** The preview did not answer: its last log lines, and whether a report is offered or sent. */
   previewStuck: () => call<{ log: string[]; report?: "offer" }>("/api/preview/stuck", {}),
   previewAnswers: () => call<{ ok: boolean }>("/api/preview/answers"),

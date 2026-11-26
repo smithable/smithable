@@ -14,7 +14,7 @@ pages:
       latest: { layout: grid, columns: 3, band: muted }
       gallery: { columns: 2 }
   jobs:
-    table: { view: cards, sort: year }
+    table: { view: cards, sort: year, open: picture }
     record: { pictures: top }
   enquiries:
     table:

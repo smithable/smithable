@@ -152,8 +152,12 @@ export async function checkStudioValidation(browser, base) {
       await broken.route("**/api/project", async (route) => {
         const response = await route.fetch();
         const body = await response.json();
-        if (notice) body.notice = text;
-        else delete body.notice;
+        // A notice comes with its own id (T1602); Builder shows only one that has it.
+        if (notice) Object.assign(body, { notice: text, noticeId: "fixture-description" });
+        else {
+          delete body.notice;
+          delete body.noticeId;
+        }
         notice = false;
         body.files.spec = "smithable: 0.1\napp: { name: Demo }\ntimers:\n  broken: {}\n";
         await route.fulfill({ response, json: body });

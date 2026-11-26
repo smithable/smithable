@@ -376,3 +376,42 @@ test("finite theme defaults change actual generated navigation and hero markup d
   expect(files.find((f) => f.path === "src/routes/index.tsx")?.content).toContain('layout="cover"');
   expect(text).not.toContain("pages:");
 });
+
+test("cards name a cover the ux file gives to the kit, and pictures that open", () => {
+  const spec = validateSpec({
+    path: "smithable.yml",
+    text: `smithable: 0.1
+app: { name: Builder }
+models:
+  Project:
+    fields: { name: string!, before: picture, photos: pictures }
+pages:
+  projects: { crud: Project }
+`,
+  }).ir as SpecIR;
+  const listOf = (table: string) => {
+    const look = validateUx(
+      {
+        path: "smithable.ux.yml",
+        text: `smithableUx: 0.1\npages:\n  projects:\n    table: ${table}\n`,
+      },
+      spec,
+    ).ux;
+    return (
+      generateApp(spec, {
+        smithableVersion: "0.0.0",
+        auth: validateAuth(
+          { path: "smithable.auth.yml", text: "smithableAuth: 0.1\nsignIn: none\n" },
+          spec,
+        ).auth as AuthIR,
+        ux: look,
+      }).find((f) => f.path === "src/routes/projects/index.tsx")?.content ?? ""
+    );
+  };
+  const byRule = listOf("{ view: cards }");
+  expect(byRule).toContain('view="cards"\n        cover="before"');
+  expect(byRule).not.toContain("opens=");
+  expect(listOf("{ view: cards, cover: photos, open: picture }")).toContain(
+    'view="cards"\n        cover="photos"\n        opens="picture"',
+  );
+});
