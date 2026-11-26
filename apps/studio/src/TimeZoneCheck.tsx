@@ -36,11 +36,12 @@ export function sameClock(a: string, b: string, from = new Date()): boolean {
     };
     const [x, y] = [clock(a), clock(b)];
     const start = Date.UTC(from.getUTCFullYear(), 0, 1);
+    const end = Date.UTC(from.getUTCFullYear() + 2, 0, 1);
     const half = 432e5;
     same = x(start) === y(start);
     // Twice a day for two years; where either zone's offset moved between two samples, every
     // quarter hour between them, since two zones may change on the same day hours apart.
-    for (let at = start + half; same && at < start + 730 * 864e5; at += half) {
+    for (let at = start + half; same && at <= end; at += half) {
       const moved = x(at) !== x(at - half) || y(at) !== y(at - half);
       for (let t = moved ? at - half + 9e5 : at; same && t <= at; t += 9e5) same = x(t) === y(t);
     }
