@@ -4,21 +4,15 @@
 // stays. Studio allows it once, and only when it was started as replaceable.
 
 import {
-  closeSync,
   existsSync,
-  fchmodSync,
-  fchownSync,
-  lstatSync,
   mkdirSync,
   mkdtempSync,
-  openSync,
   readdirSync,
   readFileSync,
   renameSync,
   rmSync,
   statSync,
   symlinkSync,
-  utimesSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -36,8 +30,8 @@ import {
   withoutSampleDomains,
   withTimeZone,
 } from "./new.js";
-import { ownFolder, readTree, treeBytes, treeText } from "./secrets.js";
-import { removeTree, writeTreeFile } from "./tree-files.js";
+import { ownFolder, readTree, treeText } from "./secrets.js";
+import { markChanged, removeTree, writeTreeFile } from "./tree-files.js";
 import type { WebsiteGenerationInput, WebsiteGenerationOptions } from "./website-input.js";
 
 export interface Replacement {
@@ -187,32 +181,7 @@ function syncHere(from: string, dir: string): void {
  * until the preview's process ends: one, for a replacement.
  */
 export function reopenDatabase(dir: string): void {
-  const module = join(dir, "src", "db", "index.ts");
-  if (!existsSync(module) || !lstatSync(module).isFile()) return;
-  try {
-    utimesSync(module, new Date(), new Date());
-  } catch (error) {
-    // Setting a file's times is its owner's; a hosted Studio is in the project's group, not its
-    // owner. A copy made beside it and renamed over it needs the folder's write access alone. It
-    // is read as a project file (no link, the project user's), made new (`wx`), and given the
-    // file's group and mode with the group's write, so the project user can still change it.
-    if ((error as NodeJS.ErrnoException).code !== "EPERM") throw error;
-    const was = lstatSync(module);
-    const content = treeBytes(module);
-    const copy = join(dirname(module), `.index.ts.${process.pid}.reopen`);
-    const fd = openSync(copy, "wx", 0o600);
-    try {
-      writeFileSync(fd, content);
-      fchownSync(fd, -1, was.gid);
-      fchmodSync(fd, (was.mode & 0o777) | 0o020);
-    } catch (failure) {
-      closeSync(fd);
-      rmSync(copy, { force: true });
-      throw failure;
-    }
-    closeSync(fd);
-    renameSync(copy, module);
-  }
+  markChanged(join(dir, "src", "db", "index.ts"));
 }
 
 /**

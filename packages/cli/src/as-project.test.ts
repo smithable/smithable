@@ -1,4 +1,4 @@
-import { mkdirSync, readFileSync, statSync } from "node:fs";
+import { mkdirSync, readFileSync, statSync, utimesSync } from "node:fs";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { afterEach, expect, test } from "vitest";
@@ -13,7 +13,7 @@ import {
 import { keepImport } from "./import.js";
 import { forgetProjectUserForTests } from "./secrets.js";
 import { tempDir } from "./test-dir.js";
-import { changeTree, removeTree, writeTreeFile } from "./tree-files.js";
+import { changeTree, markChanged, removeTree, writeTreeFile } from "./tree-files.js";
 
 afterEach(() => {
   delete process.env.SMITHABLE_PROJECT_UID;
@@ -129,7 +129,13 @@ test("given a project user, the app's database and the tree are worked on by a c
   );
   removeTree(join(dir, "new"));
   expect(statSync(join(dir, "new"), { throwIfNoEntry: false })).toBeUndefined();
-  expect(childCallsForTests()).toBe(12);
+  // Marking the database module changed sets its times, which only its owner may (T1614).
+  const module = join(dir, "src", "db", "index.ts");
+  changeTree([{ path: module, data: "export const db = 1;\n" }]);
+  utimesSync(module, new Date(0), new Date(0));
+  markChanged(module);
+  expect(statSync(module).mtimeMs).toBeGreaterThan(0);
+  expect(childCallsForTests()).toBe(14);
 });
 
 test("the child knows where every function run as the project's user lives", async () => {
