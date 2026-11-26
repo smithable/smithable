@@ -16,6 +16,7 @@ import { join } from "node:path";
 import { afterEach, expect, test } from "vitest";
 import { git } from "./git.js";
 import { execQuiet } from "./io.js";
+import { dropMissingPictures } from "./pictures.js";
 import {
   capabilityFault,
   childOptions,
@@ -25,6 +26,7 @@ import {
   holdSecretsFromJson,
   loadsNoProjectCode,
   modelKey,
+  ownFolder,
   readOwn,
   readTree,
   readTreeOrNone,
@@ -366,3 +368,71 @@ test("a file of the tree read by this process is not read through a link the pro
   expect(readOwn(join(tree, "plain.txt"))).toBe("a notice");
   expect(() => readOwn(join(tree, "plain.txt"), 4)).toThrow("larger than");
 });
+
+// Studio runs as one uid and its children as the project user's (the workspace); a file Studio
+// writes in the staged app is Studio's own, which a tree read refused on beta (T1614).
+test.runIf(process.platform === "linux" && process.getuid?.() !== 0)(
+  "a folder this process made is read as its own while marked, and nothing through a link",
+  async () => {
+    // Another uid, and a group this process is in, as Studio is in the project user's (1000).
+    process.env.SMITHABLE_PROJECT_UID = "0";
+    process.env.SMITHABLE_PROJECT_GID = String(process.getgid?.());
+    const base = mkdtempSync(join(tmpdir(), "smithable-own-"));
+    dirs.push(base);
+    const staged = join(base, "project.incoming");
+    const outside = join(base, "project");
+    mkdirSync(staged, { mode: 0o2775 });
+    mkdirSync(outside);
+    // Never a folder through a link, which a project process could have put at the name.
+    symlinkSync(staged, join(base, "linked.incoming"));
+    expect(() => ownFolder(join(base, "linked.incoming"))).toThrow();
+    const content = join(staged, "smithable.content.yml");
+    writeFileSync(content, "smithableContent: 0.1\nhome:\n  hero:\n    image: images/hero.webp\n");
+    writeFileSync(join(outside, "secret.txt"), "not this\n");
+    symlinkSync(outside, join(staged, "node_modules"));
+    symlinkSync(join(outside, "secret.txt"), join(staged, "linked.txt"));
+    writeFileSync(join(staged, "two.txt"), "two names\n");
+    linkSync(join(staged, "two.txt"), join(staged, "also-two.txt"));
+    // Unmarked, the file is this process's, not the project user's: refused, as on beta.
+    expect(() => readTree(content)).toThrow("is not a file the child made");
+    const unmark = ownFolder(staged);
+    // The project user's group's to write in (the children making the app), no one else's.
+    expect(statSync(staged).mode & 0o7777).toBe(0o2770);
+    expect(statSync(staged).gid).toBe(process.getgid?.());
+    try {
+      expect(readTree(content)?.toString()).toContain("smithableContent");
+      // Only tree reads: readOwn (the project's notice) keeps the project user's rule.
+      expect(() => readOwn(content)).toThrow("is not a file the child made");
+      const said: string[] = [];
+      dropMissingPictures(staged, { out: () => {}, err: (text) => said.push(text) });
+      expect(readTree(content)?.toString()).not.toContain("hero.webp");
+      // Through the link it holds into the project, at the end or as a folder: the project's rules.
+      expect(() => readTree(join(staged, "node_modules", "secret.txt"))).toThrow(
+        "is not a file the child made",
+      );
+      expect(() => readTree(join(staged, "linked.txt"))).toThrow();
+      expect(() => readTree(join(staged, "two.txt"))).toThrow("is not a file the child made");
+      // Known by the folder held open, not its name: moved away and replaced, the name is not it.
+      renameSync(staged, join(base, "moved"));
+      mkdirSync(staged);
+      writeFileSync(content, "smithableContent: 0.1\n");
+      expect(() => readTree(content)).toThrow("is not a file the child made");
+      expect(readTree(join(base, "moved", "smithable.content.yml"))?.toString()).toContain(
+        "smithableContent",
+      );
+    } finally {
+      unmark();
+    }
+    const marked = join(base, "moved", "smithable.content.yml");
+    expect(() => readTree(marked)).toThrow("is not a file the child made");
+    // Unmarking twice does nothing: a later mark, which may hold the same number, stays.
+    const again = ownFolder(join(base, "moved"));
+    try {
+      unmark();
+      expect(readTree(marked)?.toString()).toContain("smithableContent");
+    } finally {
+      again();
+    }
+    expect(() => readTree(marked)).toThrow("is not a file the child made");
+  },
+);
