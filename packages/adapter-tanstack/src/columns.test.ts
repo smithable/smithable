@@ -38,3 +38,16 @@ test("default columns: the title, then pictures, then required fields, then the 
 test("a card shows the description, a long text never being a column", () => {
   expect(listing).toContain('descriptionField: "description"');
 });
+
+test("a card never shows its title again as the description", () => {
+  // A repair job whose only text is its description: that is its title (the T1603 walk).
+  const job = validateSpec({
+    path: "smithable.yml",
+    text: "smithable: 0.1\napp: { name: Bikes }\nmodels:\n  RepairJob:\n    fields:\n      description: text!\n      price: money\npages:\n  jobs: { crud: RepairJob }\n",
+  }).ir as SpecIR;
+  const module = generateApp(job, { smithableVersion: "0.0.0", auth }).find(
+    (f) => f.path === "src/generated/repair-job.ts",
+  )?.content;
+  expect(module).toContain('titleField: "description"');
+  expect(module).not.toContain("descriptionField");
+});
