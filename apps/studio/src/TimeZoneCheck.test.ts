@@ -20,6 +20,10 @@ test("two names for one clock are the same zone; a zone an hour off, or one keep
   expect(sameClock("Europe/Stockholm", "Europe/Helsinki", from)).toBe(false);
   // Same offset in winter, not in summer.
   expect(sameClock("Europe/Helsinki", "Africa/Cairo", new Date(Date.UTC(2022, 0, 1)))).toBe(false);
+  // Both move to summer time on the same day, two hours apart.
+  expect(sameClock("America/Havana", "America/New_York", new Date(Date.UTC(2024, 0, 1)))).toBe(
+    false,
+  );
   expect(sameClock("Europe/Oslo", "Europe/Oslo", from)).toBe(true);
   expect(sameClock("Nowhere/Land", "Europe/Oslo", from)).toBe(false);
 });
