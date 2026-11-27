@@ -159,6 +159,11 @@ export const pagesSection: SpecSection<"pages"> = {
           description:
             "false: the list offers no Export CSV, for a page whose records are to stay in the app. Unsaid, it does.",
         },
+        import: {
+          type: "boolean",
+          description:
+            "true: the list offers Import from a file to everyone who may add one record; false: to nobody. Unsaid, to the roles that may add one and see everyone's records in the list.",
+        },
         contact: {
           oneOf: [
             { type: "string" },
@@ -262,6 +267,7 @@ function readPage(
       "sortable",
       "favorites",
       "export",
+      "import",
       "period",
       "contact",
       "document",
@@ -285,6 +291,7 @@ function readPage(
   let sortable: { name: string; at: At }[] | undefined;
   let favorites: PageIR["favorites"] | undefined;
   let noExport = false;
+  let offersImport: boolean | undefined;
   let periodNode: ParsedNode | undefined;
   let mine = false;
   let contact: { to: string; keep?: string; toAt: At; keepAt?: At } | undefined;
@@ -337,6 +344,8 @@ function readPage(
       }
     } else if (key === "sortable") {
       sortable = readNameList(ctx, value, `the sortable fields of ${where}`);
+    } else if (key === "import") {
+      offersImport = readBoolean(ctx, value, `"import" in ${where}`);
     } else if (key === "mine") {
       const v = readBoolean(ctx, value, `"mine" in ${where}`);
       if (v) mine = true;
@@ -464,6 +473,7 @@ function readPage(
         "sortable",
         "favorites",
         "export",
+        "import",
         "contact",
         "document",
         "mine",
@@ -547,6 +557,7 @@ function readPage(
       : {}),
     ...(model && favorites ? { favorites } : {}),
     ...(model && noExport ? { export: false as const } : {}),
+    ...(model && offersImport !== undefined ? { import: offersImport } : {}),
     ...(model && mine ? { mine: true as const } : {}),
     ...(model && contact ? checkContact(ctx, contact, model, parsed, where) : {}),
     ...(() => {

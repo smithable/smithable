@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { actionAccess, modelAccess, pageAccess } from "./access.js";
+import { actionAccess, importOffer, modelAccess, pageAccess } from "./access.js";
 import type { AuthIR } from "./auth.js";
 import { validateAuth } from "./auth.js";
 import type { ActionIR, SpecIR, StandardActionIR } from "./ir.js";
@@ -79,6 +79,46 @@ describe("the examples", () => {
     expect(actionAccess(order, a, models)).toEqual(
       modelAccess(models.find((m) => m.name === "Order") as SpecIR["models"][0], a).write,
     );
+  });
+
+  test("Import by rule: the roles that may add a booking and read everyone's; the key either way (T1688)", () => {
+    const spec = examples["../../../examples/booking/smithable.yml"] as string;
+    const auth = examples["../../../examples/booking/smithable.auth.yml"] as string;
+    const offer = (text: string, page: string) => {
+      const { ir, auth: a } = load(text, auth);
+      const p = (ir as SpecIR).pages.find((x) => x.id === page) as SpecIR["pages"][0];
+      const model = (ir as SpecIR).models.find((m) => m.name === "Booking") as SpecIR["models"][0];
+      return importOffer(p, model, a.auth);
+    };
+    // A member may add a booking but reads only their own: no Import on My bookings; staff do
+    // not open that page, so only the administrator. The staff's own list is theirs.
+    expect(offer(spec, "my-bookings")).toEqual({ roles: ["admin"], byRule: true });
+    expect(offer(spec, "bookings")).toEqual({ roles: ["admin", "staff"], byRule: true });
+    const keyed = (value: string) =>
+      spec
+        .split(
+          "  my-bookings:                        # a member's own bookings (private access)\n    crud: Booking\n",
+        )
+        .join(`  my-bookings:\n    crud: Booking\n    ${value}\n`);
+    expect(offer(keyed("import: true"), "my-bookings")).toEqual({ all: true, byRule: false });
+    expect(offer(keyed("import: false"), "my-bookings")).toEqual({ roles: [], byRule: false });
+    expect(offer(keyed("mine: true"), "my-bookings")).toEqual({ roles: [], byRule: true });
+    // A public read of every booking is everyone's to a member too; the staff's list stays theirs,
+    // since a member does not open it.
+    const everyones = auth.split("    - Session\n").join("    - Session\n    - Booking\n");
+    const open = (page: string) => {
+      const { ir, auth: a } = load(spec, everyones);
+      const p = (ir as SpecIR).pages.find((x) => x.id === page) as SpecIR["pages"][0];
+      const model = (ir as SpecIR).models.find((m) => m.name === "Booking") as SpecIR["models"][0];
+      return importOffer(p, model, a.auth);
+    };
+    expect(open("my-bookings")).toEqual({ roles: ["admin", "member"], byRule: true });
+    expect(open("bookings")).toEqual({ roles: ["admin", "staff"], byRule: true });
+    // Without sign-in nothing is anyone's own: everyone who may add one.
+    const { ir } = load(spec, auth);
+    const p = (ir as SpecIR).pages.find((x) => x.id === "bookings") as SpecIR["pages"][0];
+    const m = (ir as SpecIR).models.find((x) => x.name === "Booking") as SpecIR["models"][0];
+    expect(importOffer(p, m, undefined)).toEqual({ all: true, byRule: true });
   });
 
   test("booking: the schedule is public; members see only their own records", () => {

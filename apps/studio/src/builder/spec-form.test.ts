@@ -438,6 +438,10 @@ test("a page's lists, filters and choices each go through their own operation", 
     "setExport",
     { page: "orders", offered: "off" },
   ]);
+  expect(operationFor("smithable.yml", page("import"), undefined)).toEqual([
+    "setImport",
+    { page: "orders", offered: "rule" },
+  ]);
   expect(operationFor("smithable.yml", page("favorites"), "only")?.[1]).toEqual({
     page: "orders",
     mode: "only",

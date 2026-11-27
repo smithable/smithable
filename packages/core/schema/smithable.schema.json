@@ -2665,6 +2665,10 @@
             "const": false,
             "description": "false: the list offers no Export CSV, for a page whose records are to stay in the app. Unsaid, it does."
           },
+          "import": {
+            "type": "boolean",
+            "description": "true: the list offers Import from a file to everyone who may add one record; false: to nobody. Unsaid, to the roles that may add one and see everyone's records in the list."
+          },
           "contact": {
             "oneOf": [
               {
