@@ -1,6 +1,6 @@
 // The fix-file rule (fixes/README.md; smithable-cloud docs/design/fixes-reach-apps.md §3), as CI
-// runs it on pull requests: BASE is the base commit; NO_FIX_FILE "true" when the event's labels
-// have the label; PR_BODY the pull request's text when the run began. With PR, REPO and
+// runs it on pull requests: BASE is the base commit at the event; PR_HEAD the pull request's head;
+// NO_FIX_FILE "true" when the event's labels have the label; PR_BODY the pull request's text when the run began. With PR, REPO and
 // GITHUB_TOKEN the labels and the text are also read as they are now, so a run started again
 // after either changed sees it (A 243). The rule itself, and which part of it passed the change,
 // is packages/cli/src/fix-file-rule.ts. Exits 1 with what the change needs.
@@ -28,9 +28,17 @@ const quietly = (...args) => {
     return undefined;
   }
 };
+// CI checks out the pull request merged into main as it is then, which can hold commits after
+// BASE: where HEAD is that merge, its first parent is the base, so only the pull request counts.
+const merged =
+  !local &&
+  Boolean(process.env.PR_HEAD) &&
+  quietly("rev-parse", "--verify", "-q", "HEAD^2") === process.env.PR_HEAD;
 const base = local
   ? quietly("rev-parse", "--verify", "-q", "origin/main^{commit}")
-  : process.env.BASE;
+  : merged
+    ? quietly("rev-parse", "HEAD^1")
+    : process.env.BASE;
 if (!base) {
   if (!local) console.log("Not a pull request: no fix-file rule.");
   process.exit(0);
