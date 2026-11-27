@@ -820,8 +820,10 @@ test("a text changed in place and saved with Enter is sent to Studio once, not a
     });
     // As in a browser: editing turned off on the focused text blurs it, once.
     let focused = true;
+    let editable = "inherit";
     Object.defineProperty(text, "contentEditable", {
       set(on: string) {
+        editable = on;
         if (on !== "false" || !focused) return;
         focused = false;
         listeners.blur?.({});
@@ -833,6 +835,8 @@ test("a text changed in place and saved with Enter is sent to Studio once, not a
     expect(posted.filter((m) => m.type === "text")).toEqual([
       expect.objectContaining({ path: "pages.home.hero.title", text: "Slow down a little" }),
     ]);
+    // And the text is no longer editable.
+    expect(editable).toBe("false");
   } finally {
     vi.unstubAllGlobals();
   }
