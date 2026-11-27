@@ -274,7 +274,8 @@ async function open(page, url) {
   try {
     await page.goto(url).catch((error) => {
       const why = String(error?.message ?? error).split("\n")[0];
-      if (!why.includes("ERR_NETWORK_CHANGED")) throw error;
+      if (!why.includes("ERR_NETWORK_CHANGED") || (events.length && !networkOnly(events)))
+        throw error;
       warn(why);
       return page.goto(url);
     });
@@ -290,11 +291,13 @@ async function open(page, url) {
         const before = [...events];
         const { why, alive } = await notLive(page, scripts, vite.length > 0, where);
         // Only the network broke it, and the reload came alive without a further failure: on.
-        if (again && alive && networkOnly(before) && events.length === before.length) {
-          warn(net[0] ?? before[0].text);
+        if (again && alive && networkOnly(before)) {
           await page.waitForLoadState("networkidle");
           await hydrated(page);
-          return;
+          if (events.length === before.length) {
+            warn(net[0] ?? before[0].text);
+            return;
+          }
         }
         error.message = [`${first} (${why})`, ...rest].join("\n");
       }
