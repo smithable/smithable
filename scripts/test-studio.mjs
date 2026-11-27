@@ -3055,9 +3055,12 @@ try {
       await pick(workspace, { x: 4, y: 4 });
       await workspaceSettings.getByRole("radio", { name: "Default", exact: true }).check();
       await workspaceSettings
-        .getByText("Landing pages and articles are public pages; the rest are workspace pages.", {
-          exact: true,
-        })
+        .getByText(
+          "Landing pages and public articles are public pages; the rest are workspace pages.",
+          {
+            exact: true,
+          },
+        )
         .waitFor();
       await workspaceSettings.getByRole("radio", { name: "Only this page", exact: true }).check();
       await workspaceSettings

@@ -24,7 +24,8 @@ export type PreviewMessage =
       label?: string;
       anchor?: { left: number; right: number; top: number; bottom: number };
     }
-  | { type: "selection-cleared" }
+  /** Escape there, or the part gone; only Escape with nothing selected ends Select. */
+  | { type: "selection-cleared"; escape?: boolean }
   | { type: "shift"; on: boolean }
   /** The selected part moved on the screen (the page scrolled or changed size). */
   | {

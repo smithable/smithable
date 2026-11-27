@@ -752,8 +752,10 @@ export function App() {
       if (!isPreviewMessage(event)) return;
       // The page lets go of its part (Escape there, the part gone, another page), or, with
       // nothing selected, Escape there ends Select.
-      if (event.data.type === "selection-cleared")
-        selectedNow.current ? clearSelection() : stopSelecting();
+      if (event.data.type === "selection-cleared") {
+        if (selectedNow.current) clearSelection();
+        else if (event.data.escape) stopSelecting();
+      }
       // Shift held in the page selects for as long as it is held: the Select button shows it (T1238).
       if (event.data.type === "shift") setShiftSelect(event.data.on === true);
       // A page loaded again while Shift was held never says it was let go.

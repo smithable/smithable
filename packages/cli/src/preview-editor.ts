@@ -211,9 +211,10 @@ if (typeof window !== "undefined" && window.parent !== window) {
     clear("data-sm-selected");
     clear("data-sm-hover");
   };
-  const loseSelection = () => {
+  // Escape says so: with nothing selected in Studio, only it ends Select there.
+  const loseSelection = (escape) => {
     clearSelection();
-    post({ type: "selection-cleared" });
+    post({ type: "selection-cleared", ...(escape ? { escape: true } : {}) });
   };
   // A section picked before its page loaded again (its look changed) is marked again once it shows,
   // or given up after ten seconds when it never does.
@@ -544,7 +545,7 @@ if (typeof window !== "undefined" && window.parent !== window) {
     if (!designOnly() && !typing && event.key === "Escape" && (armed() || selected)) {
       event.preventDefault();
       temporary = false;
-      loseSelection();
+      loseSelection(true);
       paintSelect();
     }
     if (!designOnly() && (event.ctrlKey || event.metaKey) && !event.shiftKey && event.key.toLowerCase() === "z" && !typing) {

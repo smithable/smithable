@@ -41,7 +41,7 @@ test("the key offers Import to everyone who may add one, or to no one (T1688)", 
     route(
       generate(
         bookingSpec.replace(
-          /(\n  my-bookings:[^\n]*\n    crud: Booking\n)/,
+          /(\n {2}my-bookings:[^\n]*\n {4}crud: Booking\n)/,
           `$1    import: ${value}\n`,
         ),
       ),

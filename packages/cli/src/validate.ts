@@ -613,7 +613,7 @@ export function explainSpec(
           ? `${page.id} frame: site, a public page with the top menu and footer (by rule: landing pages and articles visitors open have it)`
           : set
             ? `${page.id} frame: ${set} (frame in smithable.ux.yml)`
-            : `${page.id} frame: app, a workspace page with the app's menu (by rule: landing pages and articles are public pages, the rest workspace pages; say it with frame)`,
+            : `${page.id} frame: app, a workspace page with the app's menu (by rule: landing pages and public articles are public pages, the rest workspace pages; say it with frame)`,
     );
   }
   // Which pictures the release review asks about (picture-kinds.md §6): the hero's always, a

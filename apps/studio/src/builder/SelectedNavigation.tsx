@@ -79,22 +79,28 @@ export function SelectedNavigation({
   const description = useId();
   const wanted = value.trim();
   // What Apply runs: each an operation, in order.
-  const changes: [string, Record<string, unknown>][] = [];
+  const changes: [string, Record<string, unknown>, string][] = [];
+  const [saved, setSaved] = useState<string>();
   if (part.kind === "item") {
     if (wanted && wanted !== part.value)
-      changes.push(["setText", { path: ["pages", part.page, "title"], text: wanted }]);
+      changes.push([
+        "setText",
+        { path: ["pages", part.page, "title"], text: wanted },
+        "the menu item's text",
+      ]);
   } else {
     if (part.kind === "landing" && value !== part.value)
       changes.push([
         "setSectionLook",
         { page: part.page, section: "header", key: "position", value },
+        "the top bar's scrolling",
       ]);
     if (scope === "app" && place !== part.navigation)
-      changes.push(["setMenuLayout", { navigation: place }]);
+      changes.push(["setMenuLayout", { navigation: place }, "the menu for the whole app"]);
     if (pageFrame && scope === "page" && frame !== pageFrame.frame)
-      changes.push(["setFrame", { page: pageFrame.page, frame }]);
+      changes.push(["setFrame", { page: pageFrame.page, frame }, "this page's menu"]);
     if (pageFrame?.frame && scope === "default")
-      changes.push(["setFrame", { page: pageFrame.page, frame: "default" }]);
+      changes.push(["setFrame", { page: pageFrame.page, frame: "default" }, "this page's menu"]);
   }
   const canSave = changes.length > 0 && !saving;
   const scopes = (
@@ -139,7 +145,7 @@ export function SelectedNavigation({
         />
       ) : (
         <p className="text-xs text-quiet">
-          Landing pages and articles are public pages; the rest are workspace pages.
+          Landing pages and public articles are public pages; the rest are workspace pages.
         </p>
       )}
     </fieldset>
@@ -161,7 +167,15 @@ export function SelectedNavigation({
         if (!canSave) return;
         setSaving(true);
         try {
-          for (const [name, args] of changes) if (!(await run(name, args))) return;
+          // One Apply may be two changes: when the second is refused, say the first stays.
+          const done: string[] = [];
+          for (const [name, args, what] of changes) {
+            if (!(await run(name, args))) {
+              if (done.length) setSaved(`Saved ${done.join(" and ")}; ${what} was not changed.`);
+              return;
+            }
+            done.push(what);
+          }
           close();
         } finally {
           setSaving(false);
@@ -199,6 +213,11 @@ export function SelectedNavigation({
             This also changes the page title.
           </p>
         </div>
+      )}
+      {saved && (
+        <p role="status" className="text-xs text-quiet">
+          {saved}
+        </p>
       )}
       <div className="flex justify-end gap-2">
         {part.kind === "item" && (
