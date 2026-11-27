@@ -111,4 +111,7 @@ test("a stored picture's change is named by what it shows, never its id (T1697)"
     "Use an uploaded picture as the picture of the hero section of home",
   );
   expect(op?.describe({ page: "home", section: "hero", asset }, ir)).not.toContain(asset);
+  expect(op?.describe({ page: "home", section: "hero", asset, alt: "  " }, ir)).toBe(
+    "Use an uploaded picture as the picture of the hero section of home",
+  );
 });
