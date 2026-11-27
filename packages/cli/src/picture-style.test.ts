@@ -251,6 +251,25 @@ test("an incomplete style, an unknown one, no network or a wrong hash refuses", 
       ? new Response(bytes("not the picture"))
       : library()(url)) as Fetch;
   expect(await placeStyle(dir, "pastel", tampered)).toMatch(/does not match the library's hash/);
+  // A body larger than the cap is refused while it is read, not after: the stream is given up
+  // at the first chunk past 2 MB, and the rest is never asked for (T947).
+  const pulled: number[] = [];
+  const endless: Fetch = (async (url: string | URL | Request) => {
+    if (!String(url).includes("/files/")) return library()(url);
+    const at = pulled.push(0) - 1;
+    return new Response(
+      new ReadableStream({
+        pull: (c) => {
+          pulled[at] = (pulled[at] ?? 0) + 1;
+          c.enqueue(new Uint8Array(1_000_000));
+        },
+      }),
+    );
+  }) as Fetch;
+  expect(await placeStyle(dir, "pastel", endless)).toMatch(/larger than the library allows/);
+  expect(pulled.length).toBeGreaterThan(0);
+  // Each picture: the three chunks that pass the cap, and at most one the stream read ahead.
+  for (const count of pulled) expect(count).toBeLessThanOrEqual(4);
   // Nothing was written by any of them.
   expect(readFileSync(join(dir, "public", "images", "hero.webp"))).toEqual(
     Buffer.from(fileOf("cafe-hero")),

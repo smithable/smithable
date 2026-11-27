@@ -25,6 +25,9 @@ import { atLibrary, type Fetch, libraryBase } from "./pictures.js";
 import { readTreeOrNone, treeBytes, treeText } from "./secrets.js";
 
 const TIMEOUT = 20_000;
+// The index is small: on a network that answers nothing, `smithable new` goes on without
+// pictures after this long rather than the pictures' own wait (T947).
+const INDEX_TIMEOUT = 8_000;
 const MAX_PICTURE = 2_000_000;
 /** A project's own picture is read up to what Studio serves and the ink-wash worker takes (T1123). */
 const OWN_PICTURE = 32 * 1024 * 1024;
@@ -315,12 +318,41 @@ export function offeredStyles(dir: string, version: LibraryVersion): LibraryStyl
   return version.styles.filter((s) => planStyle(dir, version, s.id).missing.length === 0);
 }
 
+/** A body read up to the library's cap, and no further: undefined when it is larger (T947). */
+async function capped(response: Response): Promise<Uint8Array | undefined> {
+  if (Number(response.headers?.get("content-length")) > MAX_PICTURE) return undefined;
+  const reader = response.body?.getReader();
+  if (!reader) {
+    const bytes = new Uint8Array(await response.arrayBuffer());
+    return bytes.byteLength > MAX_PICTURE ? undefined : bytes;
+  }
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    size += value.byteLength;
+    if (size > MAX_PICTURE) {
+      await reader.cancel();
+      return undefined;
+    }
+    chunks.push(value);
+  }
+  const bytes = new Uint8Array(size);
+  let at = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, at);
+    at += chunk.byteLength;
+  }
+  return bytes;
+}
+
 async function fetchChecked(entry: VersionEntry, fetchFn: Fetch): Promise<Uint8Array | string> {
   try {
     const response = await fetchFn(atLibrary(entry.url), { signal: AbortSignal.timeout(TIMEOUT) });
     if (!response.ok) return `${entry.id} could not be fetched (${response.status})`;
-    const bytes = new Uint8Array(await response.arrayBuffer());
-    if (bytes.byteLength > MAX_PICTURE) return `${entry.id} is larger than the library allows`;
+    const bytes = await capped(response);
+    if (!bytes) return `${entry.id} is larger than the library allows`;
     return sha256(bytes) === entry.sha256
       ? bytes
       : `${entry.id} does not match the library's hash for it`;
@@ -339,7 +371,7 @@ const VERSION_NAME = /^[\w-]+(\.[\w-]+)*$/;
 export async function libraryVersion(fetchFn: Fetch): Promise<LibraryVersion | string> {
   const get = async (path: string) => {
     const response = await fetchFn(`${libraryBase()}/${path}`, {
-      signal: AbortSignal.timeout(TIMEOUT),
+      signal: AbortSignal.timeout(INDEX_TIMEOUT),
     });
     if (!response.ok) throw new Error(String(response.status));
     return response.json();
