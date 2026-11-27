@@ -183,3 +183,20 @@ test("private records: 'their own records only' is said of the roles it holds fo
     "Everyone who signs in sees only their own records; the guest role opens the bookings page. Admins do everything.",
   );
 });
+
+test("a page named by its id never reads as a third page's title (T1689)", () => {
+  const three = validateSpec({
+    path: "smithable.yml",
+    text: "smithable: 0.1\napp: { name: Desk }\nmodels:\n  Booking:\n    fields: { name: string! }\npages:\n  my-bookings: { crud: Booking }\n  bookings: { crud: Booking }\n  mine: { crud: Booking }\n",
+  }).ir as SpecIR;
+  const titled = validateContent(
+    {
+      path: "smithable.content.yml",
+      text: "smithableContent: 0.1\npages:\n  mine: { title: My bookings }\n",
+    },
+    three,
+  ).content as ContentIR;
+  expect(present(three, undefined, titled)[1]?.text).toBe(
+    "It has my bookings, bookings and mine, open to everyone.",
+  );
+});

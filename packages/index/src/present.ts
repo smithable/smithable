@@ -71,11 +71,21 @@ export function present(ir: SpecIR, auth?: AuthIR, content: ContentIR = emptyCon
     const open = ordered.filter((p) => !auth || auth.public.pages.includes(p.id));
     const closed = ordered.filter((p) => !open.includes(p));
     // Two pages that would read the same (my-bookings and bookings, both "bookings") are named by
-    // their ids instead.
+    // their ids instead, and again until no two read the same: an id's words may be a third
+    // page's title.
     const said = new Map(ordered.map((p) => [p.id, pageWords(ir, content, p.id)]));
-    const clash = (id: string) => [...said.values()].filter((w) => w === said.get(id)).length > 1;
-    const words = (pages: typeof ordered) =>
-      list(pages.map((p) => (clash(p.id) ? humanize(p.id).toLowerCase() : (said.get(p.id) ?? ""))));
+    for (let again = true; again; ) {
+      again = false;
+      const seen = [...said.values()];
+      for (const [id, w] of said) {
+        const own = humanize(id).toLowerCase();
+        if (w !== own && seen.filter((x) => x === w).length > 1) {
+          said.set(id, own);
+          again = true;
+        }
+      }
+    }
+    const words = (pages: typeof ordered) => list(pages.map((p) => said.get(p.id) ?? ""));
     const text =
       open.length && closed.length
         ? `It has ${words(open)} for everyone, and for those who sign in: ${words(closed)}.`
