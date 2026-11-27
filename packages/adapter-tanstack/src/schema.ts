@@ -764,7 +764,14 @@ export function seedModule(
     // A calendar's records are placed around the day the samples are loaded, never an empty week.
     const start = calendarStart(model, ir);
     const rows = seedRows(model, options).map((row, i) => {
-      const owner = ownerOf(model, row);
+      // A place or a time that is a sample user's is taken only where that user is: elsewhere
+      // it would be nobody's place in a real session, which only staff could free.
+      const held = Boolean(
+        (model.capacity || model.occupies) && ownerOf(model, row)?.startsWith("SAMPLE_USERS ?"),
+      );
+      const owner = held
+        ? JSON.stringify(sampleUsers.find((u) => u.name === row[SAMPLE_OWNER])?.id)
+        : ownerOf(model, row);
       const entries = storedFields(model).map((field) => {
         if (owner && field.name === model.ownedBy && !creatorOwned(model))
           return `${addressOwned(model) ? field.name : dataKey(field)}: ${owner}`;
@@ -805,8 +812,12 @@ export function seedModule(
           : `${dataKey(field)}: instantOf(aroundToday(${value}, ${i % 2}), app.timeZone)`;
       });
       if (owner && creatorOwned(model)) entries.push(`ownerId: ${owner}`);
-      return `    { ${entries.join(", ")} },`;
+      return held
+        ? `    ...(SAMPLE_USERS ? [{ ${entries.join(", ")} }] : []),`
+        : `    { ${entries.join(", ")} },`;
     });
+    // Rows only some builds insert: the list may be empty, and an insert of no rows is refused.
+    const some = rows.some((r) => r.startsWith("    ...(SAMPLE_USERS"));
     // A sample file that is an empty list: the model starts empty, and the seed inserts nothing
     // (an insert of no rows is refused).
     if (!rows.length) return [];
@@ -824,6 +835,15 @@ ${rows.map((r) => `  ${r}`).join("\n")}
   if (pictured.length) db.insert(schema.${n.table}).values(pictured).run();
 }`,
       ];
+    if (some)
+      return [
+        `if (db.select().from(schema.${n.table}).limit(1).all().length === 0) {
+  const rows: (typeof schema.${n.table}.$inferInsert)[] = [
+${rows.map((r) => `  ${r}`).join("\n")}
+  ];
+  if (rows.length) db.insert(schema.${n.table}).values(rows).run();
+}`,
+      ];
     return [
       `if (db.select().from(schema.${n.table}).limit(1).all().length === 0) {
   db.insert(schema.${n.table})
@@ -837,7 +857,7 @@ ${rows.join("\n")}
   // The sample users (samples/people.yml), in an app where people sign in: users of the
   // development database who sign in nowhere; the development door acts as them.
   const people = sampleUsers;
-  if (blocks.some((b) => b.includes("SAMPLE_USERS ?")))
+  if (blocks.some((b) => b.includes("SAMPLE_USERS ?") || b.includes("...(SAMPLE_USERS")))
     blocks.unshift(`// The sample users are in the database where the door that acts as them is.
 const SAMPLE_USERS = process.env.NODE_ENV !== "production" || process.env.DEMO_SIGN_IN === "1";`);
   if (people.length)
