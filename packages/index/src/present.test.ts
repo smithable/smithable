@@ -169,6 +169,10 @@ test("private records: 'their own records only' is said of the roles it holds fo
   ).toBe(
     "The desk role opens the schedule page and the bookings page, sees everyone's sessions and bookings and sees only their own records of the rest; the guest role opens the bookings page, adds bookings and sees only their own records. Admins do everything.",
   );
+  // A write grant changes others' records; it does not show them.
+  expect(said("  guest: { pages: [bookings], write: [Booking] }\n")).toMatch(
+    /^Everyone who signs in sees only their own records; /,
+  );
   // A read list naming every kind is everyone's records, not "their own of the rest".
   const every = ir.models.map((m) => m.name).join(", ");
   expect(
@@ -176,6 +180,6 @@ test("private records: 'their own records only' is said of the roles it holds fo
   ).not.toMatch(/desk role[^;]*own records/);
   // No role reads beyond its own: the rule is said once for everyone, as before.
   expect(said("  guest: { pages: [bookings] }\n")).toBe(
-    "Everyone who signs in works on their own records only; the guest role opens the bookings page. Admins do everything.",
+    "Everyone who signs in sees only their own records; the guest role opens the bookings page. Admins do everything.",
   );
 });

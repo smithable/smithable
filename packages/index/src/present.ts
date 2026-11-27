@@ -185,7 +185,7 @@ export function present(ir: SpecIR, auth?: AuthIR, content: ContentIR = emptyCon
     const rule =
       auth.defaultAccess === "shared"
         ? "Everyone who signs in sees all records and changes the ones they own"
-        : "Everyone who signs in works on their own records only";
+        : "Everyone who signs in sees only their own records";
     const roles = others.map((r) => {
       const granted = grantWords(r);
       const said = granted === "only their own records" ? [] : granted.split("; ");

@@ -307,7 +307,8 @@ export function App() {
     if (!followed) return;
     const onMessage = (e: MessageEvent) => {
       if (!isPreviewMessage(e) || e.data.type !== "navigated") return;
-      if (/^\/sign-(in|up)\b/.test(e.data.path) && !/[?&]as=/.test(e.data.path))
+      const at = new URL(e.data.path, "http://preview");
+      if (["/sign-in", "/sign-up"].includes(at.pathname) && !at.searchParams.has("as"))
         setFollowed(undefined);
     };
     window.addEventListener("message", onMessage);
