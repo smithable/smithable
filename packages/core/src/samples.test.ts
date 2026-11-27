@@ -395,6 +395,10 @@ pages:
   expect(said(plain, row("Ola", "2026-09-29 10:00").replace("Cut", "1"), "")).toEqual([
     "Record 1 of Appointment: how long it takes (service.minutes) is not in the samples; give the record it names a sample minutes.",
   ]);
+  // A service that is not there is said once, by the reference's own check.
+  const wrong = said(plain, row("Ola", "2026-09-29 10:00").replace("Cut", "Perm"));
+  expect(wrong.length).toBe(1);
+  expect(wrong[0]).not.toContain("how long");
   // On a calendar the seed moves rows to this week (1st, 3rd, …) or the next on the same weekday:
   // two Tuesdays a week apart meet when both land in the same week.
   const moved = spec("diary: { calendar: { model: Appointment, starts: startsAt } }");

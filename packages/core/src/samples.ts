@@ -329,6 +329,9 @@ function withoutOverlap(
     const from = startOf(row, i);
     if (typeof n !== "number" || from === undefined || !counts(row)) return;
     const node = at.get(row) ?? null;
+    // A reference or a length that is itself wrong is reported where it is, not again here.
+    const own = row[via ?? ""];
+    if (typeof own !== "number" && (far !== undefined || own !== undefined)) return;
     const minutes = length(row);
     if (minutes === undefined) {
       ctx.error(
