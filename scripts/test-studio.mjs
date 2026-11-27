@@ -3132,7 +3132,13 @@ try {
       if (asked < 2) throw new Error(`the thumbnail was asked for ${asked} time(s), not again`);
       // A layout clicked shows as chosen at once, with a working sign, while it is applied (T1692).
       const hero = page.locator("[role=dialog]:has([data-section-picture])");
-      const layout = hero.locator("fieldset").first().locator("button[aria-pressed=false]").first();
+      // Pinned by its place: "the first not chosen" is another button once this one is chosen.
+      const layouts = hero.locator("fieldset").first().locator("button");
+      const layout = layouts.nth(
+        await layouts.evaluateAll((all) =>
+          all.findIndex((one) => one.getAttribute("aria-pressed") === "false"),
+        ),
+      );
       await layout.click();
       await layout
         .and(page.locator("[aria-pressed=true][aria-busy=true]"))
