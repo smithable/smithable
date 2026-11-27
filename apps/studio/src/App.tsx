@@ -1765,8 +1765,12 @@ export function App() {
                   <>
                     {undoHistory}
                     {outboxAction}
+                    {settingsAction}
+                    {lookAction}
                   </>
                 )}
+                {/* Three groups (T1693): what acts on the app, then Review and Publish, then Help and More. */}
+                <ToolbarDivider />
                 <Button
                   variant="ghost"
                   data-review-launch
@@ -1803,13 +1807,8 @@ export function App() {
                     <path d="M7 17H6a4 4 0 1 1 1-8 6 6 0 0 1 11-.5 4 4 0 0 1 0 8.5h-1M12 21V12m-3 3 3-3 3 3" />
                   </ToolbarGlyph>
                 </Button>
-                {!narrow && (
-                  <>
-                    {helpAction}
-                    {settingsAction}
-                    {lookAction}
-                  </>
-                )}
+                <ToolbarDivider />
+                {!narrow && helpAction}
                 <ToolbarMore
                   hint={narrow ? hintAt(["selection", "change-applied", "look-kept"]) : undefined}
                 >
@@ -2745,6 +2744,13 @@ function ToolbarButton({
   );
 }
 
+/** A thin line between the top bar's groups (T1693). */
+function ToolbarDivider() {
+  return (
+    <span aria-hidden="true" data-toolbar-divider className="mx-1 h-5 w-px shrink-0 bg-line" />
+  );
+}
+
 function ToolbarMore({ children, hint }: { children: React.ReactNode; hint?: React.ReactNode }) {
   const [open, setOpen] = useState(false);
   const root = useRef<HTMLDivElement>(null);
@@ -2786,9 +2792,15 @@ function ToolbarMore({ children, hint }: { children: React.ReactNode; hint?: Rea
         aria-expanded={open}
         aria-controls={panelId}
         onClick={() => setOpen(!open)}
-        className="h-8 rounded-md px-2 text-xs font-medium hover:bg-subtle"
+        aria-label="More"
+        title="More"
+        className="flex size-8 items-center justify-center rounded-md hover:bg-subtle"
       >
-        More
+        <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4" fill="currentColor">
+          <circle cx="5" cy="12" r="1.75" />
+          <circle cx="12" cy="12" r="1.75" />
+          <circle cx="19" cy="12" r="1.75" />
+        </svg>
       </button>
       <div className="absolute top-full right-0 z-[65] mt-2" hidden={open}>
         {hint}

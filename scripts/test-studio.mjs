@@ -2155,6 +2155,27 @@ try {
       await (await previewPage())?.evaluate(() => {
         window.smithableKept = true;
       });
+      // The top bar in three groups (T1693): what acts on the app, Review and Publish, Help and More.
+      const order = await page
+        .locator("[data-studio-header]")
+        .evaluate((bar) =>
+          [...bar.querySelectorAll("button[aria-label], [data-toolbar-divider]")].map((e) =>
+            e.hasAttribute("data-toolbar-divider") ? "|" : e.getAttribute("aria-label"),
+          ),
+        );
+      const groups = order
+        .join(",")
+        .split("|")
+        .map((g) => g.split(",").filter(Boolean));
+      if (
+        groups.length !== 3 ||
+        !["Select", "Outbox", "All settings"].every((n) => groups[0].includes(n)) ||
+        !groups[1].includes("Publish") ||
+        !(groups[2].includes("Help") && groups[2].includes("More"))
+      )
+        throw new Error(`the top bar is not in three groups: ${order.join(" ")}`);
+      if ((await page.locator("[data-studio-header] button[aria-label=More]").innerText()).trim())
+        throw new Error("More shows a word, not its three dots");
       await page.setViewportSize({ width: 390, height: 844 });
       const header = page.locator("[data-studio-header]");
       const more = header.getByRole("button", { name: "More", exact: true });
