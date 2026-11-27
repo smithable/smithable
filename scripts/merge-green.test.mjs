@@ -38,7 +38,9 @@ case "$a" in
   *"--json state "*|*"--json state") [ -e "$d/armed" ] && [ -z "$FAIL_WATCH" ] && echo MERGED || echo OPEN ;;
   *"--json headRefName,baseRefName"*) echo "false c/x main" ;;
   "pr list"*) ;;
-  *"--auto"*) touch "$d/armed" ;;
+  *"--auto"*)
+    [ -z "$WAIT_TOUCH" ] || for _ in $(seq 1000); do [ -e "$d/started" ] && break; /bin/sleep 0.01; done
+    touch "$d/armed" ;;
   *"--disable-auto"*) touch "$d/disarmed" ;;
   *) echo "fake gh: unexpected: $a" >&2; exit 1 ;;
 esac
@@ -103,23 +105,35 @@ wait $pid; echo $?`;
 }
 
 // The lock's refresher may have a touch on its way when the lock is released (T1710). Here its
-// touch takes 0.3 s and nothing stops it, so it runs after the release.
+// touch starts before the merge and runs only once the lock is gone; each side waits on the other.
 test("a touch still on its way when the lock is released does not bring it back", () => {
   const { dir } = mergeGreen({ NOT_RUN: "1" });
   const late = `#!/usr/bin/env bash
-case "$*" in *"/lock") /bin/sleep 0.3 ;; esac
-exec /usr/bin/touch "$@"
+case "$*" in
+  *"/lock")
+    : > "$FAKE_GH/started"
+    for _ in $(seq 1000); do [ -e "$FAKE_GH/lock" ] || break; /bin/sleep 0.01; done
+    /usr/bin/touch "$@"
+    : > "$FAKE_GH/done" ;;
+  *) exec /usr/bin/touch "$@" ;;
+esac
 `;
   writeFileSync(join(dir, "touch"), late);
+  // Nothing stops the touch: it outlives the refresher.
   writeFileSync(join(dir, "pkill"), "#!/usr/bin/env bash\nexit 0\n");
   for (const f of ["touch", "pkill"]) chmodSync(join(dir, f), 0o755);
   const run = spawnSync("bash", ["scripts/merge-green.sh", "587", "--repo", "o/r"], {
     encoding: "utf8",
     timeout: 60_000,
-    env: fakeEnv(dir),
+    env: { ...fakeEnv(dir), WAIT_TOUCH: "1" },
   });
   assert.equal(run.status, 0, run.stdout + run.stderr);
-  spawnSync("/bin/sleep", ["0.6"]);
+  spawnSync("bash", [
+    "-c",
+    'for _ in $(seq 1000); do [ -e "$0" ] && break; /bin/sleep 0.01; done',
+    join(dir, "done"),
+  ]);
+  assert.ok(existsSync(join(dir, "done")), run.stdout);
   assert.ok(!existsSync(join(dir, "lock")), run.stdout);
 });
 
