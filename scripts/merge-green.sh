@@ -44,8 +44,9 @@ lock="${MERGE_LOCK:-$HOME/repos/.merge-lock}"
 nwo="${repo[1]:-$(gh repo view --json nameWithOwner -q .nameWithOwner)}"
 me="#$pr $nwo ${SESSION:-session $PPID} $(date -u +%FT%TZ) pid $$@$(hostname)"
 refresher=""
-# The refresher stops first: its touch after the lock was removed made an empty lock, which
-# nobody's pid names, so every other merge would wait an hour for it to go stale.
+# The refresher stops first, but a touch it had already started may still run after the lock is
+# removed; it never makes the file (-c), since an empty lock names nobody's pid and every other
+# merge would wait an hour for it to go stale (T1710).
 release() {
   if [ -n "$refresher" ]; then { pkill -P "$refresher"; kill "$refresher"; wait "$refresher"; } 2>/dev/null || true; fi
   if [ "$(cat "$lock" 2>/dev/null)" = "$me" ]; then rm -f "$lock"; fi
@@ -85,7 +86,7 @@ until (set -o noclobber; echo "$me" > "$lock") 2>/dev/null; do
   waited=$((waited + 10))
 done
 # Its sleep, stopped at the release, would otherwise print "Terminated" after the outcome.
-( while sleep 60; do touch "$lock"; done ) 2>/dev/null &
+( while sleep 60; do touch -c "$lock"; done ) 2>/dev/null &
 refresher=$!
 }
 drop_lock() {
