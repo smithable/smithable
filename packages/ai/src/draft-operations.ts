@@ -19,7 +19,7 @@ import {
   validateContent,
   validateSpec,
 } from "@smithable/core";
-import { operationsOf } from "./answer-operations.js";
+import { answerOf, operationsOf } from "./answer-operations.js";
 import type { Assumption, Draft, SpecFiles } from "./draft.js";
 import { completeDraftJson } from "./draft-json.js";
 import { LANGUAGE_NAMES, languageNote, otherLanguages, textLanguage } from "./language.js";
@@ -891,7 +891,9 @@ export async function draftProjectByOperations(options: {
       round += 1;
       let answer: { operations?: unknown; assumptions?: unknown };
       try {
-        answer = (await completeDraftJson(provider, { system, user: prompt, schema }, usage)) as {
+        answer = answerOf(
+          await completeDraftJson(provider, { system, user: prompt, schema }, usage),
+        ) as {
           operations?: unknown;
           assumptions?: unknown;
         };

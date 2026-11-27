@@ -1061,6 +1061,18 @@ test("a first answer whose list cannot be read is asked for once more, with its 
     });
     return { result, prompts };
   };
+  // The whole answer in a function call's wrapper (beta's route, T1719): read in one call, its
+  // choices kept.
+  const choice = {
+    part: "app",
+    question: "Who signs in?",
+    chosen: "Only you",
+    options: ["A team"],
+  };
+  const called = await run({ arguments: { operations: valid, assumptions: [choice] } });
+  if (called.result.kind !== "draft") throw new Error(called.result.message);
+  expect(called.prompts).toHaveLength(1);
+  expect(called.result.assumptions).toEqual([choice]);
   // A list sent as a JSON string is the list.
   const asString = await run({ operations: JSON.stringify(valid) });
   expect(asString.result.kind).toBe("draft");

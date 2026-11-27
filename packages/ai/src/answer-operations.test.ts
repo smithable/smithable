@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { operationsOf } from "./answer-operations.js";
+import { answerOf, operationsOf } from "./answer-operations.js";
 
 test("a model's operations are read as a list or a JSON string of one, and nothing else is guessed (T1718)", () => {
   const step = { op: "setApp", args: { name: "Tasks" } };
@@ -33,4 +33,19 @@ test("a model's operations are read as a list or a JSON string of one, and nothi
   });
   expect(operationsOf([step])).toEqual({ problem: "the answer was a list, not an object" });
   expect(operationsOf("text")).toEqual({ problem: "the answer was a string, not an object" });
+});
+
+test("a function call's wrapper is taken off: arguments as the only key, an object or its JSON (T1719)", () => {
+  const inner = { operations: [{ op: "setApp", args: { name: "Tasks" } }], assumptions: [] };
+  expect(answerOf({ arguments: inner })).toBe(inner);
+  expect(answerOf({ arguments: JSON.stringify(inner) })).toEqual(inner);
+  expect(operationsOf({ arguments: inner })).toEqual({ operations: inner.operations });
+  // Beside other keys, or not an object inside, it is the answer as it came.
+  const beside = { arguments: inner, name: "answer" };
+  expect(answerOf(beside)).toBe(beside);
+  for (const odd of [{ arguments: "not JSON" }, { arguments: [1] }, { arguments: null }])
+    expect(answerOf(odd)).toBe(odd);
+  expect(operationsOf({ arguments: "not JSON" })).toEqual({
+    problem: "no operations key; keys: arguments",
+  });
 });

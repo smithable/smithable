@@ -1,13 +1,34 @@
 /**
+ * The answer itself, out of a function call's wrapper: `{"arguments": {...}}` as its only key, the
+ * object or a JSON string of it (3 of 19 beta-route drafts were sent so, T1719); anything else as
+ * it came.
+ */
+export function answerOf(answer: unknown): unknown {
+  if (!answer || typeof answer !== "object" || Array.isArray(answer)) return answer;
+  const keys = Object.keys(answer);
+  if (keys.length !== 1 || keys[0] !== "arguments") return answer;
+  let inner = (answer as { arguments: unknown }).arguments;
+  if (typeof inner === "string") {
+    try {
+      inner = JSON.parse(inner);
+    } catch {
+      return answer;
+    }
+  }
+  return inner && typeof inner === "object" && !Array.isArray(inner) ? inner : answer;
+}
+
+/**
  * A model's list of operations, read one way for a draft and a proposal (T1718). The list is
  * taken as it is, or from a string that holds it as JSON (the shape a model sometimes sends when
- * the answer tool is offered, not forced); nothing else is guessed. What cannot be read is said
+ * the answer tool is offered, not forced); nothing else is guessed (a function call's wrapper aside, answerOf). What cannot be read is said
  * by its shape only (types and key names, never the content), for the model's next round and for
  * the failure message.
  */
 export function operationsOf(
   answer: unknown,
 ): { operations: { op?: string; args?: Record<string, unknown> }[] } | { problem: string } {
+  answer = answerOf(answer);
   if (!answer || typeof answer !== "object" || Array.isArray(answer))
     return { problem: `the answer was ${kindOf(answer)}, not an object` };
   const record = answer as Record<string, unknown>;
