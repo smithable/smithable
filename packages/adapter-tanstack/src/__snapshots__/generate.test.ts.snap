@@ -20565,7 +20565,8 @@ export const Route = createFileRoute("/day/")({
 function DayPage() {
   const { items, canCreate, canOpen, lanes } = Route.useLoaderData();
   const search = Route.useSearch();
-  const navigate = useNavigate();
+  // From this page: a next address built from the one in force is typed by this page's search.
+  const navigate = useNavigate({ from: "/day/" });
   return (
     <>
       <PageHeader page="day" title={pageUi["day"].title} />
@@ -22048,7 +22049,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/routes/barbers/$id.tsx": "10ac13c7 generated",
   "src/routes/barbers/index.tsx": "a318eada generated",
   "src/routes/barbers/new.tsx": "49d2cb83 generated",
-  "src/routes/day/index.tsx": "84bc75d1 generated",
+  "src/routes/day/index.tsx": "d7a12fe7 generated",
   "src/routes/events.ts": "cdf9dd08 generated",
   "src/routes/files/$model.$field.ts": "37c1c781 kit",
   "src/routes/files/$model.$id.$field.$n.ts": "5288014d kit",
@@ -36106,7 +36107,8 @@ export const Route = createFileRoute("/schedule/")({
 function SchedulePage() {
   const { items, canCreate, canOpen, options } = Route.useLoaderData();
   const search = Route.useSearch();
-  const navigate = useNavigate();
+  // From this page: a next address built from the one in force is typed by this page's search.
+  const navigate = useNavigate({ from: "/schedule/" });
   return (
     <>
       <PageHeader page="schedule" title={pageUi["schedule"].title} />
@@ -37493,7 +37495,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/posts/new.tsx": "7be9f470 generated",
   "src/routes/privacy/index.tsx": "6236ed29 generated",
   "src/routes/robots[.]txt.ts": "2d5317f1 generated",
-  "src/routes/schedule/index.tsx": "facbd25c generated",
+  "src/routes/schedule/index.tsx": "9a178a37 generated",
   "src/routes/sessions/$id.tsx": "10f389eb generated",
   "src/routes/sessions/index.tsx": "6b9d1770 generated",
   "src/routes/sessions/new.tsx": "55613a12 generated",
