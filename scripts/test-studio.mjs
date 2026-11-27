@@ -362,7 +362,7 @@ try {
       await page.locator("iframe[title='App preview']").waitFor();
       const face = await openSmith(page);
       const hint = page.getByRole("button", {
-        name: "Click Smith to bring him back.",
+        name: "Tap or click Smith to bring him back.",
         exact: true,
       });
       await openSuggestedTopics(page);
@@ -856,6 +856,30 @@ try {
               // Smith says what he did once it is done: the field is there.
               if (place === "shown-smith" && spec() === before)
                 throw new Error("Smith said his change before it was made");
+              // "Here it is, in the form": the new field is in the preview's view, not below its
+              // fold (T1668).
+              // The preview may load again after the change, so the frame is looked up on each try.
+              if (place === "shown-smith") {
+                const body = fresh.frameLocator('iframe[title="App preview"]').locator("body");
+                const until = Date.now() + 20000 * P;
+                const inView = () =>
+                  body
+                    .evaluate(
+                      () =>
+                        [...document.querySelectorAll('[data-sm-concept$=".notes"]')].some((e) => {
+                          const r = e.getBoundingClientRect();
+                          return r.height > 0 && r.top >= 0 && r.bottom <= innerHeight;
+                        }),
+                      undefined,
+                      { timeout: 2000 },
+                    )
+                    .catch(() => false);
+                while (!(await inView())) {
+                  if (Date.now() > until)
+                    throw new Error("Smith's new field is not in the preview's view (T1668)");
+                  await fresh.waitForTimeout(200);
+                }
+              }
               await card.getByRole("button", { name: "Next", exact: true }).click();
             }
             await card.getByRole("button", { name: "Undo", exact: true }).click();
@@ -2122,6 +2146,15 @@ try {
   await step(
     "Phone toolbar keeps primary controls within the screen and More is keyboard accessible",
     async () => {
+      // The preview's page survives the breakpoint both ways, not loaded again (white meanwhile).
+      const previewPage = () =>
+        page
+          .locator('iframe[title="App preview"]')
+          .elementHandle()
+          .then((e) => e?.contentFrame());
+      await (await previewPage())?.evaluate(() => {
+        window.smithableKept = true;
+      });
       await page.setViewportSize({ width: 390, height: 844 });
       const header = page.locator("[data-studio-header]");
       const more = header.getByRole("button", { name: "More", exact: true });
@@ -2136,6 +2169,11 @@ try {
       if (!(await more.evaluate((button) => document.activeElement === button)))
         throw new Error("Help did not return focus to More");
       await page.setViewportSize({ width: 1920, height: 1000 });
+      await page.waitForFunction(() =>
+        document.querySelector('iframe[title="App preview"]')?.closest(".contents"),
+      );
+      if (!(await (await previewPage())?.evaluate(() => window.smithableKept === true)))
+        throw new Error("the preview was loaded again when the screen changed width");
     },
   );
   await step("the preview keeps its address when settings open or close", async () => {

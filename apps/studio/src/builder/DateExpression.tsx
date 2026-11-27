@@ -6,6 +6,7 @@ import {
   type DateOffsets,
   dateDraft,
   dateText,
+  replacedDateHint,
   windowDraft,
   windowText,
 } from "./date-expression";
@@ -115,6 +116,19 @@ export function DateSetting({
     setSeen(next);
     void write(next);
   };
+  if (control.kind === "query")
+    return (
+      <div className="space-y-2">
+        <p className="text-xs text-muted">
+          This list has a query, and the query chooses its records, so it takes no date.
+        </p>
+        {value !== undefined && (
+          <button type="button" className="text-sm underline" onClick={() => emit(undefined)}>
+            Remove the saved date
+          </button>
+        )}
+      </div>
+    );
   if (control.kind === "window")
     return (
       <div className="space-y-2">
@@ -171,8 +185,14 @@ export function DateSetting({
       </div>
     );
   const enabled = value !== undefined;
+  const replaced = replacedDateHint(control, value);
   return (
     <div className="space-y-2">
+      {replaced && (
+        <p role="status" className="text-xs text-muted">
+          {replaced}
+        </p>
+      )}
       {control.offsets !== "none" && (
         <label className="flex items-center gap-2 text-sm">
           <input

@@ -58,6 +58,7 @@ import {
   clearPreviewSelection,
   isPreviewMessage,
   type Place,
+  previewEdit,
   reselectInPreview,
   revealPreviewSelection,
   type Selection,
@@ -1011,6 +1012,8 @@ export function App() {
 
   // Ctrl+Z (Cmd+Z) undoes the last change, outside text fields, here and in the preview;
   // Ctrl+Shift+Z or Ctrl+Y makes it again.
+  const runKey = useRef(run);
+  runKey.current = run;
   const undoKey = useRef(() => {});
   undoKey.current = () => {
     if (!busy && !viewingOld) void undo();
@@ -1038,7 +1041,10 @@ export function App() {
       }
     };
     const onMessage = (e: MessageEvent) => {
-      if (isPreviewMessage(e) && e.data.type === "undo") undoKey.current();
+      if (!isPreviewMessage(e)) return;
+      if (e.data.type === "undo") undoKey.current();
+      const edit = previewEdit(e.data);
+      if (edit) void runKey.current(edit.op, edit.args);
     };
     window.addEventListener("keydown", onKey);
     window.addEventListener("message", onMessage);
@@ -2799,7 +2805,9 @@ function PhoneRow({
   pan: React.HTMLAttributes<HTMLDivElement>;
   children: React.ReactNode;
 }) {
-  if (!narrow) return <>{children}</>;
+  // The same element on both sides of the breakpoint: a fragment on a wide screen made the grid
+  // and the preview's frame anew at each crossing, and the preview was white while it reloaded.
+  if (!narrow) return <div className="contents">{children}</div>;
   return (
     <div
       className="relative min-h-0 flex-1 overflow-hidden"
@@ -2832,6 +2840,8 @@ function PhoneArrow({
   show: (window: PhoneWindow) => void;
 }) {
   const label = `Show ${phonePaneNames[window]}`;
+  // As narrow as a generated app's phone gutter (20 px), so it covers no card; 44 px tall to tap
+  // (T1656).
   return (
     <button
       type="button"
@@ -2839,7 +2849,7 @@ function PhoneArrow({
       title={label}
       onClick={() => show(window)}
       className={cx(
-        "absolute top-1/2 z-40 flex size-8 -translate-y-1/2 items-center justify-center border border-line bg-panel text-lg text-fg shadow-xs hover:bg-subtle focus-visible:outline-2 focus-visible:outline-accent",
+        "absolute top-1/2 z-40 flex h-11 w-5 -translate-y-1/2 items-center justify-center border border-line bg-panel text-lg text-fg shadow-xs hover:bg-subtle focus-visible:outline-2 focus-visible:outline-accent",
         side === "left" ? "left-0 rounded-r" : "right-0 rounded-l",
       )}
     >

@@ -42,14 +42,17 @@ import {
 } from "./reference-paths";
 import {
   alternativeFor,
+  CREATE_WORDS,
   choicesFor,
   controlOf,
   entryHeading,
   finiteAlternatives,
   isRuleList,
+  kindLabel,
   labelOf,
   numberLimits,
   operationFor,
+  PAGE_KINDS,
   renameFor,
   semanticDraftReady,
   wordOrList,
@@ -505,7 +508,7 @@ function Value({
         )}
         {(!word || value !== word) && (
           <ReferencePicker
-            label={label}
+            label={kindLabel(path) && reference.create === "model" ? "Kind of record" : label}
             options={reference.options}
             value={
               typeof value === "string" || Array.isArray(value)
@@ -529,7 +532,7 @@ function Value({
             create={
               reference.create && references.create
                 ? {
-                    label: `New ${reference.create}…`,
+                    label: `New ${CREATE_WORDS[reference.create]}…`,
                     open: () => {
                       const requestedPath = JSON.stringify(path);
                       void (
@@ -838,7 +841,14 @@ function Value({
         <div className="space-y-3">
           {control.kinds && (
             <p className="text-xs text-muted">
-              Kind: <span className="font-medium">{kind ?? "not chosen"}</span>
+              Kind:{" "}
+              <span className="font-medium">
+                {!kind
+                  ? "not chosen"
+                  : path[0] === "pages"
+                    ? (PAGE_KINDS[kind] ?? kind).replace(/ (of|for|from)$/, "")
+                    : kind}
+              </span>
             </p>
           )}
           {set.map(([key, s]) => (
@@ -1431,7 +1441,7 @@ function Key({
               {schema.title ? labelOf(name, schema) : AREAS[name].label}
             </>
           ) : (
-            labelOf(name, schema)
+            (kindLabel(path) ?? labelOf(name, schema))
           )}
         </summary>
         <div className="border-t border-line p-3">
@@ -1445,7 +1455,7 @@ function Key({
           explained, the docs page (opens in a new tab). */}
       <div className="mb-1 flex items-center gap-1.5 text-xs font-medium">
         <span title={typeof schema.description === "string" ? schema.description : undefined}>
-          {labelOf(name, schema)}
+          {kindLabel(path) ?? labelOf(name, schema)}
         </span>
         {/* A key that is hard to grasp has its question mark (A 204). */}
         {HARD[name] && <HelpMark topic={HARD[name]} />}

@@ -4,7 +4,7 @@
 // holding it (its name, pid, group and folder; not its arguments, which may hold a secret) and
 // exits 1;
 // exits 0 when all are free, and 2 when the sockets cannot be read (no `ss`).
-// The ports: each example's four (test-apps-parallel's layout, every example, of which a run of
+// The ports: each example's six (test-apps-parallel's layout, every example, of which a run of
 // fewer uses the first), and Studio's check's six (TEST_STUDIO_PORT and the five after it: the
 // preview, the fake model, the MCP check, the visual matrix's app and the picture picker).
 import { execFileSync } from "node:child_process";

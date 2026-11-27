@@ -252,6 +252,7 @@ if (typeof window !== "undefined" && window.parent !== window) {
     flashing.set(element, setTimeout(() => element.removeAttribute("data-sm-flash"), 1600));
   };
   let watching = null;
+  let pending = null;
   window.addEventListener("message", (event) => {
     if (designOnly() || event.source !== window.parent || event.data?.type !== "smithable:highlight") return;
     if (!trusted(event.origin)) return;
@@ -259,8 +260,27 @@ if (typeof window !== "undefined" && window.parent !== window) {
     // Studio hears when the page has flashed (with the key it sent), so a change is flashed
     // once however often the page reloads for it, and never lost to a reload without it.
     const key = event.data.key ?? null;
-    const done = (elements) => {
-      elements.forEach(flash);
+    // Not before React has hydrated the page: an attribute on the server's HTML before then is a
+    // mismatch React warns of and never patches (T1657). A page that never hydrates (a crash)
+    // is flashed after ten seconds anyway, so Studio hears. Hydration may replace the element:
+    // what is flashed is what matches once hydrated, and a newer request ends an older wait.
+    const late = Date.now() + 10000;
+    const done = () => {
+      pending = null;
+      const now = document.querySelectorAll(selector);
+      if ((document.body.dataset.hydrated !== "true" || !now.length) && Date.now() < late)
+        return void (pending = setTimeout(done, 100));
+      now.forEach(flash);
+      // What the change touched is brought into view: a new field below the fold was flashed
+      // where nobody saw it while the guide said "here it is" (T1668). Nothing moves when it shows,
+      // and only the page scrolls: scrollIntoView would move Studio around the preview too.
+      const shown = now[0]?.getBoundingClientRect?.();
+      const by = !shown
+        ? 0
+        : shown.top < 0
+          ? shown.top
+          : Math.max(0, Math.min(shown.bottom - window.innerHeight, shown.top));
+      if (by) window.scrollBy({ top: by, behavior: "instant" });
       post({ type: "flashed", key });
     };
     const selector = (event.data.concepts ?? [])
@@ -272,14 +292,14 @@ if (typeof window !== "undefined" && window.parent !== window) {
       .join(",");
     if (!selector) return;
     watching?.disconnect();
-    const found = document.querySelectorAll(selector);
-    if (found.length) return done(found);
+    clearTimeout(pending);
+    if (document.querySelectorAll(selector).length) return done();
     const observer = new MutationObserver(() => {
       if (designOnly()) return observer.disconnect();
       const now = document.querySelectorAll(selector);
       if (!now.length) return;
       observer.disconnect();
-      done(now);
+      done();
     });
     watching = observer;
     // A renamed field may keep its element and change only its marker.
@@ -451,10 +471,12 @@ if (typeof window !== "undefined" && window.parent !== window) {
     text.contentEditable = "true";
     text.focus();
     document.getSelection().selectAllChildren(text);
+    // The listeners go first: turning editing off blurs the text, and a blur still listened to
+    // would save it a second time (one change, two commits).
     const done = (save) => {
-      text.contentEditable = "false";
       text.removeEventListener("keydown", keys);
       text.removeEventListener("blur", blur);
+      text.contentEditable = "false";
       const after = text.textContent.trim();
       if (save && after && after !== before.trim()) post({ type: "text", path: text.dataset.smText, text: after });
       else text.textContent = before;

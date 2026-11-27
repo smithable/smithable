@@ -26,8 +26,8 @@ const slowest = ["crm", "booking", "status", "invoicing", "kiosk"];
 const rank = (e) => (slowest.includes(e) ? slowest.indexOf(e) : slowest.length);
 const examples = named.toSorted((a, b) => rank(a) - rank(b));
 
-// Ten ports per example from the base (TEST_APPS_PORT, default 4400), so two checkouts testing
-// at the same time can keep apart (appBases in ports.mjs, which gate-ports.mjs checks too).
+// Each example its own ports from the base (TEST_APPS_PORT, default 4400); two checkouts testing at
+// the same time keep apart by bases 1000 apart (appBases in ports.mjs, which gate-ports.mjs checks too).
 const ports = appBases(Number(process.env.TEST_APPS_PORT ?? 4400), examples.length);
 
 const children = new Set();

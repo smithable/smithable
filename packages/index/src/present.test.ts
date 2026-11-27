@@ -121,3 +121,29 @@ roles:
     "There is an admin role, which can do everything; an agent role, a support person who answers tickets; and a team role, which runs the studio.",
   );
 });
+
+test("a description of several sentences is kept as written, in parentheses", () => {
+  const roles = validateAuth(
+    {
+      path: "smithable.auth.yml",
+      text: `smithableAuth: 0.1
+signIn: { providers: [email] }
+defaultAccess: private
+defaultRole: staff
+roles:
+  staff: { description: Reception. Runs the day and reads the messages., pages: all }
+`,
+    },
+    ir,
+  ).auth as AuthIR;
+  const part = present(ir, roles, content).find((p) => p.part === "roles");
+  expect(part?.text).toContain("a staff role (Reception. Runs the day and reads the messages)");
+});
+
+test("two pages that would read the same are named by their ids", () => {
+  const two = validateSpec({
+    path: "smithable.yml",
+    text: "smithable: 0.1\napp: { name: Desk }\nmodels:\n  Booking:\n    fields: { name: string! }\npages:\n  my-bookings: { crud: Booking }\n  bookings: { crud: Booking }\n",
+  }).ir as SpecIR;
+  expect(present(two)[1]?.text).toBe("It has my bookings and bookings, open to everyone.");
+});

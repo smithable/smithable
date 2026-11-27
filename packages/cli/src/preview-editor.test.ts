@@ -24,6 +24,7 @@ function page(
   crashed = false,
   records: string[] = [],
   search = "",
+  fields: { flash: boolean; top?: number }[] = [],
 ) {
   // The dev server's error overlay, put up by the test; the observers watching for it, and the
   // timers the runtime sets, run by hand.
@@ -54,6 +55,8 @@ function page(
     followContext?: number;
     navigationId?: number;
     documentId?: string;
+    /** The change a flash answers for. */
+    key?: number | null;
     /** The origin it was posted to. */
     to?: string;
   }[] = [];
@@ -62,6 +65,7 @@ function page(
       posted.push(to === undefined ? message : { ...message, to }),
   };
   const scrolled: number[] = [];
+  const scrolledBy: number[] = [];
   const reloads: number[] = [];
   const window = {
     parent,
@@ -69,6 +73,7 @@ function page(
     fetch: () => Promise.resolve({ ok: true, status: 200, text: () => Promise.resolve("<html>") }),
     innerHeight: 800,
     scrollTo: (_x: number, y: number) => scrolled.push(y),
+    scrollBy: ({ top }: { top: number }) => scrolledBy.push(top),
     addEventListener: (type: string, listener: (event: unknown) => void) =>
       type === "message" && listeners.push(listener),
   };
@@ -90,22 +95,29 @@ function page(
       return element;
     },
     getElementById: (id: string) => head.find((e) => e.id === id) ?? null,
+    getSelection: () => ({ selectAllChildren() {} }),
     addEventListener: (type: string, listener: (event: unknown) => void) =>
       type === "click" && clicks.push(listener),
     querySelectorAll: (selector: string) =>
-      selector === '[data-part="record-open"][data-record-id]'
-        ? records.map((id) => ({ dataset: { recordId: id } }))
-        : selector === "[data-dev-role]"
-          ? buttons
-          : selector === "button"
-            ? signInButtons
-            : selector === "[data-kit=error]" && crashed
-              ? [{}]
-              : selector === "vite-error-overlay" && overlay.shown
+      selector.startsWith("[data-sm-concept=")
+        ? fields.map((field) => ({
+            setAttribute: () => (field.flash = true),
+            removeAttribute: () => (field.flash = false),
+            getBoundingClientRect: () => ({ top: field.top ?? 0, bottom: (field.top ?? 0) + 40 }),
+          }))
+        : selector === '[data-part="record-open"][data-record-id]'
+          ? records.map((id) => ({ dataset: { recordId: id } }))
+          : selector === "[data-dev-role]"
+            ? buttons
+            : selector === "button"
+              ? signInButtons
+              : selector === "[data-kit=error]" && crashed
                 ? [{}]
-                : [],
+                : selector === "vite-error-overlay" && overlay.shown
+                  ? [{}]
+                  : [],
     styleSheets: [{ cssRules: [darkRule] }],
-    body: { dataset: { hydrated: "true" } },
+    body: { dataset: { hydrated: "true" } as { hydrated?: string } },
     documentElement: {
       attributes: new Set<string>(),
       toggleAttribute(name: string, on: boolean) {
@@ -175,8 +187,10 @@ function page(
     head,
     darkRule,
     root: document.documentElement,
+    body: document.body,
     clicked,
     scrolled,
+    scrolledBy,
     posted,
     reloads,
     tick: () => {
@@ -192,6 +206,17 @@ function page(
       const due = [...timers.values()];
       timers.clear();
       for (const t of due) t();
+    },
+    /** A click on an element, through the page's own click listeners. */
+    click: (target: unknown) => {
+      for (const c of clicks)
+        c({
+          target,
+          preventDefault() {},
+          stopPropagation() {},
+          stopImmediatePropagation() {},
+          shiftKey: false,
+        });
     },
     /** The owner presses the app's Sign out. */
     signOut: () => {
@@ -746,5 +771,73 @@ test("on the hosted shape the preview reports its pages to the Studio origin the
     expect(navigation()).toMatchObject({ path: "/invoices", followContext: 1, to: studio });
   } finally {
     delete named.__smithableStudioOrigins;
+  }
+});
+
+test("a change is flashed once the page is hydrated, never on the server's HTML before (T1657)", () => {
+  // Below the fold: the page is 800 high, the field starts at 1000.
+  const field = { flash: false, top: 1000 };
+  const shown = page("/", {}, false, [], "", [field]);
+  // The runtime escapes the concept with the browser's CSS.escape; Node has none.
+  const global = globalThis as { CSS?: { escape: (s: string) => string } };
+  global.CSS ??= { escape: (s) => s };
+  shown.body.dataset.hydrated = undefined;
+  shown.send({ type: "smithable:highlight", concepts: ["field:Order.notes"], key: 7 });
+  expect(field.flash).toBe(false);
+  expect(shown.posted.some((m) => m.type === "flashed")).toBe(false);
+  shown.later();
+  expect(field.flash).toBe(false);
+  // A newer change before hydration ends the older one's wait: one flash, answered with its key.
+  shown.send({ type: "smithable:highlight", concepts: ["field:Order.notes"], key: 8 });
+  shown.body.dataset.hydrated = "true";
+  shown.later();
+  expect(field.flash).toBe(true);
+  expect(shown.posted.filter((m) => m.type === "flashed").map((m) => m.key)).toEqual([8]);
+  // The flashed field is brought into view, by the page's own scroll only (T1668): to its bottom.
+  expect(shown.scrolledBy).toEqual([240]);
+});
+
+test("a text changed in place and saved with Enter is sent to Studio once, not again by the blur", () => {
+  const { send, posted, click } = page();
+  const Element = class {};
+  vi.stubGlobal("Element", Element);
+  try {
+    send({ type: "smithable:follow-context", context: 1 });
+    send({ type: "smithable:select-mode", on: true });
+    const listeners: Record<string, (event: unknown) => void> = {};
+    const text = Object.assign(new Element(), {
+      dataset: { smText: "pages.home.hero.title" },
+      textContent: "Find your calm",
+      isContentEditable: false,
+      closest: (selector: string) => (selector === "[data-sm-text]" ? text : null),
+      focus() {},
+      addEventListener: (type: string, listener: (event: unknown) => void) => {
+        listeners[type] = listener;
+      },
+      removeEventListener: (type: string, listener: (event: unknown) => void) => {
+        if (listeners[type] === listener) delete listeners[type];
+      },
+    });
+    // As in a browser: editing turned off on the focused text blurs it, once.
+    let focused = true;
+    let editable = "inherit";
+    Object.defineProperty(text, "contentEditable", {
+      set(on: string) {
+        editable = on;
+        if (on !== "false" || !focused) return;
+        focused = false;
+        listeners.blur?.({});
+      },
+    });
+    click(text);
+    text.textContent = "Slow down a little";
+    listeners.keydown?.({ key: "Enter", preventDefault() {} });
+    expect(posted.filter((m) => m.type === "text")).toEqual([
+      expect.objectContaining({ path: "pages.home.hero.title", text: "Slow down a little" }),
+    ]);
+    // And the text is no longer editable.
+    expect(editable).toBe("false");
+  } finally {
+    vi.unstubAllGlobals();
   }
 });

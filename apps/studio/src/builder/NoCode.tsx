@@ -297,10 +297,7 @@ export function NoCode({
       break;
     }
   }, [opened]);
-  // The preview reports what was clicked in Select, columns dragged to a new place and texts
-  // changed in place.
-  const runRef = useRef(run);
-  runRef.current = run;
+  // The preview reports what was clicked in Select; App runs the columns and texts changed there.
   const pick = useRef<(s: Selection) => void>(() => {});
   pick.current = (s) => {
     const at = placeOf(s);
@@ -347,10 +344,6 @@ export function NoCode({
     const onMessage = (e: MessageEvent) => {
       if (!isPreviewMessage(e)) return;
       if (e.data.type === "select") pick.current(e.data);
-      if (e.data.type === "columns")
-        void runRef.current("setColumns", { page: e.data.page, columns: e.data.columns });
-      if (e.data.type === "text")
-        void runRef.current("setText", { path: e.data.path.split("."), text: e.data.text });
     };
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);

@@ -137,6 +137,20 @@ export function advancePreviewContext() {
   return followContext;
 }
 
+/**
+ * The operation a change made in the preview runs: columns moved, or a text changed in place.
+ * Studio runs it whichever windows are open (a text changed with No code closed was lost).
+ */
+export function previewEdit(
+  message: PreviewMessage,
+): { op: "setColumns" | "setText"; args: Record<string, unknown> } | undefined {
+  if (message.type === "columns")
+    return { op: "setColumns", args: { page: message.page, columns: message.columns } };
+  if (message.type === "text")
+    return { op: "setText", args: { path: message.path.split("."), text: message.text } };
+  return undefined;
+}
+
 /** A message from the preview's own frame and origin, not from any other window. */
 export function isPreviewMessage(e: MessageEvent): e is MessageEvent<PreviewMessage> {
   return (

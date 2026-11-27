@@ -523,18 +523,20 @@ export function parseOperationArgs(op: AnyOperation, words: string[]): Operation
 }
 
 /** A JSON value given on the command line for an object argument; bad JSON is refused naming the option. */
-function jsonOf(key: string, text: string): unknown {
+function jsonOf(key: string, text: string, list = false): unknown {
   try {
     return JSON.parse(text);
   } catch (error) {
     const flag = `--${key.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)}`;
-    throw new OperationError(`${flag} is not JSON: ${(error as Error).message}.`);
+    // A list flag takes two forms; the message names both (T1216).
+    const forms = list ? ` Give a JSON list, or one JSON object per ${flag}.` : "";
+    throw new OperationError(`${flag} is not JSON: ${(error as Error).message}.${forms}`);
   }
 }
 
 /** A list flag's JSON: a list as it is, one object as a list of one. */
 function listOf(key: string, text: string): unknown[] {
-  const value = jsonOf(key, text);
+  const value = jsonOf(key, text, true);
   return Array.isArray(value) ? value : [value];
 }
 
