@@ -155,7 +155,8 @@ export function validateSamples(
           const name = sampleOwner(ctx, model, pair.value as ParsedNode, i, owners);
           if (name !== undefined) {
             row[SAMPLE_OWNER] = name;
-            if (model.ownedBy === "owner") given.add("owner");
+            // The seed fills the owner's field (an address, or a person), so it is not missing.
+            if (model.ownedBy) given.add(model.ownedBy);
           }
           continue;
         }
@@ -208,8 +209,8 @@ export function validateSamples(
  * A model with a capacity (a session's places) is seeded from its file alone, so the samples
  * never hold more records for one parent than it takes: the maximum a number, or the parent
  * sample's field (its default where the sample leaves it out). A maximum the samples cannot
- * know (a generated parent) refuses every record, as does any record past it. Every record
- * counts, also one a `where` would leave out: the seed never adds more than the app would.
+ * know (a generated parent) refuses every record, as does any record past it. A record counts
+ * as the app counts it: only one that meets the capacity's `where`.
  */
 function withinCapacity(
   ctx: ParseContext,
@@ -232,10 +233,15 @@ function withinCapacity(
     const value = row ? (row[name ?? ""] ?? field?.default) : undefined;
     return typeof value === "number" ? value : undefined;
   };
+  const counts = (row: Record<string, unknown>) =>
+    Object.entries(capacity.where ?? {}).every(([name, want]) => {
+      const value = row[name] ?? model.fields.find((f) => f.name === name)?.default;
+      return Array.isArray(want) ? want.includes(value as string) : value === want;
+    });
   const counted = new Map<number, number>();
   (samples[model.name] ?? []).forEach((row, i) => {
     const n = row[per.name];
-    if (typeof n !== "number") return;
+    if (typeof n !== "number" || !counts(row)) return;
     const max = maxOf(n);
     const taken = (counted.get(n) ?? 0) + 1;
     counted.set(n, taken);
