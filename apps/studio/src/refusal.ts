@@ -36,6 +36,15 @@ function line(text: string): string {
 
 /** The tool's refusal as Builder shows it. */
 export function plainRefusal(output: string): string {
+  // git.ts uncommittedRefusal: the files Git lists, never "commit or discard" (T1697).
+  if (/^Commit or discard these changes first/.test(output)) {
+    const files = output
+      .split("\n")
+      .slice(1)
+      .map((l) => l.trim().replace(/^\S{1,2}\s+/, ""))
+      .filter(Boolean);
+    return `Undo waits: ${files.join(", ")} changed outside Studio, and an undo now would take those edits along. It works again once they are saved as a change or put back.`;
+  }
   const lines = output
     .split("\n")
     .map(line)

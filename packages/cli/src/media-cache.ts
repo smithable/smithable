@@ -6,6 +6,7 @@
 // nothing is fetched.
 import { createHash, randomBytes } from "node:crypto";
 import {
+  appendFileSync,
   existsSync,
   lstatSync,
   mkdirSync,
@@ -246,6 +247,26 @@ function dropMediaHere(dir: string, asset: string, variant?: string): void {
   else if (existsSync(join(folder, variant))) unlinkSync(join(folder, variant));
 }
 
+/**
+ * Keeps the cache out of the project's history (T1697): the starters' .gitignore names
+ * public/media only since 2026-11-24, and .gitignore is written once, so in an older project the
+ * fetched files were changes no operation made, and every change after them was refused. The
+ * repository's own exclude file says it without touching a project file; through no link.
+ */
+function keepMediaOutOfGitHere(dir: string): void {
+  const repository = join(dir, ".git");
+  if (!existsSync(repository) || !lstatSync(repository).isDirectory()) return;
+  const info = join(repository, "info");
+  folder(info);
+  const path = join(info, "exclude");
+  if (isLink(path)) return;
+  const text = existsSync(path) ? readFileSync(path, "utf8") : "";
+  if (text.split("\n").some((line) => line.trim() === MEDIA_EXCLUDE)) return;
+  appendFileSync(path, `${text && !text.endsWith("\n") ? "\n" : ""}${MEDIA_EXCLUDE}\n`);
+}
+const MEDIA_EXCLUDE = "/public/media/";
+
+export const keepMediaOutOfGit = asProject("keepMediaOutOfGit", keepMediaOutOfGitHere);
 export const cachedMedia = asProject("cachedMedia", cachedMediaHere);
 export const placeMedia = asProject("placeMedia", placeMediaHere);
 export const dropMedia = asProject("dropMedia", dropMediaHere);
@@ -279,6 +300,7 @@ export async function syncMedia(
   { recheck = false }: { recheck?: boolean } = {},
 ): Promise<MediaSync> {
   const done: MediaSync = { written: [], removed: [], missing: [], faults: [] };
+  keepMediaOutOfGit(dir);
   const cached = cachedMedia(dir, recheck);
   const records = new Map<string, Promise<Record<string, string> | undefined>>();
   const record = (asset: string) => {

@@ -16,6 +16,7 @@ import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, expect, test } from "vitest";
+import { ensureRepository, uncommittedRefusal } from "./git.js";
 import {
   hostedMediaSource,
   hostRecord,
@@ -441,4 +442,20 @@ test("§7 the host fills a stored choice's record from the service, never the ca
   expect(await hostRecord("setSectionFilm", none, undefined)).toBe(false);
   expect(none).not.toHaveProperty("record");
   expect(await hostRecord("setText", { asset: ID }, s)).toBe(false);
+});
+
+test("§3 in a project whose .gitignore predates the cache, its files are no change of the project's: Undo is not refused (T1697)", async () => {
+  const dir = project(hero(ID));
+  // A project made before 2026-11-24: its .gitignore says nothing of public/media.
+  writeFileSync(join(dir, ".gitignore"), "node_modules\n");
+  ensureRepository(dir);
+  const { source: s } = source({ [`${ID}/w480.webp`]: "small", [`${ID}/w1600.webp`]: "large" });
+  await syncMedia(dir, s);
+  expect(readFileSync(join(dir, "public/media", ID, "w480.webp"), "utf8")).toBe("small");
+  expect(uncommittedRefusal(dir)).toBeUndefined();
+  // Said once, however often it syncs; the project's own files are left as they were.
+  await syncMedia(dir, s);
+  const exclude = readFileSync(join(dir, ".git/info/exclude"), "utf8");
+  expect(exclude.split("\n").filter((line) => line === "/public/media/")).toHaveLength(1);
+  expect(readFileSync(join(dir, ".gitignore"), "utf8")).toBe("node_modules\n");
 });
