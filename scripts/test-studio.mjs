@@ -3024,6 +3024,10 @@ try {
         )
         .first();
       if (!(await workspaceItem.isVisible())) {
+        // Select stays on after a form closes (T1684): the app's own menu is used with it off.
+        const select = page.getByRole("button", { name: "Select", exact: true });
+        if ((await select.getAttribute("aria-pressed")) === "true") await select.click();
+        await preview.locator("html[data-sm-selecting]").waitFor({ state: "detached" });
         await workspaceHeader
           .getByRole("button", { name: "Open menu", exact: true })
           .first()
@@ -3045,6 +3049,13 @@ try {
     async () => {
       mkdirSync(join(dir, "public/images"), { recursive: true });
       writeFileSync(join(dir, "public/images/walk-hero.png"), png(32, 20));
+      // As an upload through Studio would be: committed, so the change can be undone on its own.
+      for (const args of [
+        ["add", "public/images/walk-hero.png"],
+        ["-c", "user.name=walk", "-c", "user.email=walk@example.com", "commit", "-qm", "A picture"],
+      ])
+        if (spawnSync("git", args, { cwd: dir }).status !== 0)
+          throw new Error(`git ${args.at(-3)}`);
       await op("setSectionPicture", {
         page: "home",
         section: "hero",
