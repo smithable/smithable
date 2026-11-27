@@ -686,10 +686,12 @@ if (typeof window !== "undefined" && window.parent !== window) {
   document.addEventListener(
     "click",
     (event) => {
-      if (event.target?.closest?.('[data-part="sign-out"]'))
-        try {
-          sessionStorage.setItem(SIGNED_OUT, "1");
-        } catch {}
+      if (!event.target?.closest?.('[data-part="sign-out"]')) return;
+      // Studio stops saying whom the preview is signed in as, on a public page too (T1705).
+      post({ type: "signed-out" });
+      try {
+        sessionStorage.setItem(SIGNED_OUT, "1");
+      } catch {}
     },
     true,
   );

@@ -300,14 +300,17 @@ export function App() {
   const [followed, setFollowed] = useState<string>();
   const previewingAs = people?.people.find((p) => p.id === followed);
   // Not said once it may be untrue: the person is gone from the sample users, or the preview
-  // is on a sign-in page (the door refused, or they signed out of a page that needs a session).
+  // is on a sign-in page (the door refused, or they signed out of a page that needs a session),
+  // or Sign out was pressed in it (on a public page, which stays where it is).
   useEffect(() => {
     if (followed && people && !previewingAs) setFollowed(undefined);
   }, [followed, people, previewingAs]);
   useEffect(() => {
     if (!followed) return;
     const onMessage = (e: MessageEvent) => {
-      if (!isPreviewMessage(e) || e.data.type !== "navigated") return;
+      if (!isPreviewMessage(e)) return;
+      if (e.data.type === "signed-out") return setFollowed(undefined);
+      if (e.data.type !== "navigated") return;
       const at = new URL(e.data.path, "http://preview");
       if (["/sign-in", "/sign-up"].includes(at.pathname) && !at.searchParams.has("as"))
         setFollowed(undefined);

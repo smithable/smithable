@@ -311,8 +311,12 @@ test("the preview signs in whenever it shows the sign-in page, until the owner s
   const again = page("/sign-in", storage);
   again.tick();
   expect(again.clicked).toEqual(["sign-in"]);
-  // The owner signs out: the sign-in page stays, to try another role.
-  page("/customers", storage).signOut();
+  // The owner signs out: the sign-in page stays, to try another role. Studio is told, so it
+  // stops saying whom the preview is signed in as, on a public page too (T1705).
+  const out = page("/customers", storage);
+  out.send({ type: "smithable:follow-context", context: 1 });
+  out.signOut();
+  expect(out.posted.map((m) => m.type)).toContain("signed-out");
   const after = page("/sign-in", storage);
   after.tick();
   expect(after.clicked).toEqual([]);

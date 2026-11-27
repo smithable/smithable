@@ -3,6 +3,8 @@ import type { EditableFile, SpecIR } from "@smithable/core";
 // Messages from the preview editor in the app's page (packages/cli/src/preview-editor.ts).
 export type PreviewMessage =
   | { type: "ready" }
+  /** Someone pressed Sign out in the app: it is no longer signed in as whom Follow chose. */
+  | { type: "signed-out" }
   /** The page has flashed what a change touched; `key` is the one Studio sent with it. */
   | { type: "flashed"; key: string | null }
   /** The page the preview is on now, e.g. "/customers/12". */
