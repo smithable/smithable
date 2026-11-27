@@ -1,6 +1,6 @@
 import { type SpecIR, validateSpec } from "@smithable/core";
 import { describe, expect, it, vi } from "vitest";
-import { isPreviewMessage, setPreview, touchesPage } from "./preview";
+import { isPreviewMessage, previewEdit, setPreview, touchesPage } from "./preview";
 
 describe("preview navigation messages", () => {
   it("rejects malformed paths before any consumer handles them, and checks frame and origin", () => {
@@ -101,4 +101,16 @@ describe("touchesPage", () => {
     ).toBe(true);
     expect(touchesPage(title, "/orders", ir, [])).toBe(true);
   });
+});
+
+it("a change made in the preview is the operation Studio runs, whichever windows are open", () => {
+  expect(previewEdit({ type: "text", path: "pages.home.hero.title", text: "Slow down" })).toEqual({
+    op: "setText",
+    args: { path: ["pages", "home", "hero", "title"], text: "Slow down" },
+  });
+  expect(previewEdit({ type: "columns", page: "bookings", columns: ["name"] })).toEqual({
+    op: "setColumns",
+    args: { page: "bookings", columns: ["name"] },
+  });
+  expect(previewEdit({ type: "undo" })).toBeUndefined();
 });

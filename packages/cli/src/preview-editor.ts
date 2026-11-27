@@ -471,10 +471,12 @@ if (typeof window !== "undefined" && window.parent !== window) {
     text.contentEditable = "true";
     text.focus();
     document.getSelection().selectAllChildren(text);
+    // The listeners go first: turning editing off blurs the text, and a blur still listened to
+    // would save it a second time (one change, two commits).
     const done = (save) => {
-      text.contentEditable = "false";
       text.removeEventListener("keydown", keys);
       text.removeEventListener("blur", blur);
+      text.contentEditable = "false";
       const after = text.textContent.trim();
       if (save && after && after !== before.trim()) post({ type: "text", path: text.dataset.smText, text: after });
       else text.textContent = before;
