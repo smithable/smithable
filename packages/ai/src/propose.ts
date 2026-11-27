@@ -1,6 +1,7 @@
 // From a request in plain words to operations (ARCHITECTURE §9.1–9.4). The model only chooses
 // operations and their arguments; every proposal is dry-run against the project before anyone
 // sees it, and nothing is applied until the user confirms.
+
 import {
   type AnyOperation,
   type AuthIR,
@@ -26,6 +27,7 @@ import {
   matchRequest,
   refusalOf,
 } from "@smithable/index";
+import { operationsOf } from "./answer-operations.js";
 import { checkAudience } from "./audience.js";
 import {
   completeJson,
@@ -235,7 +237,7 @@ const notForModels = (value: unknown) =>
 
 interface Answer {
   kind?: string;
-  operations?: { op?: string; args?: OperationArgs }[];
+  operations?: unknown;
   question?: string;
   options?: string[];
   text?: string;
@@ -412,7 +414,12 @@ export async function proposeChange(options: {
         if (index === providers.length - 1) return { kind: "none", reason: none, usage };
         break;
       }
-      const checked = dryRun(files, answer.operations ?? []);
+      // The list as it is or from a JSON string; another shape is said, for the next round (T1718).
+      const read = operationsOf(answer);
+      const checked =
+        "problem" in read
+          ? ({ ok: false, message: `The answer has no operations: ${read.problem}.` } as const)
+          : dryRun(files, read.operations);
       // Operations that leave every file as it was are no change: nothing to apply or trace.
       if (checked.ok && unchanged(files, checked.files))
         return { kind: "none", reason: NOTHING, usage };

@@ -3,6 +3,7 @@
 // operation's own argument schema, so the spec's grammar cannot go wrong. The operations are
 // applied one by one; the one that fails goes back to the model with its reason, and the model
 // answers with that one corrected and the rest.
+
 import {
   type AnyOperation,
   applyOperation,
@@ -18,6 +19,7 @@ import {
   validateContent,
   validateSpec,
 } from "@smithable/core";
+import { operationsOf } from "./answer-operations.js";
 import type { Assumption, Draft, SpecFiles } from "./draft.js";
 import { completeDraftJson } from "./draft-json.js";
 import { LANGUAGE_NAMES, languageNote, otherLanguages, textLanguage } from "./language.js";
@@ -887,10 +889,10 @@ export async function draftProjectByOperations(options: {
     };
     while (round < MAX_ROUNDS) {
       round += 1;
-      let answer: { operations?: Step[]; assumptions?: unknown };
+      let answer: { operations?: unknown; assumptions?: unknown };
       try {
         answer = (await completeDraftJson(provider, { system, user: prompt, schema }, usage)) as {
-          operations?: Step[];
+          operations?: unknown;
           assumptions?: unknown;
         };
         // The first answer's choices; a correction round repeats them or not, it does not matter.
@@ -901,7 +903,18 @@ export async function draftProjectByOperations(options: {
         if (told.size > 0 && done.length > 0) return draftOf(droppedBefore);
         break;
       }
-      const steps = (answer.operations ?? []).slice(0, MAX_OPERATIONS - done.length);
+      const read = operationsOf(answer);
+      const unusable =
+        "problem" in read ? read.problem : read.operations.length ? "" : "operations was empty";
+      // A first answer whose list cannot be read, or is empty, is asked for once more (T1718).
+      if (unusable && round === 1 && round < MAX_ROUNDS) {
+        prompt = `${prompt}\n\nThe previous answer could not be used: ${unusable}. Answer with JSON only: {"operations": [{"op": "<name>", "args": {...}}, ...]}, the list itself, not a string.`;
+        continue;
+      }
+      const steps = ("problem" in read ? [] : (read.operations as Step[])).slice(
+        0,
+        MAX_OPERATIONS - done.length,
+      );
       if (steps.length === 0) {
         // In a correction round an empty answer drops what was refused; a first answer with
         // nothing in it is no draft.
@@ -911,7 +924,7 @@ export async function draftProjectByOperations(options: {
         }
         problem = refused.length
           ? refused.map((r) => `${r.step.op}: ${r.message}`).join("\n")
-          : "The answer has no operations.";
+          : `The answer has no operations: ${unusable}.`;
         break;
       }
       // Everything that can be applied is; what cannot goes back together, with its reasons.
