@@ -2671,7 +2671,9 @@ export function App() {
       )}
       {navigation && (
         <SelectedNavigation
-          key={selectedPart?.concept}
+          // Its first choice follows the page's frame: a frame that changes after the click (the
+          // spec catching up) starts the form again (T1695).
+          key={`${selectedPart?.concept}:${"frame" in navigation ? (navigation.frame ?? "") : ""}`}
           part={navigation}
           run={run}
           close={clearSelection}

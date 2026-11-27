@@ -3016,6 +3016,7 @@ try {
           : "topbar-centered";
       await pick(workspace, { x: 4, y: 4 });
       const workspaceSettings = page.getByRole("form", { name: "App navigation", exact: true });
+      await workspaceSettings.getByRole("radio", { name: "Whole app", exact: true }).check();
       await workspaceSettings
         .getByLabel("Menu for the whole app", { exact: true })
         .selectOption(placement);
