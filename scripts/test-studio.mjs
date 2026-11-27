@@ -3098,8 +3098,19 @@ try {
       );
       await page.unroute(thumb);
       if (asked < 2) throw new Error(`the thumbnail was asked for ${asked} time(s), not again`);
-      await page.getByRole("button", { name: "Close selection", exact: true }).click();
-      await alt.waitFor({ state: "hidden" });
+      // A layout clicked shows as chosen at once, with a working sign, while it is applied (T1692).
+      const hero = page.locator("[role=dialog]:has([data-section-picture])");
+      const layout = hero.locator("fieldset").first().locator("button[aria-pressed=false]").first();
+      await layout.click();
+      await layout
+        .and(page.locator("[aria-pressed=true][aria-busy=true]"))
+        .waitFor({ timeout: 2000 });
+      await layout.getByRole("status").getByText("Changing…", { exact: true }).waitFor();
+      await layout.getByRole("status").waitFor({ state: "detached", timeout: 120000 * P });
+      await layout.and(page.locator("[aria-pressed=true]")).waitFor();
+      // Cancel puts the section back as it was, and closes the form.
+      await hero.getByRole("button", { name: "Cancel", exact: true }).click();
+      await alt.waitFor({ state: "hidden", timeout: 120000 * P });
       // Closing the form ends that selection, not Select: the next click selects again.
       if ((await select.getAttribute("aria-pressed")) !== "true")
         throw new Error("closing the form turned Select off");
