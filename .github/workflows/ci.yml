@@ -143,6 +143,7 @@ jobs:
         run: node scripts/fix-file-rule.mjs
         env:
           BASE: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD: ${{ github.event.pull_request.head.sha }}
           NO_FIX_FILE: ${{ contains(github.event.pull_request.labels.*.name, 'no-fix-file') }}
           # A line "Fix file: none, because …" in its text (an env, never in the command line).
           PR_BODY: ${{ github.event.pull_request.body }}
