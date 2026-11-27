@@ -26,6 +26,8 @@ The entries are filled in from the merged pull requests at each release. A fix t
 
 ### Fixes
 
+- **Lists**: Import is offered to the roles that may add a record and read everyone's on that list, no longer to a member on a list of their own records; `import: true | false` on a crud page says it either way, and `smithable validate --explain` shows who is offered it (fix `list-import-own-records`).
+
 - Generated apps no longer repeat a card's title as its description when the title is taken from the record's only long text field (`fixes/card-title-not-repeated.yml`).
 - A generated app whose `SMTP_URL` is not an address holds its mail in the outbox and logs why, instead of failing the change that sent it (`fixes/smtp-url-not-an-address.yml`).
 - A signed call to a generated app's incoming address is known by what is signed (the id its entry names, else the signature), never by the Idempotency-Key header the signature leaves out, so a replay with a new header is not acted on again (`fixes/signed-incoming-replay.yml`).
