@@ -4,12 +4,19 @@ import type { Spec } from "../engine";
 import type { Selection } from "../preview";
 import { Button, Select } from "../ui";
 import type { Run } from "./ChangeForms";
+import { pageForPreviewPath } from "./preview-follow";
 
 export function selectedNavigation(selection: Selection | undefined, spec: Spec) {
   if (!selection || !spec.ir) return;
   const navigation = spec.ux?.navigation ?? "sidebar";
   if (selection.concept === "navigation:workspace") {
-    const page = spec.ir.pages.find(({ id }) => id === selection.page);
+    // The menu belongs to no page: the one shown is found from the preview's address.
+    const id =
+      selection.page ??
+      (typeof selection.path === "string"
+        ? pageForPreviewPath(spec.ir, selection.path, spec.content?.languages)
+        : undefined);
+    const page = spec.ir.pages.find((candidate) => candidate.id === id);
     return {
       kind: "workspace",
       label: "App navigation",

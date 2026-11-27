@@ -20,6 +20,8 @@ export type PreviewMessage =
       /** A picture: a section's, clicked on its picture. */
       part: "field" | "column" | "value" | "menu-item" | "picture" | null;
       page: string | null;
+      /** Where the preview was: a part that belongs to no page (the app's menu) is placed by it. */
+      path?: string;
       columns: string[] | null;
       label?: string;
       anchor?: { left: number; right: number; top: number; bottom: number };

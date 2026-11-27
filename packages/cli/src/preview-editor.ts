@@ -168,7 +168,8 @@ if (typeof window !== "undefined" && window.parent !== window) {
     if (quiet) return post({ type: "selection-moved", anchor: { left, right, top, bottom } });
     const heading = concept.startsWith("section:") ? marked.querySelector("h1, h2") : null;
     post({
-      type: "select", concept, part, page: marked.dataset.smPage ?? null, columns,
+      // The page's address too: the app's menu belongs to no page, and Studio finds it from there (T1695).
+      type: "select", concept, part, page: marked.dataset.smPage ?? null, path: location.pathname, columns,
       label: marked.matches(footerSelector) ? "Footer" : ((heading ?? marked).getAttribute("aria-label") || (heading ?? marked).textContent || "").trim().slice(0, 120),
       anchor: { left, right, top, bottom },
     });
