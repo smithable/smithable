@@ -295,6 +295,9 @@ export function App() {
   const [peopleOpen, setPeopleOpen] = useState(false);
   const [people, setPeople] = useState<PeopleState>();
   const [go, setGo] = useState<{ path: string; key: number }>();
+  // The sample user the preview was last signed in as by Follow, said beside its address (T1687).
+  const [followed, setFollowed] = useState<string>();
+  const previewingAs = people?.people.find((p) => p.id === followed);
   // Whether No code's editors open the preview's page as it changes (the link beside the address).
   const [following, setFollowingState] = useState(() => {
     try {
@@ -2113,12 +2116,14 @@ export function App() {
             state={people}
             auth={spec.auth}
             onState={setPeople}
-            onFollow={(id) =>
+            followed={previewingAs?.id}
+            onFollow={(id) => {
+              setFollowed(id);
               setGo((g) => ({
                 path: `/sign-in?as=${encodeURIComponent(id)}&redirect=/`,
                 key: (g?.key ?? 0) + 1,
-              }))
-            }
+              }));
+            }}
             onClose={() => setPeopleOpen(false)}
           />
         )}
@@ -2208,6 +2213,7 @@ export function App() {
                   highlight={highlight}
                   pages={pages}
                   go={go}
+                  previewingAs={previewingAs}
                   following={following}
                   onFollowing={
                     // Behavior and Layout follow the preview; Who can and Content have no page

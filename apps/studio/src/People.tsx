@@ -12,6 +12,7 @@ export function PeoplePanel({
   auth,
   onState,
   onFollow,
+  followed,
   onClose,
 }: {
   state?: PeopleState;
@@ -20,6 +21,8 @@ export function PeoplePanel({
   onState: (state: PeopleState) => void;
   /** Opens the preview signed in as this sample user. */
   onFollow: (id: string) => void;
+  /** The sample user the preview is signed in as by Follow. */
+  followed?: string;
   onClose: () => void;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
@@ -138,11 +141,16 @@ export function PeoplePanel({
                 {p.id !== "visitor" && (
                   <Button
                     variant="ghost"
-                    className="h-6"
-                    title={`Open the preview signed in as ${p.name}`}
+                    aria-pressed={p.id === followed}
+                    title={
+                      p.id === followed
+                        ? `The preview is signed in as ${p.name}. Click to open its start page as ${p.name} again.`
+                        : `Open the preview signed in as ${p.name}`
+                    }
+                    className={cx("h-6", p.id === followed && "bg-accent-soft")}
                     onClick={() => onFollow(p.id)}
                   >
-                    Follow
+                    {p.id === followed ? "Following" : "Follow"}
                   </Button>
                 )}
                 <Button

@@ -78,6 +78,7 @@ export function Preview({
   highlight,
   pages = [],
   go,
+  previewingAs,
   following,
   onFollowing,
 }: {
@@ -100,6 +101,8 @@ export function Preview({
   pages?: [string, string][];
   /** A page to open, as the address bar would (Follow's sign-in); `key` makes it again. */
   go?: { path: string; key: number };
+  /** The sample user Follow signed the preview in as: said beside the address (T1687). */
+  previewingAs?: { name: string; role: string };
   /** Whether the editors open the preview's page as it changes (No code's Behavior and Layout);
    * offered beside the address only with `onFollowing`. */
   following?: boolean;
@@ -466,6 +469,14 @@ export function Preview({
                 <path d="m5 6 3 3 3-3" />
               </svg>
             </button>
+            {previewingAs && (
+              <span
+                role="status"
+                className="shrink-0 truncate rounded-md bg-accent-soft px-2 py-1 text-xs whitespace-nowrap"
+              >
+                Previewing as {previewingAs.name}, {previewingAs.role}
+              </span>
+            )}
             {onFollowing && (
               <button
                 type="button"
