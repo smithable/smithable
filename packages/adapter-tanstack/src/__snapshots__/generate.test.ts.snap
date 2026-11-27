@@ -20081,7 +20081,8 @@ function AppointmentsPage() {
       {w.newOne("appointment")}
     </Link>
   );
-  const importButton = canCreate && (
+  // Import is for admin, staff (by rule; say it with import).
+  const importButton = canCreate && viewer != null && ["admin","staff"].includes(viewer.role) && (
     <ImportDialog ui={appointmentUi} run={(data) => importAppointments({ data })} undo={(id) => undoImportAppointments({ data: id })} />
   );
   return (
@@ -20404,7 +20405,8 @@ function BarbersPage() {
       {w.newOne("barber")}
     </Link>
   );
-  const importButton = canCreate && (
+  // Import is for admin (by rule; say it with import).
+  const importButton = canCreate && viewer != null && ["admin"].includes(viewer.role) && (
     <ImportDialog ui={barberUi} run={(data) => importBarbers({ data })} undo={(id) => undoImportBarbers({ data: id })} />
   );
   return (
@@ -20899,7 +20901,8 @@ function ServicesPage() {
       {w.newOne("service")}
     </Link>
   );
-  const importButton = canCreate && (
+  // Import is for admin (by rule; say it with import).
+  const importButton = canCreate && viewer != null && ["admin"].includes(viewer.role) && (
     <ImportDialog ui={serviceUi} run={(data) => importServices({ data })} undo={(id) => undoImportServices({ data: id })} />
   );
   return (
@@ -21293,7 +21296,8 @@ function TimeOffPage() {
       {w.newOne("time off")}
     </Link>
   );
-  const importButton = canCreate && (
+  // Import is for admin, staff (by rule; say it with import).
+  const importButton = canCreate && viewer != null && ["admin","staff"].includes(viewer.role) && (
     <ImportDialog ui={timeOffUi} run={(data) => importTimeOffs({ data })} undo={(id) => undoImportTimeOffs({ data: id })} />
   );
   return (
@@ -22039,10 +22043,10 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/app-card.tsx": "a74639e0 generated",
   "src/routes/appointments/$id.tsx": "05b6e945 generated",
-  "src/routes/appointments/index.tsx": "a983a43c generated",
+  "src/routes/appointments/index.tsx": "a0555ef5 generated",
   "src/routes/appointments/new.tsx": "cf4771c5 generated",
   "src/routes/barbers/$id.tsx": "10ac13c7 generated",
-  "src/routes/barbers/index.tsx": "45283bb1 generated",
+  "src/routes/barbers/index.tsx": "a318eada generated",
   "src/routes/barbers/new.tsx": "49d2cb83 generated",
   "src/routes/day/index.tsx": "84bc75d1 generated",
   "src/routes/events.ts": "cdf9dd08 generated",
@@ -22054,12 +22058,12 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/routes/privacy/index.tsx": "9fcb262e generated",
   "src/routes/robots[.]txt.ts": "21d2d615 generated",
   "src/routes/services/$id.tsx": "bddd0cd6 generated",
-  "src/routes/services/index.tsx": "d980917e generated",
+  "src/routes/services/index.tsx": "88c4917f generated",
   "src/routes/services/new.tsx": "5d1280e4 generated",
   "src/routes/sign-in.tsx": "64dbc342 generated",
   "src/routes/sitemap[.]xml.ts": "5c8fa673 generated",
   "src/routes/time-off/$id.tsx": "e91b5ca4 generated",
-  "src/routes/time-off/index.tsx": "0126663b generated",
+  "src/routes/time-off/index.tsx": "84deb182 generated",
   "src/routes/time-off/new.tsx": "007c55c8 generated",
   "src/start.ts": "6b874d2d kit",
   "src/styles.css": "dcd25010 kit",
@@ -34341,7 +34345,8 @@ function BookingsPage() {
       {w.newOne("booking")}
     </Link>
   );
-  const importButton = canCreate && (
+  // Import is for admin, staff (by rule; say it with import).
+  const importButton = canCreate && viewer != null && ["admin","staff"].includes(viewer.role) && (
     <ImportDialog ui={bookingUi} run={(data) => importBookings({ data })} undo={(id) => undoImportBookings({ data: id })} />
   );
   return (
@@ -34648,7 +34653,8 @@ function ClassTypesPage() {
       {w.newOne("class type")}
     </Link>
   );
-  const importButton = canCreate && (
+  // Import is for admin (by rule; say it with import).
+  const importButton = canCreate && viewer != null && ["admin"].includes(viewer.role) && (
     <ImportDialog ui={classTypeUi} run={(data) => importClassTypes({ data })} undo={(id) => undoImportClassTypes({ data: id })} />
   );
   return (
@@ -35068,7 +35074,8 @@ function InstructorsPage() {
       {w.newOne("instructor")}
     </Link>
   );
-  const importButton = canCreate && (
+  // Import is for admin (by rule; say it with import).
+  const importButton = canCreate && viewer != null && ["admin"].includes(viewer.role) && (
     <ImportDialog ui={instructorUi} run={(data) => importInstructors({ data })} undo={(id) => undoImportInstructors({ data: id })} />
   );
   return (
@@ -35306,7 +35313,8 @@ function MessagesPage() {
       {w.newOne("message")}
     </Link>
   );
-  const importButton = canCreate && (
+  // Import is for admin (by rule; say it with import).
+  const importButton = canCreate && viewer != null && ["admin"].includes(viewer.role) && (
     <ImportDialog ui={messageUi} run={(data) => importMessages({ data })} undo={(id) => undoImportMessages({ data: id })} />
   );
   return (
@@ -35569,7 +35577,8 @@ function MyBookingsPage() {
       {w.newOne("booking")}
     </Link>
   );
-  const importButton = canCreate && (
+  // Import is for admin, staff (by rule; say it with import).
+  const importButton = canCreate && viewer != null && ["admin","staff"].includes(viewer.role) && (
     <ImportDialog ui={bookingUi} run={(data) => importBookings({ data })} undo={(id) => undoImportBookings({ data: id })} />
   );
   return (
@@ -35832,7 +35841,8 @@ function PostsPage() {
       {w.newOne("post")}
     </Link>
   );
-  const importButton = canCreate && (
+  // Import is for admin (by rule; say it with import).
+  const importButton = canCreate && viewer != null && ["admin"].includes(viewer.role) && (
     <ImportDialog ui={postUi} run={(data) => importPosts({ data })} undo={(id) => undoImportPosts({ data: id })} />
   );
   return (
@@ -36367,7 +36377,8 @@ function SessionsPage() {
       {w.newOne("session")}
     </Link>
   );
-  const importButton = canCreate && (
+  // Import is for admin, staff (by rule; say it with import).
+  const importButton = canCreate && viewer != null && ["admin","staff"].includes(viewer.role) && (
     <ImportDialog ui={sessionUi} run={(data) => importSessions({ data })} undo={(id) => undoImportSessions({ data: id })} />
   );
   return (
@@ -37456,10 +37467,10 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/blog/$address.tsx": "0fa31fdc generated",
   "src/routes/blog/index.tsx": "9ff11305 generated",
   "src/routes/bookings/$id.tsx": "28c46fa8 generated",
-  "src/routes/bookings/index.tsx": "5ab565dd generated",
+  "src/routes/bookings/index.tsx": "551c75b0 generated",
   "src/routes/bookings/new.tsx": "09aebe1c generated",
   "src/routes/class-types/$id.tsx": "7774de5a generated",
-  "src/routes/class-types/index.tsx": "4d83873e generated",
+  "src/routes/class-types/index.tsx": "fd15ab27 generated",
   "src/routes/class-types/new.tsx": "d4e202b3 generated",
   "src/routes/events.ts": "98860b46 generated",
   "src/routes/files/$model.$field.ts": "37c1c781 kit",
@@ -37468,23 +37479,23 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/index.tsx": "8141551e generated",
   "src/routes/instructors/$id.tsx": "edc5cce4 generated",
-  "src/routes/instructors/index.tsx": "856face6 generated",
+  "src/routes/instructors/index.tsx": "4b0b1ad7 generated",
   "src/routes/instructors/new.tsx": "8bd30440 generated",
   "src/routes/messages/$id.tsx": "c0a4d7de generated",
-  "src/routes/messages/index.tsx": "0fd9f042 generated",
+  "src/routes/messages/index.tsx": "ba6a9a3f generated",
   "src/routes/messages/new.tsx": "09a8fde8 generated",
   "src/routes/my-bookings/$id.tsx": "79f453fa generated",
   "src/routes/my-bookings/-my-bookings-parts.tsx": "c178be52 generated",
-  "src/routes/my-bookings/index.tsx": "d4bcea1a generated",
+  "src/routes/my-bookings/index.tsx": "0cbe4717 generated",
   "src/routes/my-bookings/new.tsx": "574871aa generated",
   "src/routes/posts/$id.tsx": "f83087d3 generated",
-  "src/routes/posts/index.tsx": "ce0f7be9 generated",
+  "src/routes/posts/index.tsx": "f4ab3874 generated",
   "src/routes/posts/new.tsx": "7be9f470 generated",
   "src/routes/privacy/index.tsx": "6236ed29 generated",
   "src/routes/robots[.]txt.ts": "2d5317f1 generated",
   "src/routes/schedule/index.tsx": "79cdbac7 generated",
   "src/routes/sessions/$id.tsx": "10f389eb generated",
-  "src/routes/sessions/index.tsx": "becb08cf generated",
+  "src/routes/sessions/index.tsx": "daf7d522 generated",
   "src/routes/sessions/new.tsx": "55613a12 generated",
   "src/routes/sign-in.tsx": "64dbc342 generated",
   "src/routes/sitemap[.]xml.ts": "018df36b generated",
@@ -43318,7 +43329,8 @@ function EnquiriesPage() {
       {w.newOne("enquiry")}
     </Link>
   );
-  const importButton = canCreate && (
+  // Import is for admin, crew (by rule; say it with import).
+  const importButton = canCreate && viewer != null && ["admin","crew"].includes(viewer.role) && (
     <ImportDialog ui={enquiryUi} run={(data) => importEnquiries({ data })} undo={(id) => undoImportEnquiries({ data: id })} />
   );
   return (
@@ -43864,7 +43876,8 @@ function ProjectsPage() {
       {w.newOne("project")}
     </Link>
   );
-  const importButton = canCreate && (
+  // Import is for admin, crew (by rule; say it with import).
+  const importButton = canCreate && viewer != null && ["admin","crew"].includes(viewer.role) && (
     <ImportDialog ui={projectUi} run={(data) => importProjects({ data })} undo={(id) => undoImportProjects({ data: id })} />
   );
   return (
@@ -44174,7 +44187,8 @@ function ServicesPage() {
       {w.newOne("service")}
     </Link>
   );
-  const importButton = canCreate && (
+  // Import is for admin, crew (by rule; say it with import).
+  const importButton = canCreate && viewer != null && ["admin","crew"].includes(viewer.role) && (
     <ImportDialog ui={serviceUi} run={(data) => importServices({ data })} undo={(id) => undoImportServices({ data: id })} />
   );
   return (
@@ -45371,7 +45385,7 @@ exports[`../../../examples/builder/smithable.yml > the generated files are as re
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/app-card.tsx": "a74639e0 generated",
   "src/routes/enquiries/$id.tsx": "9f8f421d generated",
-  "src/routes/enquiries/index.tsx": "6b75b28a generated",
+  "src/routes/enquiries/index.tsx": "1c24a039 generated",
   "src/routes/enquiries/new.tsx": "14abb828 generated",
   "src/routes/files/$model.$field.ts": "37c1c781 kit",
   "src/routes/files/$model.$id.$field.$n.ts": "5288014d kit",
@@ -45380,11 +45394,11 @@ exports[`../../../examples/builder/smithable.yml > the generated files are as re
   "src/routes/index.tsx": "14cf364f generated",
   "src/routes/privacy/index.tsx": "66a357d1 generated",
   "src/routes/projects/$id.tsx": "b413344a generated",
-  "src/routes/projects/index.tsx": "07e25658 generated",
+  "src/routes/projects/index.tsx": "6bcfbdf7 generated",
   "src/routes/projects/new.tsx": "747fcb9b generated",
   "src/routes/robots[.]txt.ts": "11965935 generated",
   "src/routes/services/$id.tsx": "a5473589 generated",
-  "src/routes/services/index.tsx": "d980917e generated",
+  "src/routes/services/index.tsx": "9ae0d207 generated",
   "src/routes/services/new.tsx": "5d1280e4 generated",
   "src/routes/sign-in.tsx": "fc26205e generated",
   "src/routes/sitemap[.]xml.ts": "1fbdc78e generated",
@@ -53220,7 +53234,8 @@ function CustomersPage() {
       {w.newOne("customer")}
     </Link>
   );
-  const importButton = canCreate && (
+  // Import is for admin, sales (by rule; say it with import).
+  const importButton = canCreate && viewer != null && ["admin","sales"].includes(viewer.role) && (
     <ImportDialog ui={customerUi} run={(data) => importCustomers({ data })} undo={(id) => undoImportCustomers({ data: id })} />
   );
   const scheduleFollowUpsButton = allows(scheduleFollowUpsAccess, viewer) && (
@@ -53603,7 +53618,8 @@ function FollowUpsPage() {
       {w.newOne("follow up")}
     </Link>
   );
-  const importButton = canCreate && (
+  // Import is for admin, sales (by rule; say it with import).
+  const importButton = canCreate && viewer != null && ["admin","sales"].includes(viewer.role) && (
     <ImportDialog ui={followUpUi} run={(data) => importFollowUps({ data })} undo={(id) => undoImportFollowUps({ data: id })} />
   );
   return (
@@ -54032,7 +54048,8 @@ function OrdersPage() {
       {w.newOne("order")}
     </Link>
   );
-  const importButton = canCreate && (
+  // Import is for admin, sales (by rule; say it with import).
+  const importButton = canCreate && viewer != null && ["admin","sales"].includes(viewer.role) && (
     <ImportDialog ui={orderUi} run={(data) => importOrders({ data })} undo={(id) => undoImportOrders({ data: id })} />
   );
   return (
@@ -55343,17 +55360,17 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/routes/app-card.tsx": "a74639e0 generated",
   "src/routes/customers/$id.tsx": "6a23d1ec generated",
   "src/routes/customers/actions/schedule-follow-ups.tsx": "0fb22ed7 generated",
-  "src/routes/customers/index.tsx": "99249990 generated",
+  "src/routes/customers/index.tsx": "81316eeb generated",
   "src/routes/customers/new.tsx": "101540c3 generated",
   "src/routes/customers/trash.tsx": "7848b304 generated",
   "src/routes/follow-ups/$id.tsx": "180573bb generated",
-  "src/routes/follow-ups/index.tsx": "a154cae8 generated",
+  "src/routes/follow-ups/index.tsx": "55e3a5b9 generated",
   "src/routes/follow-ups/new.tsx": "e6b35f58 generated",
   "src/routes/follow-ups/trash.tsx": "182e9c79 generated",
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/index.tsx": "7f70752a generated",
   "src/routes/orders/$id.tsx": "d906427c generated",
-  "src/routes/orders/index.tsx": "b9697369 generated",
+  "src/routes/orders/index.tsx": "910b017c generated",
   "src/routes/orders/new.tsx": "c9d034f0 generated",
   "src/routes/orders/trash.tsx": "80862bb0 generated",
   "src/routes/robots[.]txt.ts": "c64e7261 generated",
@@ -63787,7 +63804,8 @@ function ClientsPage() {
       {w.newOne("client")}
     </Link>
   );
-  const importButton = canCreate && (
+  // Import is for admin (by rule; say it with import).
+  const importButton = canCreate && viewer != null && ["admin"].includes(viewer.role) && (
     <ImportDialog ui={clientUi} run={(data) => importClients({ data })} undo={(id) => undoImportClients({ data: id })} />
   );
   return (
@@ -64283,7 +64301,8 @@ function InvoicesPage() {
       {w.newOne("invoice")}
     </Link>
   );
-  const importButton = canCreate && (
+  // Import is for admin (by rule; say it with import).
+  const importButton = canCreate && viewer != null && ["admin"].includes(viewer.role) && (
     <ImportDialog ui={invoiceUi} run={(data) => importInvoices({ data })} undo={(id) => undoImportInvoices({ data: id })} />
   );
   return (
@@ -65609,7 +65628,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/app-card.tsx": "a74639e0 generated",
   "src/routes/clients/$id.tsx": "e36f8b7f generated",
-  "src/routes/clients/index.tsx": "12269975 generated",
+  "src/routes/clients/index.tsx": "0db27a54 generated",
   "src/routes/clients/new.tsx": "1194d3e4 generated",
   "src/routes/events.ts": "2a5e5b78 generated",
   "src/routes/files/$model.$field.ts": "37c1c781 kit",
@@ -65619,7 +65638,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/routes/index.tsx": "c2dc8302 generated",
   "src/routes/invoices/$id.tsx": "8eb4e8fc generated",
   "src/routes/invoices/$id_.document.tsx": "3a477458 generated",
-  "src/routes/invoices/index.tsx": "0e4af827 generated",
+  "src/routes/invoices/index.tsx": "f8f87d86 generated",
   "src/routes/invoices/new.tsx": "8fcd2b9f generated",
   "src/routes/overview/index.tsx": "254c2c93 generated",
   "src/routes/privacy/index.tsx": "6ef06b81 generated",
@@ -74543,7 +74562,8 @@ function DishesPage() {
       {w.newOne("dish")}
     </Link>
   );
-  const importButton = canCreate && (
+  // Import is for admin, staff (by rule; say it with import).
+  const importButton = canCreate && viewer != null && ["admin","staff"].includes(viewer.role) && (
     <ImportDialog ui={dishUi} run={(data) => importDishes({ data })} undo={(id) => undoImportDishes({ data: id })} />
   );
   return (
@@ -74900,7 +74920,8 @@ function EnquiriesPage() {
       {w.newOne("catering enquiry")}
     </Link>
   );
-  const importButton = canCreate && (
+  // Import is for admin, staff (by rule; say it with import).
+  const importButton = canCreate && viewer != null && ["admin","staff"].includes(viewer.role) && (
     <ImportDialog ui={cateringEnquiryUi} run={(data) => importCateringEnquiries({ data })} undo={(id) => undoImportCateringEnquiries({ data: id })} />
   );
   return (
@@ -75435,7 +75456,8 @@ function OrdersPage() {
       {w.newOne("order")}
     </Link>
   );
-  const importButton = canCreate && (
+  // Import is for admin, staff (by rule; say it with import).
+  const importButton = canCreate && viewer != null && ["admin","staff"].includes(viewer.role) && (
     <ImportDialog ui={orderUi} run={(data) => importOrders({ data })} undo={(id) => undoImportOrders({ data: id })} />
   );
   return (
@@ -75979,7 +76001,8 @@ function StopsPage() {
       {w.newOne("stop")}
     </Link>
   );
-  const importButton = canCreate && (
+  // Import is for admin, staff (by rule; say it with import).
+  const importButton = canCreate && viewer != null && ["admin","staff"].includes(viewer.role) && (
     <ImportDialog ui={stopUi} run={(data) => importStops({ data })} undo={(id) => undoImportStops({ data: id })} />
   );
   return (
@@ -77102,10 +77125,10 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/routes/app-card.tsx": "a74639e0 generated",
   "src/routes/catering/index.tsx": "4f16deb9 generated",
   "src/routes/dishes/$id.tsx": "ae74c5c1 generated",
-  "src/routes/dishes/index.tsx": "bbffbf09 generated",
+  "src/routes/dishes/index.tsx": "f16c93b0 generated",
   "src/routes/dishes/new.tsx": "7aa588df generated",
   "src/routes/enquiries/$id.tsx": "aa658206 generated",
-  "src/routes/enquiries/index.tsx": "3b73d9ea generated",
+  "src/routes/enquiries/index.tsx": "1c2e0853 generated",
   "src/routes/enquiries/new.tsx": "20d6dfa3 generated",
   "src/routes/events.ts": "e5bcb4f0 generated",
   "src/routes/files/$model.$field.ts": "37c1c781 kit",
@@ -77114,13 +77137,13 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/index.tsx": "f89691ae generated",
   "src/routes/orders/$id.tsx": "eb8a58da generated",
-  "src/routes/orders/index.tsx": "4fb12d6e generated",
+  "src/routes/orders/index.tsx": "28744435 generated",
   "src/routes/orders/new.tsx": "1739d5ad generated",
   "src/routes/robots[.]txt.ts": "63cfc100 generated",
   "src/routes/sign-in.tsx": "11f3b277 generated",
   "src/routes/sitemap[.]xml.ts": "2e83acd6 generated",
   "src/routes/stops/$id.tsx": "7d3c395b generated",
-  "src/routes/stops/index.tsx": "5641736c generated",
+  "src/routes/stops/index.tsx": "688c7813 generated",
   "src/routes/stops/new.tsx": "0033752d generated",
   "src/routes/team/activity.tsx": "8822160b generated",
   "src/routes/team/index.tsx": "d0aa5bca generated",
@@ -80970,7 +80993,8 @@ function CatalogPage() {
       {w.newOne("item")}
     </Link>
   );
-  const importButton = canCreate && (
+  // Import is for admin (by rule; say it with import).
+  const importButton = canCreate && viewer != null && ["admin"].includes(viewer.role) && (
     <ImportDialog ui={itemUi} run={(data) => importItems({ data })} undo={(id) => undoImportItems({ data: id })} />
   );
   return (
@@ -81171,8 +81195,6 @@ import { currentViewer } from "#/lib/viewer.server";
 import { type Search, count, listQuery, optional, text } from "#/kit/params";
 import { buttonVariants } from "#/components/ui/button";
 import { csvName, csvOf, download } from "#/kit/csv";
-import { ImportDialog } from "#/kit/ImportDialog";
-import { importItems, undoImportItems } from "#/generated/item.import";
 import { useState } from "react";
 import { SelectionBar } from "#/kit/SelectionBar";
 import { deleteItems, itemDeleteRule, itemUi } from "#/generated/item";
@@ -81225,15 +81247,12 @@ function MyItemsPage() {
       {w.newOne("item")}
     </Link>
   );
-  const importButton = canCreate && (
-    <ImportDialog ui={itemUi} run={(data) => importItems({ data })} undo={(id) => undoImportItems({ data: id })} />
-  );
   return (
     <>
       <PageHeader
         page="myItems"
         title={pageUi["myItems"].title}
-        actions={<>{importButton}{newButton}</>}
+        actions={<>{newButton}</>}
       />
       {selectable && (
         <SelectionBar
@@ -81633,7 +81652,8 @@ function SavedPage() {
       {w.newOne("item")}
     </Link>
   );
-  const importButton = canCreate && (
+  // Import is for admin (by rule; say it with import).
+  const importButton = canCreate && viewer != null && ["admin"].includes(viewer.role) && (
     <ImportDialog ui={itemUi} run={(data) => importItems({ data })} undo={(id) => undoImportItems({ data: id })} />
   );
   return (
@@ -82562,16 +82582,16 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/routes/files/$model.$id.$field.$n.ts": "5288014d kit",
   "src/routes/files/$model.$id.$field.ts": "93378bd7 kit",
   "src/routes/health.ts": "362c9904 kit",
-  "src/routes/index.tsx": "0775d6da generated",
+  "src/routes/index.tsx": "9a5dba33 generated",
   "src/routes/my-items/$id.tsx": "5e517763 generated",
-  "src/routes/my-items/index.tsx": "4bf87539 generated",
+  "src/routes/my-items/index.tsx": "131555d3 generated",
   "src/routes/my-items/new.tsx": "d513e438 generated",
   "src/routes/new.tsx": "f7a5182d generated",
   "src/routes/review/file.$id.ts": "e0b138f6 generated",
   "src/routes/review/index.tsx": "3fc62105 generated",
   "src/routes/robots[.]txt.ts": "cbf1bff5 generated",
   "src/routes/saved/$id.tsx": "603d45a0 generated",
-  "src/routes/saved/index.tsx": "095fc40b generated",
+  "src/routes/saved/index.tsx": "45a523b2 generated",
   "src/routes/saved/new.tsx": "6599de80 generated",
   "src/routes/sign-in.tsx": "563d1820 generated",
   "src/routes/sitemap[.]xml.ts": "abb491ed generated",
@@ -87638,7 +87658,8 @@ function EnquiriesPage() {
       {w.newOne("enquiry")}
     </Link>
   );
-  const importButton = canCreate && (
+  // Import is for admin, crew (by rule; say it with import).
+  const importButton = canCreate && viewer != null && ["admin","crew"].includes(viewer.role) && (
     <ImportDialog ui={enquiryUi} run={(data) => importEnquiries({ data })} undo={(id) => undoImportEnquiries({ data: id })} />
   );
   return (
@@ -88151,7 +88172,8 @@ function JobsPage() {
       {w.newOne("job")}
     </Link>
   );
-  const importButton = canCreate && (
+  // Import is for admin, crew (by rule; say it with import).
+  const importButton = canCreate && viewer != null && ["admin","crew"].includes(viewer.role) && (
     <ImportDialog ui={jobUi} run={(data) => importJobs({ data })} undo={(id) => undoImportJobs({ data: id })} />
   );
   return (
@@ -89402,7 +89424,7 @@ exports[`../../../examples/painter/smithable.yml > the generated files are as re
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/app-card.tsx": "a74639e0 generated",
   "src/routes/enquiries/$id.tsx": "114b2cca generated",
-  "src/routes/enquiries/index.tsx": "74104296 generated",
+  "src/routes/enquiries/index.tsx": "fb89571f generated",
   "src/routes/enquiries/new.tsx": "6dbd7a5c generated",
   "src/routes/files/$model.$field.ts": "37c1c781 kit",
   "src/routes/files/$model.$id.$field.$n.ts": "5288014d kit",
@@ -89410,7 +89432,7 @@ exports[`../../../examples/painter/smithable.yml > the generated files are as re
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/index.tsx": "8cc9e0b7 generated",
   "src/routes/jobs/$id.tsx": "0e5a54dd generated",
-  "src/routes/jobs/index.tsx": "631b8020 generated",
+  "src/routes/jobs/index.tsx": "d31bceb5 generated",
   "src/routes/jobs/new.tsx": "65893714 generated",
   "src/routes/privacy/index.tsx": "d583618f generated",
   "src/routes/robots[.]txt.ts": "e65ef773 generated",
@@ -92707,7 +92729,8 @@ function ItemsPage() {
       {w.newOne("item")}
     </Link>
   );
-  const importButton = canCreate && (
+  // Import is for admin (by rule; say it with import).
+  const importButton = canCreate && viewer != null && ["admin"].includes(viewer.role) && (
     <ImportDialog ui={itemUi} run={(data) => importItems({ data })} undo={(id) => undoImportItems({ data: id })} />
   );
   return (
@@ -93525,7 +93548,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/index.tsx": "781b7593 generated",
   "src/routes/items/$id.tsx": "6a20f2c4 generated",
-  "src/routes/items/index.tsx": "dbfe2752 generated",
+  "src/routes/items/index.tsx": "e08d3f19 generated",
   "src/routes/items/new.tsx": "6d8d9bc4 generated",
   "src/routes/robots[.]txt.ts": "472c1e51 generated",
   "src/routes/sign-in.tsx": "563d1820 generated",
@@ -98969,7 +98992,8 @@ function DishesPage() {
       {w.newOne("dish")}
     </Link>
   );
-  const importButton = canCreate && (
+  // Import is for admin, staff (by rule; say it with import).
+  const importButton = canCreate && viewer != null && ["admin","staff"].includes(viewer.role) && (
     <ImportDialog ui={dishUi} run={(data) => importDishes({ data })} undo={(id) => undoImportDishes({ data: id })} />
   );
   return (
@@ -99353,7 +99377,8 @@ function MenusPage() {
       {w.newOne("menu")}
     </Link>
   );
-  const importButton = canCreate && (
+  // Import is for admin, staff (by rule; say it with import).
+  const importButton = canCreate && viewer != null && ["admin","staff"].includes(viewer.role) && (
     <ImportDialog ui={menuUi} run={(data) => importMenus({ data })} undo={(id) => undoImportMenus({ data: id })} />
   );
   return (
@@ -99644,7 +99669,8 @@ function ServiceHoursPage() {
       {w.newOne("service hour")}
     </Link>
   );
-  const importButton = canCreate && (
+  // Import is for admin, staff (by rule; say it with import).
+  const importButton = canCreate && viewer != null && ["admin","staff"].includes(viewer.role) && (
     <ImportDialog ui={serviceHourUi} run={(data) => importServiceHours({ data })} undo={(id) => undoImportServiceHours({ data: id })} />
   );
   return (
@@ -100843,17 +100869,17 @@ exports[`../../../examples/restaurant/smithable.yml > the generated files are as
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/app-card.tsx": "a74639e0 generated",
   "src/routes/dishes/$id.tsx": "a9415b76 generated",
-  "src/routes/dishes/index.tsx": "b6f7a07a generated",
+  "src/routes/dishes/index.tsx": "b29652a7 generated",
   "src/routes/dishes/new.tsx": "eb5a9a82 generated",
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/index.tsx": "4acae87e generated",
   "src/routes/menu/index.tsx": "e68100b9 generated",
   "src/routes/menus/$id.tsx": "4f4ae484 generated",
-  "src/routes/menus/index.tsx": "8acbe075 generated",
+  "src/routes/menus/index.tsx": "6672c196 generated",
   "src/routes/menus/new.tsx": "b1591c18 generated",
   "src/routes/robots[.]txt.ts": "82e4d36e generated",
   "src/routes/service-hours/$id.tsx": "6282fccd generated",
-  "src/routes/service-hours/index.tsx": "6efae8a3 generated",
+  "src/routes/service-hours/index.tsx": "ccdd9f9e generated",
   "src/routes/service-hours/new.tsx": "bb3fae1a generated",
   "src/routes/sign-in.tsx": "11f3b277 generated",
   "src/routes/sitemap[.]xml.ts": "29e35b26 generated",
@@ -112726,7 +112752,8 @@ function ComponentsPage() {
       {w.newOne("component")}
     </Link>
   );
-  const importButton = canCreate && (
+  // Import is for admin, staff (by rule; say it with import).
+  const importButton = canCreate && viewer != null && ["admin","staff"].includes(viewer.role) && (
     <ImportDialog ui={componentUi} run={(data) => importComponents({ data })} undo={(id) => undoImportComponents({ data: id })} />
   );
   return (
@@ -113253,7 +113280,8 @@ function IncidentsPage() {
       {w.newOne("incident")}
     </Link>
   );
-  const importButton = canCreate && (
+  // Import is for admin, staff (by rule; say it with import).
+  const importButton = canCreate && viewer != null && ["admin","staff"].includes(viewer.role) && (
     <ImportDialog ui={incidentUi} run={(data) => importIncidents({ data })} undo={(id) => undoImportIncidents({ data: id })} />
   );
   return (
@@ -113803,7 +113831,8 @@ function MaintenancePage() {
       {w.newOne("maintenance")}
     </Link>
   );
-  const importButton = canCreate && (
+  // Import is for admin, staff (by rule; say it with import).
+  const importButton = canCreate && viewer != null && ["admin","staff"].includes(viewer.role) && (
     <ImportDialog ui={maintenanceUi} run={(data) => importMaintenances({ data })} undo={(id) => undoImportMaintenances({ data: id })} />
   );
   return (
@@ -114619,7 +114648,8 @@ function UpdatesPage() {
       {w.newOne("incident update")}
     </Link>
   );
-  const importButton = canCreate && (
+  // Import is for admin, staff (by rule; say it with import).
+  const importButton = canCreate && viewer != null && ["admin","staff"].includes(viewer.role) && (
     <ImportDialog ui={incidentUpdateUi} run={(data) => importIncidentUpdates({ data })} undo={(id) => undoImportIncidentUpdates({ data: id })} />
   );
   return (
@@ -115416,18 +115446,18 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/routes/api/v1/openapi[.]json.ts": "ed462bec generated",
   "src/routes/app-card.tsx": "a74639e0 generated",
   "src/routes/components/$id.tsx": "dc8ee51a generated",
-  "src/routes/components/index.tsx": "505a019a generated",
+  "src/routes/components/index.tsx": "144ddb07 generated",
   "src/routes/components/new.tsx": "0fbd3870 generated",
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/history/$address.tsx": "971802d2 generated",
   "src/routes/history/index.tsx": "21415972 generated",
   "src/routes/incidents/$id.tsx": "bf4ecf44 generated",
-  "src/routes/incidents/index.tsx": "7c4beb6e generated",
+  "src/routes/incidents/index.tsx": "1256f521 generated",
   "src/routes/incidents/new.tsx": "a9f07576 generated",
   "src/routes/incoming/chatCommand.ts": "a2f3f35d generated",
   "src/routes/index.tsx": "82ce7233 generated",
   "src/routes/maintenance/$id.tsx": "0ad33c2b generated",
-  "src/routes/maintenance/index.tsx": "cf3eb42f generated",
+  "src/routes/maintenance/index.tsx": "cdc5bb4e generated",
   "src/routes/maintenance/new.tsx": "569f7977 generated",
   "src/routes/mcp.ts": "0d8813db generated",
   "src/routes/overview/index.tsx": "be91b9dc generated",
@@ -115437,7 +115467,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/routes/team/activity.tsx": "ded514ba generated",
   "src/routes/team/index.tsx": "dafa2829 generated",
   "src/routes/updates/$id.tsx": "68a6081c generated",
-  "src/routes/updates/index.tsx": "11c7f442 generated",
+  "src/routes/updates/index.tsx": "bb375f29 generated",
   "src/routes/updates/new.tsx": "ac78941b generated",
   "src/start.ts": "6b874d2d kit",
   "src/styles.css": "dcd25010 kit",
@@ -121963,7 +121993,8 @@ function CasesPage() {
       {w.newOne("support case")}
     </Link>
   );
-  const importButton = canCreate && (
+  // Import is for admin, agent (by rule; say it with import).
+  const importButton = canCreate && viewer != null && ["admin","agent"].includes(viewer.role) && (
     <ImportDialog ui={supportCaseUi} run={(data) => importSupportCases({ data })} undo={(id) => undoImportSupportCases({ data: id })} />
   );
   return (
@@ -123503,7 +123534,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/app-card.tsx": "a74639e0 generated",
   "src/routes/cases/$id.tsx": "69d4f745 generated",
-  "src/routes/cases/index.tsx": "f45f99ca generated",
+  "src/routes/cases/index.tsx": "b6d234a7 generated",
   "src/routes/cases/new.tsx": "0befc28f generated",
   "src/routes/events.ts": "f683a575 generated",
   "src/routes/files/$model.$field.ts": "37c1c781 kit",
