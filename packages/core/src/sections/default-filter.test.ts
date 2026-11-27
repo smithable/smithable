@@ -278,6 +278,27 @@ test("the ux file says how a filter on a reference is picked; setFilterPick writ
   expect(wrong.ok ? "" : wrong.message).toContain('sessions has no filter named "notes"');
 });
 
+test("import: true or false says who a list offers Import to; setImport writes it and takes it away", () => {
+  expect(read("    import: false\n").ir?.pages[0]?.import).toBe(false);
+  expect(read("    import: true\n").ir?.pages[0]?.import).toBe(true);
+  expect(read("").ir?.pages[0]?.import).toBeUndefined();
+  expect(messages("    import: staff\n").join()).toMatch(/import/);
+  const files = {
+    spec: SPEC,
+    auth: "smithableAuth: 0.1\nsignIn:\n  providers: [google]\ndefaultAccess: shared\nroles:\n  admin: {}\n",
+  };
+  const off = applyOperation(files, "setImport", { page: "sessions", offered: "off" });
+  if (!off.ok) throw new Error(off.message);
+  expect(off.files.spec).toContain("import: false");
+  const on = applyOperation(off.files, "setImport", { page: "sessions", offered: "on" });
+  if (!on.ok) throw new Error(on.message);
+  expect(on.files.spec).toContain("import: true");
+  expect(on.files.spec).not.toContain("import: false");
+  const rule = applyOperation(on.files, "setImport", { page: "sessions", offered: "rule" });
+  if (!rule.ok) throw new Error(rule.message);
+  expect(rule.files.spec).not.toContain("import:");
+});
+
 test("export: false takes a crud page's Export CSV away; setExport says it and undoes it", () => {
   expect(read("    export: false\n").ir?.pages[0]?.export).toBe(false);
   expect(messages("    export: true\n").join()).toMatch(/can only be false/);

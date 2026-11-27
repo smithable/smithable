@@ -366,6 +366,7 @@ const LEFT_OUT: Record<string, string> = {
   "smithable.yml:pages.*.mine": "a list narrowed to the viewer's own, within what they may read",
   "smithable.yml:pages.*.period": "a list's period",
   "smithable.yml:pages.*.favorites": "a list's favorites",
+  "smithable.yml:pages.*.import": "who is offered a list's import, within who may create",
   "smithable.yml:pages.*.export": "a list's download, within what the viewer may read",
   "smithable.yml:pages.*.contact.**": "a record page's contact button",
   "smithable.yml:pages.*.document.**": "a record printed as a document, from fields the card lists",

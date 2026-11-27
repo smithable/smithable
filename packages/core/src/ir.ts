@@ -467,6 +467,11 @@ export interface PageIR extends SemanticText {
   period?: Record<string, string>;
   /** false: the list offers no Export CSV (the API's CSV, for a key, stays). */
   export?: false;
+  /**
+   * Who the list offers Import to (access.ts importOffer): true everyone who may create one, false
+   * nobody; unsaid, the roles that may create one and read everyone's records in the list.
+   */
+  import?: boolean;
   /** The page lists only the viewer's own records (my items, my orders); it needs sign-in. */
   mine?: true;
   /** A "contact" block on the record page that mails the record's owner, or the user a field of the model names; `keep` names a model a copy of each message is stored in, and `link` its reference to this page's model, which the server fills from the record. */

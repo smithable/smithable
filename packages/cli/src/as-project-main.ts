@@ -22,6 +22,7 @@ const HOME: Record<string, () => Promise<unknown>> = {
   removeTree: () => import("./tree-files.js"),
   changeTree: () => import("./tree-files.js"),
   markChanged: () => import("./tree-files.js"),
+  keepMediaOutOfGit: () => import("./media-cache.js"),
   cachedMedia: () => import("./media-cache.js"),
   placeMedia: () => import("./media-cache.js"),
   dropMedia: () => import("./media-cache.js"),

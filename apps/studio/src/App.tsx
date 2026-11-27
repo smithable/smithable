@@ -963,7 +963,7 @@ export function App() {
     setBusy(false);
     setMessage({
       ok: result.ok,
-      text: result.ok && plain ? `Undid: ${plain}` : (result.output.split("\n")[0] ?? ""),
+      text: result.ok && plain ? `Undid: ${plain}` : plainRefusal(result.output),
     });
   });
 
