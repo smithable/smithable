@@ -340,3 +340,70 @@ pages:
     "Record 1 of Booking: how many bookings session 1 takes is not in the samples",
   );
 });
+
+test("a resource's time is taken once by the samples, with its gap, where the seed puts it (T1712)", () => {
+  const spec = (calendar: string) =>
+    validateSpec({
+      path: "smithable.yml",
+      text: `smithable: 0.1
+app: { name: Cuts }
+models:
+  Service:
+    fields: { name: string!, minutes: int! = 30 }
+  Barber:
+    fields: { name: string! }
+    schedule: { hours: { mon-sat: "09:00-17:00" }, gap: 10 }
+  Appointment:
+    fields: { service: Service!, barber: Barber!, startsAt: datetime!, status: requested | confirmed | cancelled }
+    occupies: { resource: barber, starts: startsAt, duration: service.minutes, while: { status: [requested, confirmed] } }
+pages:
+  ${calendar}
+`,
+    }).ir;
+  const said = (
+    ir: ReturnType<typeof spec>,
+    appointments: string,
+    services = "- { name: Cut }\n",
+  ) => {
+    if (!ir) throw new Error("the spec is invalid");
+    return validateSamples(
+      [
+        ...(services ? [{ path: "samples/Service.yml", text: services }] : []),
+        { path: "samples/Barber.yml", text: "- { name: Ola }\n- { name: Pia }\n" },
+        { path: "samples/Appointment.yml", text: appointments },
+      ],
+      ir,
+    ).diagnostics.map((d) => d.message);
+  };
+  const plain = spec("appointments: { crud: Appointment }");
+  const row = (barber: string, at: string, status = "confirmed") =>
+    `- { service: Cut, barber: ${barber}, startsAt: ${at}, status: ${status} }\n`;
+  // Another barber, the end of the gap, or a cancelled one: free.
+  expect(
+    said(
+      plain,
+      row("Ola", "2026-09-29 10:00") +
+        row("Pia", "2026-09-29 10:00") +
+        row("Ola", "2026-09-29 10:40") +
+        row("Ola", "2026-09-29 10:10", "cancelled"),
+    ),
+  ).toEqual([]);
+  expect(said(plain, row("Ola", "2026-09-29 10:00") + row("Ola", "2026-09-29 10:35"))).toEqual([
+    "Record 2 of Appointment takes barber 1's time while record 1 does (with the 10 minutes kept free after each).",
+  ]);
+  // A length from a generated service is not known.
+  expect(said(plain, row("Ola", "2026-09-29 10:00").replace("Cut", "1"), "")).toEqual([
+    "Record 1 of Appointment: how long it takes (service.minutes) is not in the samples; give the record it names a sample minutes.",
+  ]);
+  // On a calendar the seed moves rows to this week (1st, 3rd, …) or the next on the same weekday:
+  // two Tuesdays a week apart meet when both land in the same week.
+  const moved = spec("diary: { calendar: { model: Appointment, starts: startsAt } }");
+  const tuesdays =
+    row("Ola", "2026-09-29 10:00") +
+    row("Ola", "2026-10-06 10:00") +
+    row("Ola", "2026-10-13 10:00");
+  expect(said(moved, tuesdays)).toEqual([
+    "Record 3 of Appointment takes barber 1's time while record 1 does (with the 10 minutes kept free after each).",
+  ]);
+  expect(said(plain, tuesdays)).toEqual([]);
+});

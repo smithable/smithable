@@ -200,6 +200,7 @@ export function validateSamples(
   for (const { model, ctx } of parsed) {
     const before = ctx.diagnostics.length;
     if (model.capacity) withinCapacity(ctx, model, ir, samples, at);
+    if (model.occupies) withoutOverlap(ctx, model, ir, samples, at);
     diagnostics.push(...ctx.diagnostics.slice(before));
   }
   return { samples, diagnostics };
@@ -233,11 +234,7 @@ function withinCapacity(
     const value = row ? (row[name ?? ""] ?? field?.default) : undefined;
     return typeof value === "number" ? value : undefined;
   };
-  const counts = (row: Record<string, unknown>) =>
-    Object.entries(capacity.where ?? {}).every(([name, want]) => {
-      const value = row[name] ?? model.fields.find((f) => f.name === name)?.default;
-      return Array.isArray(want) ? want.includes(value as string) : value === want;
-    });
+  const counts = meets(model, capacity.where);
   const counted = new Map<number, number>();
   (samples[model.name] ?? []).forEach((row, i) => {
     const n = row[per.name];
@@ -258,6 +255,97 @@ function withinCapacity(
         "over-capacity",
         `Record ${i + 1} of ${model.name} is one more than the ${max} ${per.name} ${n} takes.`,
       );
+  });
+}
+
+/** Whether a sample row meets a condition (a capacity's `where`, an occupies' `while`). */
+function meets(model: ModelIR, condition: Record<string, unknown> | undefined) {
+  return (row: Record<string, unknown>) =>
+    Object.entries(condition ?? {}).every(([name, want]) => {
+      const value = row[name] ?? model.fields.find((f) => f.name === name)?.default;
+      return Array.isArray(want) ? want.includes(value as string) : value === want;
+    });
+}
+
+/**
+ * A model that occupies a resource's time (an appointment its barber's) is seeded from its file
+ * alone, so the samples never book one resource twice at once: as the app refuses it, a record
+ * that meets `while` may not overlap another of the same resource, with the resource's gap
+ * after each. Times are compared where the seed puts them: a calendar's records move to this
+ * week or the next by their order, on the same weekday and time. A length the samples cannot
+ * know (from a generated record) refuses the record.
+ */
+function withoutOverlap(
+  ctx: ParseContext,
+  model: ModelIR,
+  ir: SpecIR,
+  samples: SamplesIR,
+  at: WeakMap<object, ParsedNode>,
+): void {
+  const occupies = model.occupies;
+  const resource = model.fields.find((f) => f.name === occupies?.resource);
+  if (!occupies || resource?.type.kind !== "relation") return;
+  const target = (resource.type as { model: string }).model;
+  const gap = ir.models.find((m) => m.name === target)?.schedule?.gap ?? 0;
+  const moved = ir.pages.some(
+    (p) =>
+      p.pattern.kind === "calendar" &&
+      p.pattern.model === model.name &&
+      p.pattern.starts === occupies.starts,
+  );
+  const [via, far] = occupies.duration.split(".");
+  const length = (row: Record<string, unknown>): number | undefined => {
+    if (far === undefined) {
+      const value = row[via ?? ""] ?? model.fields.find((f) => f.name === via)?.default;
+      return typeof value === "number" ? value : undefined;
+    }
+    const ref = model.fields.find((f) => f.name === via);
+    const other =
+      ref?.type.kind === "relation"
+        ? ir.models.find((m) => m.name === (ref.type as { model: string }).model)
+        : undefined;
+    const n = row[via ?? ""];
+    const parentRow = other && typeof n === "number" ? samples[other.name]?.[n - 1] : undefined;
+    const value = parentRow
+      ? (parentRow[far] ?? other?.fields.find((f) => f.name === far)?.default)
+      : undefined;
+    return typeof value === "number" ? value : undefined;
+  };
+  const startOf = (row: Record<string, unknown>, i: number): number | undefined => {
+    const value = row[occupies.starts];
+    if (typeof value !== "string") return undefined;
+    const ms = Date.parse(`${value}Z`);
+    if (Number.isNaN(ms)) return undefined;
+    if (!moved) return ms / 60_000;
+    const minutes = (ms / 60_000) % 1440;
+    const weekday = (new Date(ms).getUTCDay() + 6) % 7;
+    return ((i % 2) * 7 + weekday) * 1440 + minutes;
+  };
+  const counts = meets(model, occupies.while);
+  const taken: { n: number; from: number; to: number; i: number }[] = [];
+  (samples[model.name] ?? []).forEach((row, i) => {
+    const n = row[resource.name];
+    const from = startOf(row, i);
+    if (typeof n !== "number" || from === undefined || !counts(row)) return;
+    const node = at.get(row) ?? null;
+    const minutes = length(row);
+    if (minutes === undefined) {
+      ctx.error(
+        node,
+        "sample-overlap",
+        `Record ${i + 1} of ${model.name}: how long it takes (${occupies.duration}) is not in the samples; give ${far === undefined ? "it" : "the record it names"} a sample ${far ?? via}.`,
+      );
+      return;
+    }
+    const to = from + minutes;
+    const clash = taken.find((t) => t.n === n && from < t.to + gap && t.from < to + gap);
+    if (clash)
+      ctx.error(
+        node,
+        "sample-overlap",
+        `Record ${i + 1} of ${model.name} takes ${resource.name} ${n}'s time while record ${clash.i + 1} does${gap ? ` (with the ${gap} minutes kept free after each)` : ""}.`,
+      );
+    else taken.push({ n, from, to, i });
   });
 }
 
