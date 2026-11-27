@@ -7,12 +7,20 @@ import type { Run } from "./ChangeForms";
 
 export function selectedNavigation(selection: Selection | undefined, spec: Spec) {
   if (!selection || !spec.ir) return;
-  if (selection.concept === "navigation:workspace")
+  const navigation = spec.ux?.navigation ?? "sidebar";
+  if (selection.concept === "navigation:workspace") {
+    const page = spec.ir.pages.find(({ id }) => id === selection.page);
     return {
       kind: "workspace",
       label: "App navigation",
-      value: spec.ux?.navigation ?? "sidebar",
+      value: navigation,
+      navigation,
+      // A page with a frame of its own (landing, onboarding) keeps it: no choice for it alone.
+      ...(page && !["landing", "onboarding"].includes(page.pattern.kind)
+        ? { page: page.id, frame: spec.ux?.pages[page.id]?.frame }
+        : {}),
     } as const;
+  }
   const landing = /^navigation:landing\.([\w-]+)$/.exec(selection.concept);
   if (landing) {
     const page = spec.ir.pages.find(({ id }) => id === landing[1]);
@@ -22,6 +30,7 @@ export function selectedNavigation(selection: Selection | undefined, spec: Spec)
       label: "Top bar",
       page: page.id,
       value: spec.ux?.pages[page.id]?.header?.position ?? "sticky",
+      navigation,
     } as const;
   }
   if (selection.part !== "menu-item") return;
@@ -34,6 +43,17 @@ export function selectedNavigation(selection: Selection | undefined, spec: Spec)
     humanize(page.id);
   return { kind: "item", label, page: page.id, value: label, route: page.route } as const;
 }
+
+/** The menu's places for the whole app (setMenuLayout) and a page's frames (setFrame), T1695. */
+const PLACES: [string, string][] = [
+  ["sidebar", "Side menu"],
+  ["topbar", "Top menu"],
+  ["topbar-centered", "Top menu centred"],
+];
+const FRAMES: [string, string][] = [
+  ["site", "Public page: top menu and footer"],
+  ["app", "Workspace page: the app's menu"],
+];
 
 export function SelectedNavigation({
   part,
@@ -50,11 +70,80 @@ export function SelectedNavigation({
 }) {
   const [value, setValue] = useState<string>(part.value);
   const [saving, setSaving] = useState(false);
+  const pageFrame = part.kind === "workspace" && "page" in part ? part : undefined;
+  const [scope, setScope] = useState<"app" | "page" | "default">(pageFrame?.frame ? "page" : "app");
+  const [frame, setFrame] = useState<string>(pageFrame?.frame ?? "site");
+  const [place, setPlace] = useState<string>(part.kind === "item" ? "" : part.navigation);
   const heading = useId();
   const control = useId();
   const description = useId();
   const wanted = value.trim();
-  const canSave = Boolean(wanted && wanted !== part.value && !saving);
+  // What Apply runs: each an operation, in order.
+  const changes: [string, Record<string, unknown>][] = [];
+  if (part.kind === "item") {
+    if (wanted && wanted !== part.value)
+      changes.push(["setText", { path: ["pages", part.page, "title"], text: wanted }]);
+  } else {
+    if (part.kind === "landing" && value !== part.value)
+      changes.push([
+        "setSectionLook",
+        { page: part.page, section: "header", key: "position", value },
+      ]);
+    if (scope === "app" && place !== part.navigation)
+      changes.push(["setMenuLayout", { navigation: place }]);
+    if (pageFrame && scope === "page" && frame !== pageFrame.frame)
+      changes.push(["setFrame", { page: pageFrame.page, frame }]);
+    if (pageFrame?.frame && scope === "default")
+      changes.push(["setFrame", { page: pageFrame.page, frame: "default" }]);
+  }
+  const canSave = changes.length > 0 && !saving;
+  const scopes = (
+    <fieldset className="space-y-1 text-sm">
+      <legend className="mb-1">
+        {part.kind === "landing" ? "Menu on workspace pages" : "Menu"}
+      </legend>
+      {(
+        [
+          ["app", "Whole app"],
+          ...(pageFrame
+            ? [
+                ["page", "Only this page"],
+                ["default", "Default"],
+              ]
+            : []),
+        ] as [typeof scope, string][]
+      ).map(([id, label]) => (
+        <label key={id} className="flex items-center gap-2">
+          <input
+            type="radio"
+            name={`${heading}-scope`}
+            checked={scope === id}
+            onChange={() => setScope(id)}
+          />
+          {label}
+        </label>
+      ))}
+      {scope === "app" ? (
+        <Select
+          aria-label="Menu for the whole app"
+          value={place}
+          onChange={(event) => setPlace(event.target.value)}
+          options={PLACES}
+        />
+      ) : scope === "page" ? (
+        <Select
+          aria-label="Menu for this page"
+          value={frame}
+          onChange={(event) => setFrame(event.target.value)}
+          options={FRAMES}
+        />
+      ) : (
+        <p className="text-xs text-quiet">
+          Landing pages and articles are public pages; the rest are workspace pages.
+        </p>
+      )}
+    </fieldset>
+  );
   return (
     <form
       aria-labelledby={heading}
@@ -72,18 +161,8 @@ export function SelectedNavigation({
         if (!canSave) return;
         setSaving(true);
         try {
-          const ok =
-            part.kind === "landing"
-              ? await run("setSectionLook", {
-                  page: part.page,
-                  section: "header",
-                  key: "position",
-                  value: wanted,
-                })
-              : part.kind === "workspace"
-                ? await run("setMenuLayout", { navigation: wanted })
-                : await run("setText", { path: ["pages", part.page, "title"], text: wanted });
-          if (ok) close();
+          for (const [name, args] of changes) if (!(await run(name, args))) return;
+          close();
         } finally {
           setSaving(false);
         }
@@ -93,28 +172,19 @@ export function SelectedNavigation({
         {part.label}
       </h2>
       {part.kind === "landing" ? (
-        <label className="flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            checked={value === "sticky"}
-            onChange={(event) => setValue(event.target.checked ? "sticky" : "scrolling")}
-          />
-          Stays at the top when scrolling
-        </label>
+        <>
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={value === "sticky"}
+              onChange={(event) => setValue(event.target.checked ? "sticky" : "scrolling")}
+            />
+            Stays at the top when scrolling
+          </label>
+          {scopes}
+        </>
       ) : part.kind === "workspace" ? (
-        <div className="space-y-1 text-sm">
-          <label htmlFor={control}>Menu placement</label>
-          <Select
-            id={control}
-            value={value}
-            onChange={(event) => setValue(event.target.value)}
-            options={[
-              ["sidebar", "Menu at the side"],
-              ["topbar", "Across the top"],
-              ["topbar-centered", "Across the top, centred"],
-            ]}
-          />
-        </div>
+        scopes
       ) : (
         <div className="space-y-1 text-sm">
           <label htmlFor={control}>Menu item text</label>

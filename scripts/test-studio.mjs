@@ -2952,7 +2952,9 @@ try {
         // Its box is drawn inside the bar, which runs to the window's edges (T1695).
         const box = await topBar.evaluate((el) => {
           const look = getComputedStyle(el);
-          return el.hasAttribute("data-sm-selected") && `${look.outlineStyle} ${look.outlineOffset}`;
+          return (
+            el.hasAttribute("data-sm-selected") && `${look.outlineStyle} ${look.outlineOffset}`
+          );
         });
         if (box !== "solid -2px") throw new Error(`the selected top bar's box: ${box}`);
         const settings = page.getByRole("form", { name: "Top bar", exact: true });
@@ -3014,7 +3016,9 @@ try {
           : "topbar-centered";
       await pick(workspace, { x: 4, y: 4 });
       const workspaceSettings = page.getByRole("form", { name: "App navigation", exact: true });
-      await workspaceSettings.getByLabel("Menu placement", { exact: true }).selectOption(placement);
+      await workspaceSettings
+        .getByLabel("Menu for the whole app", { exact: true })
+        .selectOption(placement);
       await workspaceSettings.getByRole("button", { name: "Apply", exact: true }).click();
       await workspaceSettings.waitFor({ state: "hidden" });
       const positioned = workspaceHeader.and(preview.locator(`[data-navigation="${placement}"]`));
@@ -3046,6 +3050,24 @@ try {
         .getByRole("button", { name: "Cancel", exact: true })
         .click();
       await op("setMenuLayout", { navigation: menuSource ?? "inherit" });
+      // Only this page: the page's frame, through the menu (T1695); Default says the rule.
+      await openPreview("/customers");
+      await pick(workspace, { x: 4, y: 4 });
+      await workspaceSettings.getByRole("radio", { name: "Default", exact: true }).check();
+      await workspaceSettings
+        .getByText("Landing pages and articles are public pages; the rest are workspace pages.", {
+          exact: true,
+        })
+        .waitFor();
+      await workspaceSettings.getByRole("radio", { name: "Only this page", exact: true }).check();
+      await workspaceSettings
+        .getByLabel("Menu for this page", { exact: true })
+        .selectOption("site");
+      await workspaceSettings.getByRole("button", { name: "Apply", exact: true }).click();
+      await workspaceSettings.waitFor({ state: "hidden" });
+      for (let i = 0; i < 60 * P && !framed(); i++) await new Promise((r) => setTimeout(r, 1000));
+      if (!framed()) throw new Error("Only this page did not give the customers the site's frame");
+      await op("setFrame", { page: "customers", frame: "default" });
       await sub("Behavior");
     },
   );
