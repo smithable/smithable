@@ -111,4 +111,7 @@ test("in CI, main's commits after the event's base are not the pull request's", 
   assert.equal(failed.status, 1, "the pull request's own kit change still needs a declaration");
   assert.match(failed.stderr, /kit\/mine\.ts/);
   assert.doesNotMatch(failed.stderr, /theirs\.ts/);
+  const wrong = run(base);
+  assert.equal(wrong.status, 1, "a checkout that is not this pull request's merge");
+  assert.match(wrong.stderr, /not .* merged into main/);
 });
