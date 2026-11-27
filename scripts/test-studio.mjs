@@ -3020,7 +3020,7 @@ try {
   );
 
   await step(
-    "a click on a section's picture opens its form at the picture, Select stays on after the form closes, and Show me opens where a change shows (T1686, T1684, T1682)",
+    "a click on a section's picture opens its form at the picture, whose thumbnail asks again when it was not there yet; Select stays on after the form closes, and Show me opens where a change shows (T1686, T1691, T1684, T1682)",
     async () => {
       mkdirSync(join(dir, "public/images"), { recursive: true });
       writeFileSync(join(dir, "public/images/walk-hero.png"), png(32, 20));
@@ -3031,6 +3031,12 @@ try {
         alt: "A grey square",
       });
       await openPreview("/home");
+      // The thumbnail's first ask finds nothing, as in a hosted workspace before its fetch (T1691).
+      let asked = 0;
+      const thumb = "**/api/images/walk-hero.png*";
+      await page.route(thumb, (route) =>
+        asked++ ? route.continue() : route.fulfill({ status: 404, body: "" }),
+      );
       const select = page.getByRole("button", { name: "Select", exact: true });
       if ((await select.getAttribute("aria-pressed")) !== "true") await select.click();
       const picture = preview.locator('[data-kit=section][data-section="hero"] img').first();
@@ -3053,6 +3059,13 @@ try {
       // Its picture's control has the focus, not the form's heading.
       if (!(await page.evaluate(() => !!document.activeElement?.closest("[data-section-picture]"))))
         throw new Error("the picture's control does not have the focus");
+      await page.waitForFunction(
+        () => (document.querySelector("[data-section-picture] img")?.naturalWidth ?? 0) > 0,
+        undefined,
+        { timeout: 15000 * P },
+      );
+      await page.unroute(thumb);
+      if (asked < 2) throw new Error(`the thumbnail was asked for ${asked} time(s), not again`);
       await page.getByRole("button", { name: "Close selection", exact: true }).click();
       await alt.waitFor({ state: "hidden" });
       // Closing the form ends that selection, not Select: the next click selects again.
