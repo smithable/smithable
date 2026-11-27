@@ -2,16 +2,20 @@ import assert from "node:assert/strict";
 import { openSmith } from "./studio-form-checks.mjs";
 
 export async function checkStudioSelection(browser, base) {
+  // The first open waits long: on a loaded runner the preview's first build takes minutes (T1491).
+  let opened = false;
   const open = async (phone = false) => {
+    const wait = opened ? 60000 : 240000;
+    opened = true;
     const context = await browser.newContext({
       viewport: phone ? { width: 390, height: 844 } : { width: 1440, height: 900 },
       hasTouch: phone,
     });
     const page = await context.newPage();
     page.setDefaultTimeout(20000);
-    await page.goto(`${base}/?guide=off`);
+    await page.goto(`${base}/?guide=off`, { timeout: wait });
     const frame = page.frameLocator('iframe[title="App preview"]');
-    await frame.locator("body[data-hydrated=true]").waitFor({ timeout: 60000 });
+    await frame.locator("body[data-hydrated=true]").waitFor({ timeout: wait });
     const hero = frame.locator("[data-hero]");
     const link = hero.getByRole("link", { name: "See the schedule", exact: true });
     const select = page
