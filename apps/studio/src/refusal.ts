@@ -43,7 +43,7 @@ export function plainRefusal(output: string): string {
       .slice(1)
       .map((l) => l.trim().replace(/^\S{1,2}\s+/, ""))
       .filter(Boolean);
-    return `Undo waits: ${files.join(", ")} changed outside Studio, and an undo now would take those edits along. It works again once they are saved as a change or put back.`;
+    return `${files.join(", ")} changed outside Studio. This would take those edits along, so it waits until they are saved as a change or put back.`;
   }
   const lines = output
     .split("\n")

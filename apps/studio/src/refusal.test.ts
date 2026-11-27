@@ -32,7 +32,7 @@ test("files changed outside Studio are named in plain words, never 'commit or di
     "Commit or discard these changes first:\n  ?? public/media/\n   M src/custom/a.ts\n",
   );
   expect(said).toBe(
-    "Undo waits: public/media/, src/custom/a.ts changed outside Studio, and an undo now would take those edits along. It works again once they are saved as a change or put back.",
+    "public/media/, src/custom/a.ts changed outside Studio. This would take those edits along, so it waits until they are saved as a change or put back.",
   );
   expect(said).not.toMatch(/commit|discard/i);
 });

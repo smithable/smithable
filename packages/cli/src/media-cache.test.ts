@@ -459,3 +459,16 @@ test("§3 in a project whose .gitignore predates the cache, its files are no cha
   expect(exclude.split("\n").filter((line) => line === "/public/media/")).toHaveLength(1);
   expect(readFileSync(join(dir, ".gitignore"), "utf8")).toBe("node_modules\n");
 });
+
+test("§3 a link in place of the exclude file is never followed (T1697)", async () => {
+  const dir = project(hero(ID));
+  ensureRepository(dir);
+  const elsewhere = join(folder("smithable-media-elsewhere-"), "target");
+  writeFileSync(elsewhere, "mine\n");
+  rmSync(join(dir, ".git/info/exclude"), { force: true });
+  symlinkSync(elsewhere, join(dir, ".git/info/exclude"));
+  const { source: s } = source({ [`${ID}/w480.webp`]: "small", [`${ID}/w1600.webp`]: "large" });
+  const done = await syncMedia(dir, s);
+  expect(done.written).toHaveLength(2);
+  expect(readFileSync(elsewhere, "utf8")).toBe("mine\n");
+});

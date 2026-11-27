@@ -6,10 +6,13 @@
 // nothing is fetched.
 import { createHash, randomBytes } from "node:crypto";
 import {
-  appendFileSync,
+  closeSync,
+  constants,
   existsSync,
+  fstatSync,
   lstatSync,
   mkdirSync,
+  openSync,
   readdirSync,
   readFileSync,
   renameSync,
@@ -17,6 +20,7 @@ import {
   statSync,
   unlinkSync,
   writeFileSync,
+  writeSync,
 } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
@@ -258,11 +262,30 @@ function keepMediaOutOfGitHere(dir: string): void {
   if (!existsSync(repository) || !lstatSync(repository).isDirectory()) return;
   const info = join(repository, "info");
   folder(info);
-  const path = join(info, "exclude");
-  if (isLink(path)) return;
-  const text = existsSync(path) ? readFileSync(path, "utf8") : "";
-  if (text.split("\n").some((line) => line.trim() === MEDIA_EXCLUDE)) return;
-  appendFileSync(path, `${text && !text.endsWith("\n") ? "\n" : ""}${MEDIA_EXCLUDE}\n`);
+  // One descriptor for the check, the read and the append: a link or a pipe put there is never
+  // followed or waited on; the pictures are fetched all the same.
+  let fd: number;
+  try {
+    fd = openSync(
+      join(info, "exclude"),
+      constants.O_RDWR |
+        constants.O_CREAT |
+        constants.O_APPEND |
+        constants.O_NOFOLLOW |
+        constants.O_NONBLOCK,
+      0o644,
+    );
+  } catch {
+    return;
+  }
+  try {
+    if (!fstatSync(fd).isFile()) return;
+    const text = readFileSync(fd, "utf8");
+    if (text.split("\n").some((line) => line.trim() === MEDIA_EXCLUDE)) return;
+    writeSync(fd, `${text && !text.endsWith("\n") ? "\n" : ""}${MEDIA_EXCLUDE}\n`);
+  } finally {
+    closeSync(fd);
+  }
 }
 const MEDIA_EXCLUDE = "/public/media/";
 
