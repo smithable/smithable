@@ -2949,6 +2949,12 @@ try {
         originalPosition === "scrolling" ? ["sticky", "scrolling"] : ["scrolling", "sticky"];
       for (const position of positions) {
         await pick(topBar, { x: 4, y: 4 });
+        // Its box is drawn inside the bar, which runs to the window's edges (T1695).
+        const box = await topBar.evaluate((el) => {
+          const look = getComputedStyle(el);
+          return el.hasAttribute("data-sm-selected") && `${look.outlineStyle} ${look.outlineOffset}`;
+        });
+        if (box !== "solid -2px") throw new Error(`the selected top bar's box: ${box}`);
         const settings = page.getByRole("form", { name: "Top bar", exact: true });
         await settings
           .getByRole("checkbox", { name: "Stays at the top when scrolling", exact: true })

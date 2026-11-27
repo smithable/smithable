@@ -46,6 +46,8 @@ if (typeof window !== "undefined" && window.parent !== window) {
     "[data-sm-part=column][draggable=true]{cursor:grab!important}" +
     // A landing section runs to the window's edges: its box is drawn inside them, so all four sides show.
     "[data-kit=section][data-sm-hover],[data-kit=section][data-sm-selected]{outline-offset:-2px!important}" +
+    // So does the app's menu, a bar across the top or a side menu at the window's edge (T1695).
+    '[data-sm-concept^="navigation:"][data-sm-hover],[data-sm-concept^="navigation:"][data-sm-selected]{outline-offset:-2px!important}' +
     "html[data-sm-selecting] [data-sm-concept]{cursor:pointer!important}" +
     "html[data-sm-selecting] [data-sm-text]:hover{outline:2px dashed #e8590c!important;outline-offset:2px;cursor:text!important}" +
     // Being edited: an outline only, so the text keeps its own colors (a hero's white title on a pale box could not be read).
