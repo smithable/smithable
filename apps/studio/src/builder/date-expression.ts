@@ -124,9 +124,11 @@ export function replacedDateHint(control: DateControl, value: unknown): string |
     return undefined;
   const field = dateDraft(value).field;
   if (!field || control.options.some((option) => option.value === field)) return undefined;
-  return control.from && control.options.length
+  if (!control.from)
+    return "Set what capacity counts per first, then choose one of its dates here.";
+  return control.options.length
     ? `Capacity now counts per ${control.from}, so the date comes from it: choose one of its dates below.`
-    : "Capacity counts per nothing with a date yet: set what it counts per first, then choose one of its dates here.";
+    : `Capacity counts per ${control.from}, which has no dates to choose: count per a reference with a date.`;
 }
 /** All incomplete strings stay in the existing local parent draft until every date is valid. */
 export function dateTreeReady(

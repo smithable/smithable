@@ -271,10 +271,18 @@ test("after capacity's per changes, a saved date from the old reference says whe
   expect(replacedDateHint(now, "2 hours before session.startsAt")).toMatch(/per other/);
   expect(replacedDateHint(now, "2 hours before other.opensAt")).toBeUndefined();
   expect(replacedDateHint(now, undefined)).toBeUndefined();
-  // A per with no dates to offer says to set the per first.
+  // A plain field: matching says nothing, from the old reference says where dates come from.
+  expect(replacedDateHint(now, "other.opensAt")).toBeUndefined();
+  expect(replacedDateHint(now, "session.startsAt")).toMatch(/per other/);
+  // A per with no dates to offer is named; no per at all asks for one first.
   const none = dateControl([...capacityPath, "closes"], per("title"), ir);
   if (!none) throw Error("Missing deadline control");
-  expect(replacedDateHint(none, "session.startsAt")).toMatch(/set what it counts per first/);
+  expect(replacedDateHint(none, "session.startsAt")).toMatch(/per title, which has no dates/);
+  const unset = dateControl([...capacityPath, "closes"], per(""), ir);
+  if (!unset) throw Error("Missing deadline control");
+  expect(replacedDateHint(unset, "session.startsAt")).toMatch(
+    /^Set what capacity counts per first/,
+  );
   // The list mail's date has no per: no hint.
   const list = dateControl([...listPath, "when"], document, ir);
   if (!list) throw Error("Missing list control");
