@@ -587,11 +587,14 @@ const setSectionPicture: Operation<{
   positional: ["page", "section", "src"],
   describe: ({ page, section, src, asset, alt, item }) => {
     const which = `${item === undefined ? "the picture" : `picture ${item + 1}`} of the ${section} section of ${page}`;
-    // A stored file's id is no name a person knows (T1697): its description, when it has one.
+    // A stored file's id is no name a person knows (T1697): its description, when it has one,
+    // else only that the picture changed (T1699).
     return src
       ? `Use ${src} as ${which}`
       : asset
-        ? `Use ${alt?.trim() ? `the picture “${alt.trim()}”` : "an uploaded picture"} as ${which}`
+        ? alt?.trim()
+          ? `Use the picture “${alt.trim()}” as ${which}`
+          : `Changed ${which}`
         : `Remove ${which}`;
   },
   destructive: () => false,
@@ -873,10 +876,13 @@ const setSectionFilm: Operation<{
     },
   },
   positional: ["page", "section", "src"],
+  // A stored video's id is no name a person knows (T1699): only that the video changed.
   describe: ({ page, section, src, asset }) =>
-    src || asset
-      ? `Play ${src ?? `stored film ${asset}`} over the picture of the ${section} section of ${page}`
-      : `Remove the film of the ${section} section of ${page}`,
+    src
+      ? `Play ${src} over the picture of the ${section} section of ${page}`
+      : asset
+        ? `Changed the video of the ${section} section of ${page}`
+        : `Remove the film of the ${section} section of ${page}`,
   destructive: () => false,
   apply({ content }, { page, section, src, asset, record }, ir) {
     const found = ir.pages.find((p) => p.id === page)?.sections.find((s) => s.name === section);

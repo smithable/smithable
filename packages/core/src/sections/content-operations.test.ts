@@ -107,11 +107,16 @@ test("a stored picture's change is named by what it shows, never its id (T1697)"
   expect(op?.describe({ page: "home", section: "hero", asset, alt: "A red roof" }, ir)).toBe(
     "Use the picture “A red roof” as the picture of the hero section of home",
   );
+  // Without a description, only that it changed (T1699).
   expect(op?.describe({ page: "home", section: "hero", asset }, ir)).toBe(
-    "Use an uploaded picture as the picture of the hero section of home",
+    "Changed the picture of the hero section of home",
   );
-  expect(op?.describe({ page: "home", section: "hero", asset }, ir)).not.toContain(asset);
   expect(op?.describe({ page: "home", section: "hero", asset, alt: "  " }, ir)).toBe(
-    "Use an uploaded picture as the picture of the hero section of home",
+    "Changed the picture of the hero section of home",
+  );
+  const film = findOperation("setSectionFilm");
+  const filmIr = {} as Parameters<NonNullable<typeof film>["describe"]>[1];
+  expect(film?.describe({ page: "home", section: "hero", asset }, filmIr)).toBe(
+    "Changed the video of the hero section of home",
   );
 });
