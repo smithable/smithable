@@ -1,0 +1,4 @@
+# Tests scripts/verify.sh leaves out, one per line: the file, two spaces, why. Each takes minutes alone
+# and fails on time under load, which makes a push hook wait or fail for nothing. CI's units job and the
+# gate still run every test.
+packages/cli/src/spec-text-code.test.ts  about 28 minutes alone (every example generated and built); a case passed its 300 s under load (T1509; T1538 splits it by app)
