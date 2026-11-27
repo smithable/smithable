@@ -303,6 +303,12 @@ export function App() {
   useEffect(() => {
     if (followed && people && !previewingAs) setFollowed(undefined);
   }, [followed, people, previewingAs]);
+  // The sample users are read again after each change while one is followed: the panel reads them
+  // only while open, and a change made with it closed (removeSampleUser) must still clear this.
+  const files = project?.files;
+  useEffect(() => {
+    if (followed && files) api.people().then(setPeople, () => {});
+  }, [followed, files]);
   useEffect(() => {
     if (!followed) return;
     const onMessage = (e: MessageEvent) => {
