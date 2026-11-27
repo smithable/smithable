@@ -266,6 +266,8 @@ pressure() {
 sampler=$!
 
 # The plan, then the run. GATE_RUN runs another command in the gate's turn instead (the weekly long run of the properties, ci.md).
+# A gate that passes marks its tree for the pre-push hook (scripts/mark-verified.sh); GATE_RUN does not.
+[ -n "${GATE_RUN:-}" ] || before=$(scripts/mark-verified.sh --tree)
 if [ -n "${GATE_RUN:-}" ]; then
   echo "gate.sh: running $GATE_RUN in the gate's turn."
   bash -c "$GATE_RUN"
@@ -294,6 +296,7 @@ else
 fi
 status=$?
 pkill -P "$sampler" 2>/dev/null; kill "$sampler" 2>/dev/null; wait "$sampler" 2>/dev/null
+if [ $status -eq 0 ] && [ -z "${GATE_RUN:-}" ]; then scripts/mark-verified.sh "$before" || true; fi
 rm -f "$lock.who"
 exit $status
 }
