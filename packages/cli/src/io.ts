@@ -51,6 +51,10 @@ export function lap(step: string): void {
 export function lapFrom(): void {
   lapStart = Date.now();
 }
+/** One line beside the timings (why a step ran), with SMITHABLE_TIMINGS set. */
+export function note(line: string): void {
+  if (process.env.SMITHABLE_TIMINGS) process.stderr.write(`[time] ${line}\n`);
+}
 /** One timing of its own, beside the laps (e.g. how long the preview took to answer). */
 export function timed(what: string, since: number): void {
   if (process.env.SMITHABLE_TIMINGS)
