@@ -21,14 +21,13 @@ export function answerOf(answer: unknown): unknown {
 /**
  * A model's list of operations, read one way for a draft and a proposal (T1718). The list is
  * taken as it is, or from a string that holds it as JSON (the shape a model sometimes sends when
- * the answer tool is offered, not forced); nothing else is guessed (a function call's wrapper aside, answerOf). What cannot be read is said
+ * the answer tool is offered, not forced); nothing else is guessed. The caller takes off a function call's wrapper first (answerOf), once, so the operations and the assumptions are read from the same object. What cannot be read is said
  * by its shape only (types and key names, never the content), for the model's next round and for
  * the failure message.
  */
 export function operationsOf(
   answer: unknown,
 ): { operations: { op?: string; args?: Record<string, unknown> }[] } | { problem: string } {
-  answer = answerOf(answer);
   if (!answer || typeof answer !== "object" || Array.isArray(answer))
     return { problem: `the answer was ${kindOf(answer)}, not an object` };
   const record = answer as Record<string, unknown>;

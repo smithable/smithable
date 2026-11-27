@@ -385,14 +385,14 @@ export async function proposeChange(options: {
     for (let attempt = 0; attempt < 1 + REPAIRS; attempt++) {
       let answer: Answer;
       try {
-        answer = answerOf(
+        answer = (answerOf(
           await completeJson(
             provider,
             // The second round says so, for a gateway that sends repairs to a stronger model.
             { system, user: prompt, schema, fallbackSchema, ...(attempt ? { repair: true } : {}) },
             usage,
           ),
-        ) as Answer;
+        ) ?? {}) as Answer;
       } catch (error) {
         // Paused: no other model on the same service would answer; said as such, not as a fault.
         if (error instanceof PausedError) return { kind: "paused", paused: error.paused, usage };

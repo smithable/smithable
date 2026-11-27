@@ -39,7 +39,11 @@ test("a function call's wrapper is taken off: arguments as the only key, an obje
   const inner = { operations: [{ op: "setApp", args: { name: "Tasks" } }], assumptions: [] };
   expect(answerOf({ arguments: inner })).toBe(inner);
   expect(answerOf({ arguments: JSON.stringify(inner) })).toEqual(inner);
-  expect(operationsOf({ arguments: inner })).toEqual({ operations: inner.operations });
+  expect(operationsOf(answerOf({ arguments: inner }))).toEqual({ operations: inner.operations });
+  // Taken off once: a wrapper inside a wrapper is not an answer, for the operations as for the rest.
+  expect(operationsOf(answerOf({ arguments: { arguments: inner } }))).toEqual({
+    problem: "no operations key; keys: arguments",
+  });
   // Beside other keys, or not an object inside, it is the answer as it came.
   const beside = { arguments: inner, name: "answer" };
   expect(answerOf(beside)).toBe(beside);
