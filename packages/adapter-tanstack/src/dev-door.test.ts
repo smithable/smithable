@@ -210,3 +210,38 @@ test("a sample user's place is taken only where they are seeded, never nobody's 
   expect(seed).toContain("{ sessionId: 1, note: null },");
   expect(seed).toContain("if (rows.length) db.insert(schema.bookings).values(rows).run();");
 });
+
+test("a place a sample address holds is taken only where sample users are, too (T1712)", () => {
+  const places = validateSpec({
+    path: "smithable.yml",
+    text: "smithable: 0.1\napp: { name: Studio }\nmodels:\n  Session:\n    fields: { title: string!, capacity: int! = 4 }\n  Booking:\n    fields: { session: Session!, email: email! }\n    ownedBy: email\n    capacity: { per: session, max: session.capacity }\npages:\n  bookings: { crud: Booking }\n",
+  }).ir as SpecIR;
+  const placesAuth = validateAuth(
+    {
+      path: "smithable.auth.yml",
+      text: "smithableAuth: 0.1\nsignIn: { providers: [email] }\ndefaultAccess: shared\nroles: { admin: {}, member: { pages: all } }\n",
+    },
+    places,
+  ).auth as AuthIR;
+  const { samples, diagnostics } = validateSamples(
+    [
+      { path: "samples/Session.yml", text: "- { title: Yoga }\n" },
+      { path: "samples/Booking.yml", text: "- { session: Yoga, owner: Åsa Öberg }\n" },
+    ],
+    places,
+    emptyContent(),
+    { people: people ?? [], auth: placesAuth },
+  );
+  expect(diagnostics).toEqual([]);
+  const seed =
+    generateApp(places, {
+      smithableVersion: "0.0.0",
+      auth: placesAuth,
+      content: emptyContent(),
+      samples,
+      ...(people ? { people } : {}),
+    }).find((f) => f.path === "src/db/seed.ts")?.content ?? "";
+  expect(seed).toContain(
+    '...(SAMPLE_USERS ? [{ sessionId: 1, email: "asa-oberg@sample.example" }] : []),',
+  );
+});

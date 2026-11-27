@@ -766,12 +766,12 @@ export function seedModule(
     const rows = seedRows(model, options).map((row, i) => {
       // A place or a time that is a sample user's is taken only where that user is: elsewhere
       // it would be nobody's place in a real session, which only staff could free.
-      const held = Boolean(
-        (model.capacity || model.occupies) && ownerOf(model, row)?.startsWith("SAMPLE_USERS ?"),
-      );
-      const owner = held
-        ? JSON.stringify(sampleUsers.find((u) => u.name === row[SAMPLE_OWNER])?.id)
-        : ownerOf(model, row);
+      // An address's too: a sample address holds a place nobody real can free (T1712).
+      const held = Boolean((model.capacity || model.occupies) && ownerOf(model, row));
+      const owner =
+        held && !addressOwned(model)
+          ? JSON.stringify(sampleUsers.find((u) => u.name === row[SAMPLE_OWNER])?.id)
+          : ownerOf(model, row);
       const entries = storedFields(model).map((field) => {
         if (owner && field.name === model.ownedBy && !creatorOwned(model))
           return `${addressOwned(model) ? field.name : dataKey(field)}: ${owner}`;

@@ -317,8 +317,9 @@ function withoutOverlap(
     const ms = Date.parse(`${value}Z`);
     if (Number.isNaN(ms)) return undefined;
     if (!moved) return ms / 60_000;
-    const minutes = (ms / 60_000) % 1440;
-    const weekday = (new Date(ms).getUTCDay() + 6) % 7;
+    const day = new Date(ms);
+    const minutes = day.getUTCHours() * 60 + day.getUTCMinutes();
+    const weekday = (day.getUTCDay() + 6) % 7;
     return ((i % 2) * 7 + weekday) * 1440 + minutes;
   };
   const counts = meets(model, occupies.while);
@@ -345,7 +346,7 @@ function withoutOverlap(
         "sample-overlap",
         `Record ${i + 1} of ${model.name} takes ${resource.name} ${n}'s time while record ${clash.i + 1} does${gap ? ` (with the ${gap} minutes kept free after each)` : ""}.`,
       );
-    else taken.push({ n, from, to, i });
+    taken.push({ n, from, to, i });
   });
 }
 
