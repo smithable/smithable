@@ -298,6 +298,21 @@ export function App() {
   // The sample user the preview was last signed in as by Follow, said beside its address (T1687).
   const [followed, setFollowed] = useState<string>();
   const previewingAs = people?.people.find((p) => p.id === followed);
+  // Not said once it may be untrue: the person is gone from the sample users, or the preview
+  // is on a sign-in page (the door refused, or they signed out of a page that needs a session).
+  useEffect(() => {
+    if (followed && people && !previewingAs) setFollowed(undefined);
+  }, [followed, people, previewingAs]);
+  useEffect(() => {
+    if (!followed) return;
+    const onMessage = (e: MessageEvent) => {
+      if (!isPreviewMessage(e) || e.data.type !== "navigated") return;
+      if (/^\/sign-(in|up)\b/.test(e.data.path) && !/[?&]as=/.test(e.data.path))
+        setFollowed(undefined);
+    };
+    window.addEventListener("message", onMessage);
+    return () => window.removeEventListener("message", onMessage);
+  }, [followed]);
   // Whether No code's editors open the preview's page as it changes (the link beside the address).
   const [following, setFollowingState] = useState(() => {
     try {

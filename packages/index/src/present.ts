@@ -164,15 +164,23 @@ export function present(ir: SpecIR, auth?: AuthIR, content: ContentIR = emptyCon
   // 5. Signed in: what each role may do, the record rule included.
   if (auth && auth.signIn !== "none") {
     // With private records, "their own records only" is said of the roles it holds for: a role
-    // whose read grant names kinds sees everyone's of those, its own of the rest (T1685).
+    // whose read grant names kinds sees everyone's of those, its own of the rest (T1685). It is
+    // what they see: a write grant changes records, it does not show them.
     const others = auth.roles.filter((r) => r.name !== "admin");
     const reads = (r: (typeof others)[number]) =>
-      r.grants === "all" ? "all" : r.grants.read?.length ? r.grants.read : undefined;
+      r.grants === "all" ||
+      r.grants.read === "all" ||
+      (r.grants.read?.length &&
+        ir.models.every((m) => r.grants !== "all" && r.grants.read?.includes(m.name)))
+        ? "all"
+        : r.grants.read?.length
+          ? r.grants.read
+          : undefined;
     const perRole = auth.defaultAccess !== "shared" && others.some((r) => reads(r));
     const own = (r: (typeof others)[number]) => {
       const read = reads(r);
-      if (!read) return ["works on their own records only"];
-      return read === "all" ? [] : ["works on their own records of the rest"];
+      if (!read) return ["sees only their own records"];
+      return read === "all" ? [] : ["sees only their own records of the rest"];
     };
     const rule =
       auth.defaultAccess === "shared"
