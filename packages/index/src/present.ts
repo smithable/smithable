@@ -163,13 +163,29 @@ export function present(ir: SpecIR, auth?: AuthIR, content: ContentIR = emptyCon
 
   // 5. Signed in: what each role may do, the record rule included.
   if (auth && auth.signIn !== "none") {
+    // With private records, "their own records only" is said of the roles it holds for: a role
+    // whose read grant names kinds sees everyone's of those, its own of the rest (T1685).
+    const others = auth.roles.filter((r) => r.name !== "admin");
+    const reads = (r: (typeof others)[number]) =>
+      r.grants === "all" ? "all" : r.grants.read?.length ? r.grants.read : undefined;
+    const perRole = auth.defaultAccess !== "shared" && others.some((r) => reads(r));
+    const own = (r: (typeof others)[number]) => {
+      const read = reads(r);
+      if (!read) return ["works on their own records only"];
+      return read === "all" ? [] : ["works on their own records of the rest"];
+    };
     const rule =
       auth.defaultAccess === "shared"
         ? "Everyone who signs in sees all records and changes the ones they own"
         : "Everyone who signs in works on their own records only";
-    const roles = auth.roles
-      .filter((r) => r.name !== "admin")
-      .map((r) => `the ${r.name} role ${list(grantWords(r).split("; "))}`);
+    const roles = others.map((r) => {
+      const granted = grantWords(r);
+      const said = granted === "only their own records" ? [] : granted.split("; ");
+      return `the ${r.name} role ${list(perRole ? [...said, ...own(r)] : said.length ? said : [granted])}`;
+    });
+    const lead = perRole
+      ? roles.join("; ").replace(/^t/, "T")
+      : `${rule}${roles.length ? `; ${roles.join("; ")}` : ""}`;
     const pages = auth.roles.length
       ? ir.pages.filter(
           (p) => !auth.public.pages.includes(p.id) && pageAccess(p, auth).roles.length,
@@ -177,7 +193,7 @@ export function present(ir: SpecIR, auth?: AuthIR, content: ContentIR = emptyCon
       : [];
     parts.push({
       part: "signedIn",
-      text: `${rule}${roles.length ? `; ${roles.join("; ")}` : ""}. Admins do everything.`,
+      text: `${lead}. Admins do everything.`,
       concepts: [...auth.roles.map((r) => `role:${r.name}`), ...pages.map((p) => `page:${p.id}`)],
       expression: "proud",
     });
