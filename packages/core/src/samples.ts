@@ -12,11 +12,13 @@ import {
   parseDocument,
   stringify,
 } from "yaml";
+import type { AuthIR } from "./auth.js";
 import { type ContentIR, PICTURE_KINDS, type PictureKind } from "./content.js";
 import { ParseContext } from "./context.js";
 import type { Diagnostic } from "./diagnostics.js";
 import { type FieldIR, type ModelIR, PICTURES_MAX, type SpecIR } from "./ir.js";
 import { humanize } from "./naming.js";
+import type { PersonIR } from "./people.js";
 import { didYouMean } from "./suggest.js";
 import { convertValue } from "./values.js";
 
@@ -35,6 +37,12 @@ export interface SamplePicture {
  */
 export type SampleRecordValue = string | number | boolean | null | SamplePicture | SamplePicture[];
 export type SamplesIR = Record<string, Record<string, SampleRecordValue>[]>;
+
+/**
+ * Where a sample record keeps the sample user it names as its owner (`owner: Maja` in the
+ * file): the person's name, which the seed turns into the owner column's value. Not a field.
+ */
+export const SAMPLE_OWNER = "@owner";
 
 /** The one file in samples/ that is not a model's records: the sample users, which people.ts reads. */
 export const PEOPLE_FILE = "people";
@@ -71,6 +79,8 @@ export function validateSamples(
   files: readonly { path: string; text: string }[],
   ir: SpecIR,
   content?: ContentIR,
+  /** The sample users a record may name as its owner, and the auth file that signs them in. */
+  owners?: { people: readonly PersonIR[]; auth?: Pick<AuthIR, "signIn"> },
 ): { samples: SamplesIR; diagnostics: Diagnostic[] } {
   const diagnostics: Diagnostic[] = [];
   const parsed: { model: ModelIR; ctx: ParseContext; items: ParsedNode[] }[] = [];
@@ -115,6 +125,8 @@ export function validateSamples(
     );
   }
   const samples: SamplesIR = {};
+  // Where each record was written, for what is said of it once all are read.
+  const at = new WeakMap<object, ParsedNode>();
   for (const { model, ctx, items } of parsed) {
     const fields = model.fields.filter(
       (f) => !f.formula && !(f.type.kind === "relation" && f.type.many),
@@ -134,6 +146,19 @@ export function validateSamples(
       for (const pair of item.items) {
         const keyNode = pair.key as ParsedNode;
         const key = isScalar(keyNode) ? String(keyNode.value) : "";
+        // `owner` names the sample user whose record it is, unless the model has a field of that
+        // name that is not its owner.
+        if (
+          key === "owner" &&
+          fields.every((f) => f.name !== "owner" || f.name === model.ownedBy)
+        ) {
+          const name = sampleOwner(ctx, model, pair.value as ParsedNode, i, owners);
+          if (name !== undefined) {
+            row[SAMPLE_OWNER] = name;
+            if (model.ownedBy === "owner") given.add("owner");
+          }
+          continue;
+        }
         const field = fields.find((f) => f.name === key);
         if (!field) {
           ctx.warning(
@@ -166,11 +191,107 @@ export function validateSamples(
             "missing-field",
             `Record ${i + 1} of ${model.name} needs "${field.name}".`,
           );
+      at.set(row, item);
       return [row];
     });
     diagnostics.push(...ctx.diagnostics.filter((d) => !diagnostics.includes(d)));
   }
+  for (const { model, ctx } of parsed) {
+    const before = ctx.diagnostics.length;
+    if (model.capacity) withinCapacity(ctx, model, ir, samples, at);
+    diagnostics.push(...ctx.diagnostics.slice(before));
+  }
   return { samples, diagnostics };
+}
+
+/**
+ * A model with a capacity (a session's places) is seeded from its file alone, so the samples
+ * never hold more records for one parent than it takes: the maximum a number, or the parent
+ * sample's field (its default where the sample leaves it out). A maximum the samples cannot
+ * know (a generated parent) refuses every record, as does any record past it. Every record
+ * counts, also one a `where` would leave out: the seed never adds more than the app would.
+ */
+function withinCapacity(
+  ctx: ParseContext,
+  model: ModelIR,
+  ir: SpecIR,
+  samples: SamplesIR,
+  at: WeakMap<object, ParsedNode>,
+): void {
+  const capacity = model.capacity;
+  const per = model.fields.find((f) => f.name === capacity?.per);
+  if (!capacity || per?.type.kind !== "relation") return;
+  const parent = ir.models.find((m) => m.name === (per.type as { model: string }).model);
+  const parentRows = parent ? samples[parent.name] : undefined;
+  const maxOf = (n: number): number | undefined => {
+    if (typeof capacity.max === "number") return capacity.max;
+    const name = capacity.max.split(".")[1];
+    const field = parent?.fields.find((f) => f.name === name);
+    // A generated parent's number is made up by the seed, so only a sample parent's is known.
+    const row = parentRows?.[n - 1];
+    const value = row ? (row[name ?? ""] ?? field?.default) : undefined;
+    return typeof value === "number" ? value : undefined;
+  };
+  const counted = new Map<number, number>();
+  (samples[model.name] ?? []).forEach((row, i) => {
+    const n = row[per.name];
+    if (typeof n !== "number") return;
+    const max = maxOf(n);
+    const taken = (counted.get(n) ?? 0) + 1;
+    counted.set(n, taken);
+    const node = at.get(row) ?? null;
+    if (max === undefined)
+      ctx.error(
+        node,
+        "over-capacity",
+        `Record ${i + 1} of ${model.name}: how many ${humanize(model.name).toLowerCase()}s ${per.name} ${n} takes is not in the samples; give ${parent?.name ?? "it"} a samples file with ${String(capacity.max).split(".")[1] ?? "its maximum"}.`,
+      );
+    else if (taken > max)
+      ctx.error(
+        node,
+        "over-capacity",
+        `Record ${i + 1} of ${model.name} is one more than the ${max} ${per.name} ${n} takes.`,
+      );
+  });
+}
+
+/**
+ * The sample user a record names as its owner: one of samples/people.yml who signs in, in an
+ * app where people do, and a model whose records someone owns.
+ */
+function sampleOwner(
+  ctx: ParseContext,
+  model: ModelIR,
+  node: ParsedNode,
+  i: number,
+  owners: { people: readonly PersonIR[]; auth?: Pick<AuthIR, "signIn"> } | undefined,
+): string | undefined {
+  const record = `Record ${i + 1} of ${model.name}`;
+  const value = isScalar(node) ? node.value : undefined;
+  if (!owners?.auth || owners.auth.signIn === "none") {
+    ctx.error(node, "invalid-owner", `${record} names an owner, but nobody signs in to this app.`);
+    return undefined;
+  }
+  // A record owned by an address is the address's; one owned by a user or its creator, theirs.
+  const people = owners.people.filter((p) => p.role !== "visitor");
+  if (typeof value !== "string" || !people.some((p) => p.name === value)) {
+    const visitor = owners.people.some((p) => p.name === value && p.role === "visitor");
+    ctx.error(
+      node,
+      "invalid-owner",
+      visitor
+        ? `${record} is owned by ${value}, a visitor, who has no account.`
+        : `${record} is owned by "${String(value)}", who is not a sample user of samples/people.yml.`,
+      typeof value === "string"
+        ? didYouMean(
+            value,
+            people.map((p) => p.name),
+          )
+        : undefined,
+    );
+    return undefined;
+  }
+  return value;
 }
 
 function sampleValue(

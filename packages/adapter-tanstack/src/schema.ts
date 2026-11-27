@@ -11,6 +11,7 @@ import {
   isUpload,
   kebab,
   type ModelIR,
+  SAMPLE_OWNER,
   type SpecIR,
   snake,
   storesFiles,
@@ -728,10 +729,11 @@ export function seedModule(
 ): string {
   // A record that must refer to a user cannot be invented, nor can records that need it; nor
   // a person's place (a model with a capacity): every place stays free. Nor bookings of someone's
-  // time or their time away (appointments.md): every free time stays free.
+  // time or their time away (appointments.md): every free time stays free. Unless the app's
+  // samples file holds them: validate keeps those within the places there are.
   const skipped = new Set<string>(
     ir.models
-      .filter((m) => m.capacity || m.occupies)
+      .filter((m) => (m.capacity || m.occupies) && !options.samples?.[m.name])
       .map((m) => m.name)
       .concat(ir.models.flatMap((m) => (m.schedule?.away ? [m.schedule.away.model] : []))),
   );
@@ -747,12 +749,25 @@ export function seedModule(
       skipped.add(model.name);
   }
   const ordered = dependencyOrder(ir.models).filter((m) => !skipped.has(m.name));
+  // A sample record's owner (`owner:` in its file): the sample user's id, in a build that has
+  // the sample users (below), or their address where the record is owned by one.
+  const sampleUsers = options.auth && hasSignIn(options.auth) ? samplePeople(options.people) : [];
+  const ownerOf = (model: ModelIR, row: Record<string, unknown>) => {
+    const person = sampleUsers.find((u) => u.name === row[SAMPLE_OWNER]);
+    if (!person) return undefined;
+    return addressOwned(model)
+      ? JSON.stringify(person.email)
+      : `SAMPLE_USERS ? ${JSON.stringify(person.id)} : null`;
+  };
   const blocks = ordered.flatMap((model) => {
     const n = tableNames(model);
     // A calendar's records are placed around the day the samples are loaded, never an empty week.
     const start = calendarStart(model, ir);
     const rows = seedRows(model, options).map((row, i) => {
+      const owner = ownerOf(model, row);
       const entries = storedFields(model).map((field) => {
+        if (owner && field.name === model.ownedBy && !creatorOwned(model))
+          return `${addressOwned(model) ? field.name : dataKey(field)}: ${owner}`;
         // A sample file's picture: its file under public/images/samples/, and its description.
         const own = row[field.name];
         // A sample file's picture an AI made says so (generated: true), and may say its kind
@@ -789,6 +804,7 @@ export function seedModule(
           ? `${dataKey(field)}: aroundToday(new Date(${JSON.stringify(`${row[field.name]}T00:00:00Z`)}), ${i % 2}).slice(0, 10)`
           : `${dataKey(field)}: instantOf(aroundToday(${value}, ${i % 2}), app.timeZone)`;
       });
+      if (owner && creatorOwned(model)) entries.push(`ownerId: ${owner}`);
       return `    { ${entries.join(", ")} },`;
     });
     // A sample file that is an empty list: the model starts empty, and the seed inserts nothing
@@ -820,7 +836,10 @@ ${rows.join("\n")}
   });
   // The sample users (samples/people.yml), in an app where people sign in: users of the
   // development database who sign in nowhere; the development door acts as them.
-  const people = options.auth && hasSignIn(options.auth) ? samplePeople(options.people) : [];
+  const people = sampleUsers;
+  if (blocks.some((b) => b.includes("SAMPLE_USERS ?")))
+    blocks.unshift(`// The sample users are in the database where the door that acts as them is.
+const SAMPLE_USERS = process.env.NODE_ENV !== "production" || process.env.DEMO_SIGN_IN === "1";`);
   if (people.length)
     blocks.unshift(`// Only where the door that acts as them is (src/generated/people.ts): a seeded production
 // database holds no user nobody controls.

@@ -317,6 +317,7 @@ export {
   ASK_FILE,
   fitSamples,
   PEOPLE_FILE,
+  SAMPLE_OWNER,
   type SamplePicture,
   type SampleRecordValue,
   type SamplesIR,

@@ -1,9 +1,11 @@
 import {
   type AuthIR,
   emptyContent,
+  type SamplesIR,
   type SpecIR,
   validateAuth,
   validatePeople,
+  validateSamples,
   validateSpec,
 } from "@smithable/core";
 import { expect, test } from "vitest";
@@ -139,3 +141,31 @@ test("the door merges and splits only what the action and each record allow, and
   expect(clock).toContain("const move = moving.then(async () => {");
   expect(clock).toContain("return refused(error);");
 });
+
+test("a sample record names its owner: the sample user's id where they are seeded (T1704)", () => {
+  const { samples } = validateSamples(
+    [
+      { path: "samples/Session.yml", text: "- { title: Yoga, startsAt: 2026-10-06 18:00 }\n" },
+      { path: "samples/Booking.yml", text: "- { session: Yoga, owner: Åsa Öberg }\n" },
+    ],
+    spec,
+    emptyContent(),
+    { people: people ?? [], auth },
+  );
+  const seed = of2(samples);
+  expect(seed).toContain(
+    'const SAMPLE_USERS = process.env.NODE_ENV !== "production" || process.env.DEMO_SIGN_IN === "1";',
+  );
+  expect(seed).toContain('ownerId: SAMPLE_USERS ? "sample-asa-oberg" : null');
+  // The users come first, so the owner column refers to one that is there.
+  expect(seed.indexOf("db.insert(schema.user)")).toBeLessThan(seed.indexOf("ownerId:"));
+});
+
+const of2 = (samples: SamplesIR) =>
+  generateApp(spec, {
+    smithableVersion: "0.0.0",
+    auth,
+    content: emptyContent(),
+    samples,
+    ...(people ? { people } : {}),
+  }).find((f) => f.path === "src/db/seed.ts")?.content ?? "";
