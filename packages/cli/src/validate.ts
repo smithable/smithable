@@ -602,6 +602,20 @@ export function explainSpec(
       `${page.id} hero: button ${opens}; ${hero.secondButton ? `second button opens ${hero.secondButton}` : "no second button (secondButton)"}`,
     );
   }
+  // Each page's frame (page-sections.md §4; T1695): the ux file's frame, else its kind's.
+  for (const page of ir.pages) {
+    const kind = page.pattern.kind;
+    const set = ux?.pages[page.id]?.frame;
+    lines.push(
+      kind === "onboarding"
+        ? `${page.id} frame: its own (an onboarding page's)`
+        : kind === "landing" || (kind === "articles" && auth.public.pages.includes(page.id))
+          ? `${page.id} frame: site, a public page with the top menu and footer (by rule: landing pages and articles visitors open have it)`
+          : set
+            ? `${page.id} frame: ${set} (frame in smithable.ux.yml)`
+            : `${page.id} frame: app, a workspace page with the app's menu (by rule: landing pages and public articles are public pages, the rest workspace pages; say it with frame)`,
+    );
+  }
   // Which pictures the release review asks about (picture-kinds.md §6): the hero's always, a
   // gallery's or mediaText's only when the spec says they are the owner's work, never by name.
   for (const page of ir.pages) {

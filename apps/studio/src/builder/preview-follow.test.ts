@@ -1,6 +1,6 @@
 import { type SpecIR, validateSpec } from "@smithable/core";
 import { describe, expect, it } from "vitest";
-import { PreviewNavigation, pageForPreviewPath } from "./preview-follow";
+import { PreviewNavigation, pageForPreviewPath, whereShows } from "./preview-follow";
 
 const checked = validateSpec({
   path: "smithable.yml",
@@ -111,4 +111,38 @@ it("retires superseded documents even before their current editor context arrive
   expect(follow.receive(message("/orders", 0, 0, "second"), 1)).toBeUndefined();
   expect(follow.receive(message("/customers/1", 1, 1, "first"), 1)).toBeUndefined();
   expect(follow.receive(message("/orders/1", 1, 1, "second"), 1)).toBe("/orders/1");
+});
+
+describe("where a change shows, for the receipt's Show me (T1682)", () => {
+  const op = (name: string, args: Record<string, unknown>) => ({ op: name, args });
+  it("opens a field's form, a record kind's list and a page's text on its page", () => {
+    expect(whereShows(op("addField", { model: "Order", field: "phone" }), ir)).toBe("/orders/new");
+    expect(whereShows(op("setModelLabel", { model: "Customer" }), ir)).toBe("/customers");
+    expect(whereShows(op("setText", { path: ["pages", "home", "title"] }), ir)).toBe("/");
+    expect(whereShows(op("grant", { what: "pages", names: ["team"] }), ir)).toBe("/team");
+  });
+  it("falls back on an admin view for a kind of record with no page of its own", () => {
+    const admin = validateSpec({
+      path: "smithable.yml",
+      text: `smithable: 0.1
+app: {name: Admin}
+models:
+  Note: {fields: {text: string}}
+pages:
+  records: {data: all}
+`,
+    }).ir as SpecIR;
+    const records = admin.pages.find((p) => p.id === "records")?.route;
+    expect(whereShows(op("addField", { model: "Note", field: "title" }), admin)).toBe(
+      `${records}/notes`,
+    );
+  });
+  it("offers nothing for a change that shows nowhere in particular", () => {
+    expect(whereShows(op("setTheme", { theme: "dusk" }), ir)).toBeUndefined();
+    expect(whereShows(op("setText", { path: ["app", "name"] }), ir)).toBeUndefined();
+    expect(whereShows(undefined, ir)).toBeUndefined();
+    expect(
+      whereShows(op("addField", { model: "Order", field: "phone" }), undefined),
+    ).toBeUndefined();
+  });
 });

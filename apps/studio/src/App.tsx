@@ -26,6 +26,7 @@ import wordmarkDark from "./brand/wordmark-dark.svg";
 import { Ask, type AudioActivity, usePresentation } from "./builder/Ask";
 import { NoCode, OPEN_PART, type OpenPart } from "./builder/NoCode";
 import { mailTemplates, OutgoingTemplate } from "./builder/OutgoingTemplate";
+import { whereShows } from "./builder/preview-follow";
 import { SelectedButton, selectedButton } from "./builder/SelectedButton";
 import { SelectedNavigation, selectedNavigation } from "./builder/SelectedNavigation";
 import {
@@ -360,11 +361,17 @@ export function App() {
   // The section form's own height as drawn (SelectedSection measures it), to place it wholly on the screen.
   const [sectionHeight, setSectionHeight] = useState(260);
   const [selectionHost, setSelectionHost] = useState<HTMLDivElement | null>(null);
+  // Closing a part's form ends that selection only: Select stays on for the next click (T1684).
   const clearSelection = useCallback(() => {
     setSelectedPart(undefined);
-    setSelecting(false);
     clearPreviewSelection();
   }, []);
+  const stopSelecting = useCallback(() => {
+    clearSelection();
+    setSelecting(false);
+  }, [clearSelection]);
+  const selectedNow = useRef(selectedPart);
+  selectedNow.current = selectedPart;
   useEffect(() => {
     const keydown = (event: KeyboardEvent) => {
       if (
@@ -373,7 +380,9 @@ export function App() {
       )
         return;
       if (event.key === "Shift") setShiftSelect(true);
-      if (event.key === "Escape" && (selecting || selectedPart)) clearSelection();
+      // Escape lets go of the part first, then of Select.
+      if (event.key === "Escape" && selectedPart) clearSelection();
+      else if (event.key === "Escape" && selecting) stopSelecting();
     };
     const keyup = (event: KeyboardEvent) => {
       if (event.key === "Shift") setShiftSelect(false);
@@ -391,7 +400,7 @@ export function App() {
       window.removeEventListener("blur", blur);
       document.removeEventListener("visibilitychange", hidden);
     };
-  }, [clearSelection, selectedPart, selecting]);
+  }, [clearSelection, stopSelecting, selectedPart, selecting]);
   const [place, setPlace] = useState<Place>(() => {
     try {
       const kept = JSON.parse(sessionStorage.getItem("smithable:place") ?? "") as Place;
@@ -760,7 +769,12 @@ export function App() {
   useEffect(() => {
     const receiveSelection = (event: MessageEvent) => {
       if (!isPreviewMessage(event)) return;
-      if (event.data.type === "selection-cleared") clearSelection();
+      // The page lets go of its part (Escape there, the part gone, another page), or, with
+      // nothing selected, Escape there ends Select.
+      if (event.data.type === "selection-cleared") {
+        if (selectedNow.current) clearSelection();
+        else if (event.data.escape) stopSelecting();
+      }
       // Shift held in the page selects for as long as it is held: the Select button shows it (T1238).
       if (event.data.type === "shift") setShiftSelect(event.data.on === true);
       // A page loaded again while Shift was held never says it was let go.
@@ -787,7 +801,7 @@ export function App() {
     };
     window.addEventListener("message", receiveSelection);
     return () => window.removeEventListener("message", receiveSelection);
-  }, [clearSelection, reveal, selectingCode]);
+  }, [clearSelection, stopSelecting, reveal, selectingCode]);
   const lookApp = project?.localDir ?? project?.name ?? "";
   const initialLook = Boolean(
     project &&
@@ -1427,6 +1441,14 @@ export function App() {
         assumptions={assumptions}
         {...(project.beta ? { beta: project.beta } : {})}
         words={words}
+        showMe={(operation) => {
+          const path = whereShows(operation, spec.ir);
+          if (!path) return undefined;
+          return () => {
+            openPreviewWindow();
+            setGo((previous) => ({ path, key: (previous?.key ?? 0) + 1 }));
+          };
+        }}
         waiting={project.waiting}
         selection={selectedPart?.concept}
         trace={project.trace}
@@ -1751,7 +1773,7 @@ export function App() {
                   pressed={selecting || shiftSelect}
                   onClick={() => {
                     openPreviewWindow();
-                    if (selecting) clearSelection();
+                    if (selecting) stopSelecting();
                     else {
                       setSelecting(true);
                       requestAnimationFrame(() => previewFrame()?.focus());
@@ -1764,8 +1786,12 @@ export function App() {
                   <>
                     {undoHistory}
                     {outboxAction}
+                    {settingsAction}
+                    {lookAction}
                   </>
                 )}
+                {/* Three groups (T1693): what acts on the app, then Review and Publish, then Help and More. */}
+                <ToolbarDivider />
                 <Button
                   variant="ghost"
                   data-review-launch
@@ -1802,13 +1828,8 @@ export function App() {
                     <path d="M7 17H6a4 4 0 1 1 1-8 6 6 0 0 1 11-.5 4 4 0 0 1 0 8.5h-1M12 21V12m-3 3 3-3 3 3" />
                   </ToolbarGlyph>
                 </Button>
-                {!narrow && (
-                  <>
-                    {helpAction}
-                    {settingsAction}
-                    {lookAction}
-                  </>
-                )}
+                <ToolbarDivider />
+                {!narrow && helpAction}
                 <ToolbarMore
                   hint={narrow ? hintAt(["selection", "change-applied", "look-kept"]) : undefined}
                 >
@@ -2652,6 +2673,7 @@ export function App() {
           project={project}
           refresh={refreshLook}
           close={clearSelection}
+          atPicture={selectedPart?.part === "picture"}
           ask={() => workIn("smith")}
           position={sectionPosition}
           measured={setSectionHeight}
@@ -2746,6 +2768,13 @@ function ToolbarButton({
   );
 }
 
+/** A thin line between the top bar's groups (T1693). */
+function ToolbarDivider() {
+  return (
+    <span aria-hidden="true" data-toolbar-divider className="mx-1 h-5 w-px shrink-0 bg-line" />
+  );
+}
+
 function ToolbarMore({ children, hint }: { children: React.ReactNode; hint?: React.ReactNode }) {
   const [open, setOpen] = useState(false);
   const root = useRef<HTMLDivElement>(null);
@@ -2787,9 +2816,15 @@ function ToolbarMore({ children, hint }: { children: React.ReactNode; hint?: Rea
         aria-expanded={open}
         aria-controls={panelId}
         onClick={() => setOpen(!open)}
-        className="h-8 rounded-md px-2 text-xs font-medium hover:bg-subtle"
+        aria-label="More"
+        title="More"
+        className="flex size-8 items-center justify-center rounded-md hover:bg-subtle"
       >
-        More
+        <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4" fill="currentColor">
+          <circle cx="5" cy="12" r="1.75" />
+          <circle cx="12" cy="12" r="1.75" />
+          <circle cx="19" cy="12" r="1.75" />
+        </svg>
       </button>
       <div className="absolute top-full right-0 z-[65] mt-2" hidden={open}>
         {hint}
