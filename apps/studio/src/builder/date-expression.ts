@@ -66,8 +66,10 @@ export function windowReady(value: unknown): boolean {
   );
 }
 export type DateControl =
-  | { kind: "date"; offsets: DateOffsets; options: ReferenceOption[] }
-  | { kind: "window"; hasDate: boolean };
+  | { kind: "date"; offsets: DateOffsets; options: ReferenceOption[]; from?: string }
+  | { kind: "window"; hasDate: boolean }
+  /** A list with a query takes no date: the query chooses its records. */
+  | { kind: "query" };
 const object = (value: unknown): Record<string, unknown> =>
   value && typeof value === "object" && !Array.isArray(value)
     ? (value as Record<string, unknown>)
@@ -98,10 +100,11 @@ export function dateControl(
             }),
           )
         : [];
-    return { kind: "date", offsets: "before", options };
+    return { kind: "date", offsets: "before", options, from: typeof per === "string" ? per : "" };
   }
   if (area === "outgoing" && key === "list" && path.length === 4) {
     const list = object(own.list);
+    if (list.query && (part === "when" || part === "within")) return { kind: "query" };
     const options =
       !list.query && typeof list.model === "string"
         ? referenceOptions({ kind: "field", model: list.model, use: "date", oneHop: true }, ir)
@@ -111,6 +114,21 @@ export function dateControl(
       return { kind: "window", hasDate: options.some((option) => option.value === list.when) };
   }
   return undefined;
+}
+/**
+ * What to do when the saved date is no longer one of the choices (capacity's `per` changed):
+ * the dates now come from the new reference.
+ */
+export function replacedDateHint(control: DateControl, value: unknown): string | undefined {
+  if (control.kind !== "date" || control.from === undefined || typeof value !== "string")
+    return undefined;
+  const field = dateDraft(value).field;
+  if (!field || control.options.some((option) => option.value === field)) return undefined;
+  if (!control.from)
+    return "Set what capacity counts per first, then choose one of its dates here.";
+  return control.options.length
+    ? `Capacity now counts per ${control.from}, so the date comes from it: choose one of its dates below.`
+    : `Capacity counts per ${control.from}, which has no dates to choose: count per a reference with a date.`;
 }
 /** All incomplete strings stay in the existing local parent draft until every date is valid. */
 export function dateTreeReady(
@@ -122,6 +140,7 @@ export function dateTreeReady(
   const control = dateControl(path, document, ir);
   if (control) {
     if (value === undefined) return true;
+    if (control.kind === "query") return false;
     return control.kind === "window"
       ? control.hasDate && windowReady(value)
       : typeof value === "string" &&
