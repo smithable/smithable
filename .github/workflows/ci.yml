@@ -230,7 +230,9 @@ jobs:
       # run and full-ci pull requests, not the local gate or every pull request (T1491). In a turn
       # of the gate queue of its own, so no session's gate starts beside its browser; on the
       # packages the gate above built.
-      - run: SESSION=ci GATE_AHEAD_MAX=99 scripts/gate.sh
+      # Named here, so it stays off ordinary pull requests should FULL_CI be switched on again.
+      - if: github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'full-ci')
+        run: SESSION=ci GATE_AHEAD_MAX=99 scripts/gate.sh
         env:
           GATE_RUN: TEST_STUDIO_PORT=8620 pnpm test:studio:selection
           TMPDIR: ${{ runner.temp }}
