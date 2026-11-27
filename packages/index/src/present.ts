@@ -71,18 +71,31 @@ export function present(ir: SpecIR, auth?: AuthIR, content: ContentIR = emptyCon
     const open = ordered.filter((p) => !auth || auth.public.pages.includes(p.id));
     const closed = ordered.filter((p) => !open.includes(p));
     // Two pages that would read the same (my-bookings and bookings, both "bookings") are named by
-    // their ids instead, and again until no two read the same: an id's words may be a third
-    // page's title.
-    const said = new Map(ordered.map((p) => [p.id, pageWords(ir, content, p.id)]));
+    // their ids' words instead, and again until no two read the same: an id's words may be a
+    // third page's title, or another id's (myBookings, my-bookings), which then reads as the id.
+    // Each page's names, plainest first; in a clash only the pages on the plainest name in it
+    // move on, so a title yields to an id's words, and the id as written is always unique.
+    const names = new Map(
+      ordered.map((p) => [
+        p.id,
+        [pageWords(ir, content, p.id), humanize(p.id).toLowerCase(), p.id],
+      ]),
+    );
+    const step = new Map(ordered.map((p) => [p.id, 0]));
+    const said = new Map<string, string>();
     for (let again = true; again; ) {
       again = false;
-      const seen = [...said.values()];
-      for (const [id, w] of said) {
-        const own = humanize(id).toLowerCase();
-        if (w !== own && seen.filter((x) => x === w).length > 1) {
-          said.set(id, own);
-          again = true;
-        }
+      said.clear();
+      for (const [id, n] of names) said.set(id, n[step.get(id) ?? 0] ?? id);
+      for (const w of new Set(said.values())) {
+        const same = [...said].filter(([, x]) => x === w).map(([id]) => id);
+        if (same.length < 2) continue;
+        const low = Math.min(...same.map((id) => step.get(id) ?? 0));
+        for (const id of same)
+          if (step.get(id) === low && low < 2) {
+            step.set(id, low + 1);
+            again = true;
+          }
       }
     }
     const words = (pages: typeof ordered) => list(pages.map((p) => said.get(p.id) ?? ""));

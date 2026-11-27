@@ -200,3 +200,14 @@ test("a page named by its id never reads as a third page's title (T1689)", () =>
     "It has my bookings, bookings and mine, open to everyone.",
   );
 });
+
+test("two ids that read the same are said as they are written (T1689)", () => {
+  const two = validateSpec({
+    path: "smithable.yml",
+    text: "smithable: 0.1\napp: { name: Desk }\nmodels:\n  Booking:\n    fields: { name: string! }\npages:\n  myBookings: { crud: Booking, route: /mine }\n  my-bookings: { crud: Booking }\n  bookings: { crud: Booking }\n",
+  });
+  expect(two.diagnostics.filter((d) => d.severity === "error")).toEqual([]);
+  expect(present(two.ir as SpecIR)[1]?.text).toBe(
+    "It has myBookings, my-bookings and bookings, open to everyone.",
+  );
+});
