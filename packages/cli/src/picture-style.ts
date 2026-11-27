@@ -320,7 +320,10 @@ export function offeredStyles(dir: string, version: LibraryVersion): LibraryStyl
 
 /** A body read up to the library's cap, and no further: undefined when it is larger (T947). */
 async function capped(response: Response): Promise<Uint8Array | undefined> {
-  if (Number(response.headers?.get("content-length")) > MAX_PICTURE) return undefined;
+  if (Number(response.headers?.get("content-length")) > MAX_PICTURE) {
+    await response.body?.cancel();
+    return undefined;
+  }
   const reader = response.body?.getReader();
   if (!reader) {
     const bytes = new Uint8Array(await response.arrayBuffer());
