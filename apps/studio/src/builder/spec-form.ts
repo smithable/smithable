@@ -133,6 +133,34 @@ const LABELS: Record<string, string> = {
   about: "What it is for",
 };
 
+/** A page's kind, as the add form names it. */
+export const PAGE_KINDS: Record<string, string> = {
+  crud: "A list of records",
+  landing: "A landing page for visitors",
+  custom: "A page of your own, in code",
+  dashboard: "A dashboard",
+  settings: "Settings of",
+  onboarding: "An onboarding for",
+  users: "Who has access",
+  data: "All the records, for administrators",
+  review: "Files waiting for review",
+  calendar: "A calendar of",
+  articles: "Articles from",
+  calculator: "A calculator",
+  legal: "The privacy page",
+};
+
+/** What a reference creates, in Studio's words (the spec says model). */
+export const CREATE_WORDS = { model: "kind of record", page: "page", action: "action" } as const;
+
+/**
+ * A page's kind key in Studio's words (the add form's), not the spec's (crud, "A model to …"):
+ * a page's own key names its kind; any other key keeps its label.
+ */
+export function kindLabel(path: readonly (string | number)[]): string | undefined {
+  return path[0] === "pages" && path.length === 3 ? PAGE_KINDS[String(path[2])] : undefined;
+}
+
 /** A key's label: its word in LABELS, the first sentence of its description, or its name made readable. */
 export function labelOf(key: string, schema: JsonSchema): string {
   // The schema's own title where it gives one (core, Fable 46 (c)): "Currency", "Time zone".

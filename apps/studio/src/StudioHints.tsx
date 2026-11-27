@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 const words = {
-  "smith-hidden": "Click Smith to bring him back.",
+  "smith-hidden": "Tap or click Smith to bring him back.",
   selection: "All settings shows more for what you selected.",
   "change-applied": "Undo in the top bar puts the app back.",
   "settings-opened": "No code changes the app. Code shows its files.",

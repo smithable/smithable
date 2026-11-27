@@ -24,7 +24,7 @@ function page(
   crashed = false,
   records: string[] = [],
   search = "",
-  fields: { flash: boolean }[] = [],
+  fields: { flash: boolean; top?: number }[] = [],
 ) {
   // The dev server's error overlay, put up by the test; the observers watching for it, and the
   // timers the runtime sets, run by hand.
@@ -65,6 +65,7 @@ function page(
       posted.push(to === undefined ? message : { ...message, to }),
   };
   const scrolled: number[] = [];
+  const scrolledBy: number[] = [];
   const reloads: number[] = [];
   const window = {
     parent,
@@ -72,6 +73,7 @@ function page(
     fetch: () => Promise.resolve({ ok: true, status: 200, text: () => Promise.resolve("<html>") }),
     innerHeight: 800,
     scrollTo: (_x: number, y: number) => scrolled.push(y),
+    scrollBy: ({ top }: { top: number }) => scrolledBy.push(top),
     addEventListener: (type: string, listener: (event: unknown) => void) =>
       type === "message" && listeners.push(listener),
   };
@@ -100,6 +102,7 @@ function page(
         ? fields.map((field) => ({
             setAttribute: () => (field.flash = true),
             removeAttribute: () => (field.flash = false),
+            getBoundingClientRect: () => ({ top: field.top ?? 0, bottom: (field.top ?? 0) + 40 }),
           }))
         : selector === '[data-part="record-open"][data-record-id]'
           ? records.map((id) => ({ dataset: { recordId: id } }))
@@ -186,6 +189,7 @@ function page(
     body: document.body,
     clicked,
     scrolled,
+    scrolledBy,
     posted,
     reloads,
     tick: () => {
@@ -759,7 +763,8 @@ test("on the hosted shape the preview reports its pages to the Studio origin the
 });
 
 test("a change is flashed once the page is hydrated, never on the server's HTML before (T1657)", () => {
-  const field = { flash: false };
+  // Below the fold: the page is 800 high, the field starts at 1000.
+  const field = { flash: false, top: 1000 };
   const shown = page("/", {}, false, [], "", [field]);
   // The runtime escapes the concept with the browser's CSS.escape; Node has none.
   const global = globalThis as { CSS?: { escape: (s: string) => string } };
@@ -776,4 +781,6 @@ test("a change is flashed once the page is hydrated, never on the server's HTML 
   shown.later();
   expect(field.flash).toBe(true);
   expect(shown.posted.filter((m) => m.type === "flashed").map((m) => m.key)).toEqual([8]);
+  // The flashed field is brought into view, by the page's own scroll only (T1668): to its bottom.
+  expect(shown.scrolledBy).toEqual([240]);
 });
