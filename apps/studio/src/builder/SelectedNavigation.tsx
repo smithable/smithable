@@ -166,6 +166,8 @@ export function SelectedNavigation({
         event.preventDefault();
         if (!canSave) return;
         setSaving(true);
+        // A retry starts without the last Apply's line: it may not be true now.
+        setSaved(undefined);
         try {
           // One Apply may be two changes: when the second is refused, say the first stays.
           const done: string[] = [];
