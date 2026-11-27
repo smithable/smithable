@@ -70,7 +70,12 @@ export function present(ir: SpecIR, auth?: AuthIR, content: ContentIR = emptyCon
     const ordered = [...ir.pages].sort((a, b) => Number(b.route === "/") - Number(a.route === "/"));
     const open = ordered.filter((p) => !auth || auth.public.pages.includes(p.id));
     const closed = ordered.filter((p) => !open.includes(p));
-    const words = (pages: typeof ordered) => list(pages.map((p) => pageWords(ir, content, p.id)));
+    // Two pages that would read the same (my-bookings and bookings, both "bookings") are named by
+    // their ids instead.
+    const said = new Map(ordered.map((p) => [p.id, pageWords(ir, content, p.id)]));
+    const clash = (id: string) => [...said.values()].filter((w) => w === said.get(id)).length > 1;
+    const words = (pages: typeof ordered) =>
+      list(pages.map((p) => (clash(p.id) ? humanize(p.id).toLowerCase() : (said.get(p.id) ?? ""))));
     const text =
       open.length && closed.length
         ? `It has ${words(open)} for everyone, and for those who sign in: ${words(closed)}.`
@@ -111,6 +116,8 @@ export function present(ir: SpecIR, auth?: AuthIR, content: ContentIR = emptyCon
       const what = (r: (typeof roles)[number]) => {
         const d = r.description?.trim().replace(/\.$/, "");
         if (!d) return "";
+        // Several sentences ("Reception. Runs the day.") are kept as written, in parentheses.
+        if (/[.!?] /.test(d)) return ` (${d})`;
         return /^(A|An|The) /.test(d)
           ? `, ${d.charAt(0).toLowerCase()}${d.slice(1)}`
           : `, which ${d.charAt(0).toLowerCase()}${d.slice(1)}`;

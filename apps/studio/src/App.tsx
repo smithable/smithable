@@ -58,6 +58,7 @@ import {
   clearPreviewSelection,
   isPreviewMessage,
   type Place,
+  previewEdit,
   reselectInPreview,
   revealPreviewSelection,
   type Selection,
@@ -1011,6 +1012,8 @@ export function App() {
 
   // Ctrl+Z (Cmd+Z) undoes the last change, outside text fields, here and in the preview;
   // Ctrl+Shift+Z or Ctrl+Y makes it again.
+  const runKey = useRef(run);
+  runKey.current = run;
   const undoKey = useRef(() => {});
   undoKey.current = () => {
     if (!busy && !viewingOld) void undo();
@@ -1038,7 +1041,10 @@ export function App() {
       }
     };
     const onMessage = (e: MessageEvent) => {
-      if (isPreviewMessage(e) && e.data.type === "undo") undoKey.current();
+      if (!isPreviewMessage(e)) return;
+      if (e.data.type === "undo") undoKey.current();
+      const edit = previewEdit(e.data);
+      if (edit) void runKey.current(edit.op, edit.args);
     };
     window.addEventListener("keydown", onKey);
     window.addEventListener("message", onMessage);

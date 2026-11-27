@@ -95,6 +95,7 @@ function page(
       return element;
     },
     getElementById: (id: string) => head.find((e) => e.id === id) ?? null,
+    getSelection: () => ({ selectAllChildren() {} }),
     addEventListener: (type: string, listener: (event: unknown) => void) =>
       type === "click" && clicks.push(listener),
     querySelectorAll: (selector: string) =>
@@ -205,6 +206,17 @@ function page(
       const due = [...timers.values()];
       timers.clear();
       for (const t of due) t();
+    },
+    /** A click on an element, through the page's own click listeners. */
+    click: (target: unknown) => {
+      for (const c of clicks)
+        c({
+          target,
+          preventDefault() {},
+          stopPropagation() {},
+          stopImmediatePropagation() {},
+          shiftKey: false,
+        });
     },
     /** The owner presses the app's Sign out. */
     signOut: () => {
@@ -783,4 +795,45 @@ test("a change is flashed once the page is hydrated, never on the server's HTML 
   expect(shown.posted.filter((m) => m.type === "flashed").map((m) => m.key)).toEqual([8]);
   // The flashed field is brought into view, by the page's own scroll only (T1668): to its bottom.
   expect(shown.scrolledBy).toEqual([240]);
+});
+
+test("a text changed in place and saved with Enter is sent to Studio once, not again by the blur", () => {
+  const { send, posted, click } = page();
+  const Element = class {};
+  vi.stubGlobal("Element", Element);
+  try {
+    send({ type: "smithable:follow-context", context: 1 });
+    send({ type: "smithable:select-mode", on: true });
+    const listeners: Record<string, (event: unknown) => void> = {};
+    const text = Object.assign(new Element(), {
+      dataset: { smText: "pages.home.hero.title" },
+      textContent: "Find your calm",
+      isContentEditable: false,
+      closest: (selector: string) => (selector === "[data-sm-text]" ? text : null),
+      focus() {},
+      addEventListener: (type: string, listener: (event: unknown) => void) => {
+        listeners[type] = listener;
+      },
+      removeEventListener: (type: string, listener: (event: unknown) => void) => {
+        if (listeners[type] === listener) delete listeners[type];
+      },
+    });
+    // As in a browser: editing turned off on the focused text blurs it, once.
+    let focused = true;
+    Object.defineProperty(text, "contentEditable", {
+      set(on: string) {
+        if (on !== "false" || !focused) return;
+        focused = false;
+        listeners.blur?.({});
+      },
+    });
+    click(text);
+    text.textContent = "Slow down a little";
+    listeners.keydown?.({ key: "Enter", preventDefault() {} });
+    expect(posted.filter((m) => m.type === "text")).toEqual([
+      expect.objectContaining({ path: "pages.home.hero.title", text: "Slow down a little" }),
+    ]);
+  } finally {
+    vi.unstubAllGlobals();
+  }
 });
