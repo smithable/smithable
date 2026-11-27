@@ -15,6 +15,10 @@ test("a model's operations are read as a list or a JSON string of one, and nothi
     problem: "no operations key; keys: result, note",
   });
   expect(operationsOf({})).toEqual({ problem: "no operations key; keys: none" });
+  // A key that is not a short name could be words of the answer: counted, never copied.
+  expect(operationsOf({ result: [], "private customer note": true })).toEqual({
+    problem: "no operations key; keys: result, 1 other",
+  });
   expect(operationsOf({ operations: "setApp Tasks" })).toEqual({
     problem: "operations was a string that is not JSON",
   });

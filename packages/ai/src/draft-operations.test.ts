@@ -1077,6 +1077,7 @@ test("a first answer whose list cannot be read is asked for once more, with its 
   const twice = await run({ operations: { first: valid[0] } }, { operations: "setApp Tasks" });
   expect(twice.result.kind).toBe("failed");
   expect(twice.prompts).toHaveLength(2);
+  expect(twice.result.usage).toHaveLength(2);
   if (twice.result.kind === "failed")
     expect(twice.result.message).toContain(
       "The answer has no operations: operations was a string that is not JSON.",

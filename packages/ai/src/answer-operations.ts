@@ -12,8 +12,7 @@ export function operationsOf(
     return { problem: `the answer was ${kindOf(answer)}, not an object` };
   const record = answer as Record<string, unknown>;
   if (!("operations" in record)) {
-    const keys = Object.keys(record);
-    return { problem: `no operations key; keys: ${keys.length ? keys.join(", ") : "none"}` };
+    return { problem: `no operations key; keys: ${keysOf(record)}` };
   }
   let list = record.operations;
   if (typeof list === "string") {
@@ -32,6 +31,18 @@ export function operationsOf(
         !!step && typeof step === "object" && !Array.isArray(step),
     ),
   };
+}
+
+/**
+ * An answer's keys, named only where they are short names (a wrapper such as "result"); a key
+ * that is anything else could be the answer's own words, so it is counted, never copied.
+ */
+function keysOf(record: Record<string, unknown>): string {
+  const keys = Object.keys(record);
+  const named = keys.filter((k) => /^[A-Za-z_][A-Za-z0-9_-]{0,31}$/.test(k)).slice(0, 10);
+  const others = keys.length - named.length;
+  const said = [...named, ...(others ? [`${others} other${others === 1 ? "" : "s"}`] : [])];
+  return said.length ? said.join(", ") : "none";
 }
 
 function kindOf(value: unknown): string {
