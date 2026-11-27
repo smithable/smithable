@@ -34,7 +34,12 @@ export function VersionHistory({
                 {current && <span className="font-medium text-accent">Current version</span>}
                 {!current && entry.undone && <span>Alternate version</span>}
                 {entry.milestone && <span className="break-all">{entry.milestone}</span>}
-                {!current && !onSee && <span>Preview unavailable here</span>}
+                {!current && !onSee && (
+                  // A hosted Studio has no room for an earlier version's copy yet (T1697).
+                  <span title="A Studio on your own computer can open earlier versions.">
+                    Earlier versions cannot be previewed here yet
+                  </span>
+                )}
               </p>
             </div>
             {!current && onSee && (

@@ -585,12 +585,13 @@ const setSectionPicture: Operation<{
     },
   },
   positional: ["page", "section", "src"],
-  describe: ({ page, section, src, asset, item }) => {
+  describe: ({ page, section, src, asset, alt, item }) => {
     const which = `${item === undefined ? "the picture" : `picture ${item + 1}`} of the ${section} section of ${page}`;
+    // A stored file's id is no name a person knows (T1697): its description, when it has one.
     return src
       ? `Use ${src} as ${which}`
       : asset
-        ? `Use stored file ${asset} as ${which}`
+        ? `Use ${alt?.trim() ? `the picture “${alt.trim()}”` : "an uploaded picture"} as ${which}`
         : `Remove ${which}`;
   },
   destructive: () => false,

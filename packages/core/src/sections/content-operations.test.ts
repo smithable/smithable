@@ -98,3 +98,20 @@ test("the command line gives setItems its list of objects as JSON (T1213)", () =
     /^--items is not JSON: .+\. Give a JSON list, or one JSON object per --items\.$/,
   );
 });
+
+test("a stored picture's change is named by what it shows, never its id (T1697)", () => {
+  const op = findOperation("setSectionPicture");
+  // The words read only the arguments.
+  const ir = {} as Parameters<NonNullable<typeof op>["describe"]>[1];
+  const asset = "m_01hz8k3q4r5s6t7v8w9x0y1z2a";
+  expect(op?.describe({ page: "home", section: "hero", asset, alt: "A red roof" }, ir)).toBe(
+    "Use the picture “A red roof” as the picture of the hero section of home",
+  );
+  expect(op?.describe({ page: "home", section: "hero", asset }, ir)).toBe(
+    "Use an uploaded picture as the picture of the hero section of home",
+  );
+  expect(op?.describe({ page: "home", section: "hero", asset }, ir)).not.toContain(asset);
+  expect(op?.describe({ page: "home", section: "hero", asset, alt: "  " }, ir)).toBe(
+    "Use an uploaded picture as the picture of the hero section of home",
+  );
+});
