@@ -11,6 +11,7 @@ import { readdirSync } from "node:fs";
 import { cpus } from "node:os";
 import { join } from "node:path";
 import { appBases } from "./ports.mjs";
+import { RETRIED, retriedNote } from "./test-apps-first-load.mjs";
 
 const repo = new URL("..", import.meta.url).pathname;
 // The examples named on the command line, or every example (scripts/gate.sh names the ones a
@@ -41,6 +42,7 @@ const atOnce = Math.max(
   1,
   Number(process.env.TEST_APPS_CONCURRENCY) || Math.max(2, Math.floor(cpus().length / 2)),
 );
+let retried = 0;
 /** Runs `tasks` with at most `atOnce` in flight, keeping their order in the results. */
 async function limited(tasks) {
   const results = new Array(tasks.length);
@@ -71,7 +73,10 @@ const results = await limited(
           pending += chunk;
           const lines = pending.split("\n");
           pending = lines.pop() ?? "";
-          for (const line of lines) process.stdout.write(`${prefix}${line}\n`);
+          for (const line of lines) {
+            if (line.includes(RETRIED)) retried++;
+            process.stdout.write(`${prefix}${line}\n`);
+          }
         };
         child.stdout.on("data", write);
         child.stderr.on("data", write);
@@ -86,7 +91,7 @@ const results = await limited(
 const failed = results.filter((r) => r.code !== 0).map((r) => r.example);
 console.log(
   failed.length
-    ? `\nFailed: ${failed.join(", ")}`
-    : `\nAll ${examples.length} example apps passed.`,
+    ? `\nFailed: ${failed.join(", ")}${retriedNote(retried)}`
+    : `\nAll ${examples.length} example apps passed.${retriedNote(retried)}`,
 );
 process.exit(failed.length ? 1 : 0);
