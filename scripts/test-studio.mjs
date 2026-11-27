@@ -757,6 +757,32 @@ try {
     },
   );
   await step(
+    "Follow signs the preview in as a sample user, shows it is on, and the preview says whom it is signed in as",
+    async () => {
+      await op("addSampleUser", { name: "Maja", role: "sales" });
+      await (await toolbarAction(page, "Sample users")).click();
+      const panel = page.getByRole("dialog", { name: "Sample users" });
+      const follow = panel.getByRole("button", { name: "Follow", exact: true });
+      await follow.waitFor({ timeout: 10000 * P });
+      await follow.click();
+      const following = panel.getByRole("button", { name: "Following", exact: true });
+      if ((await following.getAttribute("aria-pressed")) !== "true")
+        throw new Error("Following is not pressed");
+      await page
+        .getByRole("status")
+        .filter({ hasText: "Previewing as Maja, sales" })
+        .waitFor({ timeout: 10000 * P });
+      await panel.getByRole("button", { name: "Close" }).click();
+      await panel.waitFor({ state: "detached" });
+      await op("removeSampleUser", { name: "Maja" });
+      // Gone from the sample users, the preview no longer says it is signed in as them.
+      await page
+        .getByRole("status")
+        .filter({ hasText: "Previewing as" })
+        .waitFor({ state: "detached", timeout: 10000 * P });
+    },
+  );
+  await step(
     "the guide is Smith's: each stop a line in his thread with its place lit, once; Guide says it again; Code's tour with Code open; a reload shows nothing",
     async () => {
       // On a page of its own: every other step runs with ?guide=off.
