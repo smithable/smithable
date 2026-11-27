@@ -98,9 +98,30 @@ wait $pid; echo $?`;
     const out = readFileSync(join(dir, "out"), "utf8");
     assert.equal(run.stdout.trim().split("\n").at(-1), "130", out + run.stderr);
     assert.ok(existsSync(join(dir, "disarmed")), out);
-    assert.ok(!existsSync(join(dir, "lock")));
+    assert.ok(!existsSync(join(dir, "lock")), out);
   });
 }
+
+// The lock's refresher may have a touch on its way when the lock is released (T1710). Here its
+// touch takes 0.3 s and nothing stops it, so it runs after the release.
+test("a touch still on its way when the lock is released does not bring it back", () => {
+  const { dir } = mergeGreen({ NOT_RUN: "1" });
+  const late = `#!/usr/bin/env bash
+case "$*" in *"/lock") /bin/sleep 0.3 ;; esac
+exec /usr/bin/touch "$@"
+`;
+  writeFileSync(join(dir, "touch"), late);
+  writeFileSync(join(dir, "pkill"), "#!/usr/bin/env bash\nexit 0\n");
+  for (const f of ["touch", "pkill"]) chmodSync(join(dir, f), 0o755);
+  const run = spawnSync("bash", ["scripts/merge-green.sh", "587", "--repo", "o/r"], {
+    encoding: "utf8",
+    timeout: 60_000,
+    env: fakeEnv(dir),
+  });
+  assert.equal(run.status, 0, run.stdout + run.stderr);
+  spawnSync("/bin/sleep", ["0.6"]);
+  assert.ok(!existsSync(join(dir, "lock")), run.stdout);
+});
 
 test("a failed check disarms the auto-merge", () => {
   const { run, dir } = mergeGreen({ FAIL_WATCH: "1" });
