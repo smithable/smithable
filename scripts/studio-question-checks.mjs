@@ -263,6 +263,12 @@ export async function checkStudioQuestions(browser, base) {
         await page.locator('[data-part="question-acknowledged"] p').textContent(),
         `Times stay in ${keep.trim().slice(5)}.`,
       );
+    // …and heard, with sound on (a second reviewer's point on #1439).
+    if (keep.startsWith("Keep "))
+      await page.waitForFunction(
+        (said) => window.questionFixture.spoken.some((s) => s.text === said),
+        `Times stay in ${keep.trim().slice(5)}.`,
+      );
     const owner = page.locator('[data-part="owner-check"]');
     await owner.waitFor();
     assert.equal(asks, 1, "a recognized optional answer called a model");

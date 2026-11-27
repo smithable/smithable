@@ -56,7 +56,7 @@ export function useStudioQuestion({
   const [settled, setSettled] = useState<string[]>([]);
   const [spoken, setSpoken] = useState<string[]>([]);
   const [working, setWorking] = useState(false);
-  const [ack, setAck] = useState<{ id: string; text: string }>();
+  const [ack, setAck] = useState<{ id: string; text: string; app?: string }>();
   const [owner, setOwner] = useState({
     app,
     other: false,
@@ -81,7 +81,7 @@ export function useStudioQuestion({
   // An answer that keeps things as they are closes with a word back, not in silence (T1670).
   const acknowledge = (key: string, text: string) => {
     settle(key);
-    setAck({ id: key, text });
+    setAck({ id: key, text, app });
     setTimeout(() => setAck((now) => (now?.id === key ? undefined : now)), 2500);
   };
   const write = async (key: string, action: () => Promise<boolean>) => {
@@ -94,7 +94,8 @@ export function useStudioQuestion({
     }
   };
   if (!ready || !app || !spec) return undefined;
-  if (ack)
+  // Said in the app it answers for: another app opened meanwhile shows its own question.
+  if (ack?.app === app)
     return {
       id: `${ack.id}:ack`,
       text: ack.text,
@@ -102,7 +103,8 @@ export function useStudioQuestion({
       choices: [],
       close: () => setAck(undefined),
       answer: () => false,
-      spoken: true,
+      // Heard as well as shown when sound is on, like the question it answers.
+      spoken: false,
       markSpoken: () => {},
     };
   const zoneKey = zoneAskedKey(app);

@@ -843,7 +843,11 @@ function Value({
             <p className="text-xs text-muted">
               Kind:{" "}
               <span className="font-medium">
-                {kind ? (PAGE_KINDS[kind] ?? kind).replace(/ (of|for|from)$/, "") : "not chosen"}
+                {!kind
+                  ? "not chosen"
+                  : path[0] === "pages"
+                    ? (PAGE_KINDS[kind] ?? kind).replace(/ (of|for|from)$/, "")
+                    : kind}
               </span>
             </p>
           )}

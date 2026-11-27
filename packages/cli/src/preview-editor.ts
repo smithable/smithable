@@ -272,8 +272,15 @@ if (typeof window !== "undefined" && window.parent !== window) {
         return void (pending = setTimeout(done, 100));
       now.forEach(flash);
       // What the change touched is brought into view: a new field below the fold was flashed
-      // where nobody saw it while the guide said "here it is" (T1668). Nothing moves when it shows.
-      now[0]?.scrollIntoView?.({ block: "nearest", inline: "nearest" });
+      // where nobody saw it while the guide said "here it is" (T1668). Nothing moves when it shows,
+      // and only the page scrolls: scrollIntoView would move Studio around the preview too.
+      const shown = now[0]?.getBoundingClientRect?.();
+      const by = !shown
+        ? 0
+        : shown.top < 0
+          ? shown.top
+          : Math.max(0, Math.min(shown.bottom - window.innerHeight, shown.top));
+      if (by) window.scrollBy({ top: by, behavior: "instant" });
       post({ type: "flashed", key });
     };
     const selector = (event.data.concepts ?? [])
