@@ -151,6 +151,7 @@ export function SelectedSection({
   project,
   refresh,
   close,
+  atPicture,
   ask,
   position,
   measured,
@@ -162,6 +163,8 @@ export function SelectedSection({
   /** Reads the project again after a change, so the form and the preview show it. */
   refresh: () => Promise<void>;
   close: () => void;
+  /** Opened by a click on the section's picture: the form starts at it (T1686). */
+  atPicture?: boolean;
   ask: () => void;
   position?: CSSProperties;
   /** Its height as drawn, each time it changes, so the screen places it by that, not a guess. */
@@ -169,6 +172,8 @@ export function SelectedSection({
   reveal: (sheetTop: number) => void;
 }) {
   const lookProject = project.lookProject ?? "";
+  // A click on the picture: the form shows its picture and its first control has the focus.
+  const pictureAt = useRef<HTMLDivElement>(null);
   const [session] = useState(
     () =>
       new LookSession(
@@ -210,7 +215,17 @@ export function SelectedSection({
   const panel = useRef<HTMLDivElement>(null);
   const narrow = useMedia("(max-width: 1023px)");
   // The click that picked the section left focus in the preview: the form takes it, so Escape closes.
-  useEffect(() => panel.current?.focus({ preventScroll: true }), []);
+  // The form takes the focus as it opens; opened by a click on the picture, its picture does (T1686).
+  // biome-ignore lint/correctness/useExhaustiveDependencies: on opening only
+  useEffect(() => {
+    const control = atPicture
+      ? pictureAt.current?.querySelector<HTMLElement>("input, button, select")
+      : undefined;
+    if (control) {
+      pictureAt.current?.scrollIntoView({ block: "nearest" });
+      control.focus({ preventScroll: true });
+    } else panel.current?.focus({ preventScroll: true });
+  }, []);
   useLayoutEffect(() => {
     const sheet = panel.current;
     if (!narrow || !sheet) return;
@@ -382,19 +397,21 @@ export function SelectedSection({
           </fieldset>
         ))}
         {section.picture && (
-          <SectionPicture
-            key={pictureValue(section.picture.image)}
-            page={section.page}
-            section={section.section}
-            image={section.picture.image}
-            label={
-              ["text", "callToAction", "features"].includes(section.kind)
-                ? "Background picture"
-                : undefined
-            }
-            change={(args, file) => void choosePicture(args, file)}
-            busy={busy}
-          />
+          <div ref={pictureAt}>
+            <SectionPicture
+              key={pictureValue(section.picture.image)}
+              page={section.page}
+              section={section.section}
+              image={section.picture.image}
+              label={
+                ["text", "callToAction", "features"].includes(section.kind)
+                  ? "Background picture"
+                  : undefined
+              }
+              change={(args, file) => void choosePicture(args, file)}
+              busy={busy}
+            />
+          </div>
         )}
         {section.kind === "hero" && section.picture?.image && (
           <SectionFilm

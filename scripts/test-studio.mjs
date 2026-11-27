@@ -3019,6 +3019,77 @@ try {
     },
   );
 
+  await step(
+    "a click on a section's picture opens its form at the picture, Select stays on after the form closes, and Show me opens where a change shows (T1686, T1684, T1682)",
+    async () => {
+      mkdirSync(join(dir, "public/images"), { recursive: true });
+      writeFileSync(join(dir, "public/images/walk-hero.png"), png(32, 20));
+      await op("setSectionPicture", {
+        page: "home",
+        section: "hero",
+        src: "images/walk-hero.png",
+        alt: "A grey square",
+      });
+      await openPreview("/home");
+      const select = page.getByRole("button", { name: "Select", exact: true });
+      if ((await select.getAttribute("aria-pressed")) !== "true") await select.click();
+      const picture = preview.locator('[data-kit=section][data-section="hero"] img').first();
+      const alt = page.getByLabel("What it shows", { exact: true });
+      // A click in a preview that reloads under it (the picture just set) selects nothing: again.
+      for (let i = 0; ; i++) {
+        await preview
+          .locator("html[data-sm-selecting]")
+          .waitFor({ state: "attached", timeout: 60000 * P });
+        await picture.dispatchEvent("click");
+        if (
+          await alt.waitFor({ timeout: 5000 }).then(
+            () => true,
+            () => false,
+          )
+        )
+          break;
+        if (i > 12 * P) throw new Error("the picture's click opened no form at the picture");
+      }
+      // Its picture's control has the focus, not the form's heading.
+      if (!(await page.evaluate(() => !!document.activeElement?.closest("[data-section-picture]"))))
+        throw new Error("the picture's control does not have the focus");
+      await page.getByRole("button", { name: "Close selection", exact: true }).click();
+      await alt.waitFor({ state: "hidden" });
+      // Closing the form ends that selection, not Select: the next click selects again.
+      if ((await select.getAttribute("aria-pressed")) !== "true")
+        throw new Error("closing the form turned Select off");
+      await preview
+        .locator("html[data-sm-selecting]")
+        .waitFor({ state: "attached", timeout: 10000 * P });
+      // Escape with nothing selected ends Select.
+      await page.keyboard.press("Escape");
+      await select.and(page.locator('[aria-pressed="false"]')).waitFor({ timeout: 5000 * P });
+      // A change shows on another page: the preview stays, and Show me opens it there.
+      await op("addField", { model: "Customer", field: "walkPhone", type: "string" });
+      const showMe = page
+        .getByRole("list", { name: "Thread" })
+        .getByRole("button", { name: "Show me", exact: true });
+      await showMe.waitFor({ timeout: 60000 * P });
+      await page.locator('[data-preview-page][data-preview-current="/home"]').waitFor();
+      await showMe.click();
+      await page
+        .locator('[data-preview-page][data-preview-current="/customers/new"]')
+        .waitFor({ timeout: 10000 * P });
+      for (const undo of [1, 2]) {
+        const undone = await fetch(`${base}/api/undo`, {
+          method: "POST",
+          headers: { "content-type": "application/json", "x-smithable": "1" },
+          body: "{}",
+        });
+        if (!undone.ok) throw new Error(`undo ${undo} answered ${undone.status}`);
+      }
+      for (let i = 0; (await project()).files.spec.includes("walkPhone"); i++) {
+        if (i > 60 * P) throw new Error("the field was not undone");
+        await page.waitForTimeout(1000);
+      }
+    },
+  );
+
   console.log("Code");
   await firstWindow("code");
   await step(

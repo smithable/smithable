@@ -496,7 +496,9 @@ if (typeof window !== "undefined" && window.parent !== window) {
     event.stopPropagation();
     if (!marked) {
       const section = sectionAt(event.target);
-      if (section) selectPart(section.element, section.concept);
+      // A click on the section's picture opens its form at the picture.
+      const picture = event.target instanceof Element && event.target.closest("img, picture");
+      if (section) selectPart(section.element, section.concept, picture ? "picture" : null);
       return;
     }
     // A selected column takes the keys, so Alt and the arrows move it.
