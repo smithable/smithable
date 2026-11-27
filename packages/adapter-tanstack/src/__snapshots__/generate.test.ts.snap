@@ -35577,8 +35577,8 @@ function MyBookingsPage() {
       {w.newOne("booking")}
     </Link>
   );
-  // Import is for admin, staff (by rule; say it with import).
-  const importButton = canCreate && viewer != null && ["admin","staff"].includes(viewer.role) && (
+  // Import is for admin (by rule; say it with import).
+  const importButton = canCreate && viewer != null && ["admin"].includes(viewer.role) && (
     <ImportDialog ui={bookingUi} run={(data) => importBookings({ data })} undo={(id) => undoImportBookings({ data: id })} />
   );
   return (
@@ -37486,7 +37486,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/messages/new.tsx": "09a8fde8 generated",
   "src/routes/my-bookings/$id.tsx": "79f453fa generated",
   "src/routes/my-bookings/-my-bookings-parts.tsx": "c178be52 generated",
-  "src/routes/my-bookings/index.tsx": "0cbe4717 generated",
+  "src/routes/my-bookings/index.tsx": "126a117f generated",
   "src/routes/my-bookings/new.tsx": "574871aa generated",
   "src/routes/posts/$id.tsx": "f83087d3 generated",
   "src/routes/posts/index.tsx": "f4ab3874 generated",
@@ -80993,8 +80993,8 @@ function CatalogPage() {
       {w.newOne("item")}
     </Link>
   );
-  // Import is for admin (by rule; say it with import).
-  const importButton = canCreate && viewer != null && ["admin"].includes(viewer.role) && (
+  // Import is for admin, member (by rule; say it with import).
+  const importButton = canCreate && viewer != null && ["admin","member"].includes(viewer.role) && (
     <ImportDialog ui={itemUi} run={(data) => importItems({ data })} undo={(id) => undoImportItems({ data: id })} />
   );
   return (
@@ -81652,8 +81652,8 @@ function SavedPage() {
       {w.newOne("item")}
     </Link>
   );
-  // Import is for admin (by rule; say it with import).
-  const importButton = canCreate && viewer != null && ["admin"].includes(viewer.role) && (
+  // Import is for admin, member (by rule; say it with import).
+  const importButton = canCreate && viewer != null && ["admin","member"].includes(viewer.role) && (
     <ImportDialog ui={itemUi} run={(data) => importItems({ data })} undo={(id) => undoImportItems({ data: id })} />
   );
   return (
@@ -82582,7 +82582,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/routes/files/$model.$id.$field.$n.ts": "5288014d kit",
   "src/routes/files/$model.$id.$field.ts": "93378bd7 kit",
   "src/routes/health.ts": "362c9904 kit",
-  "src/routes/index.tsx": "9a5dba33 generated",
+  "src/routes/index.tsx": "354ac5e5 generated",
   "src/routes/my-items/$id.tsx": "5e517763 generated",
   "src/routes/my-items/index.tsx": "131555d3 generated",
   "src/routes/my-items/new.tsx": "d513e438 generated",
@@ -82591,7 +82591,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/routes/review/index.tsx": "3fc62105 generated",
   "src/routes/robots[.]txt.ts": "cbf1bff5 generated",
   "src/routes/saved/$id.tsx": "603d45a0 generated",
-  "src/routes/saved/index.tsx": "45a523b2 generated",
+  "src/routes/saved/index.tsx": "463cd68a generated",
   "src/routes/saved/new.tsx": "6599de80 generated",
   "src/routes/sign-in.tsx": "563d1820 generated",
   "src/routes/sitemap[.]xml.ts": "abb491ed generated",
@@ -112752,8 +112752,8 @@ function ComponentsPage() {
       {w.newOne("component")}
     </Link>
   );
-  // Import is for admin, staff (by rule; say it with import).
-  const importButton = canCreate && viewer != null && ["admin","staff"].includes(viewer.role) && (
+  // Import is for admin (by rule; say it with import).
+  const importButton = canCreate && viewer != null && ["admin"].includes(viewer.role) && (
     <ImportDialog ui={componentUi} run={(data) => importComponents({ data })} undo={(id) => undoImportComponents({ data: id })} />
   );
   return (
@@ -115446,7 +115446,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/routes/api/v1/openapi[.]json.ts": "ed462bec generated",
   "src/routes/app-card.tsx": "a74639e0 generated",
   "src/routes/components/$id.tsx": "dc8ee51a generated",
-  "src/routes/components/index.tsx": "144ddb07 generated",
+  "src/routes/components/index.tsx": "0a0b413b generated",
   "src/routes/components/new.tsx": "0fbd3870 generated",
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/history/$address.tsx": "971802d2 generated",

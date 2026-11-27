@@ -621,7 +621,7 @@ export function listParts(
   // Import from a file (A 238, T1688): on a list of its own, for whom importOffer says.
   const offer = within ? undefined : importOffer(page, model, auth);
   const importing = offer && ("all" in offer || offer.roles.length > 0);
-  const importRoles = offer && "roles" in offer ? offer.roles : undefined;
+  const importRoles = importing && "roles" in offer ? offer.roles : undefined;
   // Only the viewer's own records (mine: true), for apps with sign-in.
   const ownOnly = Boolean(!within && auth && hasSignIn(auth) && page.mine);
   // A conversation on each record: its count column and the Unread toggle (conversation.md §1).

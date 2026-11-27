@@ -90,8 +90,10 @@ describe("the examples", () => {
       const model = (ir as SpecIR).models.find((m) => m.name === "Booking") as SpecIR["models"][0];
       return importOffer(p, model, a.auth);
     };
-    // A member may add a booking but reads only their own: no Import on My bookings.
-    expect(offer(spec, "my-bookings")).toEqual({ roles: ["admin", "staff"], byRule: true });
+    // A member may add a booking but reads only their own: no Import on My bookings; staff do
+    // not open that page, so only the administrator. The staff's own list is theirs.
+    expect(offer(spec, "my-bookings")).toEqual({ roles: ["admin"], byRule: true });
+    expect(offer(spec, "bookings")).toEqual({ roles: ["admin", "staff"], byRule: true });
     const keyed = (value: string) =>
       spec
         .split(
@@ -101,6 +103,17 @@ describe("the examples", () => {
     expect(offer(keyed("import: true"), "my-bookings")).toEqual({ all: true, byRule: false });
     expect(offer(keyed("import: false"), "my-bookings")).toEqual({ roles: [], byRule: false });
     expect(offer(keyed("mine: true"), "my-bookings")).toEqual({ roles: [], byRule: true });
+    // A public read of every booking is everyone's to a member too; the staff's list stays theirs,
+    // since a member does not open it.
+    const everyones = auth.split("    - Session\n").join("    - Session\n    - Booking\n");
+    const open = (page: string) => {
+      const { ir, auth: a } = load(spec, everyones);
+      const p = (ir as SpecIR).pages.find((x) => x.id === page) as SpecIR["pages"][0];
+      const model = (ir as SpecIR).models.find((m) => m.name === "Booking") as SpecIR["models"][0];
+      return importOffer(p, model, a.auth);
+    };
+    expect(open("my-bookings")).toEqual({ roles: ["admin", "member"], byRule: true });
+    expect(open("bookings")).toEqual({ roles: ["admin", "staff"], byRule: true });
     // Without sign-in nothing is anyone's own: everyone who may add one.
     const { ir } = load(spec, auth);
     const p = (ir as SpecIR).pages.find((x) => x.id === "bookings") as SpecIR["pages"][0];

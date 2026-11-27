@@ -29,7 +29,11 @@ const route = (files: ReturnType<typeof generate>, page: string) =>
 test("a member who reads only their own bookings is not offered Import; the roles that read everyone's are (T1688)", () => {
   const list = route(generate(bookingSpec), "my-bookings");
   expect(list).toContain("ImportDialog");
-  expect(list).toMatch(/\["admin", ?"staff"\]\.includes\(viewer\.role\)/);
+  // Staff do not open My bookings: of those who read everyone's, only the administrator there.
+  expect(list).toMatch(/\["admin"\]\.includes\(viewer\.role\)/);
+  expect(route(generate(bookingSpec), "bookings")).toMatch(
+    /\["admin", ?"staff"\]\.includes\(viewer\.role\)/,
+  );
 });
 
 test("the key offers Import to everyone who may add one, or to no one (T1688)", () => {

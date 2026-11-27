@@ -95,8 +95,9 @@ export function modelAccess(model: ModelIR, auth: AuthIR): ModelAllowed {
 /**
  * Who a list page offers Import from a file to (T1688): `import: true` everyone who may create a
  * record (`all`), `false` nobody; unsaid, the roles that may create one and whose rule for the
- * list is not scoped to their own records (they read everyone's, and the page is not `mine`), or
- * everyone who may create when the app has no sign-in. A visitor of an app with sign-in gets it
+ * list is not scoped to their own records (they read everyone's, by a grant or a public read with
+ * no `where`, and the page is not `mine`) and who open the page, or everyone who may create when
+ * the app has no sign-in. A visitor of an app with sign-in gets it
  * only from the key. The server checks each record's create as before: this is the offer.
  */
 export function importOffer(
@@ -109,8 +110,12 @@ export function importOffer(
   if (!auth || auth.signIn === "none") return { all: true, byRule: true };
   if (page.mine) return { roles: [], byRule: true };
   const access = modelAccess(model, auth);
+  const everyones = access.read.public && !access.read.where;
+  const opens = pageAccess(page, auth).roles;
   return {
-    roles: access.create.roles.filter((r) => access.read.roles.includes(r)),
+    roles: access.create.roles.filter(
+      (r) => (everyones || access.read.roles.includes(r)) && opens.includes(r),
+    ),
     byRule: true,
   };
 }
