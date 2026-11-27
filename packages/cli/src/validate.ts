@@ -14,6 +14,7 @@ import {
   formatDiagnostic,
   formatsOf,
   hasErrors,
+  importOffer,
   initialsOf,
   LANGUAGES,
   modelAccess,
@@ -617,6 +618,19 @@ export function explainSpec(
   // How a list page's filter on a reference is picked (A 208): the ux file's word, else the count.
   for (const page of ir.pages) {
     const model = ir.models.find((m) => m.name === pageModel(page));
+    // Who the list offers Import from a file to (T1688): the import key, else the rule.
+    if (model && page.pattern.kind === "crud") {
+      const offer = importOffer(page, model, auth);
+      const who =
+        "all" in offer
+          ? "everyone who may add one"
+          : offer.roles.length
+            ? offer.roles.join(", ")
+            : "nobody";
+      lines.push(
+        `${page.id} import: offered to ${who} (${offer.byRule ? "by rule: the roles that may add one and see everyone's records in the list; say it with import" : "import"})`,
+      );
+    }
     // The cards' cover: the ux file's, else the model's first picture field.
     const look = ux?.pages[page.id];
     const cover = look?.view === "cards" && model ? cardCover(model, look) : undefined;

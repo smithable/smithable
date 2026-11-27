@@ -868,6 +868,44 @@ const setExport: Operation<{ page: string; offered: "on" | "off" }> = {
   },
 };
 
+const setImport: Operation<{ page: string; offered: "on" | "off" | "rule" }> = {
+  name: "setImport",
+  sets: ["smithable.yml:pages.*.import"],
+  summary:
+    "Offer Import from a file on a list page to everyone who may add a record (on), to nobody (off), or by rule (rule: the roles that may add one and see everyone's records in the list).",
+  schema: {
+    type: "object",
+    required: ["page", "offered"],
+    additionalProperties: false,
+    properties: {
+      page: refTo({ ref: "page", label: "Page" }),
+      offered: {
+        type: "string",
+        enum: ["on", "off", "rule"],
+        description:
+          "on: everyone who may add a record; off: nobody; rule: the roles that may add one and see everyone's records in the list.",
+      },
+    },
+  },
+  positional: ["page", "offered"],
+  describe: ({ page, offered }) =>
+    offered === "rule"
+      ? `Offer Import on ${page} by rule`
+      : offered === "off"
+        ? `Offer no Import on ${page}`
+        : `Offer Import on ${page} to everyone who may add a record`,
+  destructive: () => false,
+  apply({ spec }, { page, offered }, ir) {
+    const p = ir.pages.find((x) => x.id === page);
+    if (!p) throw new OperationError(`There is no page named "${page}".`);
+    if (p.pattern.kind !== "crud") throw new OperationError(`${page} is not a list page.`);
+    const path = ["pages", page, "import"];
+    if (spec.has(path)) spec.remove(path);
+    if (offered !== "rule") spec.add(["pages", page], "import", offered === "on");
+    return [];
+  },
+};
+
 const setFavorites: Operation<{ page: string; mode?: "on" | "only" | "off" }> = {
   name: "setFavorites",
   sets: ["smithable.yml:pages.*.favorites"],
@@ -1520,6 +1558,7 @@ export const crudOperations: AnyOperation[] = [
   setSortable,
   setFavorites,
   setExport,
+  setImport,
   setContact,
   setDocument,
   setMine,

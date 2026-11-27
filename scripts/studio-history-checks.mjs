@@ -37,7 +37,10 @@ export async function checkStudioHistory(page, phone, evidence) {
   await page.route("**/api/project", (route) => route.fulfill({ json: hosted }));
   await page.reload();
   await (await toolbarAction(page, "Changes")).click();
-  await rows.nth(1).getByText("Preview unavailable here", { exact: true }).waitFor();
+  await rows
+    .nth(1)
+    .getByText("Earlier versions cannot be previewed here yet", { exact: true })
+    .waitFor();
   assert.equal(await history.getByRole("button").count(), 0);
 
   await page.unrouteAll({ behavior: "wait" });

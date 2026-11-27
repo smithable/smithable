@@ -700,6 +700,8 @@ export function operationFor(
           return op(list, { fields: value ?? [] });
         if (own === "export" && (value === undefined || value === false))
           return op("setExport", { offered: value === false ? "off" : "on" });
+        if (own === "import" && (value === undefined || typeof value === "boolean"))
+          return op("setImport", { offered: value === undefined ? "rule" : value ? "on" : "off" });
         if (
           own === "favorites" &&
           (value === undefined || typeof value === "boolean" || value === "only")

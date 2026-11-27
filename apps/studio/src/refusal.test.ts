@@ -26,3 +26,13 @@ test("a refusal loses the files' language in Builder", () => {
     'Customer already has a field named "email".',
   );
 });
+
+test("files changed outside Studio are named in plain words, never 'commit or discard' (T1697)", () => {
+  const said = plainRefusal(
+    "Commit or discard these changes first:\n  ?? public/media/\n   M src/custom/a.ts\n",
+  );
+  expect(said).toBe(
+    "public/media/, src/custom/a.ts changed outside Studio. This would take those edits along, so it waits until they are saved as a change or put back.",
+  );
+  expect(said).not.toMatch(/commit|discard/i);
+});

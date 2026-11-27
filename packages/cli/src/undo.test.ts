@@ -1,8 +1,10 @@
+import { createHash } from "node:crypto";
 import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, expect, test } from "vitest";
 import { git } from "./git.js";
+import { syncMedia } from "./media-cache.js";
 import { captureIo } from "./test-io.js";
 import { numberedChanges, undoableChanges, undoChange, undoNumbers } from "./undo.js";
 
@@ -222,4 +224,30 @@ test("a guarded picker undo returns its post-undo revision while holding the loc
     }),
   ).toBe(0);
   expect(returned).toBe(projectRevision(dir));
+});
+
+test("in a project whose .gitignore predates the picture cache, a stored picture's files do not stop Undo (T1697)", async () => {
+  const asset = "m_01hz8k3q4r5s6t7v8w9x0y1z2a";
+  const content = `smithableContent: 0.1\npages:\n  customers:\n    hero:\n      title: Roofs\n      image: { asset: ${asset}, alt: A roof, width: 1600, widths: [480] }\n`;
+  // Made before 2026-11-24: the .gitignore says nothing of public/media.
+  const { dir, shas } = history([
+    { "smithable.yml": base, ".gitignore": "node_modules\n", "smithable.content.yml": content },
+    withPhone,
+  ]);
+  dirs.push(dir);
+  const sha = (text: string) => createHash("sha256").update(text).digest("hex");
+  const files: Record<string, string> = { "w480.webp": "small", "w1600.webp": "large" };
+  // The hosted workspace fetches the picture after the change, as Studio does.
+  await syncMedia(dir, {
+    record: async () => Object.fromEntries(Object.entries(files).map(([k, v]) => [k, sha(v)])),
+    fetch: async (_, variant) => {
+      const text = files[variant] ?? "";
+      return { bytes: new TextEncoder().encode(text), sha256: sha(text) };
+    },
+  });
+  expect(existsSync(join(dir, "public/media", asset, "w480.webp"))).toBe(true);
+  const io = captureIo();
+  expect(await undoChange(dir, io, shas[0] ?? "", { yes: true })).toBe(0);
+  expect(io.stderr).not.toContain("Commit or discard");
+  expect(git(dir, ["status", "--porcelain"]).out.trim()).toBe("");
 });

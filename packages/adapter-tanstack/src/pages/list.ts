@@ -6,6 +6,7 @@ import {
   type FieldIR,
   filterThrough,
   humanize,
+  importOffer,
   kebab,
   type ModelIR,
   type PageIR,
@@ -617,6 +618,10 @@ export function listParts(
     // One on the rows picked is in the selection bar, not a button of its own (A 171).
     ir.actions.filter((a) => a.name === name && a.custom && !a.rows),
   );
+  // Import from a file (A 238, T1688): on a list of its own, for whom importOffer says.
+  const offer = within ? undefined : importOffer(page, model, auth);
+  const importing = offer && ("all" in offer || offer.roles.length > 0);
+  const importRoles = importing && "roles" in offer ? offer.roles : undefined;
   // Only the viewer's own records (mine: true), for apps with sign-in.
   const ownOnly = Boolean(!within && auth && hasSignIn(auth) && page.mine);
   // A conversation on each record: its count column and the Unread toggle (conversation.md §1).
@@ -773,8 +778,7 @@ export function listParts(
     !within &&
     (many.length > 0 || onRows.length > 0 || merges.length > 0 || Boolean(auth && hasSignIn(auth)));
   if (selecting && page.export !== false) view.add("#/kit/csv", "csvName", "csvOf", "download");
-  // Import from a file (A 238), on a list of its own.
-  if (!within)
+  if (importing)
     view
       .add("#/kit/ImportDialog", "ImportDialog")
       .add(importNames(model).module, importNames(model).run, importNames(model).undo);
@@ -859,7 +863,7 @@ export function listParts(
     const totalled = own.length > 0;
     return `function ${component}() {
   const { ${scrolling ? "rows: first" : "rows"}, canCreate${within ? ", more" : scrolling ? ", total, size" : ", total, page: at, size"}${totalled ? ", totals" : ""}${filtering?.options.length ? ", options" : ""}${favorites ? ", saved" : ""}${threadField ? ", threads" : ""} } = ${api}.useLoaderData();${filtering ? `\n  const { q, sort, ${favorites === "all" ? "view, " : ""}page: _page, ...values } = ${api}.useSearch();` : searchable ? `\n  const { q } = ${api}.useSearch();` : ""}
-${actions.length || offered.length || selecting || filtering?.mine || filtering?.unread || favorites || trash ? `  const { viewer } = ${api}.useRouteContext();\n` : ""}  const navigate = useNavigate(${within ? "" : `{ from: ${JSON.stringify(path)} }`});${favorites || selecting || trash ? "\n  const router = useRouter();" : ""}${
+${actions.length || offered.length || importRoles || selecting || filtering?.mine || filtering?.unread || favorites || trash ? `  const { viewer } = ${api}.useRouteContext();\n` : ""}  const navigate = useNavigate(${within ? "" : `{ from: ${JSON.stringify(path)} }`});${favorites || selecting || trash ? "\n  const router = useRouter();" : ""}${
       scrolling
         ? `
   // The cards loaded after the first page, as the reader scrolls; a new search starts again.
@@ -899,10 +903,11 @@ ${actions.length || offered.length || selecting || filtering?.mine || filtering?
       {w.newOne(${JSON.stringify(n.label.toLowerCase())})}
     </Link>
   );${
-    within
+    !importing
       ? ""
       : `
-  const importButton = canCreate && (
+  // Import is for ${importRoles ? importRoles.join(", ") : "everyone who may add one"} (${offer?.byRule ? "by rule; say it with import" : "import"}).
+  const importButton = canCreate${importRoles ? ` && viewer != null && ${JSON.stringify(importRoles)}.includes(viewer.role)` : ""} && (
     <ImportDialog ui={${n.ui}} run={(data) => ${importNames(model).run}({ data })} undo={(id) => ${importNames(model).undo}({ data: id })} />
   );`
   }${actions
@@ -919,7 +924,7 @@ ${actions.length || offered.length || selecting || filtering?.mine || filtering?
     <>
       <PageHeader${within ? "" : `\n        page=${attr(page.id)}`}
         ${within ? `title={${n.ui}.pluralLabel}` : t.pageHeader(page.id)}
-        actions={${actions.length || !within ? `<>${actions.map((a) => `{${a.name}Button}`).join("")}${within ? "" : "{importButton}"}{newButton}</>` : "newButton"}}
+        actions={${actions.length || !within ? `<>${actions.map((a) => `{${a.name}Button}`).join("")}${importing ? "{importButton}" : ""}{newButton}</>` : "newButton"}}
       />
 ${
   searchable && search
