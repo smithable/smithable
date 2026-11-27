@@ -3498,7 +3498,10 @@ async function rulesFlow(base) {
     // offered on the customer's page.
     await open(page, `${base}/customers`);
     await page.getByRole("button", { name: "Nordic Timber Oy" }).first().click();
-    await page.getByRole("button", { name: "Thank" }).click();
+    // On the record page, and its button alone: more than one button there matches "Thank".
+    await page.waitForURL(/\/customers\/[^/?]+/);
+    await page.getByRole("heading", { name: "Nordic Timber Oy" }).waitFor({ timeout: 10000 * P });
+    await page.getByRole("button", { name: "Thank", exact: true }).click();
     await page
       .getByRole("checkbox", { name: "Thanked", checked: true })
       .waitFor({ timeout: 10000 * P });

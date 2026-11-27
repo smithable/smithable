@@ -6,6 +6,8 @@
 #                                             new files, .gitignore respected), as a commit of it all would have
 #   scripts/mark-verified.sh [--lint] [BEFORE] write the marker for that tree; with BEFORE (the --tree of
 #                                             the run's start), only when nothing changed during the run
+#   scripts/mark-verified.sh --gate [BEFORE]  gate.sh's alone: the same marker, and verified/gate/<tree>,
+#                                             which tells a gate that passed from a verify.sh run
 set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
 tree() {
@@ -18,8 +20,8 @@ tree() {
   rm -f "$idx"
 }
 if [ "${1:-}" = --tree ]; then tree; exit 0; fi
-lint=
-if [ "${1:-}" = --lint ]; then lint=lint; shift; fi
+lint= gate=
+if [ "${1:-}" = --lint ]; then lint=lint; shift; elif [ "${1:-}" = --gate ]; then gate=gate; shift; fi
 now=$(tree)
 if [ -n "${1:-}" ] && [ "$1" != "$now" ]; then
   echo "mark-verified: the files changed during the run (a generated file, or an edit): no marker. Commit and run again." >&2
@@ -30,4 +32,10 @@ mkdir -p "$dir/lint"
 date -u +%FT%TZ > "$dir/lint/$now"
 if [ -n "$lint" ]; then echo "mark-verified: lint passed on tree $now."; exit 0; fi
 date -u +%FT%TZ > "$dir/$now"
+if [ -n "$gate" ]; then
+  mkdir -p "$dir/gate"
+  date -u +%FT%TZ > "$dir/gate/$now"
+  echo "mark-verified: the gate passed on tree $now."
+  exit 0
+fi
 echo "mark-verified: lint, build and unit tests passed on tree $now."

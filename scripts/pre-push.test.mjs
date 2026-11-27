@@ -92,6 +92,17 @@ test("the marker is for the files as they will be committed, before the commit",
   assert.equal(r.status, 0, r.stderr);
 });
 
+test("only the gate's marker says a gate passed", () => {
+  const { run } = scratch();
+  const gated = 'test -e ".git/verified/gate/$(git rev-parse "HEAD^{tree}")"';
+  run("echo 'export const a = 10;' > code.ts && git commit -qam change");
+  assert.equal(run("scripts/mark-verified.sh").status, 0);
+  assert.notEqual(run(gated).status, 0);
+  assert.equal(run("scripts/mark-verified.sh --gate").status, 0);
+  assert.equal(run(gated).status, 0);
+  assert.equal(run("git push -q origin c/x").status, 0);
+});
+
 test("a run whose files changed under it writes no marker", () => {
   const { run } = scratch();
   const before = run("scripts/mark-verified.sh --tree").stdout.trim();
