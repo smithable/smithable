@@ -9891,14 +9891,17 @@ for (const [index, example] of examples.entries()) {
               throw new Error(`the change is ${by[0]?.who}'s`);
             return;
           }
-          // A member's booking of the first session (the sample data has none).
+          // A member's booking of the first session (the sample data's are Maja's, in later ones).
           const now = Date.now();
           write(
             dir,
             `insert or ignore into user (id, name, email, role, created_at, updated_at) values ('timer-member', 'Timer Member', 'timer-member@example.com', 'member', ${now}, ${now});
             insert into bookings (session_id, attendee_id, created_at, updated_at) select min(id), 'timer-member', ${now}, ${now} from sessions`,
           );
-          const [booking] = query(dir, "select session_id as session from bookings limit 1");
+          const [booking] = query(
+            dir,
+            "select session_id as session from bookings where attendee_id = 'timer-member' limit 1",
+          );
           if (!booking) throw new Error("no booking to remind of");
           const [{ n: booked }] = query(
             dir,
