@@ -72,6 +72,14 @@ export type Progress = (
   assumptions?: Assumption[],
 ) => void;
 
+/**
+ * Where a description's own making stopped, as one fixed line the hosted service can name: what
+ * the engine printed before it can quote the description, so the service keeps only kinds (T1759).
+ */
+export function stoppedLine(stage: "starting" | "preparing" | "drafting" | "building"): string {
+  return `The description's draft stopped while ${stage}.\n`;
+}
+
 /** What decides the install: the same in both means the packages installed here fit. */
 function installed(dir: string): string {
   const pkg = JSON.parse(readFileSync(join(dir, "package.json"), "utf8"));
@@ -299,6 +307,7 @@ export async function replaceProject(
     if (lock) writeFileSync(join(beside, "pnpm-lock.yaml"), lock);
   };
   let said = "";
+  let stage: Parameters<typeof stoppedLine>[0] = "starting";
   // What the build said, for the line it gives when no model is set up (T778).
   let told = "";
   const kept: Io = {
@@ -328,12 +337,19 @@ export async function replaceProject(
             sampleData: false,
             pictureData: Boolean(control.websiteInput),
             maxTokens: control.maxTokens ?? 150_000,
-            onStage: control.stage,
+            onStage: (now: "preparing" | "drafting" | "building") => {
+              stage = now;
+              control.stage?.(now);
+            },
             onAssumptions: control.assumptions,
             onUsage: control.usage,
             onDiagnostic: control.diagnostic,
           }
-        : {}),
+        : {
+            onStage: (now: "preparing" | "drafting" | "building") => {
+              stage = now;
+            },
+          }),
       onDraft: (files, assumptions) => {
         if (!control) progress("building", files, assumptions);
       },
@@ -343,26 +359,48 @@ export async function replaceProject(
       return made;
     }
     if (made !== 0) {
-      io.err(said);
-      fresh();
-      progress("building");
+      const stopped = stage;
+      // The draft's own failure right before the line that says so, not before the starter's
+      // build: the service reads only the lines just above it (T1759). Said also when the
+      // starter fails or throws.
+      // Whether the starter's last error output ended its line: the marker, on the same stream,
+      // is a line of its own.
+      let ended = true;
+      const starterIo: Io = {
+        out: io.out,
+        err: (text) => {
+          if (text) ended = text.endsWith("\n");
+          io.err(text);
+        },
+      };
+      const tell = () => {
+        if (!ended) io.err("\n");
+        if (said) io.err(said.endsWith("\n") ? said : `${said}\n`);
+        io.err(stoppedLine(stopped));
+      };
       const starter = to.starter ?? "crm";
       const why = /allowance/i.test(said)
         ? "the AI allowance is used up"
         : said.includes("No model is available")
           ? "no AI model is available"
           : "the AI model did not produce a working app from it";
-      // The starter as it is, kept as private as the description asks (T778), never plain.
-      made = await create(beside, io, starter, {
-        ...options,
-        ...(to.describe
-          ? {
-              describe: to.describe,
-              yes: true,
-              starterOnly: why.replace(/^./, (c) => c.toUpperCase()),
-            }
-          : {}),
-      });
+      try {
+        fresh();
+        progress("building");
+        // The starter as it is, kept as private as the description asks (T778), never plain.
+        made = await create(beside, starterIo, starter, {
+          ...options,
+          ...(to.describe
+            ? {
+                describe: to.describe,
+                yes: true,
+                starterOnly: why.replace(/^./, (c) => c.toUpperCase()),
+              }
+            : {}),
+        });
+      } finally {
+        tell();
+      }
       if (made !== 0) return made;
       io.err(`Could not make the app from the description (${why}); starting from ${starter}.\n`);
       mkdirSync(join(beside, "data", ".smithable"), { recursive: true });
