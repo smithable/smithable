@@ -114,12 +114,13 @@ running() {
 # (GATE_CHANGED, newline-separated, stands in for a test of the plan).
 changes() {
   if [ -n "${GATE_CHANGED:-}" ]; then printf '%s\n' "$GATE_CHANGED"; return; fi
-  local base tracked
+  local base tracked untracked
   # Half a list could plan too little: when the branch's own changes cannot be read, say nothing,
   # which plans everything.
   base=$(git merge-base HEAD origin/main 2>/dev/null) || return 0
   tracked=$(git diff --name-only --no-renames "$base" 2>/dev/null) || return 0
-  { printf '%s\n' "$tracked"; git ls-files --others --exclude-standard 2>/dev/null; } | sed '/^$/d' | sort -u
+  untracked=$(git ls-files --others --exclude-standard 2>/dev/null) || return 0
+  printf '%s\n' "$tracked" "$untracked" | sed '/^$/d' | sort -u
 }
 
 # Which suites a change needs (Johan, 2026-10-22: speed first, nothing tested for nothing). Lint,
@@ -300,7 +301,7 @@ if [ -n "${GATE_RUN:-}" ]; then
   bash -c "$GATE_RUN"
 else
   planned() {
-    p=$(plan)
+    p=$(plan) || return 1
     apps=${p#apps=}; apps=${apps%% studio=*}
     studio=${p#*studio=}; studio=${studio%% visual=*}
     visual=${p#*visual=}; visual=${visual%% why=*}

@@ -7,7 +7,7 @@
 // hydration waited past its time (2026-10-18); the self-hosted CI runner runs three, since it
 // shares the machine with the sessions' own work.
 import { spawn } from "node:child_process";
-import { readdirSync, rmSync, writeFileSync } from "node:fs";
+import { readdirSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { cpus } from "node:os";
 import { join } from "node:path";
 import { appBases } from "./ports.mjs";
@@ -101,8 +101,13 @@ if (!failed.length) passed(examples.join(" "));
 const note = process.env.GATE_FAILED_FILE;
 if (note)
   try {
-    rmSync(note, { force: true });
-    if (failed.length) writeFileSync(note, `${failed.join("\n")}\n`);
+    // Renamed into place: a run cut off here leaves the earlier note whole.
+    if (failed.length) {
+      // A cut-off run's leftover may be another user's: removed, not written over.
+      rmSync(`${note}.new`, { force: true });
+      writeFileSync(`${note}.new`, `${failed.join("\n")}\n`);
+      renameSync(`${note}.new`, note);
+    } else rmSync(note, { force: true });
   } catch (error) {
     console.error(`The failed apps could not be noted for the next run: ${error.message}`);
   }
