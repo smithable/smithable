@@ -166,6 +166,20 @@ jobs:
           echo "$changed"
           echo "::error::The build changed committed files or left new ones: merge origin/main, run pnpm build and commit them."
           exit 1
+      # A pull request type-checks no app otherwise (the full job is off unless labelled). Run too
+      # when the list of changed files is too long to be known.
+      - name: A generated app type-checks
+        if: >-
+          github.event_name == 'pull_request' && (needs.scope.outputs.changed == ''
+          || contains(needs.scope.outputs.changed, 'packages/adapter-tanstack/')
+          || contains(needs.scope.outputs.changed, 'packages/core/')
+          || contains(needs.scope.outputs.changed, 'packages/cli/')
+          || contains(needs.scope.outputs.changed, 'pnpm-lock.yaml')
+          || contains(needs.scope.outputs.changed, 'examples/booking/')
+          || contains(needs.scope.outputs.changed, 'scripts/typecheck-app.sh')
+          || contains(needs.scope.outputs.changed, '.github/workflows/ci.yml'))
+        run: scripts/typecheck-app.sh
+        timeout-minutes: 8
       - run: pnpm test
       - run: pnpm site
 
