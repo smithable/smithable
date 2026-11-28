@@ -289,7 +289,7 @@ function ${component}() {
       <Filters
         filters={${literal(filtering.controls)}}
         values={{ ${filterKeys.map((k) => `${k}: search.${k}`).join(", ")} }}
-        onChange={(_, changed) => navigate({ to: ${JSON.stringify(page.route)}, search: (now) => ({ ...now, ...changed, open: undefined }), replace: true, resetScroll: false })}
+        onChange={(_, change) => navigate({ to: ${JSON.stringify(page.route)}, search: (now) => ({ ...now, ...change(now), open: undefined }), replace: true, resetScroll: false })}
       />`
           : ""
       }

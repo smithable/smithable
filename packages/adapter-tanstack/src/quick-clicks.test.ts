@@ -74,8 +74,8 @@ test("two quick changes to two filters both stay in the address", async () => {
     values: {},
     sorts: [{ value: "name", label: "Name" }],
     // As a generated list page does it.
-    onChange: (_: unknown, changed: Props) => {
-      address = { ...address, ...changed, page: undefined };
+    onChange: (_: unknown, change: (now: Props) => Props) => {
+      address = { ...address, ...change(address), page: undefined };
     },
   });
   const chips = (name: string) =>
@@ -84,4 +84,36 @@ test("two quick changes to two filters both stay in the address", async () => {
   chips("room")("false");
   handler(drawn, (e) => e.type === "select", "onChange")({ target: { value: "name" } });
   expect(address).toEqual({ q: "yoga", level: "true", room: "false", sort: "name" });
+});
+
+test("two quick clicks on chips of one filter both count, over the page's default", async () => {
+  const { Filters } = (await import(filtersPath)) as { Filters: Component };
+  let address: Props = {};
+  const options = ["a", "b", "c"].map((value) => ({ value, label: value }));
+  const drawn = Filters({
+    filters: [{ name: "level", label: "Level", kind: "chips", chips: true, options }],
+    values: {},
+    defaults: { level: "a" },
+    onChange: (_: unknown, change: (now: Props) => Props) => {
+      address = { ...address, ...change(address) };
+    },
+  });
+  // The chips are drawn by a component of their own inside the filters.
+  const field = found(
+    drawn,
+    (e) => (e.props?.filter as Props | undefined)?.name === "level",
+  )[0] as Element;
+  const chips = found((field.type as Component)(field.props), (e) => e.type === "button");
+  const click = (at: number) => ((chips[at] as Element).props.onClick as () => void)();
+  click(1);
+  click(2);
+  expect(address).toEqual({ level: "a,b,c" });
+  // The default's own chip was drawn pressed: its click takes it out, and only it.
+  click(0);
+  expect(address).toEqual({ level: "b,c" });
+  // The same chip twice is where it started (a chip added again goes last).
+  click(1);
+  expect(address).toEqual({ level: "c" });
+  click(1);
+  expect(address).toEqual({ level: "c,b" });
 });

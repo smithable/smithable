@@ -1,5 +1,5 @@
 id: quick-clicks
-title: Two quick clicks, on two filters or on the calendar's next or previous arrow, counted only the second.
+title: Two quick clicks, on filters, on their chips or on the calendar's next or previous arrow, counted only the second.
 severity: fix
 exposure: none
 introduced: unknown
