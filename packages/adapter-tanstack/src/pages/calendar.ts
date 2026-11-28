@@ -279,7 +279,8 @@ ${guard(`pageAccess[${JSON.stringify(page.id)}]`)}${ctx.t.head(page)}  validateS
 function ${component}() {
   const { items, canCreate, canOpen${laneModel ? ", lanes" : ""}${filtering?.options.length ? ", options" : ""} } = Route.useLoaderData();
   const search = Route.useSearch();
-  const navigate = useNavigate();
+  // From this page: a next address built from the one in force is typed by this page's search.
+  const navigate = useNavigate({ from: ${JSON.stringify(indexPath(page.route))} });
   return (
     <>
       <PageHeader page=${attr(page.id)} ${t.pageHeader(page.id)} />${
@@ -288,7 +289,7 @@ function ${component}() {
       <Filters
         filters={${literal(filtering.controls)}}
         values={{ ${filterKeys.map((k) => `${k}: search.${k}`).join(", ")} }}
-        onChange={(next) => navigate({ to: ${JSON.stringify(page.route)}, search: { ...search, ...next, open: undefined }, replace: true, resetScroll: false })}
+        onChange={(next) => navigate({ to: ${JSON.stringify(page.route)}, search: (now) => ({ ...now, ...next, open: undefined }), replace: true, resetScroll: false })}
       />`
           : ""
       }

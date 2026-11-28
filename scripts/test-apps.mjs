@@ -567,6 +567,11 @@ async function calendarFlow(base) {
     await moved(thisWeek);
     if (!page.url().includes("time=morning")) throw new Error("Next dropped the time of day");
     await page.getByRole("button", { name: "Any time", exact: true }).click();
+    // The address first, then the button drawn chosen: the next click starts from the page as it is.
+    await page.waitForURL((url) => !url.searchParams.has("time"));
+    await page
+      .locator('[data-part="time-of-day"] button[aria-pressed="true"]', { hasText: "Any time" })
+      .waitFor({ timeout: 10000 * P });
     // The page's own filters (A 215 5b): a class type's chip shows only its classes, in the address.
     const types = page.locator('[data-kit="filters"] fieldset', {
       has: page.locator("legend", { hasText: "Class type" }),
@@ -596,6 +601,18 @@ async function calendarFlow(base) {
       throw new Error("Previous dropped the class type");
     await types.getByRole("button", { name: chosen }).click();
     await page.waitForURL((url) => !url.search.includes("classType="));
+    // Two quick clicks, the second before the page is drawn again, keep both choices (T1470): each
+    // builds its address from the one in force, not the one the page was drawn with.
+    await page.getByRole("button", { name: "Morning", exact: true }).click();
+    await types.getByRole("button", { name: chosen }).click();
+    await page.waitForURL(
+      (url) => url.searchParams.get("time") === "morning" && url.searchParams.has("classType"),
+    );
+    await page.getByRole("button", { name: "Any time", exact: true }).click();
+    await types.getByRole("button", { name: chosen }).click();
+    await page.waitForURL(
+      (url) => !url.searchParams.has("time") && !url.searchParams.has("classType"),
+    );
     await page.getByRole("button", { name: "Previous" }).click();
     await page.waitForFunction(
       (text) => [...document.querySelectorAll("h2")].some((h) => h.textContent === text),
