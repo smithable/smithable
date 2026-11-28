@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawn, spawnSync } from "node:child_process";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
@@ -132,4 +132,59 @@ test("only CI's gate skips lint and the units, and only when told", () => {
   assert.match(plan(changed, { SESSION: "ci", GATE_BASICS_DONE: "1" }), /units are skipped/);
   assert.doesNotMatch(plan(changed, { GATE_BASICS_DONE: "1" }), /skipped/);
   assert.doesNotMatch(plan(changed, { SESSION: "ci" }), /skipped/);
+});
+
+test("a format error in a changed file stops a heavy run before it queues (T1780)", () => {
+  const dir = mkdtempSync(join(tmpdir(), "smithable-gate-lint-"));
+  try {
+    const env = Object.fromEntries(
+      Object.entries(process.env).filter(([k]) => !k.startsWith("GIT_")),
+    );
+    const repo = join(dir, "repo");
+    const home = join(dir, "home");
+    mkdirSync(join(repo, "node_modules/.bin"), { recursive: true });
+    symlinkSync(
+      fileURLToPath(new URL("../node_modules/.bin/biome", import.meta.url)),
+      join(repo, "node_modules/.bin/biome"),
+    );
+    const git = (...args) =>
+      assert.equal(
+        spawnSync("git", ["-C", repo, "-c", "user.name=t", "-c", "user.email=t@t", ...args], {
+          env,
+        }).status,
+        0,
+        args.join(" "),
+      );
+    const bad = "export const a    =  1\n";
+    writeFileSync(join(repo, "biome.json"), "{}\n");
+    writeFileSync(join(repo, ".gitignore"), "node_modules\n");
+    writeFileSync(join(repo, "old.js"), bad);
+    git("init", "-q");
+    git("add", "-A");
+    git("commit", "-qm", "main");
+    git("update-ref", "refs/remotes/origin/main", "HEAD");
+    const run = (session = "t") =>
+      spawnSync("bash", [gate], {
+        cwd: repo,
+        env: { ...env, GATE_HOME: home, SESSION: session, GATE_RUN: "echo ran-the-job" },
+        encoding: "utf8",
+      });
+    writeFileSync(join(repo, "notes.md"), "notes\n");
+    assert.match(run().stdout, /^ran-the-job$/m, "an old error and a file biome does not read");
+    writeFileSync(join(repo, "new file.js"), bad);
+    for (const commit of [false, true]) {
+      if (commit) {
+        git("add", "-A");
+        git("commit", "-qm", "change");
+      }
+      const r = run();
+      assert.equal(r.status, 1, r.stderr);
+      assert.match(r.stderr, /run pnpm fix/);
+      assert.doesNotMatch(r.stdout, /ran-the-job/);
+    }
+    assert.equal(idle(home), 0, "no ticket was left in the queue");
+    assert.match(run("ci").stdout, /^ran-the-job$/m);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });

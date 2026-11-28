@@ -210,6 +210,22 @@ if [ "${1:-}" = --queue ]; then
   exit 0
 fi
 
+# A format error found after a heavy run costs the run again (T1780): before a place in the queue
+# is taken, for a gate or a GATE_RUN job alike, biome reads the files this worktree changed against
+# main (seconds, not the whole of pnpm lint). CI's runner lints by itself; a folder without biome
+# has nothing to read.
+lint_changed() (
+  cd "$(git rev-parse --show-toplevel 2>/dev/null)" 2>/dev/null || exit 0
+  [ -e biome.json ] && [ -x node_modules/.bin/biome ] || exit 0
+  base=$(git merge-base HEAD origin/main 2>/dev/null) || exit 0
+  { git diff -z --name-only --diff-filter=d "$base"; git ls-files -z --others --exclude-standard; } |
+    xargs -0 -r node_modules/.bin/biome check --files-ignore-unknown=true --no-errors-on-unmatched >/dev/null 2>&1
+)
+if [ "$session" != ci ] && ! lint_changed; then
+  echo "gate.sh: biome finds errors in the files changed here, so nothing was queued or run: run pnpm fix, then pnpm lint." >&2
+  exit 1
+fi
+
 ticket="$queue/$(date +%s%N).$$"
 printf '%s\t%s\n' "$session" "$(pwd)" > "$ticket"
 trap 'rm -f "$ticket"' EXIT
