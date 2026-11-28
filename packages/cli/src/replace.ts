@@ -363,7 +363,20 @@ export async function replaceProject(
       // The draft's own failure right before the line that says so, not before the starter's
       // build: the service reads only the lines just above it (T1759). Said also when the
       // starter fails or throws.
+      // Whether the starter's last word ended its line: the marker is a line of its own.
+      let ended = true;
+      const starterIo: Io = {
+        out: (text) => {
+          if (text) ended = text.endsWith("\n");
+          io.out(text);
+        },
+        err: (text) => {
+          if (text) ended = text.endsWith("\n");
+          io.err(text);
+        },
+      };
       const tell = () => {
+        if (!ended) io.err("\n");
         if (said) io.err(said.endsWith("\n") ? said : `${said}\n`);
         io.err(stoppedLine(stopped));
       };
@@ -377,7 +390,7 @@ export async function replaceProject(
         fresh();
         progress("building");
         // The starter as it is, kept as private as the description asks (T778), never plain.
-        made = await create(beside, io, starter, {
+        made = await create(beside, starterIo, starter, {
           ...options,
           ...(to.describe
             ? {
