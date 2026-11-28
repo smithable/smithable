@@ -4,8 +4,8 @@
 # browser, as `pnpm check`) runs on the self-hosted runner through scripts/gate.sh when the change
 # touches the engine, examples, check scripts, dependencies or this workflow and the repository
 # variable FULL_CI is "true", or, whatever it touches, when the pull request has the label
-# `full-ci` (for a change someone judges risky). With FULL_CI off the local `pnpm check` is the
-# gate for engine changes (CLAUDE.md).
+# `full-ci` (for a change someone judges risky) or `all-apps` (which also runs every app). With
+# FULL_CI off the local `pnpm check` is the gate for engine changes (CLAUDE.md).
 # A pull request of plain documents alone (the list under paths-ignore: design notes, benchmark
 # reports, the Markdown at the root) starts no run: nothing here reads those files. It has no
 # `check` to wait for, so scripts/merge-green.sh merges it itself, after reading the same list from
@@ -126,7 +126,7 @@ jobs:
             full=false; why="$why, but FULL_CI is off and no full-ci or all-apps label: the local pnpm check is the gate"
           fi
           # The label alone is enough, whatever the paths (plain documents start no run at all).
-          if [ "$LABELLED" = true ] && [ "$full" != true ]; then full=true; why="labelled full-ci"; fi
+          if [ "$LABELLED" = true ] && [ "$full" != true ]; then full=true; why="labelled full-ci or all-apps"; fi
           basics=true
           { echo "full=$full"; echo "basics=$basics"; echo "engine=$engine"; echo "studio=$studio"; } >> "$GITHUB_OUTPUT"
           echo "Full check: $full ($why)" | tee -a "$GITHUB_STEP_SUMMARY"
