@@ -188,6 +188,31 @@ test("a change has one patch id, uncommitted with a new file or committed, at wh
   }
 });
 
+test("a branch that merged main has the same patch id locally and on the merged checkout", () => {
+  const { dir, git, write, commit } = repository();
+  try {
+    const id = (env) => patchId(changeEnds(env, dir), dir);
+    write("a.txt", "two\n");
+    commit("work");
+    git("switch", "-q", "main");
+    write("other.txt", "main moved\n");
+    commit("main");
+    git("switch", "-q", "work");
+    git("merge", "-q", "--no-edit", "main");
+    const local = id({ GATE_BASE: "main" });
+    // CI: main moves on again, and the checkout is the head merged into it.
+    const head = git("rev-parse", "HEAD");
+    git("switch", "-q", "main");
+    write("third.txt", "again\n");
+    commit("main again");
+    git("switch", "-qc", "merged");
+    git("merge", "-q", "--no-ff", "--no-edit", head);
+    assert.equal(id({ GATE_BASE: "HEAD^1", GATE_HEAD: head }), local);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test("--check-snapshot stops with exit 3 until the units have passed on the files", () => {
   const { dir, write, commit } = repository();
   try {

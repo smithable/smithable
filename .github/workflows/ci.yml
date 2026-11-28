@@ -93,7 +93,9 @@ jobs:
           elif ! git cat-file -e "$BASE^{commit}" 2>/dev/null; then
             full=true; studio=true; why="no base to compare with"
           else
-            changed=$(git diff --name-only --no-renames "$BASE" HEAD)
+            # HEAD is the pull request merged into main, so against its first parent only the
+            # pull request's own changes show (the event's base commit can lag behind).
+            changed=$(git diff --name-only --no-renames HEAD^1 HEAD)
             # For the full job's plan, whose shallow checkout cannot work it out. A very long
             # list is left out, and the gate then runs everything.
             if [ "$(wc -l <<< "$changed")" -le 500 ] && [ "${#changed}" -le 60000 ]; then
@@ -233,7 +235,7 @@ jobs:
           # What the plan compares and names (scripts/gate-plan.mjs): the pull request's own
           # commits, not their merge with main, so it draws the sample a local gate drew.
           # Every app on a scheduled or hand-started run, and on the label all-apps.
-          GATE_BASE: ${{ github.event.pull_request.base.sha }}
+          GATE_BASE: ${{ github.event_name == 'pull_request' && 'HEAD^1' || '' }}
           GATE_HEAD: ${{ github.event.pull_request.head.sha }}
           GATE_BRANCH: ${{ github.head_ref }}
           GATE_ALL_APPS: ${{ (github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'all-apps')) && '1' || '' }}
