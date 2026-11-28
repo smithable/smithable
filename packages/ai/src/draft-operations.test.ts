@@ -1035,3 +1035,63 @@ test("a website import repairs a draft that only created a privacy page", async 
     message: "The website draft has no landing page.",
   });
 });
+
+test("a first answer whose list cannot be read is asked for once more, with its shape, and counted (T1718)", async () => {
+  const valid = [
+    { op: "setApp", args: { name: "Tasks" } },
+    { op: "addModel", args: { model: "Task", fields: { title: "string!" } } },
+    { op: "addPage", args: { page: "tasks", model: "Task" } },
+  ];
+  const run = async (...answers: unknown[]) => {
+    const prompts: string[] = [];
+    const provider: Provider = {
+      name: "fake",
+      tier: "frontier",
+      location: "eu",
+      price: { input: 0, output: 0 },
+      async complete({ user }) {
+        prompts.push(user);
+        const text = JSON.stringify(answers[Math.min(prompts.length, answers.length) - 1]);
+        return { text, model: "fake", inputTokens: 1, outputTokens: 1 };
+      },
+    };
+    const result = await draftProjectByOperations({
+      description: "A task list",
+      providers: [provider],
+    });
+    return { result, prompts };
+  };
+  // The whole answer in a function call's wrapper (beta's route, T1719): read in one call, its
+  // choices kept.
+  const choice = {
+    part: "app",
+    question: "Who signs in?",
+    chosen: "Only you",
+    options: ["A team"],
+  };
+  const called = await run({ arguments: { operations: valid, assumptions: [choice] } });
+  if (called.result.kind !== "draft") throw new Error(called.result.message);
+  expect(called.prompts).toHaveLength(1);
+  expect(called.result.assumptions).toEqual([choice]);
+  // A list sent as a JSON string is the list.
+  const asString = await run({ operations: JSON.stringify(valid) });
+  expect(asString.result.kind).toBe("draft");
+  expect(asString.prompts).toHaveLength(1);
+  // Under another key: once more, saying so; the second answer is the draft, both counted.
+  const wrapped = await run({ result: { operations: valid } }, { operations: valid });
+  if (wrapped.result.kind !== "draft") throw new Error(wrapped.result.message);
+  expect(wrapped.prompts).toHaveLength(2);
+  expect(wrapped.prompts[1]).toContain(
+    "The previous answer could not be used: no operations key; keys: result.",
+  );
+  expect(wrapped.result.usage).toHaveLength(2);
+  // Twice unusable (an object, never applied): the failure names the shape, once more only.
+  const twice = await run({ operations: { first: valid[0] } }, { operations: "setApp Tasks" });
+  expect(twice.result.kind).toBe("failed");
+  expect(twice.prompts).toHaveLength(2);
+  expect(twice.result.usage).toHaveLength(2);
+  if (twice.result.kind === "failed")
+    expect(twice.result.message).toContain(
+      "The answer has no operations: operations was a string that is not JSON.",
+    );
+});

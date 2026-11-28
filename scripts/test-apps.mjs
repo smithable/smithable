@@ -30,7 +30,9 @@ import { chromium } from "playwright";
 import { seeded, validateSpec, walk } from "../packages/core/dist/index.js";
 import { startFakeModel } from "./fake-model.mjs";
 import { APP_OFFSETS, APP_PORT, checkPorts, claimPort } from "./ports.mjs";
+import { networkOnly, RETRIED, retriedNote } from "./test-apps-first-load.mjs";
 import { upgradeFlow } from "./upgrade-flow.mjs";
+import { walkRecord } from "./walk-record.mjs";
 
 // How long the waits are, times TEST_PATIENCE (the gate sets it from the machine's load, 1 to 3):
 // a check that waits a minute on a quiet machine waits three under load, so a slow answer is
@@ -47,7 +49,11 @@ const examples = process.argv.slice(2).length
       .filter((e) => e.isDirectory())
       .map((e) => e.name);
 
+const passed = walkRecord("scripts/test-apps.mjs");
 const failures = [];
+/** First loads reloaded because only the network broke them (T1707), and the app they were in. */
+let retried = 0;
+let app = "";
 // The secret of the mail address incomingMailFlow adds on the booking site (integrations.md §3).
 process.env.INCOMING_SUPPORT_SECRET = "support-secret";
 // And mailThreadFlow's, with the mailbox a reply goes to (mail-threads.md §4).
@@ -220,22 +226,42 @@ async function open(page, url) {
       .replace(/[A-Za-z0-9_\-+=]{32,}/g, "…");
   const clean = (line) => redact(line.replace(/\s+/g, " ")).slice(0, 160);
   const add = (list, max, line) => list.length < max && list.push(clean(line));
+  // Every failure, uncapped and unshortened: what decides whether only the network broke the load.
+  const events = [];
+  let again = true;
+  const warn = (why) => {
+    again = false;
+    retried++;
+    console.log(`  ${RETRIED} ${app} ${clean(why)}`);
+  };
   const where = (address) => address.split(/[?#]/)[0];
   const onConsole = (m) => {
     // Chrome says each failed request again as "Failed to load resource"; the request lines have it.
     if (m.text().startsWith("Failed to load resource")) return;
-    if (m.type() === "error") add(seen, 10, `error: ${m.text()}`);
+    if (m.type() === "error") {
+      events.push({ kind: "error", text: m.text() });
+      add(seen, 10, `error: ${m.text()}`);
+    }
     // The last four, so a reload late in the load is not crowded out by the first connects.
     else if (m.text().startsWith("[vite]")) vite.push(clean(m.text())) > 4 && vite.shift();
   };
-  const onError = (e) => add(seen, 10, `pageerror: ${e?.message || String(e)}`);
+  const onError = (e) => {
+    events.push({ kind: "error", text: e?.message || String(e) });
+    add(seen, 10, `pageerror: ${e?.message || String(e)}`);
+  };
   // Requests have their own cap, so a run of failed ones never hides a page error. One a reload cut
   // off is not why a page failed.
   const onFailed = (r) => {
     const why = r.failure()?.errorText ?? "";
-    if (!why.includes("ERR_ABORTED")) add(net, 5, `failed: ${where(r.url())} ${why}`);
+    if (why.includes("ERR_ABORTED")) return;
+    events.push({ kind: "request", text: why, script: r.resourceType() === "script" });
+    add(net, 5, `failed: ${where(r.url())} ${why}`);
   };
-  const onResponse = (r) => r.status() >= 400 && add(net, 5, `${r.status()}: ${where(r.url())}`);
+  const onResponse = (r) => {
+    if (r.status() < 400) return;
+    events.push({ kind: "response", text: String(r.status()) });
+    add(net, 5, `${r.status()}: ${where(r.url())}`);
+  };
   // Scripts asked for and not yet answered: a page that never comes alive may wait on one (T1623).
   const scripts = new Map();
   const onRequest = (r) => r.resourceType() === "script" && scripts.set(r, Date.now());
@@ -248,7 +274,13 @@ async function open(page, url) {
   page.on("requestfinished", onSettled);
   page.on("requestfailed", onSettled);
   try {
-    await page.goto(url);
+    await page.goto(url).catch((error) => {
+      const why = String(error?.message ?? error).split("\n")[0];
+      if (!why.includes("ERR_NETWORK_CHANGED") || (events.length && !networkOnly(events)))
+        throw error;
+      warn(why);
+      return page.goto(url);
+    });
     try {
       await page.waitForLoadState("networkidle");
       await hydrated(page);
@@ -258,7 +290,17 @@ async function open(page, url) {
       // said too and still fails the step: a page that needs one is a finding.
       if (error instanceof Error && error.name === "TimeoutError") {
         const [first, ...rest] = error.message.split("\n");
-        const why = await notLive(page, scripts, vite.length > 0, where);
+        const before = [...events];
+        const { why, alive } = await notLive(page, scripts, vite.length > 0, where);
+        // Only the network broke it, and the reload came alive without a further failure: on.
+        if (again && alive && networkOnly(before)) {
+          await page.waitForLoadState("networkidle");
+          await hydrated(page);
+          if (events.length === before.length) {
+            warn(net[0] ?? before[0].text);
+            return;
+          }
+        }
         error.message = [`${first} (${why})`, ...rest].join("\n");
       }
       throw error;
@@ -307,12 +349,14 @@ async function notLive(page, scripts, viteRan, where) {
   // Only the page's own marker is awaited after the reload: a quiet network is not the question.
   const start = Date.now();
   let step = "the reload";
+  let alive = false;
   try {
     await page.reload({ waitUntil: "commit", timeout: 30_000 * P });
     step = "the page after a reload";
     await page
       .locator('body[data-hydrated="true"]')
       .waitFor({ state: "attached", timeout: 30_000 * P });
+    alive = true;
     lines.push(
       `a reload brought it alive in ${Math.round((Date.now() - start) / 1000)} s: the first load needed a reload`,
     );
@@ -321,7 +365,7 @@ async function notLive(page, scripts, viteRan, where) {
       `a reload did not bring it alive: ${step} timed out or failed (${String(e?.message ?? e).split("\n")[0]})`,
     );
   }
-  return `not live: ${lines.join("; ")}`;
+  return { why: `not live: ${lines.join("; ")}`, alive };
 }
 
 /** Chooses a related record in a searchable field: type part of its name, click it. */
@@ -525,6 +569,11 @@ async function calendarFlow(base) {
     await moved(thisWeek);
     if (!page.url().includes("time=morning")) throw new Error("Next dropped the time of day");
     await page.getByRole("button", { name: "Any time", exact: true }).click();
+    // The address first, then the button drawn chosen: the next click starts from the page as it is.
+    await page.waitForURL((url) => !url.searchParams.has("time"));
+    await page
+      .locator('[data-part="time-of-day"] button[aria-pressed="true"]', { hasText: "Any time" })
+      .waitFor({ timeout: 10000 * P });
     // The page's own filters (A 215 5b): a class type's chip shows only its classes, in the address.
     const types = page.locator('[data-kit="filters"] fieldset', {
       has: page.locator("legend", { hasText: "Class type" }),
@@ -554,6 +603,18 @@ async function calendarFlow(base) {
       throw new Error("Previous dropped the class type");
     await types.getByRole("button", { name: chosen }).click();
     await page.waitForURL((url) => !url.search.includes("classType="));
+    // Two quick clicks, the second before the page is drawn again, keep both choices (T1470): each
+    // builds its address from the one in force, not the one the page was drawn with.
+    await page.getByRole("button", { name: "Morning", exact: true }).click();
+    await types.getByRole("button", { name: chosen }).click();
+    await page.waitForURL(
+      (url) => url.searchParams.get("time") === "morning" && url.searchParams.has("classType"),
+    );
+    await page.getByRole("button", { name: "Any time", exact: true }).click();
+    await types.getByRole("button", { name: chosen }).click();
+    await page.waitForURL(
+      (url) => !url.searchParams.has("time") && !url.searchParams.has("classType"),
+    );
     await page.getByRole("button", { name: "Previous" }).click();
     await page.waitForFunction(
       (text) => [...document.querySelectorAll("h2")].some((h) => h.textContent === text),
@@ -3456,7 +3517,10 @@ async function rulesFlow(base) {
     // offered on the customer's page.
     await open(page, `${base}/customers`);
     await page.getByRole("button", { name: "Nordic Timber Oy" }).first().click();
-    await page.getByRole("button", { name: "Thank" }).click();
+    // On the record page, and its button alone: more than one button there matches "Thank".
+    await page.waitForURL(/\/customers\/[^/?]+/);
+    await page.getByRole("heading", { name: "Nordic Timber Oy" }).waitFor({ timeout: 10000 * P });
+    await page.getByRole("button", { name: "Thank", exact: true }).click();
     await page
       .getByRole("checkbox", { name: "Thanked", checked: true })
       .waitFor({ timeout: 10000 * P });
@@ -9272,6 +9336,7 @@ async function browserFlow(dir, base) {
 
 for (const [index, example] of examples.entries()) {
   console.log(`\n${example}`);
+  app = example;
   const dir = join(mkdtempSync(join(tmpdir(), `smithable-${example}-`)), "app");
   dirs.push(dir);
   // Parallel runs (scripts/test-apps-parallel.mjs) give each process its own ports.
@@ -11079,4 +11144,5 @@ if (failures.length) {
   process.exit(1);
 }
 for (const dir of dirs) rmSync(join(dir, ".."), { recursive: true, force: true });
-console.log(`\nAll ${examples.length} example apps passed.`);
+passed(examples.join(" "));
+console.log(`\nAll ${examples.length} example apps passed.${retriedNote(retried)}`);

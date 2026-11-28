@@ -16,7 +16,7 @@ import {
 } from "@smithable/adapter-tanstack";
 import { YamlEditor } from "@smithable/core";
 import { cardFiles } from "./card.js";
-import { exec, execQuiet, type Io, lap, tool } from "./io.js";
+import { exec, execQuiet, type Io, lap, note, tool } from "./io.js";
 import { templateKitRevision } from "./maintenance.js";
 import { taggedContent } from "./picture-style.js";
 import { contextFacts } from "./privacy-review.js";
@@ -220,6 +220,21 @@ function applyOverrides(dir: string): boolean {
 }
 
 /**
+ * Why a change installs its packages, or undefined when it need not: the manifests it changed,
+ * no node_modules, or (a run that does not say what it changed) every step runs.
+ */
+export function installReason(
+  changed: string[] | undefined,
+  hasNodeModules: boolean,
+): string | undefined {
+  if (!changed) return "the changed files are not known";
+  const manifests = changed.filter((p) => p === "package.json" || p === "pnpm-workspace.yaml");
+  if (manifests.length) return `${manifests.join(" and ")} changed`;
+  if (!hasNodeModules) return "node_modules is missing";
+  return undefined;
+}
+
+/**
  * Installs dependencies, then lets the app's own tools create migrations and the route tree.
  * Given the files a change wrote or removed, only the tools whose inputs changed run.
  */
@@ -231,10 +246,10 @@ export async function runTools(
   installed = false,
 ): Promise<number> {
   const needs = (test: (path: string) => boolean) => !changed || changed.some(test);
-  const install =
-    !installed &&
-    (needs((p) => p === "package.json" || p === "pnpm-workspace.yaml") ||
-      !existsSync(join(dir, "node_modules")));
+  const reason = installed
+    ? undefined
+    : installReason(changed, existsSync(join(dir, "node_modules")));
+  const install = reason !== undefined;
   const schema =
     needs((p) => p === "src/db/schema.ts") ||
     (migration?.renames.length ?? 0) > 0 ||
@@ -251,6 +266,8 @@ export async function runTools(
   // In this process, or in the project worker when this one holds a secret (T991).
   const steps = stepsFor(dir, io);
   lap("generate");
+  // Why, beside its time: a hosted change that installed for 24 s said only how long (T1703).
+  if (install) note(`install because ${reason}`);
   if (install && !installing(dir, () => run(["install", "--silent"]))) return 1;
   lap("install");
   if (schema) {

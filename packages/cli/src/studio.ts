@@ -55,7 +55,7 @@ import {
 } from "./generation-job.js";
 import { asMade, git, ownRepository, trailer, uncommittedRefusal } from "./git.js";
 import { hostedLevel } from "./hosted-level.js";
-import { type Io, tool } from "./io.js";
+import { type Io, timed, tool } from "./io.js";
 import { lookContext } from "./look-context.js";
 import { mintLookTicket } from "./look-ticket.js";
 import { mcpServer } from "./mcp.js";
@@ -762,10 +762,23 @@ export async function studio(
   const mediaSource = hostedMediaSource();
   const media = mediaSource ? mediaSyncer(dir, mediaSource, (line) => io.err(line)) : undefined;
   void media?.sync(true);
-  const changed = (data: unknown) =>
+  // Each step's time after a change, with SMITHABLE_TIMINGS (T1703: a hosted change's wait after
+  // its operation was not in the workspace's log).
+  const changed = (data: unknown) => {
+    const since = Date.now();
+    let step = since;
     void settled()
-      .then(() => media?.sync())
-      .then(() => send("changed", data));
+      .then(() => {
+        timed("change: dev server settled", step);
+        step = Date.now();
+        return media?.sync();
+      })
+      .then(() => {
+        if (media) timed("change: media sync", step);
+        send("changed", data);
+        timed("change: preview told to reload", since);
+      });
+  };
   // The sample users (sample-users.md §4–§6), acting in the preview through its door.
   const people = sampleRunner({
     door: doorAt(localPreview, doorSecret, previewHeaders),

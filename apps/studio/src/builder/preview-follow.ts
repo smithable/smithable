@@ -1,4 +1,39 @@
 import { kebab, plural, type SpecIR } from "@smithable/core";
+import { touched } from "../preview";
+
+/**
+ * The page where a change shows, for the receipt's Show me (T1682): a page's text on its page,
+ * a field on its list's form, a kind of record on its list (its own page first, else an admin
+ * view that holds it). None when the change shows nowhere in particular (the menu, the look).
+ */
+export function whereShows(
+  operation: { op: string; args: Record<string, unknown> } | undefined,
+  ir: SpecIR | undefined,
+): string | undefined {
+  if (!ir) return;
+  const plain = (route: string) => (route.includes("$") ? undefined : route);
+  for (const concept of touched(operation)) {
+    const [kind, name = ""] = concept.split(/:(.*)/s);
+    if (kind === "text" || kind === "page") {
+      const id = kind === "page" ? name : name.split(".")[1];
+      const page =
+        name.startsWith("pages.") || kind === "page"
+          ? ir.pages.find((p) => p.id === id)
+          : undefined;
+      if (page) return plain(page.route);
+      continue;
+    }
+    const model = name.split(".")[0];
+    const own = ir.pages.find((p) => p.pattern.kind === "crud" && p.pattern.model === model);
+    if (own)
+      return plain(kind === "field" ? `${own.route === "/" ? "" : own.route}/new` : own.route);
+    const admin = ir.pages.find(
+      (p) => p.pattern.kind === "data" && (p.pattern.all || p.pattern.models.includes(model ?? "")),
+    );
+    if (admin && model)
+      return plain(`${admin.route === "/" ? "" : admin.route}/${kebab(plural(model))}`);
+  }
+}
 
 /** The generated page routes, rather than a guess from a page's name. */
 export function pageForPreviewPath(ir: SpecIR, path: string, languages: string[] = []) {

@@ -1,6 +1,6 @@
 // The fix-file rule (fixes/README.md; smithable-cloud docs/design/fixes-reach-apps.md §3), as CI
-// runs it on pull requests: BASE is the base commit; NO_FIX_FILE "true" when the event's labels
-// have the label; PR_BODY the pull request's text when the run began. With PR, REPO and
+// runs it on pull requests: BASE is the base commit at the event; PR_HEAD the pull request's head;
+// NO_FIX_FILE "true" when the event's labels have the label; PR_BODY the pull request's text when the run began. With PR, REPO and
 // GITHUB_TOKEN the labels and the text are also read as they are now, so a run started again
 // after either changed sees it (A 243). The rule itself, and which part of it passed the change,
 // is packages/cli/src/fix-file-rule.ts. Exits 1 with what the change needs.
@@ -28,9 +28,21 @@ const quietly = (...args) => {
     return undefined;
   }
 };
+// CI checks out the pull request merged into main as it is then, which can hold commits after
+// BASE: that merge's first parent is the base, so only the pull request counts. A checkout that
+// is not the merge of PR_HEAD is refused rather than compared with the wrong commit.
+const merged = !local && Boolean(process.env.PR_HEAD);
+if (merged && quietly("rev-parse", "--verify", "-q", "HEAD^2") !== process.env.PR_HEAD) {
+  console.error(
+    `fix-file rule: the checkout is not ${process.env.PR_HEAD} merged into main; push again for a new run.`,
+  );
+  process.exit(1);
+}
 const base = local
   ? quietly("rev-parse", "--verify", "-q", "origin/main^{commit}")
-  : process.env.BASE;
+  : merged
+    ? quietly("rev-parse", "HEAD^1")
+    : process.env.BASE;
 if (!base) {
   if (!local) console.log("Not a pull request: no fix-file rule.");
   process.exit(0);

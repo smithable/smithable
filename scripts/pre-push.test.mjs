@@ -1,9 +1,18 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { chmodSync, cpSync, mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  cpSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
+import { walkFiles, walkRecord } from "./walk-record.mjs";
 
 // The push guard (.githooks/pre-push, scripts/mark-verified.sh) in a scratch clone with a bare
 // origin. A stand-in docker answers for the scan: FAKE_DOWN makes Docker absent, FAKE_LEAK a finding.
@@ -53,7 +62,8 @@ esac
   writeFileSync(join(work, ".github", "workflows", "ci.yml"), ci);
   writeFileSync(join(work, ".github", "gitleaks.toml"), "[extend]\nuseDefault = true\n");
   cpSync(join(repoRoot, ".githooks"), join(work, ".githooks"), { recursive: true });
-  cpSync(join(repoRoot, "scripts", "mark-verified.sh"), join(work, "scripts", "mark-verified.sh"));
+  for (const script of ["mark-verified.sh", "walk-record.mjs"])
+    cpSync(join(repoRoot, "scripts", script), join(work, "scripts", script));
   writeFileSync(join(work, "code.ts"), "export const a = 1;\n");
   const r = run(`git remote add origin ../origin.git && git add -A && git commit -q -m base &&
     git push -q origin main 2>&1 && git config core.hooksPath .githooks && git switch -q -c c/x`);
@@ -90,6 +100,17 @@ test("the marker is for the files as they will be committed, before the commit",
   run("git add -A && git commit -qm change");
   const r = run("git push -q origin c/x");
   assert.equal(r.status, 0, r.stderr);
+});
+
+test("only the gate's marker says a gate passed", () => {
+  const { run } = scratch();
+  const gated = 'test -e ".git/verified/gate/$(git rev-parse "HEAD^{tree}")"';
+  run("echo 'export const a = 10;' > code.ts && git commit -qam change");
+  assert.equal(run("scripts/mark-verified.sh").status, 0);
+  assert.notEqual(run(gated).status, 0);
+  assert.equal(run("scripts/mark-verified.sh --gate").status, 0);
+  assert.equal(run(gated).status, 0);
+  assert.equal(run("git push -q origin c/x").status, 0);
 });
 
 test("a run whose files changed under it writes no marker", () => {
@@ -160,4 +181,87 @@ test("prepare turns the hook on only on the maintainers' machine and never in CI
   assert.equal(run("git config --get core.hooksPath").stdout.trim(), "");
   assert.equal(prepare().status, 0);
   assert.equal(run("git config --get core.hooksPath").stdout.trim(), ".githooks");
+});
+
+test("a changed walk needs a passing run of that content, or the trailer with a reason", () => {
+  const { run } = scratch();
+  run(`printf 'import "./x";\nimport { step } from "./flow.mjs";\n' > scripts/test-apps.mjs &&
+    echo 'export const step = 1;' > scripts/flow.mjs && git add -A && git commit -qm walk &&
+    scripts/mark-verified.sh`);
+  let r = run("git push -q origin c/x");
+  assert.notEqual(r.status, 0, "a lint and unit mark does not stand in for a run");
+  assert.match(r.stderr, /scripts\/flow\.mjs has changes with no passing run/);
+  assert.match(r.stderr, /Run: pnpm test:apps:one/);
+  assert.match(r.stderr, /Walk-not-run: <reason>/);
+
+  const passed = (ran) =>
+    run(`node -e 'import("./scripts/walk-record.mjs").then((m) =>
+      m.walkRecord("scripts/test-apps.mjs", process.cwd())("${ran}"))'`);
+  assert.equal(passed("booking").status, 0);
+  r = run("git push -q origin c/x");
+  assert.equal(r.status, 0, r.stderr);
+  assert.match(r.stderr, /scripts\/flow\.mjs: this content passed a run \(booking\)/);
+
+  // A later change to the walk needs its own run; the trailer covers the content it was made with.
+  run(
+    "echo 'export const step = 2;' > scripts/flow.mjs && git commit -qam two && scripts/mark-verified.sh",
+  );
+  assert.notEqual(run("git push -q origin c/x").status, 0);
+  run("git commit -q --allow-empty -m 'two, not run' -m 'Walk-not-run: no room for it here'");
+  r = run("git push -q origin c/x");
+  assert.equal(r.status, 0, r.stderr);
+  assert.match(r.stderr, /not run, Walk-not-run: no room for it here/);
+  run(
+    "echo 'export const step = 3;' > scripts/flow.mjs && git commit -qam three && scripts/mark-verified.sh",
+  );
+  assert.notEqual(run("git push -q origin c/x").status, 0);
+});
+
+test("the walks' files are what their entries import, without the support they stand on", () => {
+  const files = (entry) =>
+    walkFiles(entry, (path) => {
+      const file = join(repoRoot, path);
+      return existsSync(file) ? readFileSync(file, "utf8") : undefined;
+    });
+  assert.deepEqual(files("scripts/test-apps.mjs").sort(), [
+    "scripts/test-apps-first-load.mjs",
+    "scripts/test-apps.mjs",
+    "scripts/upgrade-flow.mjs",
+  ]);
+  const studio = files("scripts/test-studio.mjs");
+  for (const file of ["test-studio", "studio-look-checks", "test-public-look", "first-look-checks"])
+    assert.ok(studio.includes(`scripts/${file}.mjs`), file);
+  assert.ok(!studio.includes("scripts/ports.mjs"));
+  // A bare import and one from the folder above count too.
+  const made = {
+    "a/b.mjs": 'import "./c.mjs";\nawait import("../d.mjs");',
+    "a/c.mjs": "",
+    "d.mjs": "",
+  };
+  assert.deepEqual(
+    walkFiles("a/b.mjs", (path) => made[path]),
+    ["a/b.mjs", "a/c.mjs", "d.mjs"],
+  );
+});
+
+test("a walk outside a Git clone passes without a note", () => {
+  const dir = mkdtempSync(join(tmpdir(), "walk-"));
+  writeFileSync(join(dir, "walk.mjs"), "");
+  const before = process.env.GIT_CEILING_DIRECTORIES;
+  process.env.GIT_CEILING_DIRECTORIES = tmpdir();
+  try {
+    walkRecord("walk.mjs", dir)("walk");
+  } finally {
+    if (before === undefined) delete process.env.GIT_CEILING_DIRECTORIES;
+    else process.env.GIT_CEILING_DIRECTORIES = before;
+  }
+});
+
+test("a walk file with letters beyond ASCII in its name is not passed over", () => {
+  const { run } = scratch();
+  run(`printf 'import "./x";\\nimport "./st\u00e9g.mjs";\\n' > scripts/test-apps.mjs &&
+    echo '' > 'scripts/st\u00e9g.mjs' && git add -A && git commit -qm walk && scripts/mark-verified.sh`);
+  const r = run("git push -q origin c/x");
+  assert.notEqual(r.status, 0);
+  assert.match(r.stderr, /scripts\/st\u00e9g\.mjs has changes with no passing run/);
 });

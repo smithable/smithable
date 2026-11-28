@@ -66,6 +66,7 @@ export function Ask({
   questionVisible = true,
   onEdit,
   words,
+  showMe,
   making = false,
   waiting = [],
   selection,
@@ -126,6 +127,8 @@ export function Ask({
   onChangeApplied?: () => void;
   onEdit?: (prefill: Prefill) => void;
   words?: Words;
+  /** Opens the page where a change shows, when it shows on one (the receipt's Show me). */
+  showMe?: ShowMe;
   making?: boolean;
   waiting?: string[];
   /**
@@ -465,6 +468,8 @@ export function Ask({
   // The presentation (smith-first.md §3, §12.1), held by Studio so it outlives the panel's moves.
   const parts = show?.parts ?? [];
   const partsSaid = show?.said ?? 0;
+  /** The greeting announces the parts, so it sits right before them. */
+  const greetsParts = partsSaid > 0;
   const presenting = show?.going ?? false;
   const overlay = stage === "overlay";
   // A question asked again from the ready prompts (smith-first.md §4).
@@ -697,12 +702,19 @@ export function Ask({
       <div ref={scroller} className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4">
         {/* Whenever Smith can be asked, the app being made included (legal-1.0 U6). */}
         {ai && <AiNotice to={ai} eu={Boolean(aiEu)} privacy={aiPrivacy} />}
-        {ready && !making && (
-          <Greeting ready={ready} presenting={partsSaid > 0} sound={speech.canSpeak} />
+        {/* While presenting, the greeting goes right before the parts it announces ("here is what
+            it is, part by part"), so a change made before (the starter's theme) comes first. */}
+        {ready && !making && !greetsParts && (
+          <Greeting ready={ready} presenting={false} sound={speech.canSpeak} />
         )}
         {beta && !making && <BetaLines beta={beta} left={left} />}
         {/* The presentation where it was said: after the lines before it, before the ones since. */}
-        {trace && <Thread trace={trace} said={said} words={words} upTo={show?.startedAt} />}
+        {trace && (
+          <Thread trace={trace} said={said} words={words} showMe={showMe} upTo={show?.startedAt} />
+        )}
+        {ready && !making && greetsParts && (
+          <Greeting ready={ready} presenting sound={speech.canSpeak} />
+        )}
         {ready && !making && show && partsSaid > 0 && (
           <Presentation
             parts={parts.slice(0, partsSaid)}
@@ -721,7 +733,7 @@ export function Ask({
           />
         )}
         {trace && show?.startedAt && (
-          <Thread trace={trace} said={said} words={words} since={show.startedAt} />
+          <Thread trace={trace} said={said} words={words} showMe={showMe} since={show.startedAt} />
         )}
         {reasked && (
           <AssumptionLine
@@ -947,12 +959,14 @@ function Thread({
   trace,
   said,
   words,
+  showMe,
   upTo,
   since,
 }: {
   trace: TraceEntry[];
   said: Said[];
   words?: Words;
+  showMe?: ShowMe;
   /** Only the lines up to this time, or after it. */
   upTo?: string;
   since?: string;
@@ -963,6 +977,8 @@ function Thread({
   // What the newest change verified, under Smith's line for it (change-verified.md §5.2).
   const newest = trace[0] && !trace[0].isUndo && !trace[0].undone ? trace[0].id : "";
   const [verified, setVerified] = useVerified(newest ? [newest] : []);
+  // Where the newest change shows: opened in the preview only when asked (T1682).
+  const showNewest = newest ? showMe?.(trace[0]?.operation) : undefined;
   // Nothing yet: the greeting opens the conversation.
   if (!lines.length) return null;
   return (
@@ -973,6 +989,13 @@ function Thread({
         <li key={`${"id" in line ? line.id : ""}|${line.at}|${line.reply}`} className="space-y-1">
           {line.request && <p className={MINE}>{line.request}</p>}
           <p className={SMITHS}>{line.reply}</p>
+          {"id" in line && line.id === newest && showNewest && (
+            <div className="mr-auto px-3">
+              <Button variant="ghost" onClick={showNewest}>
+                Show me
+              </Button>
+            </div>
+          )}
           {"id" in line && line.id === newest && verified[newest] && (
             <div className="mr-auto max-w-[85%] px-3">
               <Verified
@@ -1688,6 +1711,7 @@ export function PublishState({ data, aup }: { data: "test" | "live"; aup?: strin
 
 /** Words an operation the Builder's way, where it can. */
 export type Words = (op: string, args: Record<string, unknown>) => string | undefined;
+export type ShowMe = (operation: TraceEntry["operation"]) => (() => void) | undefined;
 
 export function ProposalView({
   proposal,
