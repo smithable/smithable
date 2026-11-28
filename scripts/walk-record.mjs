@@ -59,17 +59,19 @@ const records = (cwd) =>
  */
 export function walkRecord(entry, repo = fileURLToPath(new URL("..", import.meta.url))) {
   let blobs = [];
+  let dir;
   try {
     const files = walkFiles(entry, (path) =>
       existsSync(join(repo, path)) ? readFileSync(join(repo, path), "utf8") : undefined,
     );
+    // Asked first: Git hashes a file outside a repository too, and the note would then fail.
+    dir = records(repo);
     blobs = files.map((file) => git(repo, "hash-object", file));
   } catch {
     // Not a clone of Git: there is no push to guard.
   }
   return (ran) => {
     if (!blobs.length) return;
-    const dir = records(repo);
     mkdirSync(dir, { recursive: true });
     for (const blob of blobs)
       appendFileSync(join(dir, blob), `${ran}\t${new Date().toISOString()}\n`);
@@ -82,8 +84,10 @@ export function walkRecord(entry, repo = fileURLToPath(new URL("..", import.meta
  * walk's own files only: a change to the product that breaks an unchanged step is CI's to find.
  */
 export function checkWalks(base, head, cwd = process.cwd()) {
-  const changed = git(cwd, "diff", "--name-only", "--no-renames", "--diff-filter=d", base, head)
-    .split("\n")
+  // -z: a name with letters beyond ASCII comes as it is, not quoted.
+  const names = ["diff", "--name-only", "-z", "--no-renames", "--diff-filter=d", base, head];
+  const changed = git(cwd, ...names)
+    .split("\0")
     .filter(Boolean);
   const read = (path) => {
     try {

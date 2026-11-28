@@ -12,7 +12,7 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
-import { walkFiles } from "./walk-record.mjs";
+import { walkFiles, walkRecord } from "./walk-record.mjs";
 
 // The push guard (.githooks/pre-push, scripts/mark-verified.sh) in a scratch clone with a bare
 // origin. A stand-in docker answers for the scan: FAKE_DOWN makes Docker absent, FAKE_LEAK a finding.
@@ -242,4 +242,26 @@ test("the walks' files are what their entries import, without the support they s
     walkFiles("a/b.mjs", (path) => made[path]),
     ["a/b.mjs", "a/c.mjs", "d.mjs"],
   );
+});
+
+test("a walk outside a Git clone passes without a note", () => {
+  const dir = mkdtempSync(join(tmpdir(), "walk-"));
+  writeFileSync(join(dir, "walk.mjs"), "");
+  const before = process.env.GIT_CEILING_DIRECTORIES;
+  process.env.GIT_CEILING_DIRECTORIES = tmpdir();
+  try {
+    walkRecord("walk.mjs", dir)("walk");
+  } finally {
+    if (before === undefined) delete process.env.GIT_CEILING_DIRECTORIES;
+    else process.env.GIT_CEILING_DIRECTORIES = before;
+  }
+});
+
+test("a walk file with letters beyond ASCII in its name is not passed over", () => {
+  const { run } = scratch();
+  run(`printf 'import "./x";\\nimport "./st\u00e9g.mjs";\\n' > scripts/test-apps.mjs &&
+    echo '' > 'scripts/st\u00e9g.mjs' && git add -A && git commit -qm walk && scripts/mark-verified.sh`);
+  const r = run("git push -q origin c/x");
+  assert.notEqual(r.status, 0);
+  assert.match(r.stderr, /scripts\/st\u00e9g\.mjs has changes with no passing run/);
 });
