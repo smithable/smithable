@@ -123,6 +123,8 @@ export function plan(today, changed, facts) {
       return line(every, true, true, `every app: no snapshot to compare (${error.message})`);
     }
   }
+  const unseen = snapshots && examples.find((e) => !snapshots.head.output.has(e));
+  if (unseen) return line(every, true, true, `every app: the snapshot holds nothing of ${unseen}`);
   const differs = (a, b, name) => a.get(name) !== b.get(name);
   const reached = snapshots
     ? examples.filter((e) => differs(snapshots.base.output, snapshots.head.output, e))
@@ -220,6 +222,8 @@ export function changeEnds(env, cwd) {
 export function patchId({ base, tree }, cwd) {
   const diff = git(
     [
+      "-c",
+      "core.quotePath=true",
       "diff-tree",
       "-r",
       "-p",
@@ -282,11 +286,17 @@ function repositoryFacts(env, cwd, checkSnapshot) {
 function main(argv, env, cwd) {
   const checkSnapshot = argv[0] === "--check-snapshot";
   const today = argv.at(-1);
-  const now = parsePlan(today);
-  if (env.GATE_ALL_APPS === "1")
-    return planLine({ ...now, apps: "all", why: `every app asked for (all-apps): ${now.why}` });
+  parsePlan(today);
   const changed = (env.GATE_CHANGED ?? "").split("\n");
-  return plan(today, changed, repositoryFacts(env, cwd, checkSnapshot));
+  const line = plan(today, changed, repositoryFacts(env, cwd, checkSnapshot));
+  if (env.GATE_ALL_APPS !== "1") return line;
+  // Every app, and whatever else the change itself asks for.
+  const planned = parsePlan(line);
+  return planLine({
+    ...planned,
+    apps: "all",
+    why: `every app asked for (all-apps): ${planned.why}`,
+  });
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {

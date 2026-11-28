@@ -147,15 +147,17 @@ test("no snapshot to compare runs every app; a stale one stops", () => {
 
 const repository = () => {
   const dir = mkdtempSync(join(tmpdir(), "gate-plan-"));
+  // A merge commits too, and a clean machine names nobody.
+  const who = ["-c", "user.name=t", "-c", "user.email=t@example.invalid"];
   const git = (...args) =>
-    execFileSync("git", args, { cwd: dir, encoding: "utf8", stdio: "pipe" }).trim();
+    execFileSync("git", [...who, ...args], { cwd: dir, encoding: "utf8", stdio: "pipe" }).trim();
   const write = (path, text) => {
     mkdirSync(dirname(join(dir, path)), { recursive: true });
     writeFileSync(join(dir, path), text);
   };
   const commit = (message) => {
     git("add", "-A");
-    git("-c", "user.name=t", "-c", "user.email=t@example.invalid", "commit", "-qm", message);
+    git("commit", "-qm", message);
   };
   git("init", "-qb", "main");
   write("a.txt", "one\n");
@@ -246,4 +248,15 @@ test("all-apps asks for every app whatever changed", () => {
     encoding: "utf8",
   });
   assert.match(out, /^apps=all studio=yes visual=no why=every app asked for/);
+});
+
+test("an example the changed tree's snapshot holds nothing of runs everything", () => {
+  const line = run(["packages/core/src/a.ts"], {
+    snapshots: () => {
+      const head = snapshot();
+      head.output.delete("kiosk");
+      return { base: snapshot(), head };
+    },
+  });
+  assert.match(line, /^apps=all studio=yes visual=yes why=every app: .*kiosk/);
 });

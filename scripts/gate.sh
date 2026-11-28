@@ -114,9 +114,12 @@ running() {
 # (GATE_CHANGED, newline-separated, stands in for a test of the plan).
 changes() {
   if [ -n "${GATE_CHANGED:-}" ]; then printf '%s\n' "$GATE_CHANGED"; return; fi
-  local base
-  base=$(git merge-base HEAD origin/main 2>/dev/null || true)
-  { [ -n "$base" ] && git diff --name-only --no-renames "$base"; git ls-files --others --exclude-standard; } 2>/dev/null | sort -u
+  local base tracked
+  # Half a list could plan too little: when the branch's own changes cannot be read, say nothing,
+  # which plans everything.
+  base=$(git merge-base HEAD origin/main 2>/dev/null) || return 0
+  tracked=$(git diff --name-only --no-renames "$base" 2>/dev/null) || return 0
+  { printf '%s\n' "$tracked"; git ls-files --others --exclude-standard 2>/dev/null; } | sed '/^$/d' | sort -u
 }
 
 # Which suites a change needs (Johan, 2026-10-22: speed first, nothing tested for nothing). Lint,
@@ -296,16 +299,21 @@ if [ -n "${GATE_RUN:-}" ]; then
   echo "gate.sh: running $GATE_RUN in the gate's turn."
   bash -c "$GATE_RUN"
 else
-  p=$(plan)
-  apps=${p#apps=}; apps=${apps%% studio=*}
-  studio=${p#*studio=}; studio=${studio%% visual=*}
-  visual=${p#*visual=}; visual=${visual%% why=*}
-  echo "gate.sh: ${p#*why=}: apps $apps, Studio's check $studio, the visual matrix $visual."
+  planned() {
+    p=$(plan)
+    apps=${p#apps=}; apps=${apps%% studio=*}
+    studio=${p#*studio=}; studio=${studio%% visual=*}
+    visual=${p#*visual=}; visual=${visual%% why=*}
+    echo "gate.sh: ${p#*why=}: apps $apps, Studio's check $studio, the visual matrix $visual."
+  }
+  # Planned after the units: they write snapshot entries that are new, and the plan reads them.
+  # With CI's hosted job standing for them, the committed snapshot has already passed there.
   basics() {
     if [ "$basics_done" = no ]; then
-      pnpm lint && pnpm build && pnpm test && pnpm site
+      pnpm lint && pnpm build && pnpm test && pnpm site && planned
     else
       echo "gate.sh: $skipped"
+      planned
       pnpm build && { [ "$studio" = no ] || pnpm site; }
     fi
   }
