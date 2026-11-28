@@ -929,10 +929,12 @@ async function bookingFlow(dir, base) {
     await page.getByText(/^No mats left$/).waitFor({ timeout: 10000 * P });
     if (await page.getByRole("button", { name: "Book a mat" }).count())
       throw new Error("a full session offers a place");
-    // The session's bookings name who booked (the attendee, made the member's own booking).
+    // The session's bookings name who booked (the attendee, made the member's own booking). The
+    // member's, not the sample data's (Maja's, samples/Booking.yml).
+    const mine = "u.email LIKE 'dev-member@%'";
     const [booker] = query(
       dir,
-      "SELECT u.name FROM bookings b JOIN user u ON u.id = b.attendee_id",
+      `SELECT u.name FROM bookings b JOIN user u ON u.id = b.attendee_id WHERE ${mine}`,
     );
     if (!booker) throw new Error("the member's booking names no attendee");
     await page
@@ -965,7 +967,7 @@ async function bookingFlow(dir, base) {
     await panel.getByText(/^Cancel until /).waitFor({ timeout: 10000 * P });
     const [booked] = query(
       dir,
-      "SELECT s.id, s.starts_at AS at FROM sessions s JOIN bookings b ON b.session_id = s.id",
+      `SELECT s.id, s.starts_at AS at FROM sessions s JOIN bookings b ON b.session_id = s.id JOIN user u ON u.id = b.attendee_id WHERE ${mine}`,
     );
     write(dir, `UPDATE sessions SET starts_at = ${Date.now() - 60_000} WHERE id = ${booked.id}`);
     // Its place in the week moved with its start: it is opened by its address (no Close first,
@@ -1043,7 +1045,10 @@ async function bookingsListFlow(dir, base) {
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
   write(
     dir,
+    // The sample data's bookings (Maja's, samples/Booking.yml) are set aside: the flow counts its own.
     `CREATE TABLE kept AS SELECT id, starts_at, class_type_id FROM sessions;
+     CREATE TABLE kept_bookings AS SELECT * FROM bookings;
+     DELETE FROM bookings;
      UPDATE sessions SET starts_at = ${Date.now()}, class_type_id = (SELECT MIN(id) FROM class_types) WHERE id = (SELECT MIN(id) FROM sessions);
      UPDATE sessions SET starts_at = ${Date.now() + 30 * 86400000}, class_type_id = (SELECT MAX(id) FROM class_types) WHERE id = (SELECT MAX(id) FROM sessions);
      INSERT INTO bookings (session_id, created_at, updated_at) SELECT MIN(id), 1, 1 FROM sessions;
@@ -1117,7 +1122,9 @@ async function bookingsListFlow(dir, base) {
       dir,
       `DELETE FROM bookings WHERE created_at = 1;
        UPDATE sessions SET starts_at = (SELECT starts_at FROM kept WHERE kept.id = sessions.id), class_type_id = (SELECT class_type_id FROM kept WHERE kept.id = sessions.id);
-       DROP TABLE kept;`,
+       INSERT INTO bookings SELECT * FROM kept_bookings;
+       DROP TABLE kept;
+       DROP TABLE kept_bookings;`,
     );
     await browser.close();
   }
