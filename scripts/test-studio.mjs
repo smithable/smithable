@@ -88,7 +88,9 @@ const repo = new URL("..", import.meta.url).pathname;
   ].reduce((t, f) => Math.max(t, statSync(f).mtimeMs), 0);
   const built = join(repo, "apps/studio/dist/index.html");
   if (!existsSync(built) || newest > statSync(built).mtimeMs) {
-    console.error("apps/studio/src (or its index.html) is newer than apps/studio/dist: run pnpm build first.");
+    console.error(
+      "apps/studio/src (or its index.html) is newer than apps/studio/dist: run pnpm build first.",
+    );
     process.exit(1);
   }
 }
