@@ -62,6 +62,15 @@ const FRAMES: [string, string][] = [
   ["app", "Workspace page: the app's menu"],
 ];
 
+// The form's key: its first choice follows the page's frame, so a frame that changes after the
+// click (the spec catching up) starts the form again (T1695).
+export function selectedNavigationKey(
+  concept: string | undefined,
+  part: NonNullable<ReturnType<typeof selectedNavigation>>,
+) {
+  return `${concept}:${"frame" in part ? (part.frame ?? "") : ""}`;
+}
+
 export function SelectedNavigation({
   part,
   run,

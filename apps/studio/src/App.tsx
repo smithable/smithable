@@ -28,7 +28,11 @@ import { NoCode, OPEN_PART, type OpenPart } from "./builder/NoCode";
 import { mailTemplates, OutgoingTemplate } from "./builder/OutgoingTemplate";
 import { whereShows } from "./builder/preview-follow";
 import { SelectedButton, selectedButton } from "./builder/SelectedButton";
-import { SelectedNavigation, selectedNavigation } from "./builder/SelectedNavigation";
+import {
+  SelectedNavigation,
+  selectedNavigation,
+  selectedNavigationKey,
+} from "./builder/SelectedNavigation";
 import {
   beside,
   SECTION_FORM_WIDTH,
@@ -2671,9 +2675,7 @@ export function App() {
       )}
       {navigation && (
         <SelectedNavigation
-          // Its first choice follows the page's frame: a frame that changes after the click (the
-          // spec catching up) starts the form again (T1695).
-          key={`${selectedPart?.concept}:${"frame" in navigation ? (navigation.frame ?? "") : ""}`}
+          key={selectedNavigationKey(selectedPart?.concept, navigation)}
           part={navigation}
           run={run}
           close={clearSelection}
