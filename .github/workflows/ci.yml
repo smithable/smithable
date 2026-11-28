@@ -2,11 +2,10 @@
 # Every pull request runs lint, build, units and the site on GitHub's runners. Studio changes
 # also run a browser smoke test there. The full check (the example apps and Studio in a real
 # browser, as `pnpm check`) runs on the self-hosted runner through scripts/gate.sh when the change
-# touches the engine, examples, check scripts, dependencies or this workflow, and either
-# the repository variable FULL_CI is "true" or the pull request has the label `full-ci` (for a
-# change someone judges risky). While the repository is private FULL_CI is off and the local
-# `pnpm check` is the gate for engine changes (CLAUDE.md); at the public flip it is switched on,
-# with no edit here.
+# touches the engine, examples, check scripts, dependencies or this workflow and the repository
+# variable FULL_CI is "true", or, whatever it touches, when the pull request has the label
+# `full-ci` (for a change someone judges risky) or `all-apps` (which also runs every app). With
+# FULL_CI off the local `pnpm check` is the gate for engine changes (CLAUDE.md).
 # A pull request of plain documents alone (the list under paths-ignore: design notes, benchmark
 # reports, the Markdown at the root) starts no run: nothing here reads those files. It has no
 # `check` to wait for, so scripts/merge-green.sh merges it itself, after reading the same list from
@@ -44,12 +43,13 @@ on:
     - cron: "0 1,13 * * *"
   workflow_dispatch:
 concurrency:
-  group: ci-${{ github.event.pull_request.number || github.ref }}${{ github.event.action == 'labeled' && github.event.label.name != 'full-ci' && github.event.label.name != 'no-fix-file' && format('-{0}', github.run_id) || '' }}
+  group: ci-${{ github.event.pull_request.number || github.ref }}${{ github.event.action == 'labeled' && github.event.label.name != 'full-ci' && github.event.label.name != 'all-apps' && github.event.label.name != 'no-fix-file' && format('-{0}', github.run_id) || '' }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
   scope:
-    # A label runs again only when it changes the outcome: full-ci, and no-fix-file (fixes/README.md).
-    if: github.event.action != 'labeled' || github.event.label.name == 'full-ci' || github.event.label.name == 'no-fix-file'
+    # A label runs again only when it changes the outcome: full-ci, all-apps, and no-fix-file
+    # (fixes/README.md).
+    if: github.event.action != 'labeled' || github.event.label.name == 'full-ci' || github.event.label.name == 'all-apps' || github.event.label.name == 'no-fix-file'
     runs-on: ubuntu-latest
     permissions: { contents: read, actions: read }
     outputs:
@@ -66,10 +66,12 @@ jobs:
         env:
           BASE: ${{ github.event.pull_request.base.sha }}
           FULL_CI: ${{ vars.FULL_CI }}
-          LABELLED: ${{ contains(github.event.pull_request.labels.*.name, 'full-ci') }}
+          LABELLED: ${{ contains(github.event.pull_request.labels.*.name, 'full-ci') || contains(github.event.pull_request.labels.*.name, 'all-apps') }}
           GH_TOKEN: ${{ github.token }}
         run: |
-          engine='^(packages/|apps/|examples/|scripts/test-[^/]*\.mjs$|scripts/embed\.mjs$|package\.json$|pnpm-lock\.yaml$|\.github/workflows/|\.github/actions/)'
+          engine='^(packages/|apps/|examples/|package\.json$|pnpm-lock\.yaml$|\.github/workflows/|\.github/actions/)'
+          # The scripts the full job runs: the gate, its checks and what they import, and the site's.
+          engine="$engine|^scripts/(gate\.sh|mark-verified\.sh|(test-[^/]*|studio-[^/]*|[^/]*-checks)\.mjs|(embed|first-look-browser|picture-picker-browser|fake-model|fake-coder|patience|ports|gate-plan|gate-ports|walk-record|upgrade-flow|dev-app|build-docs|commands-page|operations-page|theme-lab-export|vad-assets)\.mjs)$"
           if [ "$GITHUB_EVENT_NAME" = schedule ]; then
             # The scheduled run before this one (this one is listed first, still running).
             last=$(gh run list --workflow ci.yml --event schedule --limit 2 --json headSha,conclusion \
@@ -92,7 +94,9 @@ jobs:
           elif ! git cat-file -e "$BASE^{commit}" 2>/dev/null; then
             full=true; studio=true; why="no base to compare with"
           else
-            changed=$(git diff --name-only --no-renames "$BASE" HEAD)
+            # HEAD is the pull request merged into main, so against its first parent only the
+            # pull request's own changes show (the event's base commit can lag behind).
+            changed=$(git diff --name-only --no-renames HEAD^1 HEAD)
             # For the full job's plan, whose shallow checkout cannot work it out. A very long
             # list is left out, and the gate then runs everything.
             if [ "$(wc -l <<< "$changed")" -le 500 ] && [ "${#changed}" -le 60000 ]; then
@@ -119,8 +123,10 @@ jobs:
           fi
           engine=$full   # whether the engine changed, before FULL_CI's say: check reads it for a fork
           if [ "$full" = true ] && [ "$FULL_CI" != true ] && [ "$LABELLED" != true ] && [ "$why" != "$GITHUB_EVENT_NAME" ]; then
-            full=false; why="$why, but FULL_CI is off and no full-ci label: the local pnpm check is the gate"
+            full=false; why="$why, but FULL_CI is off and no full-ci or all-apps label: the local pnpm check is the gate"
           fi
+          # The label alone is enough, whatever the paths (plain documents start no run at all).
+          if [ "$LABELLED" = true ] && [ "$full" != true ]; then full=true; why="labelled full-ci or all-apps"; fi
           basics=true
           { echo "full=$full"; echo "basics=$basics"; echo "engine=$engine"; echo "studio=$studio"; } >> "$GITHUB_OUTPUT"
           echo "Full check: $full ($why)" | tee -a "$GITHUB_STEP_SUMMARY"
@@ -209,6 +215,9 @@ jobs:
           echo "lint-build-units did not pass, and this job does not run its lint and units."
           exit 1
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        # A pull request's plan compares with its merge base (scripts/gate-plan.mjs), which takes
+        # the history. Main's runs stay shallow: with nothing to compare they run everything.
+        with: { fetch-depth: "${{ github.event_name == 'pull_request' && '0' || '1' }}" }
       # The machine's Node through fnm (the runner's service has no shell profile).
       - run: echo "$HOME/.local/share/fnm/aliases/default/bin" >> "$GITHUB_PATH"
       - run: pnpm install --frozen-lockfile
@@ -226,6 +235,13 @@ jobs:
           # whether the hosted job's lint and units stand for this run's (scripts/gate.sh).
           GATE_CHANGED: ${{ needs.scope.outputs.changed }}
           GATE_BASICS_DONE: ${{ github.event_name == 'pull_request' && '1' || '' }}
+          # What the plan compares and names (scripts/gate-plan.mjs): the pull request's own
+          # commits, not their merge with main, so it draws the sample a local gate drew.
+          # Every app on a scheduled or hand-started run, and on the label all-apps.
+          GATE_BASE: ${{ github.event_name == 'pull_request' && 'HEAD^1' || '' }}
+          GATE_HEAD: ${{ github.event.pull_request.head.sha }}
+          GATE_BRANCH: ${{ github.head_ref }}
+          GATE_ALL_APPS: ${{ (github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'all-apps')) && '1' || '' }}
       # Studio's selection steps (the picture, film and Photos ones), here only: main's scheduled
       # run and full-ci pull requests, not the local gate or every pull request (T1491). In a turn
       # of the gate queue of its own, so no session's gate starts beside its browser; on the
@@ -283,7 +299,7 @@ jobs:
   # and reporting that as a failed `check` stood in the way of the newer run's result.
   check:
     needs: [scope, lint-build-units, studio-smoke, full]
-    if: ${{ !cancelled() && github.event_name == 'pull_request' && (github.event.action != 'labeled' || github.event.label.name == 'full-ci') }}
+    if: ${{ !cancelled() && github.event_name == 'pull_request' && (github.event.action != 'labeled' || github.event.label.name == 'full-ci' || github.event.label.name == 'all-apps') }}
     runs-on: ubuntu-latest
     permissions: {}
     steps:

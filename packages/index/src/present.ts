@@ -70,12 +70,25 @@ export function present(ir: SpecIR, auth?: AuthIR, content: ContentIR = emptyCon
     const ordered = [...ir.pages].sort((a, b) => Number(b.route === "/") - Number(a.route === "/"));
     const open = ordered.filter((p) => !auth || auth.public.pages.includes(p.id));
     const closed = ordered.filter((p) => !open.includes(p));
-    // Two pages that would read the same (my-bookings and bookings, both "bookings") are named by
-    // their ids instead.
+    // Pages that would read the same (my-bookings and bookings, both "bookings") are named by their
+    // ids instead, until no two read alike: a renamed page may meet a third page's words (one
+    // titled "My bookings"). Two ids that read alike (myBookings and my-bookings, on routes of their
+    // own) are written as they are. A page only moves forward (words, the id read out, the id), so
+    // the loop ends.
+    const byId = (id: string) => humanize(id).toLowerCase();
     const said = new Map(ordered.map((p) => [p.id, pageWords(ir, content, p.id)]));
-    const clash = (id: string) => [...said.values()].filter((w) => w === said.get(id)).length > 1;
-    const words = (pages: typeof ordered) =>
-      list(pages.map((p) => (clash(p.id) ? humanize(p.id).toLowerCase() : (said.get(p.id) ?? ""))));
+    for (let changed = true; changed; ) {
+      changed = false;
+      const all = [...said.values()];
+      for (const [id, w] of said) {
+        if (w === id || all.filter((x) => x === w).length < 2) continue;
+        const twin = ordered.some((o) => o.id !== id && byId(o.id) === w);
+        if (w === byId(id) && !twin) continue;
+        said.set(id, w === byId(id) ? id : byId(id));
+        changed = true;
+      }
+    }
+    const words = (pages: typeof ordered) => list(pages.map((p) => said.get(p.id) ?? ""));
     const text =
       open.length && closed.length
         ? `It has ${words(open)} for everyone, and for those who sign in: ${words(closed)}.`

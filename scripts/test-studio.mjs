@@ -8,8 +8,10 @@ import {
   existsSync,
   mkdirSync,
   mkdtempSync,
+  readdirSync,
   readFileSync,
   rmSync,
+  statSync,
   writeFileSync,
 } from "node:fs";
 import { request } from "node:http";
@@ -73,6 +75,25 @@ const fetch = (url, init) =>
   });
 
 const repo = new URL("..", import.meta.url).pathname;
+// A walk on a Studio built before its source changed tests the old Studio (T1777): stop and say so.
+{
+  // Directories count too: a deleted source file changes its directory's time.
+  const src = join(repo, "apps/studio/src");
+  const newest = [
+    src,
+    join(repo, "apps/studio/index.html"),
+    ...readdirSync(src, { recursive: true, withFileTypes: true }).map((e) =>
+      join(e.parentPath, e.name),
+    ),
+  ].reduce((t, f) => Math.max(t, statSync(f).mtimeMs), 0);
+  const built = join(repo, "apps/studio/dist/index.html");
+  if (!existsSync(built) || newest > statSync(built).mtimeMs) {
+    console.error(
+      "apps/studio/src (or its index.html) is newer than apps/studio/dist: run pnpm build first.",
+    );
+    process.exit(1);
+  }
+}
 const cli = join(repo, "packages/cli/dist/bin.js");
 const root = mkdtempSync(join(tmpdir(), "smithable-studio-"));
 const dir = join(root, "crm");
@@ -2943,7 +2964,38 @@ try {
         const select = page.getByRole("button", { name: "Select", exact: true });
         if ((await select.getAttribute("aria-pressed")) !== "true") await select.click();
         await preview.locator("html[data-sm-selecting]").waitFor({ state: "attached" });
+        // After a change the preview reloads, and a click on the outgoing page selects nothing
+        // (T1767): the clicked page is marked, and only a new page gets a second click.
+        await preview.locator("html").evaluate((html) => html.setAttribute("data-sm-clicked", ""));
         await target.click({ position });
+        // The selection mark sits on the target, on a box around it, or on a part inside it (a
+        // menu link's item).
+        const picked = () =>
+          target
+            .evaluate(
+              (el) =>
+                !!(el.closest("[data-sm-selected]") ?? el.querySelector("[data-sm-selected]")),
+              undefined,
+              { timeout: 2000 },
+            )
+            .catch(() => false);
+        const fresh = preview.locator("html[data-sm-selecting]:not([data-sm-clicked])");
+        const until = async (ms, orReloaded) => {
+          for (const end = Date.now() + ms; Date.now() < end; ) {
+            if (await picked()) return "picked";
+            if (orReloaded && (await fresh.count())) return "reloaded";
+            await new Promise((r) => setTimeout(r, 250));
+          }
+          return "nothing";
+        };
+        if ((await until(5000, false)) === "picked") return;
+        const next = await until(60000 * P, true);
+        if (next === "nothing")
+          throw new Error("a click selected nothing, and the preview did not reload");
+        if (next === "picked" || (await picked())) return;
+        await target.click({ position });
+        if ((await until(60000 * P, false)) !== "picked")
+          throw new Error("a click on the reloaded preview selected nothing either");
       };
       const topBar = preview.locator('header[data-sm-concept="navigation:landing.home"]');
       const originalPosition = await topBar.getAttribute("data-position");

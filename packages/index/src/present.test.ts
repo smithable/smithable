@@ -146,4 +146,25 @@ test("two pages that would read the same are named by their ids", () => {
     text: "smithable: 0.1\napp: { name: Desk }\nmodels:\n  Booking:\n    fields: { name: string! }\npages:\n  my-bookings: { crud: Booking }\n  bookings: { crud: Booking }\n",
   }).ir as SpecIR;
   expect(present(two)[1]?.text).toBe("It has my bookings and bookings, open to everyone.");
+  // Pages titled like another's new name are named by their ids in turn (T1689).
+  const three = validateSpec({
+    path: "smithable.yml",
+    text: "smithable: 0.1\napp: { name: Desk }\nmodels:\n  Booking:\n    fields: { name: string! }\npages:\n  my-bookings: { crud: Booking }\n  bookings: { crud: Booking }\n  mine: { crud: Booking }\n  archive: { crud: Booking }\n",
+  }).ir as SpecIR;
+  const titled = validateContent(
+    {
+      path: "smithable.content.yml",
+      text: "smithableContent: 0.1\npages:\n  mine: { title: My bookings }\n  archive: { title: Mine }\n",
+    },
+    three,
+  ).content as ContentIR;
+  expect(present(three, undefined, titled)[1]?.text).toBe(
+    "It has my bookings, bookings, mine and archive, open to everyone.",
+  );
+  // Two ids that read alike, on routes of their own, are written as they are (T1770).
+  const twins = validateSpec({
+    path: "smithable.yml",
+    text: "smithable: 0.1\napp: { name: Desk }\nmodels:\n  Booking:\n    fields: { name: string! }\npages:\n  myBookings: { crud: Booking, route: /mine }\n  my-bookings: { crud: Booking }\n",
+  }).ir as SpecIR;
+  expect(present(twins)[1]?.text).toBe("It has myBookings and my-bookings, open to everyone.");
 });
