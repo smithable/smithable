@@ -9,7 +9,8 @@ set -uo pipefail
 cd "$(git rev-parse --show-toplevel)" || exit 1
 before=$(scripts/mark-verified.sh --tree) || exit 1
 # A committed generated file that no longer matches its sources gets no marker: the push guard then
-# refuses, and the build's own rewrite cannot hide it.
+# refuses, and the build's own rewrite cannot hide it. The full run goes on past it, so that the
+# build rewrites the file, and ends without markers (the tree changed).
 current() { node scripts/embed.mjs --check; }
 if [ "${1:-}" = --lint ]; then pnpm lint && current && exec scripts/mark-verified.sh --lint "$before"; exit 1; fi
 # Beside a running or waiting gate, the units take two workers whatever was asked (T1522): a full
