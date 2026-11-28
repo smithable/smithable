@@ -20,6 +20,7 @@
     "test:apps": "node scripts/test-apps-parallel.mjs",
     "test:studio": "node scripts/test-studio.mjs",
     "test:studio:smoke": "node scripts/first-look-browser.mjs --smoke",
+    "test:studio:selection": "node scripts/first-look-browser.mjs --selection",
     "test:visual": "node scripts/test-visual.mjs",
     "test:container": "node scripts/test-container.mjs",
     "test:fresh": "scripts/test-fresh.sh",
