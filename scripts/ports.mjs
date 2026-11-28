@@ -1,4 +1,5 @@
 import { connect } from "node:net";
+import { lintGuard } from "./lint-guard.mjs";
 
 // The ports above 1024 that browsers, and so Node's fetch, refuse to talk to (the Fetch
 // standard's "bad ports"). A test server on one of them starts fine and then never "answers":
@@ -10,8 +11,12 @@ const REFUSED = new Set([
 
 export const refused = (port) => REFUSED.has(port);
 
-/** Stops with the reason when a test would use a refused port. */
+/**
+ * Stops with the reason when a test would use a refused port. Every browser walk asks this before
+ * it starts anything, so the walks' lint guard runs here too.
+ */
 export function checkPorts(what, ports) {
+  lintGuard();
   const bad = ports.filter(refused);
   if (!bad.length) return;
   console.error(
