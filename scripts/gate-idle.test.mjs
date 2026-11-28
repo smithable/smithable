@@ -102,9 +102,20 @@ test("the gate's own status comes back, and the sampler ends with it at once", (
   }
 });
 
+// The change is GATE_CHANGED alone: HEAD against HEAD, so no output differs and nothing is stale.
 const plan = (changed, env = {}) =>
   spawnSync("bash", [gate, "--plan"], {
-    env: { ...process.env, SESSION: "t", GATE_BASICS_DONE: "", GATE_CHANGED: changed, ...env },
+    env: {
+      ...process.env,
+      SESSION: "t",
+      GATE_BASICS_DONE: "",
+      GATE_CHANGED: changed,
+      GATE_BASE: "HEAD",
+      GATE_HEAD: "HEAD",
+      GATE_ALL_APPS: "",
+      GATE_BRANCH: "no-such-branch",
+      ...env,
+    },
     encoding: "utf8",
   }).stdout;
 

@@ -44,12 +44,13 @@ on:
     - cron: "0 1,13 * * *"
   workflow_dispatch:
 concurrency:
-  group: ci-${{ github.event.pull_request.number || github.ref }}${{ github.event.action == 'labeled' && github.event.label.name != 'full-ci' && github.event.label.name != 'no-fix-file' && format('-{0}', github.run_id) || '' }}
+  group: ci-${{ github.event.pull_request.number || github.ref }}${{ github.event.action == 'labeled' && github.event.label.name != 'full-ci' && github.event.label.name != 'all-apps' && github.event.label.name != 'no-fix-file' && format('-{0}', github.run_id) || '' }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
   scope:
-    # A label runs again only when it changes the outcome: full-ci, and no-fix-file (fixes/README.md).
-    if: github.event.action != 'labeled' || github.event.label.name == 'full-ci' || github.event.label.name == 'no-fix-file'
+    # A label runs again only when it changes the outcome: full-ci, all-apps, and no-fix-file
+    # (fixes/README.md).
+    if: github.event.action != 'labeled' || github.event.label.name == 'full-ci' || github.event.label.name == 'all-apps' || github.event.label.name == 'no-fix-file'
     runs-on: ubuntu-latest
     permissions: { contents: read, actions: read }
     outputs:
@@ -66,7 +67,7 @@ jobs:
         env:
           BASE: ${{ github.event.pull_request.base.sha }}
           FULL_CI: ${{ vars.FULL_CI }}
-          LABELLED: ${{ contains(github.event.pull_request.labels.*.name, 'full-ci') }}
+          LABELLED: ${{ contains(github.event.pull_request.labels.*.name, 'full-ci') || contains(github.event.pull_request.labels.*.name, 'all-apps') }}
           GH_TOKEN: ${{ github.token }}
         run: |
           engine='^(packages/|apps/|examples/|scripts/test-[^/]*\.mjs$|scripts/embed\.mjs$|package\.json$|pnpm-lock\.yaml$|\.github/workflows/|\.github/actions/)'
@@ -119,7 +120,7 @@ jobs:
           fi
           engine=$full   # whether the engine changed, before FULL_CI's say: check reads it for a fork
           if [ "$full" = true ] && [ "$FULL_CI" != true ] && [ "$LABELLED" != true ] && [ "$why" != "$GITHUB_EVENT_NAME" ]; then
-            full=false; why="$why, but FULL_CI is off and no full-ci label: the local pnpm check is the gate"
+            full=false; why="$why, but FULL_CI is off and no full-ci or all-apps label: the local pnpm check is the gate"
           fi
           basics=true
           { echo "full=$full"; echo "basics=$basics"; echo "engine=$engine"; echo "studio=$studio"; } >> "$GITHUB_OUTPUT"
@@ -209,6 +210,9 @@ jobs:
           echo "lint-build-units did not pass, and this job does not run its lint and units."
           exit 1
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        # A pull request's plan compares with its merge base (scripts/gate-plan.mjs), which takes
+        # the history. Main's runs stay shallow: with nothing to compare they run everything.
+        with: { fetch-depth: "${{ github.event_name == 'pull_request' && '0' || '1' }}" }
       # The machine's Node through fnm (the runner's service has no shell profile).
       - run: echo "$HOME/.local/share/fnm/aliases/default/bin" >> "$GITHUB_PATH"
       - run: pnpm install --frozen-lockfile
@@ -226,6 +230,13 @@ jobs:
           # whether the hosted job's lint and units stand for this run's (scripts/gate.sh).
           GATE_CHANGED: ${{ needs.scope.outputs.changed }}
           GATE_BASICS_DONE: ${{ github.event_name == 'pull_request' && '1' || '' }}
+          # What the plan compares and names (scripts/gate-plan.mjs): the pull request's own
+          # commits, not their merge with main, so it draws the sample a local gate drew; and
+          # the label that asks for every app. Empty on main's runs.
+          GATE_BASE: ${{ github.event.pull_request.base.sha }}
+          GATE_HEAD: ${{ github.event.pull_request.head.sha }}
+          GATE_BRANCH: ${{ github.head_ref }}
+          GATE_ALL_APPS: ${{ contains(github.event.pull_request.labels.*.name, 'all-apps') && '1' || '' }}
       # Studio's selection steps (the picture, film and Photos ones), here only: main's scheduled
       # run and full-ci pull requests, not the local gate or every pull request (T1491). In a turn
       # of the gate queue of its own, so no session's gate starts beside its browser; on the
@@ -283,7 +294,7 @@ jobs:
   # and reporting that as a failed `check` stood in the way of the newer run's result.
   check:
     needs: [scope, lint-build-units, studio-smoke, full]
-    if: ${{ !cancelled() && github.event_name == 'pull_request' && (github.event.action != 'labeled' || github.event.label.name == 'full-ci') }}
+    if: ${{ !cancelled() && github.event_name == 'pull_request' && (github.event.action != 'labeled' || github.event.label.name == 'full-ci' || github.event.label.name == 'all-apps') }}
     runs-on: ubuntu-latest
     permissions: {}
     steps:

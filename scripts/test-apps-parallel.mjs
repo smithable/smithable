@@ -7,7 +7,7 @@
 // hydration waited past its time (2026-10-18); the self-hosted CI runner runs three, since it
 // shares the machine with the sessions' own work.
 import { spawn } from "node:child_process";
-import { readdirSync } from "node:fs";
+import { readdirSync, rmSync, writeFileSync } from "node:fs";
 import { cpus } from "node:os";
 import { join } from "node:path";
 import { appBases } from "./ports.mjs";
@@ -94,4 +94,13 @@ console.log(
     ? `\nFailed: ${failed.join(", ")}${retriedNote(retried)}`
     : `\nAll ${examples.length} example apps passed.${retriedNote(retried)}`,
 );
+// For the gate's next plan of this branch (scripts/gate-plan.mjs): what failed stays in it.
+const note = process.env.GATE_FAILED_FILE;
+if (note)
+  try {
+    rmSync(note, { force: true });
+    if (failed.length) writeFileSync(note, `${failed.join("\n")}\n`);
+  } catch (error) {
+    console.error(`The failed apps could not be noted for the next run: ${error.message}`);
+  }
 process.exit(failed.length ? 1 : 0);
