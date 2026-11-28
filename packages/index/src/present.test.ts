@@ -146,4 +146,19 @@ test("two pages that would read the same are named by their ids", () => {
     text: "smithable: 0.1\napp: { name: Desk }\nmodels:\n  Booking:\n    fields: { name: string! }\npages:\n  my-bookings: { crud: Booking }\n  bookings: { crud: Booking }\n",
   }).ir as SpecIR;
   expect(present(two)[1]?.text).toBe("It has my bookings and bookings, open to everyone.");
+  // A third page titled like the first one's new name: both are named by their ids (T1689).
+  const three = validateSpec({
+    path: "smithable.yml",
+    text: "smithable: 0.1\napp: { name: Desk }\nmodels:\n  Booking:\n    fields: { name: string! }\npages:\n  my-bookings: { crud: Booking }\n  bookings: { crud: Booking }\n  mine: { crud: Booking }\n",
+  }).ir as SpecIR;
+  const titled = validateContent(
+    {
+      path: "smithable.content.yml",
+      text: "smithableContent: 0.1\npages:\n  mine: { title: My bookings }\n",
+    },
+    three,
+  ).content as ContentIR;
+  expect(present(three, undefined, titled)[1]?.text).toBe(
+    "It has my bookings, bookings and mine, open to everyone.",
+  );
 });
