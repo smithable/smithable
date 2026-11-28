@@ -40,18 +40,29 @@ export async function checkStudioSelection(browser, base) {
       if ((await select.getAttribute("aria-pressed")) !== "true") await select.click();
     };
     // After a change the preview reloads, and the outgoing page can still show Select on (T1767):
-    // a click on it opens nothing. So one more click on the new page, and a second miss fails.
+    // a click on it opens nothing. The clicked page is marked, so a second click goes only to a
+    // new page; a click lost on the same page, or on the new one, fails.
     const pickAfterChange = async (target, opened, options) => {
-      for (const last of [false, true]) {
-        await frame.locator("html[data-sm-selecting]").waitFor();
-        await target.click(options);
-        const shown = await opened.waitFor({ timeout: last ? wait : 5000 }).then(
+      await frame.locator("html[data-sm-selecting]").waitFor();
+      await frame.locator("html").evaluate((html) => html.setAttribute("data-sm-clicked", ""));
+      await target.click(options);
+      const shown = () =>
+        opened.waitFor({ timeout: 5000 }).then(
           () => true,
           () => false,
         );
-        if (shown) return;
-      }
-      throw new Error(`Two clicks after a change opened nothing: ${opened}`);
+      if (await shown()) return;
+      const fresh = frame.locator("html[data-sm-selecting]:not([data-sm-clicked])");
+      const reloaded = await fresh.waitFor({ timeout: wait }).then(
+        () => true,
+        () => false,
+      );
+      assert.ok(reloaded, `A click opened nothing, and the preview did not reload: ${opened}`);
+      if (await opened.isVisible()) return;
+      await target.click(options);
+      await opened.waitFor({ timeout: wait }).catch(() => {
+        throw new Error(`A click on the reloaded preview opened nothing either: ${opened}`);
+      });
     };
     await selectOn();
     await frame.locator("html[data-sm-selecting]").waitFor();
