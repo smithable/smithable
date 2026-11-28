@@ -59,6 +59,7 @@ import { checkStudioUsage } from "./studio-usage-checks.mjs";
 import { checkStudioValidation } from "./studio-validation-checks.mjs";
 import { checkPublicLook } from "./test-public-look.mjs";
 import { checkThemeLab } from "./theme-lab-checks.mjs";
+import { walkRecord } from "./walk-record.mjs";
 
 // A request on a kept-alive connection the server closed as idle at the same moment is reset
 // (ECONNRESET) before it is read: under load the client's own idle timer fires late, so it
@@ -81,6 +82,7 @@ const port = Number(process.env.TEST_STUDIO_PORT ?? 4900);
 // (scripts/test-visual.mjs), which the gate runs after this check.
 checkPorts("Studio's test (TEST_STUDIO_PORT)", [port, port + 1, port + 2, port + 3, port + 4]);
 const base = `http://localhost:${port}`;
+const passed = walkRecord("scripts/test-studio.mjs");
 let failed = false;
 
 /** A grey PNG of the size given, for the logo. */
@@ -4568,4 +4570,5 @@ if (failed) {
 }
 rmSync(root, { recursive: true, force: true });
 await checkPicturePicker(port + 5);
+passed("studio");
 console.log("\nStudio works in both modes.");

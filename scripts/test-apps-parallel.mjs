@@ -12,6 +12,7 @@ import { cpus } from "node:os";
 import { join } from "node:path";
 import { appBases } from "./ports.mjs";
 import { RETRIED, retriedNote } from "./test-apps-first-load.mjs";
+import { walkRecord } from "./walk-record.mjs";
 
 const repo = new URL("..", import.meta.url).pathname;
 // The examples named on the command line, or every example (scripts/gate.sh names the ones a
@@ -31,6 +32,7 @@ const examples = named.toSorted((a, b) => rank(a) - rank(b));
 // the same time keep apart by bases 1000 apart (appBases in ports.mjs, which gate-ports.mjs checks too).
 const ports = appBases(Number(process.env.TEST_APPS_PORT ?? 4400), examples.length);
 
+const passed = walkRecord("scripts/test-apps-parallel.mjs");
 const children = new Set();
 for (const signal of ["SIGINT", "SIGTERM", "SIGHUP"])
   process.on(signal, () => {
@@ -94,4 +96,5 @@ console.log(
     ? `\nFailed: ${failed.join(", ")}${retriedNote(retried)}`
     : `\nAll ${examples.length} example apps passed.${retriedNote(retried)}`,
 );
+if (!failed.length) passed(examples.join(" "));
 process.exit(failed.length ? 1 : 0);
