@@ -34,7 +34,9 @@ export function walkFiles(entry, read) {
     const source = read(path);
     if (source === undefined) return;
     files.add(path);
-    for (const [, name] of source.matchAll(/(?:\bfrom\s+|\bimport\(\s*)"(\.\/[^"]+\.mjs)"/g))
+    for (const [, name] of source.matchAll(
+      /(?:\bfrom\s+|\bimport\s*\(?\s*)"(\.{1,2}\/[^"]+\.mjs)"/g,
+    ))
       add(posix.join(posix.dirname(path), name));
   };
   add(entry);
@@ -42,7 +44,12 @@ export function walkFiles(entry, read) {
 }
 
 const git = (cwd, ...args) =>
-  execFileSync("git", args, { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim();
+  execFileSync("git", args, {
+    cwd,
+    encoding: "utf8",
+    maxBuffer: 64 * 1024 * 1024,
+    stdio: ["ignore", "pipe", "ignore"],
+  }).trim();
 const records = (cwd) =>
   join(git(cwd, "rev-parse", "--path-format=absolute", "--git-common-dir"), "verified", "walk");
 

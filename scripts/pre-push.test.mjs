@@ -232,4 +232,14 @@ test("the walks' files are what their entries import, without the support they s
   for (const file of ["test-studio", "studio-look-checks", "test-public-look", "first-look-checks"])
     assert.ok(studio.includes(`scripts/${file}.mjs`), file);
   assert.ok(!studio.includes("scripts/ports.mjs"));
+  // A bare import and one from the folder above count too.
+  const made = {
+    "a/b.mjs": 'import "./c.mjs";\nawait import("../d.mjs");',
+    "a/c.mjs": "",
+    "d.mjs": "",
+  };
+  assert.deepEqual(
+    walkFiles("a/b.mjs", (path) => made[path]),
+    ["a/b.mjs", "a/c.mjs", "d.mjs"],
+  );
 });
