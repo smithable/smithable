@@ -72,20 +72,17 @@ export function present(ir: SpecIR, auth?: AuthIR, content: ContentIR = emptyCon
     const closed = ordered.filter((p) => !open.includes(p));
     // Pages that would read the same (my-bookings and bookings, both "bookings") are named by their
     // ids instead, until no two read alike: a renamed page may meet a third page's words (one
-    // titled "My bookings"), and two ids that read the same are written as they are.
+    // titled "My bookings"). Each page moves once, so the loop ends; two ids that read alike would
+    // share a default route, which the spec refuses.
     const byId = (id: string) => humanize(id).toLowerCase();
     const said = new Map(ordered.map((p) => [p.id, pageWords(ir, content, p.id)]));
     for (let changed = true; changed; ) {
       changed = false;
       const all = [...said.values()];
       for (const [id, w] of said) {
-        if (all.filter((x) => x === w).length < 2) continue;
-        const twin = ordered.some((o) => o.id !== id && byId(o.id) === w);
-        const next = w !== byId(id) ? byId(id) : twin ? id : w;
-        if (next !== w) {
-          said.set(id, next);
-          changed = true;
-        }
+        if (w === byId(id) || all.filter((x) => x === w).length < 2) continue;
+        said.set(id, byId(id));
+        changed = true;
       }
     }
     const words = (pages: typeof ordered) => list(pages.map((p) => said.get(p.id) ?? ""));
