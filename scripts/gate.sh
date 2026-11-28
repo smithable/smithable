@@ -314,7 +314,7 @@ else
       pnpm lint && pnpm build && pnpm test && pnpm site && planned
     else
       echo "gate.sh: $skipped"
-      planned
+      planned &&
       pnpm build && { [ "$studio" = no ] || pnpm site; }
     fi
   }
