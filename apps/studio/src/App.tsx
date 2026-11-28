@@ -309,7 +309,16 @@ export function App() {
   // not among the spec files in project.files.
   const revision = project?.revision;
   useEffect(() => {
-    if (followed && revision) api.people().then(setPeople, () => {});
+    if (!followed || !revision) return;
+    // Only the latest revision's answer counts: an older one arriving last would bring back a removed user.
+    let current = true;
+    api.people().then(
+      (people) => current && setPeople(people),
+      () => {},
+    );
+    return () => {
+      current = false;
+    };
   }, [followed, revision]);
   useEffect(() => {
     if (!followed) return;
