@@ -12,6 +12,9 @@ Local-first, manifest-driven app builder. Read `docs/VISION.md` for the why, `do
   commit, or CI's full check when the gate queue is too long. The site's pages, the spec reference
   and tooling scripts `check` does not run are gated by CI on the pull request. Plain documents
   (the list is in `ci.yml`) start no CI run; merge-green merges a pull request of those alone itself.
+  The gate and CI run what the change needs, and for a wide change a sample of the example apps
+  (docs/development.md); main's scheduled full run covers the rest, and whoever's change it finds
+  red fixes forward at once.
 - A push to main starts no run; main gets the full check on its own schedule, which is where two
   changes that only clash together show, since a pull request is not run again for being behind main.
 - Merge only with `scripts/merge-green.sh <pr>`, one at a time on the machine; it is the only
