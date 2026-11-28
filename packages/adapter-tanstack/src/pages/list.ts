@@ -950,7 +950,7 @@ ${
     ? `      <Filters
         filters={${literal(filtering.controls)}}
         values={values}${filtering.defaults ? `\n        defaults={${literal(filtering.defaults)}}` : ""}${filtering.mine || filtering.unread ? "\n        signedIn={Boolean(viewer)}" : ""}${filtering.sorts.length ? `\n        sorts={${literal(filtering.sorts)}}\n        sort={sort}` : ""}
-        onChange={(_, changed) => navigate({ to: ${JSON.stringify(page.route)}, search: (now) => ({ ...now, ...changed, page: undefined }), replace: true, resetScroll: false })}
+        onChange={(_, change) => navigate({ to: ${JSON.stringify(page.route)}, search: (now) => ({ ...now, ...change(now), page: undefined }), replace: true, resetScroll: false })}
       />
 `
     : ""

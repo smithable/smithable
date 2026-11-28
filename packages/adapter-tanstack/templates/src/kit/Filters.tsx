@@ -69,6 +69,12 @@ export interface SortUi {
 /** A filter's state in the address: chips as "a,b", a range as "from..to", a toggle as "true". */
 export type FilterValues = Record<string, string | undefined>;
 
+/** What a click changes, worked out from the values in force when it is applied. */
+export type FilterChange = (now: Record<string, unknown>) => FilterValues & { sort?: string };
+
+/** Chips' "a,b" as a set. */
+const picks = (value: string | undefined) => new Set((value ?? "").split(",").filter(Boolean));
+
 export function Filters({
   filters: given,
   values,
@@ -87,13 +93,11 @@ export function Filters({
   /** The page's default filters: clearing one writes "all", so the default stays away. */
   defaults?: Record<string, string>;
   /**
-   * `next` is every value as drawn, with the change; `changed` is the change alone. A page puts
-   * `changed` on the address in force, so a second click before the redraw keeps the first.
+   * `next` is every value as drawn, with the change; `change` works out the change alone from
+   * the values in force. A page puts `change(now)` on the address's `now`, so a second click
+   * before the redraw keeps the first, also on another chip of the same filter.
    */
-  onChange: (
-    next: FilterValues & { sort?: string },
-    changed: FilterValues & { sort?: string },
-  ) => void;
+  onChange: (next: FilterValues & { sort?: string }, change: FilterChange) => void;
 }) {
   // The labels in the language now (languages.md §4).
   const filters = given.map((f) => ({
@@ -112,10 +116,17 @@ export function Filters({
   const active = shown.filter((f) => effective[f.name]);
   const folded = shown.filter((f) => f.folded && !effective[f.name]);
   const visible = more ? shown : shown.filter((f) => !folded.includes(f));
-  const send = (changed: FilterValues & { sort?: string }) =>
-    onChange({ ...values, sort, ...changed }, changed);
-  const set = (name: string, value: string | undefined) =>
-    send({ [name]: value || (defaults[name] !== undefined ? "all" : undefined) });
+  const send = (change: FilterChange) => onChange({ ...values, sort, ...change(values) }, change);
+  const written = (name: string, value: string | undefined) => ({
+    [name]: value || (defaults[name] !== undefined ? "all" : undefined),
+  });
+  const set = (name: string, value: string | undefined) => send(() => written(name, value));
+  // Chips add to what is chosen, so what is chosen is read from the values in force.
+  const alter = (name: string, change: (chosen: Set<string>) => Set<string>) =>
+    send((now) => {
+      const chosen = picks(withDefaults(now as FilterValues, defaults)[name]);
+      return written(name, [...change(chosen)].join(",") || undefined);
+    });
   return (
     <div data-kit="filters" className="mb-6 space-y-3">
       {/* Phones: the Filters button and the sort, the filters under them; wider: the filters, then the sort. */}
@@ -141,7 +152,10 @@ export function Filters({
             <select
               id={`${id}-sort`}
               value={sort ?? ""}
-              onChange={(e) => send({ sort: e.target.value || undefined })}
+              onChange={(e) => {
+                const sort = e.target.value || undefined;
+                send(() => ({ sort }));
+              }}
               className="h-control rounded-md border border-input bg-card px-3 text-sm"
             >
               <option value="">{w.newestFirst}</option>
@@ -167,6 +181,7 @@ export function Filters({
                 filter={f}
                 value={effective[f.name]}
                 onChange={(v) => set(f.name, v)}
+                onAlter={(change) => alter(f.name, change)}
               />
             ))}
             {folded.length > 0 && (
@@ -223,15 +238,24 @@ function Filter({
   filter,
   value,
   onChange,
+  onAlter,
 }: {
   filter: FilterUi;
   value: string | undefined;
   onChange: (value: string | undefined) => void;
+  /** Chips and the person list: a change to the chosen set. */
+  onAlter: (change: (chosen: Set<string>) => Set<string>) => void;
 }) {
   const id = useId();
   // The record just chosen in a search, named by the field itself until the list's answer has it.
   const [chose, setChose] = useState("");
-  const chosen = new Set((value ?? "").split(",").filter(Boolean));
+  const chosen = picks(value);
+  // One chip flips from what is in force: a second click before the redraw undoes the first.
+  const toggle = (one: string) =>
+    onAlter((now) => {
+      if (!now.delete(one)) now.add(one);
+      return now;
+    });
   if (filter.kind === "mine" || filter.kind === "unread") {
     const on = filter.kind === "mine" ? "mine" : "1";
     return (
@@ -320,12 +344,7 @@ function Filter({
                 key={o.value}
                 type="button"
                 aria-pressed={on}
-                onClick={() => {
-                  const next = new Set(chosen);
-                  if (on) next.delete(o.value);
-                  else next.add(o.value);
-                  onChange([...next].join(",") || undefined);
-                }}
+                onClick={() => toggle(o.value)}
                 className={cn(
                   "rounded-full border px-3 py-1 text-sm",
                   on
@@ -341,9 +360,12 @@ function Filter({
             aria-label={filter.label}
             value={picked}
             onChange={(e) => {
-              const next = new Set<string>([...chosen].filter((v) => v === "me" || v === "none"));
-              if (e.target.value) next.add(e.target.value);
-              onChange([...next].join(",") || undefined);
+              const person = e.target.value;
+              onAlter((now) => {
+                const next = new Set<string>([...now].filter((v) => v === "me" || v === "none"));
+                if (person) next.add(person);
+                return next;
+              });
             }}
             className="h-control max-w-60 rounded-md border border-input bg-card px-3 text-sm"
           >
@@ -389,12 +411,7 @@ function Filter({
               key={o.value}
               type="button"
               aria-pressed={on}
-              onClick={() => {
-                const next = new Set(chosen);
-                if (on) next.delete(o.value);
-                else next.add(o.value);
-                onChange([...next].join(",") || undefined);
-              }}
+              onClick={() => toggle(o.value)}
               className={cn(
                 "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm",
                 o.picture && "pl-1",

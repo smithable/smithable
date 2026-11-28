@@ -43,9 +43,9 @@ test("a generated page's filters change the address in force", () => {
   });
   const page = (path: string) => files.find((f) => f.path === path)?.content ?? "";
   expect(page("src/routes/lessons/index.tsx")).toContain(
-    'onChange={(_, changed) => navigate({ to: "/lessons", search: (now) => ({ ...now, ...changed, page: undefined }), replace: true, resetScroll: false })}',
+    'onChange={(_, change) => navigate({ to: "/lessons", search: (now) => ({ ...now, ...change(now), page: undefined }), replace: true, resetScroll: false })}',
   );
   expect(page("src/routes/schedule/index.tsx")).toContain(
-    'onChange={(_, changed) => navigate({ to: "/schedule", search: (now) => ({ ...now, ...changed, open: undefined }), replace: true, resetScroll: false })}',
+    'onChange={(_, change) => navigate({ to: "/schedule", search: (now) => ({ ...now, ...change(now), open: undefined }), replace: true, resetScroll: false })}',
   );
 });
