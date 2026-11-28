@@ -12,7 +12,7 @@
 # `check` to wait for, so scripts/merge-green.sh merges it itself, after reading the same list from
 # main and scanning its commits for secrets.
 # A push to main starts no run: a merge is of a pull request that was checked, or of plain
-# documents. Main itself gets the full check every four hours (01:00, 05:00 and so on, UTC),
+# documents. Main itself gets the full check twice a day (01:00 and 13:00 UTC),
 # which is also where two changes that only clash together show (a pull request is no longer run
 # again when it is merely behind main), and an administrator's merge past the check. It is
 # skipped when main's
@@ -41,7 +41,7 @@ on:
       - "docs/threat-model.md"
       # plain docs: end
   schedule:
-    - cron: "0 1,5,9,13,17,21 * * *"
+    - cron: "0 1,13 * * *"
   workflow_dispatch:
 concurrency:
   group: ci-${{ github.event.pull_request.number || github.ref }}${{ github.event.action == 'labeled' && github.event.label.name != 'full-ci' && github.event.label.name != 'no-fix-file' && format('-{0}', github.run_id) || '' }}
@@ -143,6 +143,7 @@ jobs:
         run: node scripts/fix-file-rule.mjs
         env:
           BASE: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD: ${{ github.event.pull_request.head.sha }}
           NO_FIX_FILE: ${{ contains(github.event.pull_request.labels.*.name, 'no-fix-file') }}
           # A line "Fix file: none, because …" in its text (an env, never in the command line).
           PR_BODY: ${{ github.event.pull_request.body }}
@@ -225,6 +226,16 @@ jobs:
           # whether the hosted job's lint and units stand for this run's (scripts/gate.sh).
           GATE_CHANGED: ${{ needs.scope.outputs.changed }}
           GATE_BASICS_DONE: ${{ github.event_name == 'pull_request' && '1' || '' }}
+      # Studio's selection steps (the picture, film and Photos ones), here only: main's scheduled
+      # run and full-ci pull requests, not the local gate or every pull request (T1491). In a turn
+      # of the gate queue of its own, so no session's gate starts beside its browser; on the
+      # packages the gate above built.
+      # Named here, so it stays off ordinary pull requests should FULL_CI be switched on again.
+      - if: github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'full-ci')
+        run: SESSION=ci GATE_AHEAD_MAX=99 scripts/gate.sh
+        env:
+          GATE_RUN: TEST_STUDIO_PORT=8620 pnpm test:studio:selection
+          TMPDIR: ${{ runner.temp }}
       # The picture Studio's test takes of a failed step.
       - if: failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

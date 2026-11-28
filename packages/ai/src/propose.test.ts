@@ -236,6 +236,25 @@ describe("proposeChange", () => {
     expect(proposal).toMatchObject({ kind: "none", reason: "This changes nothing." });
   });
 
+  test("a list sent as a JSON string is read; one under another key is asked for again, by its shape (T1718)", async () => {
+    const asString = scripted([{ ...addPhone, operations: JSON.stringify(addPhone.operations) }]);
+    expect(
+      await propose("Can you add somewhere to keep a customer's mobile?", [asString]),
+    ).toMatchObject({
+      kind: "change",
+    });
+    expect(asString.prompts).toHaveLength(1);
+    const wrapped = scripted([{ kind: "operations", result: addPhone.operations }, addPhone]);
+    expect(
+      await propose("Could you add a place for a customer's mobile?", [wrapped]),
+    ).toMatchObject({
+      kind: "change",
+    });
+    expect(wrapped.prompts[1]).toContain(
+      "It cannot be applied: The answer has no operations: no operations key; keys: kind, result.",
+    );
+  });
+
   test("a request nothing of the app or the docs matches gets the short prompt (T844 A)", async () => {
     const request = "write me a poem about the sea";
     const model = scripted([{ kind: "answer", text: "I make apps, not poems." }]);

@@ -1,0 +1,55 @@
+import { expect, test } from "vitest";
+import { answerOf, operationsOf } from "./answer-operations.js";
+
+test("a model's operations are read as a list or a JSON string of one, and nothing else is guessed (T1718)", () => {
+  const step = { op: "setApp", args: { name: "Tasks" } };
+  expect(operationsOf({ operations: [step] })).toEqual({ operations: [step] });
+  expect(operationsOf({ operations: JSON.stringify([step]) })).toEqual({ operations: [step] });
+  expect(operationsOf({ operations: [] })).toEqual({ operations: [] });
+  // An entry that is not an object never reaches an operation.
+  expect(operationsOf({ operations: [null, "setApp", [step], step] })).toEqual({
+    operations: [step],
+  });
+  // The rest is named by its shape: keys and types, never the content.
+  expect(operationsOf({ result: { operations: [step] }, note: "secret words" })).toEqual({
+    problem: "no operations key; keys: result, note",
+  });
+  expect(operationsOf({})).toEqual({ problem: "no operations key; keys: none" });
+  // A key that is not a short name could be words of the answer: counted, never copied.
+  expect(operationsOf({ result: [], "private customer note": true })).toEqual({
+    problem: "no operations key; keys: result, 1 other",
+  });
+  expect(operationsOf({ operations: "setApp Tasks" })).toEqual({
+    problem: "operations was a string that is not JSON",
+  });
+  expect(operationsOf({ operations: JSON.stringify({ step }) })).toEqual({
+    problem: "operations was a string holding an object",
+  });
+  expect(operationsOf({ operations: { 0: step } })).toEqual({
+    problem: "operations was an object, not a list",
+  });
+  expect(operationsOf({ operations: null })).toEqual({
+    problem: "operations was null, not a list",
+  });
+  expect(operationsOf([step])).toEqual({ problem: "the answer was a list, not an object" });
+  expect(operationsOf("text")).toEqual({ problem: "the answer was a string, not an object" });
+});
+
+test("a function call's wrapper is taken off: arguments as the only key, an object or its JSON (T1719)", () => {
+  const inner = { operations: [{ op: "setApp", args: { name: "Tasks" } }], assumptions: [] };
+  expect(answerOf({ arguments: inner })).toBe(inner);
+  expect(answerOf({ arguments: JSON.stringify(inner) })).toEqual(inner);
+  expect(operationsOf(answerOf({ arguments: inner }))).toEqual({ operations: inner.operations });
+  // Taken off once: a wrapper inside a wrapper is not an answer, for the operations as for the rest.
+  expect(operationsOf(answerOf({ arguments: { arguments: inner } }))).toEqual({
+    problem: "no operations key; keys: arguments",
+  });
+  // Beside other keys, or not an object inside, it is the answer as it came.
+  const beside = { arguments: inner, name: "answer" };
+  expect(answerOf(beside)).toBe(beside);
+  for (const odd of [{ arguments: "not JSON" }, { arguments: [1] }, { arguments: null }])
+    expect(answerOf(odd)).toBe(odd);
+  expect(operationsOf({ arguments: "not JSON" })).toEqual({
+    problem: "no operations key; keys: arguments",
+  });
+});

@@ -3,7 +3,7 @@
 // the form like a layout (Cancel undoes it); an uploaded file goes in with the change and leaves
 // with its undo.
 import { type ContentImage, pictureAt, pictureFile } from "@smithable/core";
-import { useId, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { PhotoLibrary } from "./PhotoLibrary";
 
 export const PICTURE_TYPES: Record<string, string> = {
@@ -26,6 +26,34 @@ export function fileRefusal(file: { type: string; size: number }): string | unde
   if (file.size > 2 * 1024 * 1024)
     return `This file is ${(file.size / 1024 / 1024).toFixed(1)} MB; at most 2 MB.`;
   return undefined;
+}
+
+/** The waits before a thumbnail that did not load is asked for again: about half a minute in all. */
+const RETRY_MS = [500, 1000, 2000, 4000, 8000, 15000];
+
+/**
+ * A picture's thumbnail that asks again when it does not load (T1691): in a hosted workspace a
+ * stored picture's files are fetched just after the change that names it (media-storage.md §4),
+ * so the form's first ask can come before they are there.
+ */
+function Thumbnail({ src }: { src: string }) {
+  const [tries, setTries] = useState({ src, n: 0, waiting: false });
+  const at = tries.src === src ? tries : { src, n: 0, waiting: false };
+  useEffect(() => {
+    if (!at.waiting) return;
+    const timer = setTimeout(() => setTries({ src, n: at.n + 1, waiting: false }), RETRY_MS[at.n]);
+    return () => clearTimeout(timer);
+  }, [src, at.n, at.waiting]);
+  return (
+    <img
+      src={at.n ? `${src}${src.includes("?") ? "&" : "?"}try=${at.n}` : src}
+      alt=""
+      onError={() => {
+        if (at.n < RETRY_MS.length) setTries({ src, n: at.n, waiting: true });
+      }}
+      className="h-12 w-16 shrink-0 rounded border border-line object-cover"
+    />
+  );
 }
 
 export function SectionPicture({
@@ -85,10 +113,8 @@ export function SectionPicture({
       <legend className="text-xs text-muted">{label}</legend>
       <div className="flex items-center gap-2">
         {image ? (
-          <img
+          <Thumbnail
             src={`/api/${image.asset && image.widths?.length ? pictureAt(image, Math.min(...image.widths)) : pictureFile(image)}`}
-            alt=""
-            className="h-12 w-16 shrink-0 rounded border border-line object-cover"
           />
         ) : (
           <span className="text-sm text-quiet">No picture: the section shows its text alone.</span>

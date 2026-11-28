@@ -20102,7 +20102,7 @@ function AppointmentsPage() {
   },
 ]}
         values={values}
-        onChange={(next) => navigate({ to: "/appointments", search: { q, ...next }, replace: true, resetScroll: false })}
+        onChange={(next) => navigate({ to: "/appointments", search: (now) => ({ q: now.q, ...next }), replace: true, resetScroll: false })}
       />
       {selectable && (
         <SelectionBar
@@ -20565,7 +20565,8 @@ export const Route = createFileRoute("/day/")({
 function DayPage() {
   const { items, canCreate, canOpen, lanes } = Route.useLoaderData();
   const search = Route.useSearch();
-  const navigate = useNavigate();
+  // From this page: a next address built from the one in force is typed by this page's search.
+  const navigate = useNavigate({ from: "/day/" });
   return (
     <>
       <PageHeader page="day" title={pageUi["day"].title} />
@@ -21961,7 +21962,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/AppLink.tsx": "841a9af0 kit",
   "src/kit/AppShell.tsx": "6dca6653 kit",
   "src/kit/AppearancePicker.tsx": "0cd564d2 kit",
-  "src/kit/Calendar.tsx": "5f787e2e kit",
+  "src/kit/Calendar.tsx": "788cceff kit",
   "src/kit/Combobox.tsx": "c3a18c75 kit",
   "src/kit/Consent.tsx": "c5ee7e50 kit",
   "src/kit/FieldInput.tsx": "39e40fcb kit",
@@ -22043,12 +22044,12 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/app-card.tsx": "a74639e0 generated",
   "src/routes/appointments/$id.tsx": "05b6e945 generated",
-  "src/routes/appointments/index.tsx": "a0555ef5 generated",
+  "src/routes/appointments/index.tsx": "93eae527 generated",
   "src/routes/appointments/new.tsx": "cf4771c5 generated",
   "src/routes/barbers/$id.tsx": "10ac13c7 generated",
   "src/routes/barbers/index.tsx": "a318eada generated",
   "src/routes/barbers/new.tsx": "49d2cb83 generated",
-  "src/routes/day/index.tsx": "84bc75d1 generated",
+  "src/routes/day/index.tsx": "d7a12fe7 generated",
   "src/routes/events.ts": "cdf9dd08 generated",
   "src/routes/files/$model.$field.ts": "37c1c781 kit",
   "src/routes/files/$model.$id.$field.$n.ts": "5288014d kit",
@@ -34373,7 +34374,7 @@ function BookingsPage() {
 ]}
         values={values}
         defaults={{ "session.startsAt": "today" }}
-        onChange={(next) => navigate({ to: "/bookings", search: { q, ...next }, replace: true, resetScroll: false })}
+        onChange={(next) => navigate({ to: "/bookings", search: (now) => ({ q: now.q, ...next }), replace: true, resetScroll: false })}
       />
       {selectable && (
         <SelectionBar
@@ -34674,7 +34675,7 @@ function ClassTypesPage() {
   },
 ]}
         values={values}
-        onChange={(next) => navigate({ to: "/class-types", search: { q, ...next }, replace: true, resetScroll: false })}
+        onChange={(next) => navigate({ to: "/class-types", search: (now) => ({ q: now.q, ...next }), replace: true, resetScroll: false })}
       />
       {selectable && (
         <SelectionBar
@@ -35862,7 +35863,7 @@ function PostsPage() {
   },
 ]}
         values={values}
-        onChange={(next) => navigate({ to: "/posts", search: { q, ...next }, replace: true, resetScroll: false })}
+        onChange={(next) => navigate({ to: "/posts", search: (now) => ({ q: now.q, ...next }), replace: true, resetScroll: false })}
       />
       {selectable && (
         <SelectionBar
@@ -36106,7 +36107,8 @@ export const Route = createFileRoute("/schedule/")({
 function SchedulePage() {
   const { items, canCreate, canOpen, options } = Route.useLoaderData();
   const search = Route.useSearch();
-  const navigate = useNavigate();
+  // From this page: a next address built from the one in force is typed by this page's search.
+  const navigate = useNavigate({ from: "/schedule/" });
   return (
     <>
       <PageHeader page="schedule" title={pageUi["schedule"].title} />
@@ -36128,7 +36130,7 @@ function SchedulePage() {
   },
 ]}
         values={{ classType: search.classType, instructor: search.instructor }}
-        onChange={(next) => navigate({ to: "/schedule", search: { ...search, ...next, open: undefined }, replace: true, resetScroll: false })}
+        onChange={(next) => navigate({ to: "/schedule", search: (now) => ({ ...now, ...next, open: undefined }), replace: true, resetScroll: false })}
       />
       <Calendar
         search={search}
@@ -36415,7 +36417,7 @@ function SessionsPage() {
   { value: "-capacity", label: "Capacity, high to low" },
 ]}
         sort={sort}
-        onChange={(next) => navigate({ to: "/sessions", search: { q, ...next }, replace: true, resetScroll: false })}
+        onChange={(next) => navigate({ to: "/sessions", search: (now) => ({ q: now.q, ...next }), replace: true, resetScroll: false })}
       />
       {selectable && (
         <SelectionBar
@@ -37349,7 +37351,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/Articles.tsx": "b321bc42 kit",
   "src/kit/Ask.tsx": "e5277427 kit",
   "src/kit/Calculator.tsx": "590a4703 kit",
-  "src/kit/Calendar.tsx": "5f787e2e kit",
+  "src/kit/Calendar.tsx": "788cceff kit",
   "src/kit/Combobox.tsx": "c3a18c75 kit",
   "src/kit/Consent.tsx": "c5ee7e50 kit",
   "src/kit/FieldInput.tsx": "39e40fcb kit",
@@ -37467,10 +37469,10 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/blog/$address.tsx": "0fa31fdc generated",
   "src/routes/blog/index.tsx": "9ff11305 generated",
   "src/routes/bookings/$id.tsx": "28c46fa8 generated",
-  "src/routes/bookings/index.tsx": "551c75b0 generated",
+  "src/routes/bookings/index.tsx": "2972592a generated",
   "src/routes/bookings/new.tsx": "09aebe1c generated",
   "src/routes/class-types/$id.tsx": "7774de5a generated",
-  "src/routes/class-types/index.tsx": "fd15ab27 generated",
+  "src/routes/class-types/index.tsx": "a70d3559 generated",
   "src/routes/class-types/new.tsx": "d4e202b3 generated",
   "src/routes/events.ts": "98860b46 generated",
   "src/routes/files/$model.$field.ts": "37c1c781 kit",
@@ -37489,13 +37491,13 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/my-bookings/index.tsx": "126a117f generated",
   "src/routes/my-bookings/new.tsx": "574871aa generated",
   "src/routes/posts/$id.tsx": "f83087d3 generated",
-  "src/routes/posts/index.tsx": "f4ab3874 generated",
+  "src/routes/posts/index.tsx": "f437c37e generated",
   "src/routes/posts/new.tsx": "7be9f470 generated",
   "src/routes/privacy/index.tsx": "6236ed29 generated",
   "src/routes/robots[.]txt.ts": "2d5317f1 generated",
-  "src/routes/schedule/index.tsx": "79cdbac7 generated",
+  "src/routes/schedule/index.tsx": "9a178a37 generated",
   "src/routes/sessions/$id.tsx": "10f389eb generated",
-  "src/routes/sessions/index.tsx": "daf7d522 generated",
+  "src/routes/sessions/index.tsx": "6b9d1770 generated",
   "src/routes/sessions/new.tsx": "55613a12 generated",
   "src/routes/sign-in.tsx": "64dbc342 generated",
   "src/routes/sitemap[.]xml.ts": "018df36b generated",
@@ -43363,7 +43365,7 @@ function EnquiriesPage() {
   { value: "-followUpOn", label: "Follow up on, newest first" },
 ]}
         sort={sort}
-        onChange={(next) => navigate({ to: "/enquiries", search: { q, ...next }, replace: true, resetScroll: false })}
+        onChange={(next) => navigate({ to: "/enquiries", search: (now) => ({ q: now.q, ...next }), replace: true, resetScroll: false })}
       />
       {selectable && (
         <SelectionBar
@@ -43903,7 +43905,7 @@ function ProjectsPage() {
   { value: "-year", label: "Year, Z to A" },
 ]}
         sort={sort}
-        onChange={(next) => navigate({ to: "/projects", search: { q, ...next }, replace: true, resetScroll: false })}
+        onChange={(next) => navigate({ to: "/projects", search: (now) => ({ q: now.q, ...next }), replace: true, resetScroll: false })}
       />
       {selectable && (
         <SelectionBar
@@ -45385,7 +45387,7 @@ exports[`../../../examples/builder/smithable.yml > the generated files are as re
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/app-card.tsx": "a74639e0 generated",
   "src/routes/enquiries/$id.tsx": "9f8f421d generated",
-  "src/routes/enquiries/index.tsx": "1c24a039 generated",
+  "src/routes/enquiries/index.tsx": "192aae9f generated",
   "src/routes/enquiries/new.tsx": "14abb828 generated",
   "src/routes/files/$model.$field.ts": "37c1c781 kit",
   "src/routes/files/$model.$id.$field.$n.ts": "5288014d kit",
@@ -45394,7 +45396,7 @@ exports[`../../../examples/builder/smithable.yml > the generated files are as re
   "src/routes/index.tsx": "14cf364f generated",
   "src/routes/privacy/index.tsx": "66a357d1 generated",
   "src/routes/projects/$id.tsx": "b413344a generated",
-  "src/routes/projects/index.tsx": "6bcfbdf7 generated",
+  "src/routes/projects/index.tsx": "8902283d generated",
   "src/routes/projects/new.tsx": "747fcb9b generated",
   "src/routes/robots[.]txt.ts": "11965935 generated",
   "src/routes/services/$id.tsx": "a5473589 generated",
@@ -53265,7 +53267,7 @@ function CustomersPage() {
   { value: "-createdAt", label: "Added, newest first" },
 ]}
         sort={sort}
-        onChange={(next) => navigate({ to: "/customers", search: { q, ...next }, replace: true, resetScroll: false })}
+        onChange={(next) => navigate({ to: "/customers", search: (now) => ({ q: now.q, ...next }), replace: true, resetScroll: false })}
       />
       {selectable && (
         <SelectionBar
@@ -53642,7 +53644,7 @@ function FollowUpsPage() {
   { value: "-dueOn", label: "Due on, newest first" },
 ]}
         sort={sort}
-        onChange={(next) => navigate({ to: "/follow-ups", search: { q, ...next }, replace: true, resetScroll: false })}
+        onChange={(next) => navigate({ to: "/follow-ups", search: (now) => ({ q: now.q, ...next }), replace: true, resetScroll: false })}
       />
       {selectable && (
         <SelectionBar
@@ -54083,7 +54085,7 @@ function OrdersPage() {
   { value: "-number", label: "Number, Z to A" },
 ]}
         sort={sort}
-        onChange={(next) => navigate({ to: "/orders", search: { q, ...next }, replace: true, resetScroll: false })}
+        onChange={(next) => navigate({ to: "/orders", search: (now) => ({ q: now.q, ...next }), replace: true, resetScroll: false })}
       />
       {selectable && (
         <SelectionBar
@@ -55360,17 +55362,17 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/routes/app-card.tsx": "a74639e0 generated",
   "src/routes/customers/$id.tsx": "6a23d1ec generated",
   "src/routes/customers/actions/schedule-follow-ups.tsx": "0fb22ed7 generated",
-  "src/routes/customers/index.tsx": "81316eeb generated",
+  "src/routes/customers/index.tsx": "863d2b71 generated",
   "src/routes/customers/new.tsx": "101540c3 generated",
   "src/routes/customers/trash.tsx": "7848b304 generated",
   "src/routes/follow-ups/$id.tsx": "180573bb generated",
-  "src/routes/follow-ups/index.tsx": "55e3a5b9 generated",
+  "src/routes/follow-ups/index.tsx": "d81a3e57 generated",
   "src/routes/follow-ups/new.tsx": "e6b35f58 generated",
   "src/routes/follow-ups/trash.tsx": "182e9c79 generated",
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/index.tsx": "7f70752a generated",
   "src/routes/orders/$id.tsx": "d906427c generated",
-  "src/routes/orders/index.tsx": "910b017c generated",
+  "src/routes/orders/index.tsx": "ea46b652 generated",
   "src/routes/orders/new.tsx": "c9d034f0 generated",
   "src/routes/orders/trash.tsx": "80862bb0 generated",
   "src/routes/robots[.]txt.ts": "c64e7261 generated",
@@ -63830,7 +63832,7 @@ function ClientsPage() {
   { value: "-createdAt", label: "Added, newest first" },
 ]}
         sort={sort}
-        onChange={(next) => navigate({ to: "/clients", search: { q, ...next }, replace: true, resetScroll: false })}
+        onChange={(next) => navigate({ to: "/clients", search: (now) => ({ q: now.q, ...next }), replace: true, resetScroll: false })}
       />
       {selectable && (
         <SelectionBar
@@ -64343,7 +64345,7 @@ function InvoicesPage() {
   { value: "-number", label: "Number, Z to A" },
 ]}
         sort={sort}
-        onChange={(next) => navigate({ to: "/invoices", search: { q, ...next }, replace: true, resetScroll: false })}
+        onChange={(next) => navigate({ to: "/invoices", search: (now) => ({ q: now.q, ...next }), replace: true, resetScroll: false })}
       />
       {selectable && (
         <SelectionBar
@@ -65628,7 +65630,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/app-card.tsx": "a74639e0 generated",
   "src/routes/clients/$id.tsx": "e36f8b7f generated",
-  "src/routes/clients/index.tsx": "0db27a54 generated",
+  "src/routes/clients/index.tsx": "df9857c6 generated",
   "src/routes/clients/new.tsx": "1194d3e4 generated",
   "src/routes/events.ts": "2a5e5b78 generated",
   "src/routes/files/$model.$field.ts": "37c1c781 kit",
@@ -65638,7 +65640,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/routes/index.tsx": "c2dc8302 generated",
   "src/routes/invoices/$id.tsx": "8eb4e8fc generated",
   "src/routes/invoices/$id_.document.tsx": "3a477458 generated",
-  "src/routes/invoices/index.tsx": "f8f87d86 generated",
+  "src/routes/invoices/index.tsx": "05390974 generated",
   "src/routes/invoices/new.tsx": "8fcd2b9f generated",
   "src/routes/overview/index.tsx": "254c2c93 generated",
   "src/routes/privacy/index.tsx": "6ef06b81 generated",
@@ -74584,7 +74586,7 @@ function DishesPage() {
   { name: "available", label: "Available", kind: "toggle" },
 ]}
         values={values}
-        onChange={(next) => navigate({ to: "/dishes", search: { q, ...next }, replace: true, resetScroll: false })}
+        onChange={(next) => navigate({ to: "/dishes", search: (now) => ({ q: now.q, ...next }), replace: true, resetScroll: false })}
       />
       {selectable && (
         <SelectionBar
@@ -74947,7 +74949,7 @@ function EnquiriesPage() {
   { value: "-followUpOn", label: "Follow up on, newest first" },
 ]}
         sort={sort}
-        onChange={(next) => navigate({ to: "/enquiries", search: { q, ...next }, replace: true, resetScroll: false })}
+        onChange={(next) => navigate({ to: "/enquiries", search: (now) => ({ q: now.q, ...next }), replace: true, resetScroll: false })}
       />
       {selectable && (
         <SelectionBar
@@ -75484,7 +75486,7 @@ function OrdersPage() {
   { value: "-wanted", label: "Wanted, newest first" },
 ]}
         sort={sort}
-        onChange={(next) => navigate({ to: "/orders", search: { q, ...next }, replace: true, resetScroll: false })}
+        onChange={(next) => navigate({ to: "/orders", search: (now) => ({ q: now.q, ...next }), replace: true, resetScroll: false })}
       />
       {selectable && (
         <SelectionBar
@@ -76028,7 +76030,7 @@ function StopsPage() {
   { value: "-startsAt", label: "Starts at, newest first" },
 ]}
         sort={sort}
-        onChange={(next) => navigate({ to: "/stops", search: { q, ...next }, replace: true, resetScroll: false })}
+        onChange={(next) => navigate({ to: "/stops", search: (now) => ({ q: now.q, ...next }), replace: true, resetScroll: false })}
       />
       {selectable && (
         <SelectionBar
@@ -77125,10 +77127,10 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/routes/app-card.tsx": "a74639e0 generated",
   "src/routes/catering/index.tsx": "4f16deb9 generated",
   "src/routes/dishes/$id.tsx": "ae74c5c1 generated",
-  "src/routes/dishes/index.tsx": "f16c93b0 generated",
+  "src/routes/dishes/index.tsx": "64b81382 generated",
   "src/routes/dishes/new.tsx": "7aa588df generated",
   "src/routes/enquiries/$id.tsx": "aa658206 generated",
-  "src/routes/enquiries/index.tsx": "1c2e0853 generated",
+  "src/routes/enquiries/index.tsx": "c4ead8ed generated",
   "src/routes/enquiries/new.tsx": "20d6dfa3 generated",
   "src/routes/events.ts": "e5bcb4f0 generated",
   "src/routes/files/$model.$field.ts": "37c1c781 kit",
@@ -77137,13 +77139,13 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/index.tsx": "f89691ae generated",
   "src/routes/orders/$id.tsx": "eb8a58da generated",
-  "src/routes/orders/index.tsx": "28744435 generated",
+  "src/routes/orders/index.tsx": "9076031b generated",
   "src/routes/orders/new.tsx": "1739d5ad generated",
   "src/routes/robots[.]txt.ts": "63cfc100 generated",
   "src/routes/sign-in.tsx": "11f3b277 generated",
   "src/routes/sitemap[.]xml.ts": "2e83acd6 generated",
   "src/routes/stops/$id.tsx": "7d3c395b generated",
-  "src/routes/stops/index.tsx": "688c7813 generated",
+  "src/routes/stops/index.tsx": "96daf0b5 generated",
   "src/routes/stops/new.tsx": "0033752d generated",
   "src/routes/team/activity.tsx": "8822160b generated",
   "src/routes/team/index.tsx": "d0aa5bca generated",
@@ -81040,7 +81042,7 @@ function CatalogPage() {
   { value: "-createdAt", label: "Added, newest first" },
 ]}
         sort={sort}
-        onChange={(next) => navigate({ to: "/", search: { q, view, ...next }, replace: true, resetScroll: false })}
+        onChange={(next) => navigate({ to: "/", search: (now) => ({ q: now.q, view: now.view, ...next }), replace: true, resetScroll: false })}
       />
       {selectable && (
         <SelectionBar
@@ -82582,7 +82584,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/routes/files/$model.$id.$field.$n.ts": "5288014d kit",
   "src/routes/files/$model.$id.$field.ts": "93378bd7 kit",
   "src/routes/health.ts": "362c9904 kit",
-  "src/routes/index.tsx": "354ac5e5 generated",
+  "src/routes/index.tsx": "92e53a04 generated",
   "src/routes/my-items/$id.tsx": "5e517763 generated",
   "src/routes/my-items/index.tsx": "131555d3 generated",
   "src/routes/my-items/new.tsx": "d513e438 generated",
@@ -87692,7 +87694,7 @@ function EnquiriesPage() {
   { value: "-followUpOn", label: "Follow up on, newest first" },
 ]}
         sort={sort}
-        onChange={(next) => navigate({ to: "/enquiries", search: { q, ...next }, replace: true, resetScroll: false })}
+        onChange={(next) => navigate({ to: "/enquiries", search: (now) => ({ q: now.q, ...next }), replace: true, resetScroll: false })}
       />
       {selectable && (
         <SelectionBar
@@ -88204,7 +88206,7 @@ function JobsPage() {
   { value: "-year", label: "Year, Z to A" },
 ]}
         sort={sort}
-        onChange={(next) => navigate({ to: "/jobs", search: { q, ...next }, replace: true, resetScroll: false })}
+        onChange={(next) => navigate({ to: "/jobs", search: (now) => ({ q: now.q, ...next }), replace: true, resetScroll: false })}
       />
       {selectable && (
         <SelectionBar
@@ -89424,7 +89426,7 @@ exports[`../../../examples/painter/smithable.yml > the generated files are as re
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/app-card.tsx": "a74639e0 generated",
   "src/routes/enquiries/$id.tsx": "114b2cca generated",
-  "src/routes/enquiries/index.tsx": "fb89571f generated",
+  "src/routes/enquiries/index.tsx": "6e22f335 generated",
   "src/routes/enquiries/new.tsx": "6dbd7a5c generated",
   "src/routes/files/$model.$field.ts": "37c1c781 kit",
   "src/routes/files/$model.$id.$field.$n.ts": "5288014d kit",
@@ -89432,7 +89434,7 @@ exports[`../../../examples/painter/smithable.yml > the generated files are as re
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/index.tsx": "8cc9e0b7 generated",
   "src/routes/jobs/$id.tsx": "0e5a54dd generated",
-  "src/routes/jobs/index.tsx": "d31bceb5 generated",
+  "src/routes/jobs/index.tsx": "d5cb0697 generated",
   "src/routes/jobs/new.tsx": "65893714 generated",
   "src/routes/privacy/index.tsx": "d583618f generated",
   "src/routes/robots[.]txt.ts": "e65ef773 generated",
@@ -92755,7 +92757,7 @@ function ItemsPage() {
   },
 ]}
         values={values}
-        onChange={(next) => navigate({ to: "/items", search: { q, ...next }, replace: true, resetScroll: false })}
+        onChange={(next) => navigate({ to: "/items", search: (now) => ({ q: now.q, ...next }), replace: true, resetScroll: false })}
       />
       {selectable && (
         <SelectionBar
@@ -93548,7 +93550,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/index.tsx": "781b7593 generated",
   "src/routes/items/$id.tsx": "6a20f2c4 generated",
-  "src/routes/items/index.tsx": "e08d3f19 generated",
+  "src/routes/items/index.tsx": "b02c205b generated",
   "src/routes/items/new.tsx": "6d8d9bc4 generated",
   "src/routes/robots[.]txt.ts": "472c1e51 generated",
   "src/routes/sign-in.tsx": "563d1820 generated",
@@ -99020,7 +99022,7 @@ function DishesPage() {
   },
 ]}
         values={values}
-        onChange={(next) => navigate({ to: "/dishes", search: { q, ...next }, replace: true, resetScroll: false })}
+        onChange={(next) => navigate({ to: "/dishes", search: (now) => ({ q: now.q, ...next }), replace: true, resetScroll: false })}
       />
       {selectable && (
         <SelectionBar
@@ -99404,7 +99406,7 @@ function MenusPage() {
   },
 ]}
         values={values}
-        onChange={(next) => navigate({ to: "/menus", search: { q, ...next }, replace: true, resetScroll: false })}
+        onChange={(next) => navigate({ to: "/menus", search: (now) => ({ q: now.q, ...next }), replace: true, resetScroll: false })}
       />
       {selectable && (
         <SelectionBar
@@ -99696,7 +99698,7 @@ function ServiceHoursPage() {
   },
 ]}
         values={values}
-        onChange={(next) => navigate({ to: "/service-hours", search: { q, ...next }, replace: true, resetScroll: false })}
+        onChange={(next) => navigate({ to: "/service-hours", search: (now) => ({ q: now.q, ...next }), replace: true, resetScroll: false })}
       />
       {selectable && (
         <SelectionBar
@@ -100869,17 +100871,17 @@ exports[`../../../examples/restaurant/smithable.yml > the generated files are as
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/app-card.tsx": "a74639e0 generated",
   "src/routes/dishes/$id.tsx": "a9415b76 generated",
-  "src/routes/dishes/index.tsx": "b29652a7 generated",
+  "src/routes/dishes/index.tsx": "a5566b6d generated",
   "src/routes/dishes/new.tsx": "eb5a9a82 generated",
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/index.tsx": "4acae87e generated",
   "src/routes/menu/index.tsx": "e68100b9 generated",
   "src/routes/menus/$id.tsx": "4f4ae484 generated",
-  "src/routes/menus/index.tsx": "6672c196 generated",
+  "src/routes/menus/index.tsx": "5b42573c generated",
   "src/routes/menus/new.tsx": "b1591c18 generated",
   "src/routes/robots[.]txt.ts": "82e4d36e generated",
   "src/routes/service-hours/$id.tsx": "6282fccd generated",
-  "src/routes/service-hours/index.tsx": "ccdd9f9e generated",
+  "src/routes/service-hours/index.tsx": "af74d904 generated",
   "src/routes/service-hours/new.tsx": "bb3fae1a generated",
   "src/routes/sign-in.tsx": "11f3b277 generated",
   "src/routes/sitemap[.]xml.ts": "29e35b26 generated",
@@ -113301,7 +113303,7 @@ function IncidentsPage() {
   },
 ]}
         values={values}
-        onChange={(next) => navigate({ to: "/incidents", search: { q, ...next }, replace: true, resetScroll: false })}
+        onChange={(next) => navigate({ to: "/incidents", search: (now) => ({ q: now.q, ...next }), replace: true, resetScroll: false })}
       />
       {selectable && (
         <SelectionBar
@@ -115452,7 +115454,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/routes/history/$address.tsx": "971802d2 generated",
   "src/routes/history/index.tsx": "21415972 generated",
   "src/routes/incidents/$id.tsx": "bf4ecf44 generated",
-  "src/routes/incidents/index.tsx": "1256f521 generated",
+  "src/routes/incidents/index.tsx": "d5d7a60f generated",
   "src/routes/incidents/new.tsx": "a9f07576 generated",
   "src/routes/incoming/chatCommand.ts": "a2f3f35d generated",
   "src/routes/index.tsx": "82ce7233 generated",
@@ -122033,7 +122035,7 @@ function CasesPage() {
   { value: "-createdAt", label: "Added, newest first" },
 ]}
         sort={sort}
-        onChange={(next) => navigate({ to: "/cases", search: { q, ...next }, replace: true, resetScroll: false })}
+        onChange={(next) => navigate({ to: "/cases", search: (now) => ({ q: now.q, ...next }), replace: true, resetScroll: false })}
       />
       {selectable && (
         <SelectionBar
@@ -123534,7 +123536,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/app-card.tsx": "a74639e0 generated",
   "src/routes/cases/$id.tsx": "69d4f745 generated",
-  "src/routes/cases/index.tsx": "b6d234a7 generated",
+  "src/routes/cases/index.tsx": "a2644151 generated",
   "src/routes/cases/new.tsx": "0befc28f generated",
   "src/routes/events.ts": "f683a575 generated",
   "src/routes/files/$model.$field.ts": "37c1c781 kit",

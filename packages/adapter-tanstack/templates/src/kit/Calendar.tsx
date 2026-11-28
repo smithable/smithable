@@ -337,7 +337,11 @@ export function Calendar({
   /** Records placed by a date, not a date and time: no hours. */
   dateOnly: boolean;
   /** `replace`: no history entry of its own (closing a panel opened from an address). */
-  onNavigate: (search: CalendarSearch, replace?: boolean) => void;
+  /**
+   * The next address, from the one in force when the router applies it, not the one this calendar
+   * was drawn with: a second click before the page is drawn again keeps the first's (T1470).
+   */
+  onNavigate: (next: (search: CalendarSearch) => CalendarSearch, replace?: boolean) => void;
   /** Opens a record on its own page; without it, a record's details open in a panel. */
   onOpen?: (id: number) => void;
   /** Starts a new record at a wall time ("2026-09-30T09:00"), for those who may create one. */
@@ -422,7 +426,7 @@ export function Calendar({
   const open = (p: Placed) => {
     if (onOpen) return onOpen(p.id);
     pushed.current = true;
-    onNavigate({ ...search, open: p.id });
+    onNavigate((now) => ({ ...now, open: p.id }));
   };
   // The open record's panel follows the address; one not among those shown is said so.
   const shown = search.open === undefined ? undefined : placed.find((p) => p.id === search.open);
@@ -434,14 +438,17 @@ export function Calendar({
   }, [search.open]);
   // Elsewhere in time, the time of day chosen stays chosen.
   // Previous, Today, Next and the views move the days; the page's filters and the time of day stay.
-  const { day: _day, week: _week, month: _month, from: _from, open: _open, ...stays } = search;
-  const go = (to: CalendarSearch) => onNavigate({ ...stays, ...to });
+  const go = (to: CalendarSearch) =>
+    onNavigate(({ day: _day, week: _week, month: _month, from: _from, open: _open, ...stays }) => ({
+      ...stays,
+      ...to,
+    }));
   const closed = () => {
     if (search.open === undefined) return;
     if (pushed.current) {
       pushed.current = false;
       window.history.back();
-    } else onNavigate({ ...search, open: undefined }, true);
+    } else onNavigate((now) => ({ ...now, open: undefined }), true);
   };
 
   return (
@@ -513,7 +520,7 @@ export function Calendar({
               variant={search.time === t ? "default" : "outline"}
               aria-pressed={search.time === t}
               className="rounded-full"
-              onClick={() => onNavigate({ ...search, time: t, open: undefined })}
+              onClick={() => onNavigate((now) => ({ ...now, time: t, open: undefined }))}
             >
               {t ? w[t] : w.anyTime}
             </Button>

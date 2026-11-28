@@ -296,7 +296,7 @@ else
 fi
 status=$?
 pkill -P "$sampler" 2>/dev/null; kill "$sampler" 2>/dev/null; wait "$sampler" 2>/dev/null
-if [ $status -eq 0 ] && [ -z "${GATE_RUN:-}" ]; then scripts/mark-verified.sh "$before" || true; fi
+if [ $status -eq 0 ] && [ -z "${GATE_RUN:-}" ]; then scripts/mark-verified.sh --gate "$before" || true; fi
 rm -f "$lock.who"
 exit $status
 }
