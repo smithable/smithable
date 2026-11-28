@@ -15,7 +15,9 @@ import {
   checkStudioLookTimeout,
   checkStudioViewer,
 } from "./studio-look-checks.mjs";
+import { walkRecord } from "./walk-record.mjs";
 
+const record = walkRecord("scripts/test-studio-look.mjs");
 const port = Number(process.env.STUDIO_LOOK_PORT ?? 18510);
 checkPorts("Studio look", [port, port + 1]);
 const owned = !process.env.STUDIO_LOOK_APP;
@@ -156,3 +158,4 @@ try {
   }
 }
 if (passed && owned) rmSync(dirname(dir), { recursive: true, force: true });
+if (passed) record("studio look");

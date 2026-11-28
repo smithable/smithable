@@ -10,7 +10,7 @@
 #      and CI runs them. Under load a local run fails on timing alone, and a refusal then costs an hour.
 #
 #   4. A push that adds or changes a browser walk's file (scripts/test-apps.mjs, test-studio.mjs and
-#      what they import) needs a passing run of it with that content, noted by the walk itself, or a
+#      the runner test-apps-parallel.mjs, test-studio-look.mjs and what they import) needs a passing run of it with that content, noted by the walk itself, or a
 #      commit trailer "Walk-not-run: <reason>" (scripts/walk-record.mjs). A lint mark does not stand
 #      in for it. It does not see a product change that breaks an unchanged walk: CI does.
 #

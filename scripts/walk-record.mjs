@@ -12,6 +12,8 @@ import { fileURLToPath } from "node:url";
 export const WALKS = {
   "scripts/test-apps.mjs": "pnpm test:apps:one <an example that runs the changed step>",
   "scripts/test-studio.mjs": "pnpm test:studio",
+  "scripts/test-apps-parallel.mjs": "node scripts/test-apps-parallel.mjs <an example>",
+  "scripts/test-studio-look.mjs": "node scripts/test-studio-look.mjs",
 };
 /** What the walks stand on and holds no step: a change here asks for no run. */
 const SUPPORT = [
@@ -102,7 +104,8 @@ export function checkWalks(base, head, cwd = process.cwd()) {
   const found = [];
   for (const [entry, run] of Object.entries(WALKS)) {
     for (const file of walkFiles(entry, read)) {
-      if (!changed.includes(file)) continue;
+      // A file two walks share is satisfied by either: records go by content.
+      if (!changed.includes(file) || found.some((f) => f.file === file)) continue;
       const blob = blobAt(head, file);
       const record = join(records(cwd), blob);
       const ran = existsSync(record)
