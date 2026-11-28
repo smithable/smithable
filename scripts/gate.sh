@@ -27,6 +27,8 @@
 # the visual matrix (pnpm test:visual, fourteen cases in a browser, three to four minutes) only
 # when the kit's templates, the adapter's page patterns or themes, the look editor or the visual
 # check itself changed. With nothing changed (CI's run on main) everything runs.
+# From those rules scripts/gate-plan.mjs narrows by what the generated code says (the example
+# apps whose output changed, a sample when most did); its rows and GATE_* inputs are there.
 # CI's full job on a pull request sets GATE_BASICS_DONE=1: the hosted job of the same run has
 # linted and run the units on the same commit, so the gate builds and goes on (the site only for
 # Studio's check, which reads it). Read only with SESSION=ci; no session's gate skips them.
@@ -74,6 +76,9 @@ umask_was=$(umask)
 umask 002
 mkdir -p "$queue"
 touch "$turns" "$lock"
+mkdir -p "$home/.gate-failed"
+# The sessions and CI's runner are different users of one group.
+chmod g+ws "$home/.gate-failed" 2>/dev/null || true
 # Folders the tests, the apps' checks and the lab left under /tmp: dropped once a day old, so a
 # machine that runs gates all day does not fill up (the tests now remove their own as they end).
 find "${TMPDIR:-/tmp}" -mindepth 1 -maxdepth 1 \( -name 'smithable-*' -o -name 'ui-lab-*' \) -mmin +1440 -exec rm -rf {} + 2>/dev/null || true
@@ -109,9 +114,13 @@ running() {
 # (GATE_CHANGED, newline-separated, stands in for a test of the plan).
 changes() {
   if [ -n "${GATE_CHANGED:-}" ]; then printf '%s\n' "$GATE_CHANGED"; return; fi
-  local base
-  base=$(git merge-base HEAD origin/main 2>/dev/null || true)
-  { [ -n "$base" ] && git diff --name-only "$base"; git ls-files --others --exclude-standard; } 2>/dev/null | sort -u
+  local base tracked untracked
+  # Half a list could plan too little: when the branch's own changes cannot be read, say nothing,
+  # which plans everything.
+  base=$(git merge-base HEAD origin/main 2>/dev/null) || return 0
+  tracked=$(git diff --name-only --no-renames "$base" 2>/dev/null) || return 0
+  untracked=$(git ls-files --others --exclude-standard 2>/dev/null) || return 0
+  printf '%s\n' "$tracked" "$untracked" | sed '/^$/d' | sort -u
 }
 
 # Which suites a change needs (Johan, 2026-10-22: speed first, nothing tested for nothing). Lint,
@@ -123,9 +132,8 @@ changes() {
 # and the CRM for Studio). The visual matrix runs when what it looks at changed: the kit's
 # templates, the adapter's page patterns and themes, the look editor, or its own scripts; and
 # when nothing changed. Plain documents decide nothing.
-plan() {
-  local changed rest apps studio visual kinds k list
-  changed=$(changes)
+plan_today() {
+  local changed=$1 rest apps studio visual kinds k list
   rest=$(printf '%s\n' "$changed" | grep -vE '^(docs/|[^/]*\.md$|$)' || true)
   visual=no
   if [ -z "$rest" ] || printf '%s\n' "$rest" | grep -qE '^(packages/adapter-tanstack/(templates/|src/pages/|src/themes\.ts$)|packages/look-editor/|scripts/(test-visual|visual-[a-z]+-checks)\.mjs$)'; then
@@ -158,12 +166,32 @@ plan() {
   echo "apps=all studio=yes visual=$visual why=the change reaches every app"
 }
 
+# The plan: today's rules above, narrowed or widened by scripts/gate-plan.mjs. The apps that
+# failed in this branch's last run stay in a narrowed plan; sessions and CI's runner share the
+# folder, so a run in either counts. With --check-snapshot (--plan) it stops, exit 3, rather
+# than plan from a snapshot the units have not passed on. A planner that fails runs everything.
+plan() {
+  local changed today status
+  changed=$(changes)
+  today=$(plan_today "$changed")
+  GATE_CHANGED=$changed node scripts/gate-plan.mjs "$@" "$today" && return
+  status=$?
+  [ "$status" -ne 3 ] || return 3
+  echo "apps=all studio=yes visual=yes why=every app: the planner failed"
+}
+
 basics_done=no
 [ "${GATE_BASICS_DONE:-}" != 1 ] || [ "${SESSION:-}" != ci ] || basics_done=yes
 skipped="lint and the units are skipped: the hosted job ran them on this commit."
 
+# This branch's note of the apps that failed (scripts/test-apps-parallel.mjs writes it).
+branch=${GATE_BRANCH:-$(git branch --show-current 2>/dev/null || true)}
+failed_file=
+[ -z "$branch" ] || failed_file=$home/.gate-failed/$(printf '%s' "$branch" | tr -c 'A-Za-z0-9._-' '_')
+export GATE_FAILED_FILE=$failed_file
+
 if [ "${1:-}" = --plan ]; then
-  plan
+  plan --check-snapshot || exit
   [ "$basics_done" = no ] || echo "$skipped"
   exit 0
 fi
@@ -272,16 +300,21 @@ if [ -n "${GATE_RUN:-}" ]; then
   echo "gate.sh: running $GATE_RUN in the gate's turn."
   bash -c "$GATE_RUN"
 else
-  p=$(plan)
-  apps=${p#apps=}; apps=${apps%% studio=*}
-  studio=${p#*studio=}; studio=${studio%% visual=*}
-  visual=${p#*visual=}; visual=${visual%% why=*}
-  echo "gate.sh: ${p#*why=}: apps $apps, Studio's check $studio, the visual matrix $visual."
+  planned() {
+    p=$(plan) || return 1
+    apps=${p#apps=}; apps=${apps%% studio=*}
+    studio=${p#*studio=}; studio=${studio%% visual=*}
+    visual=${p#*visual=}; visual=${visual%% why=*}
+    echo "gate.sh: ${p#*why=}: apps $apps, Studio's check $studio, the visual matrix $visual."
+  }
+  # Planned after the units: they write snapshot entries that are new, and the plan reads them.
+  # With CI's hosted job standing for them, the committed snapshot has already passed there.
   basics() {
     if [ "$basics_done" = no ]; then
-      pnpm lint && pnpm build && pnpm test && pnpm site
+      pnpm lint && pnpm build && pnpm test && pnpm site && planned
     else
       echo "gate.sh: $skipped"
+      planned
       pnpm build && { [ "$studio" = no ] || pnpm site; }
     fi
   }
