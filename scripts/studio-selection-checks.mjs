@@ -34,6 +34,11 @@ export async function checkStudioSelection(browser, base) {
     const originalHref = await link.getAttribute("href");
     assert.equal(originalHref, "/schedule");
     if ((await smith.getAttribute("aria-pressed")) === "true") await smith.click();
+    // Select stays on after a part's form closes (only Escape or Select again end it, T1684):
+    // turned on only where it is off.
+    const selectOn = async () => {
+      if ((await select.getAttribute("aria-pressed")) !== "true") await select.click();
+    };
     await select.click();
     await frame.locator("html[data-sm-selecting]").waitFor();
     await link.click();
@@ -47,8 +52,8 @@ export async function checkStudioSelection(browser, base) {
     assert.ok((await overlay.boundingBox()).x <= 16);
     await form.getByRole("button", { name: "Close selection", exact: true }).click();
     await form.waitFor({ state: "hidden" });
-    await select.click();
-    // After a change the preview reloads: a click before it is selecting again opens nothing.
+    // Closing the form leaves Select on: only Escape ends it (T1684).
+    assert.equal(await select.getAttribute("aria-pressed"), "true");
     await frame.locator("html[data-sm-selecting]").waitFor();
     await link.click();
     await form.waitFor();
@@ -89,6 +94,11 @@ export async function checkStudioSelection(browser, base) {
     await form.waitFor({ state: "hidden" });
     assert.equal(await link.getAttribute("href"), originalHref);
     await hero.locator("[data-sm-selected]").waitFor({ state: "hidden" });
+    // Cancel left Select on: Select again ends it, for the Shift-click without it.
+    assert.equal(await select.getAttribute("aria-pressed"), "true");
+    await select.click();
+    await frame.locator("html[data-sm-selecting]").waitFor({ state: "hidden" });
+    assert.equal(await select.getAttribute("aria-pressed"), "false");
 
     await page.locator('iframe[title="App preview"]').focus();
     await page.keyboard.down("Shift");
@@ -103,7 +113,7 @@ export async function checkStudioSelection(browser, base) {
     await applyOperation("setSectionLook");
     await frame.locator('[data-hero][data-layout="plain"]').waitFor();
 
-    await select.click();
+    await selectOn();
     // After a change the preview reloads: a click before it is selecting again opens nothing.
     await frame.locator("html[data-sm-selecting]").waitFor();
     await link.click();
@@ -115,7 +125,7 @@ export async function checkStudioSelection(browser, base) {
       .and(hero.locator('a[href="/blog"]'))
       .waitFor();
 
-    await select.click();
+    await selectOn();
     // After a change the preview reloads: a click before it is selecting again opens nothing.
     await frame.locator("html[data-sm-selecting]").waitFor();
     await link.click();
@@ -128,7 +138,7 @@ export async function checkStudioSelection(browser, base) {
 
     // A whole section, picked where none of its parts is marked (T1145): its box inside its own
     // edges, so all four sides show; its form beside it on the screen; a choice is one setSectionLook.
-    await select.click();
+    await selectOn();
     // After a change the preview reloads: a click before it is selecting again opens nothing.
     await frame.locator("html[data-sm-selecting]").waitFor();
     await hero.click({ position: { x: 4, y: 4 } });
@@ -171,7 +181,7 @@ export async function checkStudioSelection(browser, base) {
     await sectionForm.waitFor({ state: "hidden" });
     await frame.locator('[data-hero][data-layout="centered"]').waitFor({ state: "hidden" });
     await frame.locator("[data-hero]").first().waitFor();
-    await select.click();
+    await selectOn();
     // After a change the preview reloads: a click before it is selecting again opens nothing.
     await frame.locator("html[data-sm-selecting]").waitFor();
     await hero.click({ position: { x: 4, y: 4 } });
@@ -195,7 +205,7 @@ export async function checkStudioSelection(browser, base) {
     // Its picture (T1183): shown in the kept photo layout, Remove is tried on like a layout, and Cancel brings the picture back.
     const heroPicture = frame.locator("[data-hero] img").first();
     await heroPicture.waitFor();
-    await select.click();
+    await selectOn();
     // After a change the preview reloads: a click before it is selecting again opens nothing.
     await frame.locator("html[data-sm-selecting]").waitFor();
     await hero.click({ position: { x: 4, y: 4 } });
@@ -216,7 +226,7 @@ export async function checkStudioSelection(browser, base) {
     await frame.locator("[data-hero] img").first().waitFor();
     // The Photos and videos panel (T1458): locally it lists the project's pictures, marks the one
     // in use, and choosing another is tried on like any change; Cancel puts the first back.
-    await select.click();
+    await selectOn();
     // After a change the preview reloads: a click before it is selecting again opens nothing.
     await frame.locator("html[data-sm-selecting]").waitFor();
     await hero.click({ position: { x: 4, y: 4 } });
@@ -240,7 +250,7 @@ export async function checkStudioSelection(browser, base) {
     await frame.locator('[data-hero] img[src*="hero"]').first().waitFor();
     // Its film (T1278): a file that breaks a rule is refused with the rule named; one within them is
     // tried on, and Cancel takes it away again.
-    await select.click();
+    await selectOn();
     // After a change the preview reloads: a click before it is selecting again opens nothing.
     await frame.locator("html[data-sm-selecting]").waitFor();
     await hero.click({ position: { x: 4, y: 4 } });
@@ -302,7 +312,7 @@ export async function checkStudioSelection(browser, base) {
     await sectionForm.waitFor({ state: "hidden" });
     for (const { src } of [tried, again])
       assert.equal(await filmServed(src), false, `Cancel left ${src} in the app`);
-    await select.click();
+    await selectOn();
     // After a change the preview reloads: a click before it is selecting again opens nothing.
     await frame.locator("html[data-sm-selecting]").waitFor();
     await hero.click({ position: { x: 4, y: 4 } });
