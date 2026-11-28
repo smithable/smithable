@@ -60,6 +60,11 @@ test("a walk stops on a format error in its checkout's changed files, wherever i
       assert.equal(r.stdout, "");
     }
     assert.equal(walk({ CI: "true" }).stdout, "walked\n");
+    assert.equal(walk({ GIT_DIR: join(dir, "elsewhere") }).status, 77, "a hook's GIT_DIR");
+    rmSync(join(repo, "new file.js"));
+    writeFileSync(join(repo, "--write"), "notes\n");
+    writeFileSync(join(repo, "other.js"), bad);
+    assert.equal(walk().status, 77, "a file named like a flag changes nothing");
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
