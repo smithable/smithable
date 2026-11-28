@@ -2,11 +2,10 @@
 # Every pull request runs lint, build, units and the site on GitHub's runners. Studio changes
 # also run a browser smoke test there. The full check (the example apps and Studio in a real
 # browser, as `pnpm check`) runs on the self-hosted runner through scripts/gate.sh when the change
-# touches the engine, examples, check scripts, dependencies or this workflow, and either
-# the repository variable FULL_CI is "true" or the pull request has the label `full-ci` (for a
-# change someone judges risky). While the repository is private FULL_CI is off and the local
-# `pnpm check` is the gate for engine changes (CLAUDE.md); at the public flip it is switched on,
-# with no edit here.
+# touches the engine, examples, check scripts, dependencies or this workflow and the repository
+# variable FULL_CI is "true", or, whatever it touches, when the pull request has the label
+# `full-ci` (for a change someone judges risky). With FULL_CI off the local `pnpm check` is the
+# gate for engine changes (CLAUDE.md).
 # A pull request of plain documents alone (the list under paths-ignore: design notes, benchmark
 # reports, the Markdown at the root) starts no run: nothing here reads those files. It has no
 # `check` to wait for, so scripts/merge-green.sh merges it itself, after reading the same list from
@@ -69,7 +68,9 @@ jobs:
           LABELLED: ${{ contains(github.event.pull_request.labels.*.name, 'full-ci') }}
           GH_TOKEN: ${{ github.token }}
         run: |
-          engine='^(packages/|apps/|examples/|scripts/test-[^/]*\.mjs$|scripts/embed\.mjs$|package\.json$|pnpm-lock\.yaml$|\.github/workflows/|\.github/actions/)'
+          engine='^(packages/|apps/|examples/|package\.json$|pnpm-lock\.yaml$|\.github/workflows/|\.github/actions/)'
+          # The scripts the full job runs: the gate, its checks and what they import, and the site's.
+          engine="$engine|^scripts/(gate\.sh|mark-verified\.sh|(test-[^/]*|studio-[^/]*|[^/]*-checks)\.mjs|(embed|first-look-browser|picture-picker-browser|fake-model|fake-coder|patience|ports|gate-plan|gate-ports|walk-record|upgrade-flow|dev-app|build-docs|commands-page|operations-page|theme-lab-export|vad-assets)\.mjs)$"
           if [ "$GITHUB_EVENT_NAME" = schedule ]; then
             # The scheduled run before this one (this one is listed first, still running).
             last=$(gh run list --workflow ci.yml --event schedule --limit 2 --json headSha,conclusion \
@@ -121,6 +122,8 @@ jobs:
           if [ "$full" = true ] && [ "$FULL_CI" != true ] && [ "$LABELLED" != true ] && [ "$why" != "$GITHUB_EVENT_NAME" ]; then
             full=false; why="$why, but FULL_CI is off and no full-ci label: the local pnpm check is the gate"
           fi
+          # The label alone is enough, whatever the paths (plain documents start no run at all).
+          if [ "$LABELLED" = true ] && [ "$full" != true ]; then full=true; why="labelled full-ci"; fi
           basics=true
           { echo "full=$full"; echo "basics=$basics"; echo "engine=$engine"; echo "studio=$studio"; } >> "$GITHUB_OUTPUT"
           echo "Full check: $full ($why)" | tee -a "$GITHUB_STEP_SUMMARY"
