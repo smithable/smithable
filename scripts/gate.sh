@@ -77,6 +77,8 @@ umask 002
 mkdir -p "$queue"
 touch "$turns" "$lock"
 mkdir -p "$home/.gate-failed"
+# The sessions and CI's runner are different users of one group.
+chmod g+ws "$home/.gate-failed" 2>/dev/null || true
 # Folders the tests, the apps' checks and the lab left under /tmp: dropped once a day old, so a
 # machine that runs gates all day does not fill up (the tests now remove their own as they end).
 find "${TMPDIR:-/tmp}" -mindepth 1 -maxdepth 1 \( -name 'smithable-*' -o -name 'ui-lab-*' \) -mmin +1440 -exec rm -rf {} + 2>/dev/null || true
@@ -181,9 +183,7 @@ skipped="lint and the units are skipped: the hosted job ran them on this commit.
 # This branch's note of the apps that failed (scripts/test-apps-parallel.mjs writes it).
 branch=${GATE_BRANCH:-$(git branch --show-current 2>/dev/null || true)}
 failed_file=
-[ -z "$branch" ] || failed_file=${GATE_HOME:-/var/lib/smithable-gate}
-[ -z "$branch" ] || [ -n "${GATE_HOME:-}" ] || [ -w "$failed_file" ] || failed_file=$HOME/repos
-[ -z "$branch" ] || failed_file=$failed_file/.gate-failed/$(printf '%s' "$branch" | tr -c 'A-Za-z0-9._-' '_')
+[ -z "$branch" ] || failed_file=$home/.gate-failed/$(printf '%s' "$branch" | tr -c 'A-Za-z0-9._-' '_')
 export GATE_FAILED_FILE=$failed_file
 
 if [ "${1:-}" = --plan ]; then

@@ -231,12 +231,12 @@ jobs:
           GATE_CHANGED: ${{ needs.scope.outputs.changed }}
           GATE_BASICS_DONE: ${{ github.event_name == 'pull_request' && '1' || '' }}
           # What the plan compares and names (scripts/gate-plan.mjs): the pull request's own
-          # commits, not their merge with main, so it draws the sample a local gate drew; and
-          # the label that asks for every app. Empty on main's runs.
+          # commits, not their merge with main, so it draws the sample a local gate drew.
+          # Every app on a scheduled or hand-started run, and on the label all-apps.
           GATE_BASE: ${{ github.event.pull_request.base.sha }}
           GATE_HEAD: ${{ github.event.pull_request.head.sha }}
           GATE_BRANCH: ${{ github.head_ref }}
-          GATE_ALL_APPS: ${{ contains(github.event.pull_request.labels.*.name, 'all-apps') && '1' || '' }}
+          GATE_ALL_APPS: ${{ (github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'all-apps')) && '1' || '' }}
       # Studio's selection steps (the picture, film and Photos ones), here only: main's scheduled
       # run and full-ci pull requests, not the local gate or every pull request (T1491). In a turn
       # of the gate queue of its own, so no session's gate starts beside its browser; on the
