@@ -28,6 +28,7 @@ import {
   recordPicture,
   recordSummary,
   resolveLook,
+  SAMPLE_OWNER,
   type SamplesIR,
   type SpecIR,
   type SpecPlugin,
@@ -187,20 +188,7 @@ export function loadSpec(
     if (!result.ux) return failed(uxPath, result.diagnostics);
     ux = result.ux;
   }
-  // The project's sample records, seeded instead of generated ones.
   const sampleFiles = projectFiles(dirname(path), "samples");
-  let samples: SamplesIR | undefined;
-  if (sampleFiles.length) {
-    const result = validateSamples(
-      sampleFiles.map((file) => ({ path: file, text: readText(file) })),
-      ir,
-      content,
-    );
-    print(result.diagnostics);
-    const bad = result.diagnostics.find((d) => d.severity === "error");
-    if (bad) return failed(join(dirname(path), "samples"), result.diagnostics);
-    samples = result.samples;
-  }
   // The sample users, people of the sample data who act in a development build.
   let people: PersonIR[] | undefined;
   const peopleFile = sampleFiles.find(
@@ -212,6 +200,21 @@ export function loadSpec(
     if (result.diagnostics.some((d) => d.severity === "error"))
       return failed(peopleFile, result.diagnostics);
     people = result.people;
+  }
+  // The project's sample records, seeded instead of generated ones.
+  let samples: SamplesIR | undefined;
+  if (sampleFiles.length) {
+    const result = validateSamples(
+      sampleFiles.map((file) => ({ path: file, text: readText(file) })),
+      ir,
+      content,
+      // A record may name a sample user as its owner.
+      { people: people ?? [], auth },
+    );
+    print(result.diagnostics);
+    const bad = result.diagnostics.find((d) => d.severity === "error");
+    if (bad) return failed(join(dirname(path), "samples"), result.diagnostics);
+    samples = result.samples;
   }
   // The Ask check's questions (docs/design/ask-words.md §4): stale names are warnings, said here.
   let asks: AskIR[] | undefined;
@@ -326,7 +329,12 @@ export function validate(
     return valid ? 0 : 1;
   }
   const found: Diagnostic[] = [];
-  const { ir, path, auth, ux, themes, content } = loadSpec(target, io, extraPlugins, found);
+  const { ir, path, auth, ux, themes, content, samples } = loadSpec(
+    target,
+    io,
+    extraPlugins,
+    found,
+  );
   if (!ir) return 1;
   // Warnings after loading, from validate alone: the privacy page's completeness and review.
   for (const d of privacyFindings(path, ir, auth, content, ux)) io.err(`${formatDiagnostic(d)}\n`);
@@ -358,6 +366,7 @@ export function validate(
       `\n${explainSpec(shown.ir, shown.auth, shown.ux, content?.language, content?.initials)}`,
     );
     for (const line of payLinksExplained(shown.ir, content)) io.out(`${line}\n`);
+    for (const line of sampleOwnersExplained(shown.ir, samples)) io.out(`${line}\n`);
     io.out(
       `${badgeExplained(isDirectory(target) ? target : dirname(target), shown.ux?.aiBadge)}\n`,
     );
@@ -489,6 +498,24 @@ export function isDirectory(path: string): boolean {
 
 function count(n: number, noun: string): string {
   return `${n} ${noun}${n === 1 ? "" : "s"}`;
+}
+
+/**
+ * Whose the sample records are (`owner:` in samples/<Model>.yml): one line per model whose
+ * file names an owner, the records by number and title; a record without one is nobody's.
+ */
+export function sampleOwnersExplained(ir: SpecIR, samples: SamplesIR | undefined): string[] {
+  return Object.entries(samples ?? {}).flatMap(([name, rows]) => {
+    const model = ir.models.find((m) => m.name === name);
+    if (!model || !rows.some((r) => r[SAMPLE_OWNER] !== undefined)) return [];
+    const title = titleField(model);
+    const said = rows.map((r, i) => {
+      const what = typeof r[title] === "string" ? ` (${r[title]})` : "";
+      const owner = r[SAMPLE_OWNER];
+      return `${i + 1}${what} ${typeof owner === "string" ? `is ${owner}'s` : "is nobody's"}`;
+    });
+    return [`sample ${name} records: ${said.join(", ")}`];
+  });
 }
 
 /**

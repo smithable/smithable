@@ -221,3 +221,122 @@ pages:
   expect(fitted[1]?.text).toBe("- title: Website down\n  status: resolved\n  service: Website\n");
   expect(validateSamples(fitted, draft).diagnostics).toEqual([]);
 });
+
+test("a record may name a sample user as its owner, where people sign in (T1704)", () => {
+  const people = [
+    { name: "Maja", role: "member", persona: "Books a class.", pace: 1 },
+    { name: "Ola", role: "visitor", persona: "Looks.", pace: 1 },
+  ];
+  const signedIn = { signIn: { providers: ["email"] } } as unknown as { signIn: "none" };
+  const owned = (text: string, auth: { signIn: "none" } = signedIn) =>
+    validateSamples([{ path: "samples/Instructor.yml", text }], ir, content, { people, auth });
+  const ok = owned("- { name: Emma, owner: Maja }\n");
+  expect(ok.diagnostics).toEqual([]);
+  expect(ok.samples.Instructor?.[0]).toEqual({ name: "Emma", "@owner": "Maja" });
+  const said = (text: string, auth?: { signIn: "none" }) =>
+    owned(text, auth).diagnostics.map((d) => d.message);
+  expect(said("- { name: Emma, owner: Maia }\n")[0]).toBe(
+    'Record 1 of Instructor is owned by "Maia", who is not a sample user of samples/people.yml.',
+  );
+  expect(said("- { name: Emma, owner: Ola }\n")[0]).toContain("a visitor, who has no account");
+  expect(said("- { name: Emma, owner: Maja }\n", { signIn: "none" })[0]).toContain(
+    "nobody signs in to this app",
+  );
+  // An address-owned model: the owner's address fills its required field.
+  const byAddress = validateSpec({
+    path: "smithable.yml",
+    text: "smithable: 0.1\napp: { name: Studio }\nmodels:\n  Request:\n    fields: { title: string!, email: email! }\n    ownedBy: email\npages:\n  requests: { crud: Request }\n",
+  }).ir;
+  if (!byAddress) throw new Error("the spec is invalid");
+  expect(
+    validateSamples(
+      [{ path: "samples/Request.yml", text: "- { title: Mats, owner: Maja }\n" }],
+      byAddress,
+      undefined,
+      {
+        people,
+        auth: signedIn,
+      },
+    ).diagnostics,
+  ).toEqual([]);
+  // Without the sample users given, an owner is said, never dropped in silence.
+  expect(
+    check({ "samples/Instructor.yml": "- { name: Emma, owner: Maja }\n" }).diagnostics,
+  ).toHaveLength(1);
+});
+
+test("a model with places is seeded within them: the maximum known, never past it (T1704)", () => {
+  const spec = validateSpec({
+    path: "smithable.yml",
+    text: `smithable: 0.1
+app: { name: Studio }
+models:
+  Session:
+    fields: { title: string!, capacity: int! = 1 }
+  Booking:
+    fields: { session: Session!, note: text }
+    capacity: { per: session, max: session.capacity }
+  Seat:
+    fields: { session: Session! }
+    capacity: { per: session, max: 1 }
+pages:
+  bookings: { crud: Booking }
+`,
+  }).ir;
+  if (!spec) throw new Error("the spec is invalid");
+  const said = (files: Record<string, string>) =>
+    validateSamples(
+      Object.entries(files).map(([path, text]) => ({ path, text })),
+      spec,
+    ).diagnostics.map((d) => d.message);
+  const sessions = "- { title: Yoga, capacity: 2 }\n- { title: Pilates }\n";
+  expect(
+    said({
+      "samples/Session.yml": sessions,
+      "samples/Booking.yml": "- { session: Yoga }\n- { session: Yoga }\n- { session: Pilates }\n",
+    }),
+  ).toEqual([]);
+  expect(
+    said({
+      "samples/Session.yml": sessions,
+      "samples/Booking.yml": "- { session: Pilates }\n- { session: Pilates }\n",
+    }),
+  ).toEqual(["Record 2 of Booking is one more than the 1 session 2 takes."]);
+  expect(said({ "samples/Seat.yml": "- { session: 1 }\n- { session: 1 }\n" })).toEqual([
+    "Record 2 of Seat is one more than the 1 session 1 takes.",
+  ]);
+  // A record the capacity's `where` leaves out takes no place.
+  const counted = validateSpec({
+    path: "smithable.yml",
+    text: `smithable: 0.1
+app: { name: Studio }
+models:
+  Session:
+    fields: { title: string! }
+  Seat:
+    fields: { session: Session!, status: active | cancelled }
+    capacity: { per: session, max: 1, where: { status: active } }
+pages:
+  seats: { crud: Seat }
+`,
+  }).ir;
+  if (!counted) throw new Error("the spec is invalid");
+  const seats = (text: string) =>
+    validateSamples(
+      [
+        { path: "samples/Session.yml", text: "- { title: Yoga }\n" },
+        { path: "samples/Seat.yml", text },
+      ],
+      counted,
+    ).diagnostics.map((d) => d.message);
+  expect(
+    seats("- { session: Yoga, status: cancelled }\n- { session: Yoga, status: active }\n"),
+  ).toEqual([]);
+  expect(
+    seats("- { session: Yoga, status: active }\n- { session: Yoga, status: active }\n"),
+  ).toHaveLength(1);
+  // A generated session: how many it takes is not known, so no booking is.
+  expect(said({ "samples/Booking.yml": "- { session: 1 }\n" })[0]).toContain(
+    "Record 1 of Booking: how many bookings session 1 takes is not in the samples",
+  );
+});

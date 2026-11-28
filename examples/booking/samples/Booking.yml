@@ -1,0 +1,4 @@
+# Maja's place in the Tuesday evening class, this week and the next (Session.yml's last two rows):
+# `owner` names the sample user whose booking it is.
+- { session: 23, owner: Maja Lindqvist }
+- { session: 24, owner: Maja Lindqvist }

@@ -1,9 +1,11 @@
 import {
   type AuthIR,
   emptyContent,
+  type SamplesIR,
   type SpecIR,
   validateAuth,
   validatePeople,
+  validateSamples,
   validateSpec,
 } from "@smithable/core";
 import { expect, test } from "vitest";
@@ -138,4 +140,73 @@ test("the door merges and splits only what the action and each record allow, and
   expect(clock).not.toContain("Math.abs(at - Date.now()) > MOST");
   expect(clock).toContain("const move = moving.then(async () => {");
   expect(clock).toContain("return refused(error);");
+});
+
+test("a sample record names its owner: the sample user's id where they are seeded (T1704)", () => {
+  const { samples } = validateSamples(
+    [
+      { path: "samples/Session.yml", text: "- { title: Yoga, startsAt: 2026-10-06 18:00 }\n" },
+      { path: "samples/Booking.yml", text: "- { session: Yoga, owner: Åsa Öberg }\n" },
+    ],
+    spec,
+    emptyContent(),
+    { people: people ?? [], auth },
+  );
+  const seed = of2(samples);
+  expect(seed).toContain(
+    'const SAMPLE_USERS = process.env.NODE_ENV !== "production" || process.env.DEMO_SIGN_IN === "1";',
+  );
+  expect(seed).toContain('ownerId: SAMPLE_USERS ? "sample-asa-oberg" : null');
+  // The users come first, so the owner column refers to one that is there.
+  expect(seed.indexOf("db.insert(schema.user)")).toBeLessThan(seed.indexOf("ownerId:"));
+});
+
+const of2 = (samples: SamplesIR) =>
+  generateApp(spec, {
+    smithableVersion: "0.0.0",
+    auth,
+    content: emptyContent(),
+    samples,
+    ...(people ? { people } : {}),
+  }).find((f) => f.path === "src/db/seed.ts")?.content ?? "";
+
+test("a sample user's place is taken only where they are seeded, never nobody's (T1704)", () => {
+  const places = validateSpec({
+    path: "smithable.yml",
+    text: "smithable: 0.1\napp: { name: Studio }\nmodels:\n  Session:\n    fields: { title: string!, startsAt: datetime!, capacity: int! = 4 }\n  Booking:\n    fields: { session: Session!, note: text }\n    capacity: { per: session, max: session.capacity }\npages:\n  bookings: { crud: Booking }\n",
+  }).ir as SpecIR;
+  const placesAuth = validateAuth(
+    {
+      path: "smithable.auth.yml",
+      text: "smithableAuth: 0.1\nsignIn: { providers: [email] }\ndefaultAccess: shared\nroles: { admin: {}, member: { pages: all } }\n",
+    },
+    places,
+  ).auth as AuthIR;
+  const { samples, diagnostics } = validateSamples(
+    [
+      { path: "samples/Session.yml", text: "- { title: Yoga, startsAt: 2026-10-06 18:00 }\n" },
+      {
+        path: "samples/Booking.yml",
+        text: "- { session: Yoga, owner: Åsa Öberg }\n- { session: Yoga }\n",
+      },
+    ],
+    places,
+    emptyContent(),
+    { people: people ?? [], auth: placesAuth },
+  );
+  expect(diagnostics).toEqual([]);
+  const seed =
+    generateApp(places, {
+      smithableVersion: "0.0.0",
+      auth: placesAuth,
+      content: emptyContent(),
+      samples,
+      ...(people ? { people } : {}),
+    }).find((f) => f.path === "src/db/seed.ts")?.content ?? "";
+  // The whole row, not a booking with nobody in it; a row without an owner is as before.
+  expect(seed).toContain(
+    '...(SAMPLE_USERS ? [{ sessionId: 1, note: null, ownerId: "sample-asa-oberg" }] : []),',
+  );
+  expect(seed).toContain("{ sessionId: 1, note: null },");
+  expect(seed).toContain("if (rows.length) db.insert(schema.bookings).values(rows).run();");
 });
