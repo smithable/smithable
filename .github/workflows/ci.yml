@@ -158,6 +158,14 @@ jobs:
           REPO: ${{ github.repository }}
           GITHUB_TOKEN: ${{ github.token }}
       - run: pnpm build
+      # The build rewrites the committed generated files; on a pull request this is its merge with main.
+      - name: The build changes no committed file
+        run: |
+          changed=$(git status --porcelain --untracked-files=no)
+          [ -z "$changed" ] && exit 0
+          echo "$changed"
+          echo "::error::The build changed committed files: merge origin/main, run pnpm build and commit them."
+          exit 1
       - run: pnpm test
       - run: pnpm site
 

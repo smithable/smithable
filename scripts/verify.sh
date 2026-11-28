@@ -8,7 +8,10 @@
 set -uo pipefail
 cd "$(git rev-parse --show-toplevel)" || exit 1
 before=$(scripts/mark-verified.sh --tree) || exit 1
-if [ "${1:-}" = --lint ]; then pnpm lint && exec scripts/mark-verified.sh --lint "$before"; exit 1; fi
+# A committed generated file that no longer matches its sources gets no marker: the push guard then
+# refuses, and the build's own rewrite cannot hide it.
+current() { node scripts/embed.mjs --check; }
+if [ "${1:-}" = --lint ]; then pnpm lint && current && exec scripts/mark-verified.sh --lint "$before"; exit 1; fi
 # Beside a running or waiting gate, the units take two workers whatever was asked (T1522): a full
 # suite beside a gate's browser phase slows both.
 args=("$@")
@@ -24,7 +27,7 @@ while IFS= read -r line; do
   args+=(--exclude "${line%%  *}")
   echo "verify: left out (slow; CI runs it): ${line%%  *} - ${line#*  }"
 done < scripts/slow-tests.txt
-if ! { pnpm lint && { scripts/mark-verified.sh --lint "$before" || :; } && pnpm build && pnpm exec vitest run "${args[@]}"; }; then
+if ! { pnpm lint && { ! current || scripts/mark-verified.sh --lint "$before" || :; } && pnpm build && pnpm exec vitest run "${args[@]}"; }; then
   echo "verify: a step failed: no marker written." >&2
   exit 1
 fi
