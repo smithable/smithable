@@ -2968,24 +2968,28 @@ try {
         // (T1767): the clicked page is marked, and only a new page gets a second click.
         await preview.locator("html").evaluate((html) => html.setAttribute("data-sm-clicked", ""));
         await target.click({ position });
-        const picked = target.and(preview.locator("[data-sm-selected]"));
-        if (
-          await picked.waitFor({ timeout: 5000 }).then(
-            () => true,
-            () => false,
-          )
-        )
-          return;
+        // The selection mark sits on the target or on a box around it (a menu item's).
+        const picked = () =>
+          target
+            .evaluate((el) => !!el.closest("[data-sm-selected]"), undefined, { timeout: 2000 })
+            .catch(() => false);
         const fresh = preview.locator("html[data-sm-selecting]:not([data-sm-clicked])");
-        const next = await Promise.any([
-          picked.waitFor({ timeout: 60000 * P }).then(() => "picked"),
-          fresh.waitFor({ state: "attached", timeout: 60000 * P }).then(() => "reloaded"),
-        ]).catch(() => "nothing");
+        const until = async (ms, orReloaded) => {
+          for (const end = Date.now() + ms; Date.now() < end; ) {
+            if (await picked()) return "picked";
+            if (orReloaded && (await fresh.count())) return "reloaded";
+            await new Promise((r) => setTimeout(r, 250));
+          }
+          return "nothing";
+        };
+        if ((await until(5000, false)) === "picked") return;
+        const next = await until(60000 * P, true);
         if (next === "nothing")
           throw new Error("a click selected nothing, and the preview did not reload");
-        if (next === "picked" || (await picked.count())) return;
+        if (next === "picked" || (await picked())) return;
         await target.click({ position });
-        await picked.waitFor({ timeout: 60000 * P });
+        if ((await until(60000 * P, false)) !== "picked")
+          throw new Error("a click on the reloaded preview selected nothing either");
       };
       const topBar = preview.locator('header[data-sm-concept="navigation:landing.home"]');
       const originalPosition = await topBar.getAttribute("data-position");
