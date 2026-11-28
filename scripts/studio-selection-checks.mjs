@@ -331,6 +331,9 @@ export async function checkStudioSelection(browser, base) {
     await filmRow.getByText("No film: the picture stands still.", { exact: true }).waitFor();
     await sectionForm.getByRole("button", { name: "Cancel", exact: true }).click();
     await sectionForm.waitFor({ state: "hidden" });
+    // Select stays on after a form closes (T1684): with it on, the link is selected, not followed.
+    if ((await select.getAttribute("aria-pressed")) === "true") await select.click();
+    await frame.locator("html[data-sm-selecting]").waitFor({ state: "hidden" });
     await renamed.click();
     await hero.waitFor({ state: "hidden" });
   } finally {
