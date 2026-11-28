@@ -39,6 +39,20 @@ export async function checkStudioSelection(browser, base) {
     const selectOn = async () => {
       if ((await select.getAttribute("aria-pressed")) !== "true") await select.click();
     };
+    // After a change the preview reloads, and the outgoing page can still show Select on (T1767):
+    // a click on it opens nothing. So one more click on the new page, and a second miss fails.
+    const pickAfterChange = async (target, opened, options) => {
+      for (const last of [false, true]) {
+        await frame.locator("html[data-sm-selecting]").waitFor();
+        await target.click(options);
+        const shown = await opened.waitFor({ timeout: last ? wait : 5000 }).then(
+          () => true,
+          () => false,
+        );
+        if (shown) return;
+      }
+      throw new Error(`Two clicks after a change opened nothing: ${opened}`);
+    };
     await selectOn();
     await frame.locator("html[data-sm-selecting]").waitFor();
     await link.click();
@@ -116,9 +130,7 @@ export async function checkStudioSelection(browser, base) {
     await frame.locator('[data-hero][data-layout="plain"]').waitFor();
 
     await selectOn();
-    // After a change the preview reloads: a click before it is selecting again opens nothing.
-    await frame.locator("html[data-sm-selecting]").waitFor();
-    await link.click();
+    await pickAfterChange(link, form);
     await behavior.click();
     await form.getByRole("combobox", { name: "Opens", exact: true }).selectOption("blog");
     await applyOperation("setHeroButtons");
@@ -128,9 +140,7 @@ export async function checkStudioSelection(browser, base) {
       .waitFor();
 
     await selectOn();
-    // After a change the preview reloads: a click before it is selecting again opens nothing.
-    await frame.locator("html[data-sm-selecting]").waitFor();
-    await link.click();
+    await pickAfterChange(link, form);
     await text.click();
     await form.getByRole("textbox", { name: "Button text", exact: true }).fill("Browse classes");
     await applyOperation("setText");
@@ -141,10 +151,8 @@ export async function checkStudioSelection(browser, base) {
     // A whole section, picked where none of its parts is marked (T1145): its box inside its own
     // edges, so all four sides show; its form beside it on the screen; a choice is one setSectionLook.
     await selectOn();
-    // After a change the preview reloads: a click before it is selecting again opens nothing.
-    await frame.locator("html[data-sm-selecting]").waitFor();
-    await hero.click({ position: { x: 4, y: 4 } });
     const sectionForm = page.getByRole("dialog").and(overlay);
+    await pickAfterChange(hero, sectionForm, { position: { x: 4, y: 4 } });
     await sectionForm.waitFor();
     await frame.locator("[data-hero][data-sm-selected]").waitFor();
     const outline = await frame
@@ -184,10 +192,7 @@ export async function checkStudioSelection(browser, base) {
     await frame.locator('[data-hero][data-layout="centered"]').waitFor({ state: "hidden" });
     await frame.locator("[data-hero]").first().waitFor();
     await selectOn();
-    // After a change the preview reloads: a click before it is selecting again opens nothing.
-    await frame.locator("html[data-sm-selecting]").waitFor();
-    await hero.click({ position: { x: 4, y: 4 } });
-    await sectionForm.waitFor();
+    await pickAfterChange(hero, sectionForm, { position: { x: 4, y: 4 } });
     await choose("Full width photo");
     await frame.locator('[data-hero][data-layout="photo"]').waitFor();
     await sectionForm
@@ -208,10 +213,7 @@ export async function checkStudioSelection(browser, base) {
     const heroPicture = frame.locator("[data-hero] img").first();
     await heroPicture.waitFor();
     await selectOn();
-    // After a change the preview reloads: a click before it is selecting again opens nothing.
-    await frame.locator("html[data-sm-selecting]").waitFor();
-    await hero.click({ position: { x: 4, y: 4 } });
-    await sectionForm.waitFor();
+    await pickAfterChange(hero, sectionForm, { position: { x: 4, y: 4 } });
     const removed = page.waitForResponse(
       (response) =>
         response.url() === `${base}/api/op` &&
@@ -229,10 +231,7 @@ export async function checkStudioSelection(browser, base) {
     // The Photos and videos panel (T1458): locally it lists the project's pictures, marks the one
     // in use, and choosing another is tried on like any change; Cancel puts the first back.
     await selectOn();
-    // After a change the preview reloads: a click before it is selecting again opens nothing.
-    await frame.locator("html[data-sm-selecting]").waitFor();
-    await hero.click({ position: { x: 4, y: 4 } });
-    await sectionForm.waitFor();
+    await pickAfterChange(hero, sectionForm, { position: { x: 4, y: 4 } });
     await sectionForm.getByRole("button", { name: "Photos and videos", exact: true }).click();
     const library = sectionForm.locator("[data-photo-library]");
     await library.getByText("hero.webp (here now)", { exact: true }).waitFor();
@@ -253,10 +252,7 @@ export async function checkStudioSelection(browser, base) {
     // Its film (T1278): a file that breaks a rule is refused with the rule named; one within them is
     // tried on, and Cancel takes it away again.
     await selectOn();
-    // After a change the preview reloads: a click before it is selecting again opens nothing.
-    await frame.locator("html[data-sm-selecting]").waitFor();
-    await hero.click({ position: { x: 4, y: 4 } });
-    await sectionForm.waitFor();
+    await pickAfterChange(hero, sectionForm, { position: { x: 4, y: 4 } });
     const filmRow = sectionForm.locator("[data-section-film]");
     const sendFilm = async (buffer) => {
       // The form is busy until the last change is read back: a file chosen then is not taken.
@@ -315,10 +311,7 @@ export async function checkStudioSelection(browser, base) {
     for (const { src } of [tried, again])
       assert.equal(await filmServed(src), false, `Cancel left ${src} in the app`);
     await selectOn();
-    // After a change the preview reloads: a click before it is selecting again opens nothing.
-    await frame.locator("html[data-sm-selecting]").waitFor();
-    await hero.click({ position: { x: 4, y: 4 } });
-    await sectionForm.waitFor();
+    await pickAfterChange(hero, sectionForm, { position: { x: 4, y: 4 } });
     await filmRow.getByText("No film: the picture stands still.", { exact: true }).waitFor();
     await sectionForm.getByRole("button", { name: "Cancel", exact: true }).click();
     await sectionForm.waitFor({ state: "hidden" });
