@@ -22,6 +22,8 @@ const SAMPLE = 3;
 const FIXED = "booking";
 
 const DOCUMENT = /^(docs\/|[^/]*\.md$)/;
+/** What no browser check reads (the site is built and checked in every gate). */
+const UNREAD = /^(fixes\/|site\/|\.gitignore$|\.github\/[^/]*\.md$)/;
 /** Row 1: what installs, builds or decides the gate itself. */
 const FOUNDATION =
   /^(pnpm-[^/]*|biome\.json|scripts\/(embed|gate|gate-plan)\.(mjs|sh)|\.github\/(workflows|actions)\/.*)$|(^|\/)tsconfig[^/]*\.json$|^(?!examples\/)([^/]+\/)*package\.json$/;
@@ -42,7 +44,7 @@ export const sensitive = (path) =>
 /** Row 3: helpers the apps' check and Studio's both use. */
 const SHARED_HELPER = /^scripts\/(ports|patience|fake-model|gate-ports)\.mjs$/;
 /** Row 4: the apps' check itself. */
-const APPS_CHECK = /^scripts\/test-apps[^/]*\.mjs$/;
+const APPS_CHECK = /^scripts\/(test-apps[^/]*|upgrade-flow)\.mjs$/;
 /** Row 8: what vitest alone reads. */
 const UNIT_ONLY = /^(packages|apps)\/[^/]+\/src\/(.*\.test\.ts$|(.*\/)?__snapshots__\/)/;
 /** Row 9: what only Studio's checks load. */
@@ -104,8 +106,8 @@ export function plan(today, changed, facts) {
     return planLine({ apps: text, studio, visual, why });
   };
 
-  const paths = changed.filter((p) => p && !DOCUMENT.test(p));
-  // Nothing but documents, or nothing at all (main's own run): as gate.sh has it.
+  const paths = changed.filter((p) => p && !DOCUMENT.test(p) && !UNREAD.test(p));
+  // Nothing a check reads, or nothing at all (main's own run): as gate.sh has it.
   if (!paths.length) return today;
   const product = paths.filter((p) => !UNIT_ONLY.test(p));
 
@@ -180,7 +182,7 @@ export function plan(today, changed, facts) {
   if (product.every((p) => p.startsWith("examples/"))) return asToday("row 7: only examples");
   if (product.every((p) => STUDIO_SIDE.test(p)))
     return narrowed(new Set(), true, now.visual, "row 9: only Studio's side, output unchanged");
-  if (product.every((p) => /^(apps\/studio|packages|examples)\//.test(p) || STUDIO_SIDE.test(p))) {
+  if (product.every((p) => /^(apps\/studio|packages|examples|scripts)\//.test(p))) {
     const apps = new Set([...own, FIXED, ...(withCommands ? ["crm"] : [])]);
     return narrowed(
       new Set([...apps].filter((e) => every.has(e))),

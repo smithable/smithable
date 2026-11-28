@@ -48,6 +48,8 @@ const outputOf = (names) => Object.fromEntries(names.map((n) => [n, "2"]));
 test("documents alone, and nothing changed, keep today's plan", () => {
   assert.equal(run(["docs/a.md"]), TODAY);
   assert.equal(run([""]), TODAY);
+  assert.equal(run(["site/index.html", "fixes/a.md"]), TODAY);
+  assert.match(run(["apps/studio/src/a.tsx", "fixes/a.md"]), /why=row 9/);
 });
 
 test("rows 1, 1b and 3 run everything, even beside a sensitive path", () => {
@@ -123,7 +125,9 @@ test("rows 8, 9 and 10 with the output unchanged", () => {
     /^apps=booking studio=yes .*why=row 10/,
   );
   assert.match(run(["packages/core/src/a.ts"]), /^apps=booking crm studio=yes .*why=row 10/);
-  assert.match(run(["scripts/other.mjs"]), /^apps=all .*why=row 11/);
+  assert.match(run(["scripts/bench-x.mjs"]), /^apps=booking studio=yes .*why=row 10/);
+  assert.match(run(["scripts/upgrade-flow.mjs"]), /^apps=all .*why=row 4/);
+  assert.match(run(["vitest.config.ts"]), /^apps=all .*why=row 11/);
 });
 
 test("no snapshot to compare runs every app; a stale one stops", () => {
