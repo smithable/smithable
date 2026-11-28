@@ -2964,7 +2964,28 @@ try {
         const select = page.getByRole("button", { name: "Select", exact: true });
         if ((await select.getAttribute("aria-pressed")) !== "true") await select.click();
         await preview.locator("html[data-sm-selecting]").waitFor({ state: "attached" });
+        // After a change the preview reloads, and a click on the outgoing page selects nothing
+        // (T1767): the clicked page is marked, and only a new page gets a second click.
+        await preview.locator("html").evaluate((html) => html.setAttribute("data-sm-clicked", ""));
         await target.click({ position });
+        const picked = target.and(preview.locator("[data-sm-selected]"));
+        if (
+          await picked.waitFor({ timeout: 5000 }).then(
+            () => true,
+            () => false,
+          )
+        )
+          return;
+        const fresh = preview.locator("html[data-sm-selecting]:not([data-sm-clicked])");
+        const next = await Promise.any([
+          picked.waitFor({ timeout: 60000 * P }).then(() => "picked"),
+          fresh.waitFor({ state: "attached", timeout: 60000 * P }).then(() => "reloaded"),
+        ]).catch(() => "nothing");
+        if (next === "nothing")
+          throw new Error("a click selected nothing, and the preview did not reload");
+        if (next === "picked" || (await picked.count())) return;
+        await target.click({ position });
+        await picked.waitFor({ timeout: 60000 * P });
       };
       const topBar = preview.locator('header[data-sm-concept="navigation:landing.home"]');
       const originalPosition = await topBar.getAttribute("data-position");
