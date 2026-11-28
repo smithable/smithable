@@ -9,7 +9,12 @@
 #   3. The unit tests: without a record that they passed on the tree, one line warns; the push goes,
 #      and CI runs them. Under load a local run fails on timing alone, and a refusal then costs an hour.
 #
-#   A push needs no record when it is plain documents only (ci.yml's list), or a merge of main into a
+#   4. A push that adds or changes a browser walk's file (scripts/test-apps.mjs, test-studio.mjs and
+#      what they import) needs a passing run of it with that content, noted by the walk itself, or a
+#      commit trailer "Walk-not-run: <reason>" (scripts/walk-record.mjs). A lint mark does not stand
+#      in for it. It does not see a product change that breaks an unchanged walk: CI does.
+#
+#   A push needs no record of lint when it is plain documents only (ci.yml's list), or a merge of main into a
 #   branch head that is already on the remote, or whose own tree has one. CI runs on either of those.
 #
 # Each refusal prints the one command to run.
@@ -58,8 +63,10 @@ while read -r _ lsha _ rsha; do
       "remove the secret from the commits (a new commit is not enough), then push again"
   fi
   rm -f "$rules"
+  base=$(git merge-base origin/main "$lsha" 2>/dev/null) || base=
+  [ -z "$base" ] || node "$(git rev-parse --show-toplevel)/scripts/walk-record.mjs" check "$base" "$lsha" || exit 1
   marked "$lsha" && continue
-  base=$(git merge-base origin/main "$lsha" 2>/dev/null) && plain_docs "$base" "$lsha" && continue
+  [ -n "$base" ] && plain_docs "$base" "$lsha" && continue
   merge_of_main "$lsha" "$rsha" && continue
   linted "$lsha" ||
     refuse "lint has not passed on this tree ($(git rev-parse "$lsha^{tree}"))." \
