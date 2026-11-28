@@ -53,12 +53,17 @@ export async function checkStudioSelection(browser, base) {
         );
       if (await shown()) return;
       const fresh = frame.locator("html[data-sm-selecting]:not([data-sm-clicked])");
-      const reloaded = await fresh.waitFor({ timeout: wait }).then(
-        () => true,
-        () => false,
+      // Whichever comes first: the form, late, or a new page to click again on.
+      const next = await Promise.any([
+        opened.waitFor({ timeout: wait }).then(() => "opened"),
+        fresh.waitFor({ timeout: wait }).then(() => "reloaded"),
+      ]).catch(() => "nothing");
+      assert.notEqual(
+        next,
+        "nothing",
+        `A click opened nothing, and the preview did not reload: ${opened}`,
       );
-      assert.ok(reloaded, `A click opened nothing, and the preview did not reload: ${opened}`);
-      if (await opened.isVisible()) return;
+      if (next === "opened" || (await opened.isVisible())) return;
       await target.click(options);
       await opened.waitFor({ timeout: wait }).catch(() => {
         throw new Error(`A click on the reloaded preview opened nothing either: ${opened}`);
