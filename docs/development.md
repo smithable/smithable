@@ -18,7 +18,7 @@ Every command for working on Smithable itself, from a checkout of this repositor
 
 `pnpm check` is the gate; the others marked "Not part of `check`" run by hand.
 
-- `pnpm test:apps`: generates every example in `examples/` into a temporary directory, then type-checks, builds, serves and regenerates it, one process per example, at most half the cores at once (`TEST_APPS_CONCURRENCY`). `pnpm test:apps:one <example>` runs one.
+- `pnpm test:apps`: generates every example in `examples/` into a temporary directory, then type-checks, builds, serves and regenerates it, one process per example, at most half the cores at once (`TEST_APPS_CONCURRENCY`). `pnpm test:apps:one <example>` runs one. The CRM, the slowest, runs as two parts side by side, each with its own new app (`APP_PARTS` in `scripts/ports.mjs`): `crm:app` (the app built, served and used in a browser) and `crm:commands` (the engine's commands: MCP, ask, operations and apply-version, upgrade, detach); `test:apps:one crm` runs both in one.
 - `pnpm test:studio`: runs `smithable studio` on a new CRM and makes the M3–M5 changes in both modes in a real browser; it serves the theme lab's public mode from `site/`, so `pnpm site` first.
 - `pnpm test:visual`: the visual matrix (`scripts/test-visual.mjs`): a booking app with every composition, fourteen pairwise cases of viewport, zoom, appearance, type, surface, media, motion and copy in a real browser, then the mandatory states; three to four minutes. Its app serves on `TEST_STUDIO_PORT + 4` (or `VISUAL_PORT`). The gate runs it only when what it looks at changed (below).
 - `pnpm test:container` (needs Docker): builds the CRM image and checks that data survives replacing the container. Not part of `check`.

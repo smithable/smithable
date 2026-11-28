@@ -29,7 +29,7 @@ import fc from "fast-check";
 import { chromium } from "playwright";
 import { seeded, validateSpec, walk } from "../packages/core/dist/index.js";
 import { startFakeModel } from "./fake-model.mjs";
-import { APP_OFFSETS, APP_PORT, checkPorts, claimPort } from "./ports.mjs";
+import { APP_OFFSETS, APP_PARTS, APP_PORT, checkPorts, claimPort } from "./ports.mjs";
 import { networkOnly, RETRIED, retriedNote } from "./test-apps-first-load.mjs";
 import { upgradeFlow } from "./upgrade-flow.mjs";
 
@@ -47,6 +47,10 @@ const examples = process.argv.slice(2).length
   : readdirSync(join(repo, "examples"), { withFileTypes: true })
       .filter((e) => e.isDirectory())
       .map((e) => e.name);
+const parts = Object.values(APP_PARTS).flat();
+for (const name of examples)
+  if (name.includes(":") && !parts.includes(name))
+    throw new Error(`no such part: ${name} (there are ${parts.join(", ")})`);
 
 const failures = [];
 /** First loads reloaded because only the network broke them (T1707), and the app they were in. */
@@ -9315,9 +9319,20 @@ async function browserFlow(dir, base) {
   }
 }
 
-for (const [index, example] of examples.entries()) {
-  console.log(`\n${example}`);
-  app = example;
+/** The CRM's steps on the engine's commands; they need a new app and nothing the browser did. */
+async function commandSteps(dir, port) {
+  await mcpFlow(dir);
+  await askFlow(dir);
+  operationsFlow(dir);
+  upgradeFlow(dir, { cli, run, step, smithable });
+  await detachFlow(dir, port);
+}
+
+// A name is an example, or one of its parts (APP_PARTS in ports.mjs): crm:app, crm:commands.
+for (const [index, name] of examples.entries()) {
+  const [example, part] = name.split(":");
+  console.log(`\n${name}`);
+  app = name;
   const dir = join(mkdtempSync(join(tmpdir(), `smithable-${example}-`)), "app");
   dirs.push(dir);
   // Parallel runs (scripts/test-apps-parallel.mjs) give each process its own ports.
@@ -9339,6 +9354,10 @@ for (const [index, example] of examples.entries()) {
       const status = spawnSync("git", ["status", "--porcelain"], { cwd: dir, encoding: "utf8" });
       if (status.stdout.trim()) throw new Error(`uncommitted after new:\n${status.stdout}`);
     });
+    if (part === "commands") {
+      await commandSteps(dir, port);
+      continue;
+    }
     if (example === "crm") {
       step("the starter comes with its custom action implemented", () => {
         const code = readFileSync(join(dir, "src/custom/actions/schedule-follow-ups.ts"), "utf8");
@@ -10824,19 +10843,13 @@ test("the session cookie's name and attributes", async () => {
       if (!out.includes("(0 changed, 0 removed)")) throw new Error(out);
     });
     if (example === "booking") await teachFlow(dir);
-    if (example === "crm") {
-      await mcpFlow(dir);
-      await askFlow(dir);
-      operationsFlow(dir);
-      upgradeFlow(dir, { cli, run, step, smithable });
-      await detachFlow(dir, port);
-    }
+    if (example === "crm" && part !== "app") await commandSteps(dir, port);
   } catch (error) {
     // A step's failure is reported already; anything else (a mistake in this script) is not,
     // and must not pass as a green run.
     if (failures.length === reported) {
       console.log(`  ✗ ${error instanceof Error ? error.stack : error}`);
-      failures.push(`${example}: unexpected error`);
+      failures.push(`${name}: unexpected error`);
     }
     // Continue with the next example.
   }

@@ -35,6 +35,13 @@ export const APP_PORT = {
 export const APP_OFFSETS = Object.values(APP_PORT);
 
 /**
+ * Examples whose check runs as parts side by side, each with its own new app and ports, so that one
+ * example does not set how long the whole run takes. test-apps.mjs given the plain name runs it all.
+ */
+export const APP_PARTS = { crm: ["crm:app", "crm:commands"] };
+export const appRuns = (examples) => examples.flatMap((e) => APP_PARTS[e] ?? [e]);
+
+/**
  * How many examples fit: bases are one apart, and no two share a port while they span less than the
  * smallest gap between two offsets. Ten apart, an example's dev server had the port of another's
  * production server, and one app's checks ran against the other (2026-11-25).

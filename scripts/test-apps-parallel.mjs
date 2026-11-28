@@ -10,7 +10,7 @@ import { spawn } from "node:child_process";
 import { readdirSync } from "node:fs";
 import { cpus } from "node:os";
 import { join } from "node:path";
-import { appBases } from "./ports.mjs";
+import { appBases, appRuns } from "./ports.mjs";
 import { RETRIED, retriedNote } from "./test-apps-first-load.mjs";
 
 const repo = new URL("..", import.meta.url).pathname;
@@ -22,10 +22,10 @@ const named = process.argv.slice(2).length
       .filter((e) => e.isDirectory())
       .map((e) => e.name);
 // The slowest first, so that none of them starts last and runs alone (CI's times, 2026-11-25);
-// the rest keep their order after them.
-const slowest = ["crm", "booking", "status", "invoicing", "kiosk"];
+// the rest keep their order after them. Some run in parts (APP_PARTS in ports.mjs).
+const slowest = ["crm:app", "booking", "crm:commands", "status", "invoicing", "kiosk"];
 const rank = (e) => (slowest.includes(e) ? slowest.indexOf(e) : slowest.length);
-const examples = named.toSorted((a, b) => rank(a) - rank(b));
+const examples = appRuns(named).toSorted((a, b) => rank(a) - rank(b));
 
 // Each example its own ports from the base (TEST_APPS_PORT, default 4400); two checkouts testing at
 // the same time keep apart by bases 1000 apart (appBases in ports.mjs, which gate-ports.mjs checks too).
@@ -92,6 +92,6 @@ const failed = results.filter((r) => r.code !== 0).map((r) => r.example);
 console.log(
   failed.length
     ? `\nFailed: ${failed.join(", ")}${retriedNote(retried)}`
-    : `\nAll ${examples.length} example apps passed.${retriedNote(retried)}`,
+    : `\nAll ${new Set(examples.map((e) => e.split(":")[0])).size} example apps passed.${retriedNote(retried)}`,
 );
 process.exit(failed.length ? 1 : 0);

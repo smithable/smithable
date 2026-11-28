@@ -11,7 +11,7 @@ import { execFileSync } from "node:child_process";
 import { readdirSync, readlinkSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { APP_OFFSETS, appBases } from "./ports.mjs";
+import { APP_OFFSETS, appBases, appRuns } from "./ports.mjs";
 
 export const gatePorts = (appsBase, studioBase, examples) => [
   ...appBases(appsBase, examples).flatMap((base) => APP_OFFSETS.map((offset) => base + offset)),
@@ -34,8 +34,10 @@ export function listening(ss) {
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const repo = fileURLToPath(new URL("..", import.meta.url));
-  const examples = readdirSync(join(repo, "examples"), { withFileTypes: true }).filter((e) =>
-    e.isDirectory(),
+  const examples = appRuns(
+    readdirSync(join(repo, "examples"), { withFileTypes: true })
+      .filter((e) => e.isDirectory())
+      .map((e) => e.name),
   ).length;
   const ports = gatePorts(
     Number(process.env.TEST_APPS_PORT ?? 4400),
