@@ -77,13 +77,18 @@ const fetch = (url, init) =>
 const repo = new URL("..", import.meta.url).pathname;
 // A walk on a Studio built before its source changed tests the old Studio (T1777): stop and say so.
 {
-  const newest = (dir) =>
-    readdirSync(dir, { recursive: true, withFileTypes: true })
-      .filter((e) => e.isFile())
-      .reduce((t, e) => Math.max(t, statSync(join(e.parentPath, e.name)).mtimeMs), 0);
+  // Directories count too: a deleted source file changes its directory's time.
+  const src = join(repo, "apps/studio/src");
+  const newest = [
+    src,
+    join(repo, "apps/studio/index.html"),
+    ...readdirSync(src, { recursive: true, withFileTypes: true }).map((e) =>
+      join(e.parentPath, e.name),
+    ),
+  ].reduce((t, f) => Math.max(t, statSync(f).mtimeMs), 0);
   const built = join(repo, "apps/studio/dist/index.html");
-  if (!existsSync(built) || newest(join(repo, "apps/studio/src")) > statSync(built).mtimeMs) {
-    console.error("apps/studio/src is newer than apps/studio/dist: run pnpm build first.");
+  if (!existsSync(built) || newest > statSync(built).mtimeMs) {
+    console.error("apps/studio/src (or its index.html) is newer than apps/studio/dist: run pnpm build first.");
     process.exit(1);
   }
 }
