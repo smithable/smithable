@@ -32,6 +32,7 @@ import { startFakeModel } from "./fake-model.mjs";
 import { APP_OFFSETS, APP_PORT, checkPorts, claimPort } from "./ports.mjs";
 import { networkOnly, RETRIED, retriedNote } from "./test-apps-first-load.mjs";
 import { upgradeFlow } from "./upgrade-flow.mjs";
+import { walkRecord } from "./walk-record.mjs";
 
 // How long the waits are, times TEST_PATIENCE (the gate sets it from the machine's load, 1 to 3):
 // a check that waits a minute on a quiet machine waits three under load, so a slow answer is
@@ -48,6 +49,7 @@ const examples = process.argv.slice(2).length
       .filter((e) => e.isDirectory())
       .map((e) => e.name);
 
+const passed = walkRecord("scripts/test-apps.mjs");
 const failures = [];
 /** First loads reloaded because only the network broke them (T1707), and the app they were in. */
 let retried = 0;
@@ -11125,4 +11127,5 @@ if (failures.length) {
   process.exit(1);
 }
 for (const dir of dirs) rmSync(join(dir, ".."), { recursive: true, force: true });
+passed(examples.join(" "));
 console.log(`\nAll ${examples.length} example apps passed.${retriedNote(retried)}`);
