@@ -363,13 +363,11 @@ export async function replaceProject(
       // The draft's own failure right before the line that says so, not before the starter's
       // build: the service reads only the lines just above it (T1759). Said also when the
       // starter fails or throws.
-      // Whether the starter's last word ended its line: the marker is a line of its own.
+      // Whether the starter's last error output ended its line: the marker, on the same stream,
+      // is a line of its own.
       let ended = true;
       const starterIo: Io = {
-        out: (text) => {
-          if (text) ended = text.endsWith("\n");
-          io.out(text);
-        },
+        out: io.out,
         err: (text) => {
           if (text) ended = text.endsWith("\n");
           io.err(text);
