@@ -296,6 +296,42 @@ export function App() {
   const [peopleOpen, setPeopleOpen] = useState(false);
   const [people, setPeople] = useState<PeopleState>();
   const [go, setGo] = useState<{ path: string; key: number }>();
+  // The sample user the preview was last signed in as by Follow, said beside its address (T1687).
+  const [followed, setFollowed] = useState<string>();
+  const previewingAs = people?.people.find((p) => p.id === followed);
+  // Not said once it may be untrue: the person is gone from the sample users, or the preview
+  // is on a sign-in page (the door refused, or they signed out of a page that needs a session).
+  useEffect(() => {
+    if (followed && people && !previewingAs) setFollowed(undefined);
+  }, [followed, people, previewingAs]);
+  // The sample users are read again after each change while one is followed: the panel reads them
+  // only while open, and a change made with it closed (removeSampleUser) must still clear this.
+  // Keyed on the revision, which every change moves: the sample users (samples/people.yml) are
+  // not among the spec files in project.files.
+  const revision = project?.revision;
+  useEffect(() => {
+    if (!followed || !revision) return;
+    // Only the latest revision's answer counts: an older one arriving last would bring back a removed user.
+    let current = true;
+    api.people().then(
+      (people) => current && setPeople(people),
+      () => {},
+    );
+    return () => {
+      current = false;
+    };
+  }, [followed, revision]);
+  useEffect(() => {
+    if (!followed) return;
+    const onMessage = (e: MessageEvent) => {
+      if (!isPreviewMessage(e) || e.data.type !== "navigated") return;
+      const at = new URL(e.data.path, "http://preview");
+      if (["/sign-in", "/sign-up"].includes(at.pathname) && !at.searchParams.has("as"))
+        setFollowed(undefined);
+    };
+    window.addEventListener("message", onMessage);
+    return () => window.removeEventListener("message", onMessage);
+  }, [followed]);
   // Whether No code's editors open the preview's page as it changes (the link beside the address).
   const [following, setFollowingState] = useState(() => {
     try {
@@ -2134,12 +2170,14 @@ export function App() {
             state={people}
             auth={spec.auth}
             onState={setPeople}
-            onFollow={(id) =>
+            followed={previewingAs?.id}
+            onFollow={(id) => {
+              setFollowed(id);
               setGo((g) => ({
                 path: `/sign-in?as=${encodeURIComponent(id)}&redirect=/`,
                 key: (g?.key ?? 0) + 1,
-              }))
-            }
+              }));
+            }}
             onClose={() => setPeopleOpen(false)}
           />
         )}
@@ -2229,6 +2267,7 @@ export function App() {
                   highlight={highlight}
                   pages={pages}
                   go={go}
+                  previewingAs={previewingAs}
                   following={following}
                   onFollowing={
                     // Behavior and Layout follow the preview; Who can and Content have no page

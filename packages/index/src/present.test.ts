@@ -77,7 +77,7 @@ test("the five parts say what the app is, its pages, the roles, visitors and the
   );
   expect(parts[3]?.concepts).toEqual(["public"]);
   expect(parts[4]?.text).toBe(
-    "Everyone who signs in works on their own records only; the member role opens the bookings page; the team role opens every page, sees everyone's records and changes everyone's sessions. Admins do everything.",
+    "The member role opens the bookings page and sees only their own records; the team role opens every page, sees everyone's records and changes everyone's sessions. Admins do everything.",
   );
   expect(parts[4]?.text).toMatch(/Admins do everything\.$/);
   expect(parts.map((p) => p.expression)).toEqual([
@@ -167,4 +167,40 @@ test("two pages that would read the same are named by their ids", () => {
     text: "smithable: 0.1\napp: { name: Desk }\nmodels:\n  Booking:\n    fields: { name: string! }\npages:\n  myBookings: { crud: Booking, route: /mine }\n  my-bookings: { crud: Booking }\n",
   }).ir as SpecIR;
   expect(present(twins)[1]?.text).toBe("It has myBookings and my-bookings, open to everyone.");
+});
+
+test("private records: 'their own records only' is said of the roles it holds for, from the grants", () => {
+  const said = (roles: string) =>
+    present(
+      ir,
+      validateAuth(
+        {
+          path: "smithable.auth.yml",
+          text: `smithableAuth: 0.1\nsignIn: { providers: [email] }\ndefaultAccess: private\ndefaultRole: guest\nroles:\n${roles}`,
+        },
+        ir,
+      ).auth as AuthIR,
+      content,
+    ).find((p) => p.part === "signedIn")?.text;
+  // The booking starter's shape: one role reads everyone's sessions and bookings, one reads none.
+  expect(
+    said(
+      "  desk: { pages: [schedule, bookings], read: [Session, Booking] }\n  guest: { pages: [bookings], create: [Booking] }\n",
+    ),
+  ).toBe(
+    "The desk role opens the schedule page and the bookings page, sees everyone's sessions and bookings and sees only their own records of the rest; the guest role opens the bookings page, adds bookings and sees only their own records. Admins do everything.",
+  );
+  // A write grant changes others' records; it does not show them.
+  expect(said("  guest: { pages: [bookings], write: [Booking] }\n")).toMatch(
+    /^Everyone who signs in sees only their own records; /,
+  );
+  // A read list naming every kind is everyone's records, not "their own of the rest".
+  const every = ir.models.map((m) => m.name).join(", ");
+  expect(
+    said(`  desk: { pages: [schedule], read: [${every}] }\n  guest: { pages: [bookings] }\n`),
+  ).not.toMatch(/desk role[^;]*own records/);
+  // No role reads beyond its own: the rule is said once for everyone, as before.
+  expect(said("  guest: { pages: [bookings] }\n")).toBe(
+    "Everyone who signs in sees only their own records; the guest role opens the bookings page. Admins do everything.",
+  );
 });
