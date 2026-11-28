@@ -2968,10 +2968,16 @@ try {
         // (T1767): the clicked page is marked, and only a new page gets a second click.
         await preview.locator("html").evaluate((html) => html.setAttribute("data-sm-clicked", ""));
         await target.click({ position });
-        // The selection mark sits on the target or on a box around it (a menu item's).
+        // The selection mark sits on the target, on a box around it, or on a part inside it (a
+        // menu link's item).
         const picked = () =>
           target
-            .evaluate((el) => !!el.closest("[data-sm-selected]"), undefined, { timeout: 2000 })
+            .evaluate(
+              (el) =>
+                !!(el.closest("[data-sm-selected]") ?? el.querySelector("[data-sm-selected]")),
+              undefined,
+              { timeout: 2000 },
+            )
             .catch(() => false);
         const fresh = preview.locator("html[data-sm-selecting]:not([data-sm-clicked])");
         const until = async (ms, orReloaded) => {
