@@ -9319,6 +9319,75 @@ async function browserFlow(dir, base) {
   }
 }
 
+/** The CRM's changes by operations that stay in the app: the command steps expect its records and
+ *  its conversation, so crm's two parts both start with these. */
+function crmChanges(dir) {
+  // Rules on a record (record-rules.md): an order's total locked once shipped, a tracking code
+  // required then (the ship action asks for it), who handled it filled by the app, and an
+  // action asking for a person.
+  step(
+    "op setFieldRules and addAction give orders a locked total, a tracking code required when shipped, a field the app fills and an asked person, and the app type-checks",
+    () => {
+      for (const args of [
+        ["addField", "Order", "trackingCode", "string"],
+        ["setFieldRules", "Order", "trackingCode", "--required", "status=shipped"],
+        ["setFieldRules", "Order", "total", "--locked", "status=shipped | canceled"],
+        ["addField", "Order", "handledBy", "User = ME()"],
+        ["setFieldRules", "Order", "handledBy", "--by", "app"],
+        ["addField", "Order", "packedBy", "User"],
+        [
+          "addAction",
+          "ship",
+          "--on",
+          "Order",
+          "--when",
+          "status=placed",
+          "--set",
+          "status=shipped",
+        ],
+        ["addAction", "assignPacker", "--on", "Order", "--set", "packedBy="],
+        // The status of a customer's newest order, and an action only for when it shipped.
+        ["addField", "Customer", "lastOrderStatus", "string", "--formula", "LAST(orders.status)"],
+        ["addField", "Customer", "thanked", "bool"],
+        [
+          "addAction",
+          "thank",
+          "--on",
+          "Customer",
+          "--when",
+          "lastOrderStatus=shipped",
+          "--set",
+          "thanked=true",
+        ],
+        // Orders filtered by who handled them: Mine, Unassigned, the people.
+        ["setFilters", "orders", "handledBy"],
+      ]) {
+        const result = smithable(dir, "op", ...args);
+        if (result.code !== 0) throw new Error(`${args[0]}: ${result.out}`);
+      }
+      run("pnpm", ["typecheck"], dir);
+    },
+  );
+  // A conversation (conversation.md): a customer's comments as a thread on its page, added from
+  // the reply box, with no page of their own.
+  step(
+    "op addModel and setRecordList show a customer's comments as a conversation, and the app type-checks",
+    () => {
+      for (const args of [
+        ["addModel", "Comment", "body=text!", "customer=Customer!"],
+        // In the trash with its customer, as the orders are.
+        ["setTrash", "Comment", "true"],
+        ["addField", "Customer", "comments", "Comment[]"],
+        ["setRecordList", "customers", "comments", "thread"],
+      ]) {
+        const result = smithable(dir, "op", ...args);
+        if (result.code !== 0) throw new Error(`${args[0]}: ${result.out}`);
+      }
+      run("pnpm", ["typecheck"], dir);
+    },
+  );
+}
+
 /** The CRM's steps on the engine's commands; they need a new app and nothing the browser did. */
 async function commandSteps(dir, port) {
   await mcpFlow(dir);
@@ -9355,6 +9424,7 @@ for (const [index, name] of examples.entries()) {
       if (status.stdout.trim()) throw new Error(`uncommitted after new:\n${status.stdout}`);
     });
     if (part === "commands") {
+      crmChanges(dir);
       await commandSteps(dir, port);
       continue;
     }
@@ -9806,79 +9876,7 @@ for (const [index, name] of examples.entries()) {
         join(dir, "src/custom/styles.css"),
         '\n[data-page="customers"] [data-kit="model-table"] [data-part="header"] th { letter-spacing: 3px; }\n',
       );
-    // Rules on a record (record-rules.md): an order's total locked once shipped, a tracking code
-    // required then (the ship action asks for it), who handled it filled by the app, and an
-    // action asking for a person.
-    if (example === "crm")
-      step(
-        "op setFieldRules and addAction give orders a locked total, a tracking code required when shipped, a field the app fills and an asked person, and the app type-checks",
-        () => {
-          for (const args of [
-            ["addField", "Order", "trackingCode", "string"],
-            ["setFieldRules", "Order", "trackingCode", "--required", "status=shipped"],
-            ["setFieldRules", "Order", "total", "--locked", "status=shipped | canceled"],
-            ["addField", "Order", "handledBy", "User = ME()"],
-            ["setFieldRules", "Order", "handledBy", "--by", "app"],
-            ["addField", "Order", "packedBy", "User"],
-            [
-              "addAction",
-              "ship",
-              "--on",
-              "Order",
-              "--when",
-              "status=placed",
-              "--set",
-              "status=shipped",
-            ],
-            ["addAction", "assignPacker", "--on", "Order", "--set", "packedBy="],
-            // The status of a customer's newest order, and an action only for when it shipped.
-            [
-              "addField",
-              "Customer",
-              "lastOrderStatus",
-              "string",
-              "--formula",
-              "LAST(orders.status)",
-            ],
-            ["addField", "Customer", "thanked", "bool"],
-            [
-              "addAction",
-              "thank",
-              "--on",
-              "Customer",
-              "--when",
-              "lastOrderStatus=shipped",
-              "--set",
-              "thanked=true",
-            ],
-            // Orders filtered by who handled them: Mine, Unassigned, the people.
-            ["setFilters", "orders", "handledBy"],
-          ]) {
-            const result = smithable(dir, "op", ...args);
-            if (result.code !== 0) throw new Error(`${args[0]}: ${result.out}`);
-          }
-          run("pnpm", ["typecheck"], dir);
-        },
-      );
-    // A conversation (conversation.md): a customer's comments as a thread on its page, added from
-    // the reply box, with no page of their own.
-    if (example === "crm")
-      step(
-        "op addModel and setRecordList show a customer's comments as a conversation, and the app type-checks",
-        () => {
-          for (const args of [
-            ["addModel", "Comment", "body=text!", "customer=Customer!"],
-            // In the trash with its customer, as the orders are.
-            ["setTrash", "Comment", "true"],
-            ["addField", "Customer", "comments", "Comment[]"],
-            ["setRecordList", "customers", "comments", "thread"],
-          ]) {
-            const result = smithable(dir, "op", ...args);
-            if (result.code !== 0) throw new Error(`${args[0]}: ${result.out}`);
-          }
-          run("pnpm", ["typecheck"], dir);
-        },
-      );
+    if (example === "crm") crmChanges(dir);
     // A list's filters and sort (marketplace.md §2.2): the CRM's customers get them by operations.
     if (example === "crm")
       step(
