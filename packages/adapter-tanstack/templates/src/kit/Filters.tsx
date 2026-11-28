@@ -362,7 +362,7 @@ function Filter({
             onChange={(e) => {
               const person = e.target.value;
               onAlter((now) => {
-                const next = new Set([...now].filter((v) => v === "me" || v === "none"));
+                const next = new Set<string>([...now].filter((v) => v === "me" || v === "none"));
                 if (person) next.add(person);
                 return next;
               });
