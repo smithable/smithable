@@ -74,6 +74,20 @@ test("validate --explain says what a hero's buttons open, by rule or as written"
   expect(invoicing.stdout).toContain("home hero: button opens overview; no second button");
 });
 
+test("validate --explain says each page's frame, by rule or as the ux file says (T1695)", async () => {
+  const io = captureIo();
+  expect(await run(["validate", join(examples, "invoicing"), "--explain"], io)).toBe(0);
+  expect(io.stdout).toContain(
+    "home frame: site, a public page with the top menu and footer (by rule: landing pages and articles visitors open have it)",
+  );
+  expect(io.stdout).toMatch(
+    /overview frame: app, a workspace page with the app's menu \(by rule: .*; say it with frame\)/,
+  );
+  const booking = captureIo();
+  expect(await run(["validate", join(examples, "booking"), "--explain"], booking)).toBe(0);
+  expect(booking.stdout).toContain("my-bookings frame: site (frame in smithable.ux.yml)");
+});
+
 test("validate --explain says the tile's initials and where they come from (app-logo.md §0)", async () => {
   const io = captureIo();
   expect(await run(["validate", join(examples, "kiosk"), "--explain"], io)).toBe(0);

@@ -46,6 +46,8 @@ if (typeof window !== "undefined" && window.parent !== window) {
     "[data-sm-part=column][draggable=true]{cursor:grab!important}" +
     // A landing section runs to the window's edges: its box is drawn inside them, so all four sides show.
     "[data-kit=section][data-sm-hover],[data-kit=section][data-sm-selected]{outline-offset:-2px!important}" +
+    // So does the app's menu, a bar across the top or a side menu at the window's edge (T1695).
+    '[data-sm-concept^="navigation:"][data-sm-hover],[data-sm-concept^="navigation:"][data-sm-selected]{outline-offset:-2px!important}' +
     "html[data-sm-selecting] [data-sm-concept]{cursor:pointer!important}" +
     "html[data-sm-selecting] [data-sm-text]:hover{outline:2px dashed #e8590c!important;outline-offset:2px;cursor:text!important}" +
     // Being edited: an outline only, so the text keeps its own colors (a hero's white title on a pale box could not be read).
@@ -166,7 +168,8 @@ if (typeof window !== "undefined" && window.parent !== window) {
     if (quiet) return post({ type: "selection-moved", anchor: { left, right, top, bottom } });
     const heading = concept.startsWith("section:") ? marked.querySelector("h1, h2") : null;
     post({
-      type: "select", concept, part, page: marked.dataset.smPage ?? null, columns,
+      // The page's address too: the app's menu belongs to no page, and Studio finds it from there (T1695).
+      type: "select", concept, part, page: marked.dataset.smPage ?? null, path: location.pathname, columns,
       label: marked.matches(footerSelector) ? "Footer" : ((heading ?? marked).getAttribute("aria-label") || (heading ?? marked).textContent || "").trim().slice(0, 120),
       anchor: { left, right, top, bottom },
     });
@@ -209,9 +212,10 @@ if (typeof window !== "undefined" && window.parent !== window) {
     clear("data-sm-selected");
     clear("data-sm-hover");
   };
-  const loseSelection = () => {
+  // Escape says so: with nothing selected in Studio, only it ends Select there.
+  const loseSelection = (escape) => {
     clearSelection();
-    post({ type: "selection-cleared" });
+    post({ type: "selection-cleared", ...(escape ? { escape: true } : {}) });
   };
   // A section picked before its page loaded again (its look changed) is marked again once it shows,
   // or given up after ten seconds when it never does.
@@ -496,7 +500,9 @@ if (typeof window !== "undefined" && window.parent !== window) {
     event.stopPropagation();
     if (!marked) {
       const section = sectionAt(event.target);
-      if (section) selectPart(section.element, section.concept);
+      // A click on the section's picture opens its form at the picture.
+      const picture = event.target instanceof Element && event.target.closest("img, picture");
+      if (section) selectPart(section.element, section.concept, picture ? "picture" : null);
       return;
     }
     // A selected column takes the keys, so Alt and the arrows move it.
@@ -540,7 +546,7 @@ if (typeof window !== "undefined" && window.parent !== window) {
     if (!designOnly() && !typing && event.key === "Escape" && (armed() || selected)) {
       event.preventDefault();
       temporary = false;
-      loseSelection();
+      loseSelection(true);
       paintSelect();
     }
     if (!designOnly() && (event.ctrlKey || event.metaKey) && !event.shiftKey && event.key.toLowerCase() === "z" && !typing) {

@@ -151,6 +151,7 @@ export function SelectedSection({
   project,
   refresh,
   close,
+  atPicture,
   ask,
   position,
   measured,
@@ -162,6 +163,8 @@ export function SelectedSection({
   /** Reads the project again after a change, so the form and the preview show it. */
   refresh: () => Promise<void>;
   close: () => void;
+  /** Opened by a click on the section's picture: the form starts at it (T1686). */
+  atPicture?: boolean;
   ask: () => void;
   position?: CSSProperties;
   /** Its height as drawn, each time it changes, so the screen places it by that, not a guess. */
@@ -169,6 +172,8 @@ export function SelectedSection({
   reveal: (sheetTop: number) => void;
 }) {
   const lookProject = project.lookProject ?? "";
+  // A click on the picture: the form shows its picture and its first control has the focus.
+  const pictureAt = useRef<HTMLDivElement>(null);
   const [session] = useState(
     () =>
       new LookSession(
@@ -192,6 +197,8 @@ export function SelectedSection({
       ),
   );
   const [busy, setBusy] = useState(false);
+  // The choice clicked shows as chosen at once, with a working sign, while it is applied (T1692).
+  const [pending, setPending] = useState<{ key: string; value: string }>();
   const [changed, setChanged] = useState(false);
   const [error, setError] = useState<string>();
   const running = useRef(false);
@@ -210,7 +217,17 @@ export function SelectedSection({
   const panel = useRef<HTMLDivElement>(null);
   const narrow = useMedia("(max-width: 1023px)");
   // The click that picked the section left focus in the preview: the form takes it, so Escape closes.
-  useEffect(() => panel.current?.focus({ preventScroll: true }), []);
+  // The form takes the focus as it opens; opened by a click on the picture, its picture does (T1686).
+  // biome-ignore lint/correctness/useExhaustiveDependencies: on opening only
+  useEffect(() => {
+    const control = atPicture
+      ? pictureAt.current?.querySelector<HTMLElement>("input, button, select")
+      : undefined;
+    if (control) {
+      pictureAt.current?.scrollIntoView({ block: "nearest" });
+      control.focus({ preventScroll: true });
+    } else panel.current?.focus({ preventScroll: true });
+  }, []);
   useLayoutEffect(() => {
     const sheet = panel.current;
     if (!narrow || !sheet) return;
@@ -231,8 +248,10 @@ export function SelectedSection({
     observer.observe(form);
     return () => observer.disconnect();
   }, [narrow, measured]);
-  const choose = (key: string, value: string) =>
-    attempt(key, value, (revision) =>
+  const choose = (key: string, value: string) => {
+    if (running.current || !mounted.current) return;
+    setPending({ key, value });
+    return attempt(key, value, (revision) =>
       api.lookChange(
         "setSectionLook",
         { page: section.page, section: section.section, key, value },
@@ -240,6 +259,7 @@ export function SelectedSection({
         lookProject,
       ),
     );
+  };
   // A picture replaced, removed or described is tried on like a layout: Cancel puts it back, and
   // an uploaded file leaves with the change that brought it. The click on the picture shown is the
   // confirmation a stored file's place asks for (media-storage.md §2): the photo library keeps it.
@@ -290,7 +310,10 @@ export function SelectedSection({
       setChanged(session.changed);
       await reread();
       running.current = false;
-      if (mounted.current) setBusy(false);
+      if (mounted.current) {
+        setBusy(false);
+        setPending(undefined);
+      }
     }
   };
   const cancel = async () => {
@@ -361,40 +384,51 @@ export function SelectedSection({
             This section has no arrangement to choose. Describe the change to Smith instead.
           </p>
         )}
-        {section.choices.map(({ key, values, current }) => (
-          <fieldset key={key} className="space-y-1">
-            <legend className="text-xs text-muted">{KEYS[key]}</legend>
-            <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-              {values.map((value) => (
-                <button
-                  key={value}
-                  type="button"
-                  aria-pressed={value === current}
-                  disabled={busy}
-                  className="rounded-md border border-line p-1 text-left text-xs leading-tight hover:bg-subtle disabled:opacity-60 aria-pressed:border-accent aria-pressed:bg-accent-soft aria-pressed:font-medium aria-pressed:ring-2 aria-pressed:ring-accent/40"
-                  onClick={() => value !== current && void choose(key, value)}
-                >
-                  <SectionSketch kind={section.kind} choice={key} value={value} />
-                  <span className="mt-1 block">{named(section.kind, key, value)}</span>
-                </button>
-              ))}
-            </div>
-          </fieldset>
-        ))}
+        {section.choices.map(({ key, values, current }) => {
+          const shown = pending?.key === key ? pending.value : current;
+          return (
+            <fieldset key={key} className="space-y-1">
+              <legend className="text-xs text-muted">{KEYS[key]}</legend>
+              <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+                {values.map((value) => (
+                  <button
+                    key={value}
+                    type="button"
+                    aria-pressed={value === shown}
+                    aria-busy={pending?.key === key && pending.value === value}
+                    disabled={busy}
+                    className="rounded-md border border-line p-1 text-left text-xs leading-tight hover:bg-subtle disabled:opacity-60 aria-pressed:border-accent aria-pressed:bg-accent-soft aria-pressed:font-medium aria-pressed:ring-2 aria-pressed:ring-accent/40"
+                    onClick={() => value !== current && void choose(key, value)}
+                  >
+                    <SectionSketch kind={section.kind} choice={key} value={value} />
+                    <span className="mt-1 block">{named(section.kind, key, value)}</span>
+                    {pending?.key === key && pending.value === value && (
+                      <span role="status" className="mt-0.5 block text-quiet">
+                        Changing…
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </fieldset>
+          );
+        })}
         {section.picture && (
-          <SectionPicture
-            key={pictureValue(section.picture.image)}
-            page={section.page}
-            section={section.section}
-            image={section.picture.image}
-            label={
-              ["text", "callToAction", "features"].includes(section.kind)
-                ? "Background picture"
-                : undefined
-            }
-            change={(args, file) => void choosePicture(args, file)}
-            busy={busy}
-          />
+          <div ref={pictureAt}>
+            <SectionPicture
+              key={pictureValue(section.picture.image)}
+              page={section.page}
+              section={section.section}
+              image={section.picture.image}
+              label={
+                ["text", "callToAction", "features"].includes(section.kind)
+                  ? "Background picture"
+                  : undefined
+              }
+              change={(args, file) => void choosePicture(args, file)}
+              busy={busy}
+            />
+          </div>
         )}
         {section.kind === "hero" && section.picture?.image && (
           <SectionFilm

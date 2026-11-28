@@ -2155,6 +2155,27 @@ try {
       await (await previewPage())?.evaluate(() => {
         window.smithableKept = true;
       });
+      // The top bar in three groups (T1693): what acts on the app, Review and Publish, Help and More.
+      const order = await page
+        .locator("[data-studio-header]")
+        .evaluate((bar) =>
+          [...bar.querySelectorAll("button[aria-label], [data-toolbar-divider]")].map((e) =>
+            e.hasAttribute("data-toolbar-divider") ? "|" : e.getAttribute("aria-label"),
+          ),
+        );
+      const groups = order
+        .join(",")
+        .split("|")
+        .map((g) => g.split(",").filter(Boolean));
+      if (
+        groups.length !== 3 ||
+        !["Select", "Outbox", "All settings"].every((n) => groups[0].includes(n)) ||
+        !groups[1].includes("Publish") ||
+        !(groups[2].includes("Help") && groups[2].includes("More"))
+      )
+        throw new Error(`the top bar is not in three groups: ${order.join(" ")}`);
+      if ((await page.locator("[data-studio-header] button[aria-label=More]").innerText()).trim())
+        throw new Error("More shows a word, not its three dots");
       await page.setViewportSize({ width: 390, height: 844 });
       const header = page.locator("[data-studio-header]");
       const more = header.getByRole("button", { name: "More", exact: true });
@@ -2928,6 +2949,14 @@ try {
         originalPosition === "scrolling" ? ["sticky", "scrolling"] : ["scrolling", "sticky"];
       for (const position of positions) {
         await pick(topBar, { x: 4, y: 4 });
+        // Its box is drawn inside the bar, which runs to the window's edges (T1695).
+        const box = await topBar.evaluate((el) => {
+          const look = getComputedStyle(el);
+          return (
+            el.hasAttribute("data-sm-selected") && `${look.outlineStyle} ${look.outlineOffset}`
+          );
+        });
+        if (box !== "solid -2px") throw new Error(`the selected top bar's box: ${box}`);
         const settings = page.getByRole("form", { name: "Top bar", exact: true });
         await settings
           .getByRole("checkbox", { name: "Stays at the top when scrolling", exact: true })
@@ -2987,7 +3016,10 @@ try {
           : "topbar-centered";
       await pick(workspace, { x: 4, y: 4 });
       const workspaceSettings = page.getByRole("form", { name: "App navigation", exact: true });
-      await workspaceSettings.getByLabel("Menu placement", { exact: true }).selectOption(placement);
+      await workspaceSettings.getByRole("radio", { name: "Whole app", exact: true }).check();
+      await workspaceSettings
+        .getByLabel("Menu for the whole app", { exact: true })
+        .selectOption(placement);
       await workspaceSettings.getByRole("button", { name: "Apply", exact: true }).click();
       await workspaceSettings.waitFor({ state: "hidden" });
       const positioned = workspaceHeader.and(preview.locator(`[data-navigation="${placement}"]`));
@@ -3003,6 +3035,10 @@ try {
         )
         .first();
       if (!(await workspaceItem.isVisible())) {
+        // Select stays on after a form closes (T1684): the app's own menu is used with it off.
+        const select = page.getByRole("button", { name: "Select", exact: true });
+        if ((await select.getAttribute("aria-pressed")) === "true") await select.click();
+        await preview.locator("html[data-sm-selecting]").waitFor({ state: "detached" });
         await workspaceHeader
           .getByRole("button", { name: "Open menu", exact: true })
           .first()
@@ -3015,7 +3051,136 @@ try {
         .getByRole("button", { name: "Cancel", exact: true })
         .click();
       await op("setMenuLayout", { navigation: menuSource ?? "inherit" });
+      // Only this page: the page's frame, through the menu (T1695); Default says the rule.
+      await openPreview("/customers");
+      await pick(workspace, { x: 4, y: 4 });
+      await workspaceSettings.getByRole("radio", { name: "Default", exact: true }).check();
+      await workspaceSettings
+        .getByText(
+          "Landing pages and public articles are public pages; the rest are workspace pages.",
+          {
+            exact: true,
+          },
+        )
+        .waitFor();
+      await workspaceSettings.getByRole("radio", { name: "Only this page", exact: true }).check();
+      await workspaceSettings
+        .getByLabel("Menu for this page", { exact: true })
+        .selectOption("site");
+      await workspaceSettings.getByRole("button", { name: "Apply", exact: true }).click();
+      await workspaceSettings.waitFor({ state: "hidden" });
+      for (let i = 0; i < 60 * P && !framed(); i++) await new Promise((r) => setTimeout(r, 1000));
+      if (!framed()) throw new Error("Only this page did not give the customers the site's frame");
+      await op("setFrame", { page: "customers", frame: "default" });
       await sub("Behavior");
+    },
+  );
+
+  await step(
+    "a click on a section's picture opens its form at the picture, whose thumbnail asks again when it was not there yet; Select stays on after the form closes, and Show me opens where a change shows (T1686, T1691, T1684, T1682)",
+    async () => {
+      mkdirSync(join(dir, "public/images"), { recursive: true });
+      writeFileSync(join(dir, "public/images/walk-hero.png"), png(32, 20));
+      // As an upload through Studio would be: committed, so the change can be undone on its own.
+      for (const args of [
+        ["add", "public/images/walk-hero.png"],
+        ["-c", "user.name=walk", "-c", "user.email=walk@example.com", "commit", "-qm", "A picture"],
+      ])
+        if (spawnSync("git", args, { cwd: dir }).status !== 0)
+          throw new Error(`git ${args.at(-3)}`);
+      await op("setSectionPicture", {
+        page: "home",
+        section: "hero",
+        src: "images/walk-hero.png",
+        alt: "A grey square",
+      });
+      await openPreview("/home");
+      // The thumbnail's first ask finds nothing, as in a hosted workspace before its fetch (T1691).
+      let asked = 0;
+      const thumb = "**/api/images/walk-hero.png*";
+      await page.route(thumb, (route) =>
+        asked++ ? route.continue() : route.fulfill({ status: 404, body: "" }),
+      );
+      const select = page.getByRole("button", { name: "Select", exact: true });
+      if ((await select.getAttribute("aria-pressed")) !== "true") await select.click();
+      const picture = preview.locator('[data-kit=section][data-section="hero"] img').first();
+      const alt = page.getByLabel("What it shows", { exact: true });
+      // A click in a preview that reloads under it (the picture just set) selects nothing: again.
+      for (let i = 0; ; i++) {
+        await preview
+          .locator("html[data-sm-selecting]")
+          .waitFor({ state: "attached", timeout: 60000 * P });
+        await picture.dispatchEvent("click");
+        if (
+          await alt.waitFor({ timeout: 5000 }).then(
+            () => true,
+            () => false,
+          )
+        )
+          break;
+        if (i > 12 * P) throw new Error("the picture's click opened no form at the picture");
+      }
+      // Its picture's control has the focus, not the form's heading.
+      if (!(await page.evaluate(() => !!document.activeElement?.closest("[data-section-picture]"))))
+        throw new Error("the picture's control does not have the focus");
+      await page.waitForFunction(
+        () => (document.querySelector("[data-section-picture] img")?.naturalWidth ?? 0) > 0,
+        undefined,
+        { timeout: 15000 * P },
+      );
+      await page.unroute(thumb);
+      if (asked < 2) throw new Error(`the thumbnail was asked for ${asked} time(s), not again`);
+      // A layout clicked shows as chosen at once, with a working sign, while it is applied (T1692).
+      const hero = page.locator("[role=dialog]:has([data-section-picture])");
+      // Pinned by its place: "the first not chosen" is another button once this one is chosen.
+      const layouts = hero.locator("fieldset").first().locator("button");
+      const layout = layouts.nth(
+        await layouts.evaluateAll((all) =>
+          all.findIndex((one) => one.getAttribute("aria-pressed") === "false"),
+        ),
+      );
+      await layout.click();
+      await layout
+        .and(page.locator("[aria-pressed=true][aria-busy=true]"))
+        .waitFor({ timeout: 2000 });
+      await layout.getByRole("status").getByText("Changing…", { exact: true }).waitFor();
+      await layout.getByRole("status").waitFor({ state: "detached", timeout: 120000 * P });
+      await layout.and(page.locator("[aria-pressed=true]")).waitFor();
+      // Cancel puts the section back as it was, and closes the form.
+      await hero.getByRole("button", { name: "Cancel", exact: true }).click();
+      await alt.waitFor({ state: "hidden", timeout: 120000 * P });
+      // Closing the form ends that selection, not Select: the next click selects again.
+      if ((await select.getAttribute("aria-pressed")) !== "true")
+        throw new Error("closing the form turned Select off");
+      await preview
+        .locator("html[data-sm-selecting]")
+        .waitFor({ state: "attached", timeout: 10000 * P });
+      // Escape with nothing selected ends Select.
+      await page.keyboard.press("Escape");
+      await select.and(page.locator('[aria-pressed="false"]')).waitFor({ timeout: 5000 * P });
+      // A change shows on another page: the preview stays, and Show me opens it there.
+      await op("addField", { model: "Customer", field: "walkPhone", type: "string" });
+      const showMe = page
+        .getByRole("list", { name: "Thread" })
+        .getByRole("button", { name: "Show me", exact: true });
+      await showMe.waitFor({ timeout: 60000 * P });
+      await page.locator('[data-preview-page][data-preview-current="/home"]').waitFor();
+      await showMe.click();
+      await page
+        .locator('[data-preview-page][data-preview-current="/customers/new"]')
+        .waitFor({ timeout: 10000 * P });
+      for (const undo of [1, 2]) {
+        const undone = await fetch(`${base}/api/undo`, {
+          method: "POST",
+          headers: { "content-type": "application/json", "x-smithable": "1" },
+          body: "{}",
+        });
+        if (!undone.ok) throw new Error(`undo ${undo} answered ${undone.status}`);
+      }
+      for (let i = 0; (await project()).files.spec.includes("walkPhone"); i++) {
+        if (i > 60 * P) throw new Error("the field was not undone");
+        await page.waitForTimeout(1000);
+      }
     },
   );
 

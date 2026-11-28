@@ -17,13 +17,17 @@ export type PreviewMessage =
       type: "select";
       concept: string;
       /** A value is a record's or a formula's: it opens its field, never as text to change. */
-      part: "field" | "column" | "value" | "menu-item" | null;
+      /** A picture: a section's, clicked on its picture. */
+      part: "field" | "column" | "value" | "menu-item" | "picture" | null;
       page: string | null;
+      /** Where the preview was: a part that belongs to no page (the app's menu) is placed by it. */
+      path?: string;
       columns: string[] | null;
       label?: string;
       anchor?: { left: number; right: number; top: number; bottom: number };
     }
-  | { type: "selection-cleared" }
+  /** Escape there, or the part gone; only Escape with nothing selected ends Select. */
+  | { type: "selection-cleared"; escape?: boolean }
   | { type: "shift"; on: boolean }
   /** The selected part moved on the screen (the page scrolled or changed size). */
   | {
