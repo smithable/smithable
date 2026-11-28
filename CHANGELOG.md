@@ -26,6 +26,8 @@ The entries are filled in from the merged pull requests at each release. A fix t
 
 ### Fixes
 
+- **The engine**: two quick clicks, on two filters or on a calendar's next or previous arrow, both count (the second dropped the first). A page's own copy of `Filters` gets the change alone as `onChange`'s second argument (fix file `quick-clicks`).
+
 - **Lists**: Import is offered to the roles that may add a record and read everyone's on that list, no longer to a member on a list of their own records; `import: true | false` on a crud page says it either way, and `smithable validate --explain` shows who is offered it (fix `list-import-own-records`).
 
 - Generated apps no longer repeat a card's title as its description when the title is taken from the record's only long text field (`fixes/card-title-not-repeated.yml`).

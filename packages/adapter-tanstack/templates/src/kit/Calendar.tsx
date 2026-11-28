@@ -438,11 +438,13 @@ export function Calendar({
   }, [search.open]);
   // Elsewhere in time, the time of day chosen stays chosen.
   // Previous, Today, Next and the views move the days; the page's filters and the time of day stay.
-  const go = (to: CalendarSearch) =>
-    onNavigate(({ day: _day, week: _week, month: _month, from: _from, open: _open, ...stays }) => ({
-      ...stays,
-      ...to,
-    }));
+  // Previous and Next count from the address in force, not the drawn range, so two quick clicks
+  // move two steps.
+  const go = (to: CalendarSearch | "prev" | "next") =>
+    onNavigate((now) => {
+      const { day: _day, week: _week, month: _month, from: _from, open: _open, ...stays } = now;
+      return { ...stays, ...(typeof to === "string" ? calendarRange(now, appZone, own)[to] : to) };
+    });
   const closed = () => {
     if (search.open === undefined) return;
     if (pushed.current) {
@@ -454,18 +456,13 @@ export function Calendar({
   return (
     <div data-kit="calendar" className="space-y-4">
       <div className="flex flex-wrap items-center gap-2">
-        <Button
-          type="button"
-          variant="outline"
-          aria-label={w.previous}
-          onClick={() => go(range.prev)}
-        >
+        <Button type="button" variant="outline" aria-label={w.previous} onClick={() => go("prev")}>
           <ChevronLeft aria-hidden className="size-4" />
         </Button>
         <Button type="button" variant="outline" onClick={() => go(range.today)}>
           {w.today}
         </Button>
-        <Button type="button" variant="outline" aria-label={w.next} onClick={() => go(range.next)}>
+        <Button type="button" variant="outline" aria-label={w.next} onClick={() => go("next")}>
           <ChevronRight aria-hidden className="size-4" />
         </Button>
         <h2 aria-live="polite" className="mx-2 text-lg font-semibold">

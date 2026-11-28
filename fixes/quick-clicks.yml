@@ -1,0 +1,8 @@
+id: quick-clicks
+title: Two quick clicks, on two filters or on the calendar's next or previous arrow, counted only the second.
+severity: fix
+exposure: none
+introduced: unknown
+affects:
+  kit: [src/kit/Filters.tsx, src/kit/Calendar.tsx]
+migration: none

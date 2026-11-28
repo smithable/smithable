@@ -86,7 +86,14 @@ export function Filters({
   signedIn?: boolean;
   /** The page's default filters: clearing one writes "all", so the default stays away. */
   defaults?: Record<string, string>;
-  onChange: (next: FilterValues & { sort?: string }) => void;
+  /**
+   * `next` is every value as drawn, with the change; `changed` is the change alone. A page puts
+   * `changed` on the address in force, so a second click before the redraw keeps the first.
+   */
+  onChange: (
+    next: FilterValues & { sort?: string },
+    changed: FilterValues & { sort?: string },
+  ) => void;
 }) {
   // The labels in the language now (languages.md §4).
   const filters = given.map((f) => ({
@@ -105,12 +112,10 @@ export function Filters({
   const active = shown.filter((f) => effective[f.name]);
   const folded = shown.filter((f) => f.folded && !effective[f.name]);
   const visible = more ? shown : shown.filter((f) => !folded.includes(f));
+  const send = (changed: FilterValues & { sort?: string }) =>
+    onChange({ ...values, sort, ...changed }, changed);
   const set = (name: string, value: string | undefined) =>
-    onChange({
-      ...values,
-      [name]: value || (defaults[name] !== undefined ? "all" : undefined),
-      sort,
-    });
+    send({ [name]: value || (defaults[name] !== undefined ? "all" : undefined) });
   return (
     <div data-kit="filters" className="mb-6 space-y-3">
       {/* Phones: the Filters button and the sort, the filters under them; wider: the filters, then the sort. */}
@@ -136,7 +141,7 @@ export function Filters({
             <select
               id={`${id}-sort`}
               value={sort ?? ""}
-              onChange={(e) => onChange({ ...values, sort: e.target.value || undefined })}
+              onChange={(e) => send({ sort: e.target.value || undefined })}
               className="h-control rounded-md border border-input bg-card px-3 text-sm"
             >
               <option value="">{w.newestFirst}</option>
