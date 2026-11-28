@@ -410,4 +410,27 @@ pages:
     "Record 3 of Appointment takes barber 1's time while record 1 does (with the 10 minutes kept free after each).",
   ]);
   expect(said(plain, tuesdays)).toEqual([]);
+  // A clash with a record that itself clashed is named too.
+  expect(
+    said(
+      plain,
+      row("Ola", "2026-09-29 10:00") +
+        row("Ola", "2026-09-29 10:35") +
+        row("Ola", "2026-09-29 11:10"),
+    ),
+  ).toEqual([
+    "Record 2 of Appointment takes barber 1's time while record 1 does (with the 10 minutes kept free after each).",
+    "Record 3 of Appointment takes barber 1's time while record 2 does (with the 10 minutes kept free after each).",
+  ]);
+  // Moved to this week: a Monday before 1970 keeps its hour.
+  expect(
+    said(
+      moved,
+      row("Ola", "1969-12-29 10:00") +
+        row("Pia", "2026-09-29 10:00") +
+        row("Ola", "1970-01-12 10:00"),
+    ),
+  ).toEqual([
+    "Record 3 of Appointment takes barber 1's time while record 1 does (with the 10 minutes kept free after each).",
+  ]);
 });
