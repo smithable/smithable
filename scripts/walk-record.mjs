@@ -19,6 +19,7 @@ export const WALKS = {
 const SUPPORT = [
   "dev-app",
   "fake-model",
+  "lint-guard",
   "patience",
   "ports",
   "studio-test-processes",
