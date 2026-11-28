@@ -62,3 +62,19 @@ test("where a description's making stopped is one fixed line, naming only the st
   for (const stage of ["starting", "preparing", "drafting", "building"] as const)
     expect(stoppedLine(stage)).toBe(`The description's draft stopped while ${stage}.\n`);
 });
+
+test("a description that fails, and a starter that fails after it, still say the draft's lines and where it stopped (T1759)", async () => {
+  const said: string[] = [];
+  const code = await replaceProject(
+    tempDir("smithable-dir-"),
+    { out: () => {}, err: (text) => said.push(text) },
+    { describe: "A small shop", starter: "nope" },
+  );
+  expect(code).toBe(2);
+  const text = said.join("");
+  // The starter's own line, then the draft's, then the stage line last, each a line of its own.
+  const lines = text.trimEnd().split("\n");
+  expect(lines.at(-1)).toBe(stoppedLine("starting").trimEnd());
+  expect(lines.at(-2)).toMatch(/^Unknown starter "nope"\./);
+  expect(lines.filter((l) => l.startsWith('Unknown starter "nope"'))).toHaveLength(2);
+});

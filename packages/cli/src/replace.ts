@@ -360,29 +360,36 @@ export async function replaceProject(
     }
     if (made !== 0) {
       const stopped = stage;
-      fresh();
-      progress("building");
+      // The draft's own failure right before the line that says so, not before the starter's
+      // build: the service reads only the lines just above it (T1759). Said also when the
+      // starter fails or throws.
+      const tell = () => {
+        if (said) io.err(said.endsWith("\n") ? said : `${said}\n`);
+        io.err(stoppedLine(stopped));
+      };
       const starter = to.starter ?? "crm";
       const why = /allowance/i.test(said)
         ? "the AI allowance is used up"
         : said.includes("No model is available")
           ? "no AI model is available"
           : "the AI model did not produce a working app from it";
-      // The starter as it is, kept as private as the description asks (T778), never plain.
-      made = await create(beside, io, starter, {
-        ...options,
-        ...(to.describe
-          ? {
-              describe: to.describe,
-              yes: true,
-              starterOnly: why.replace(/^./, (c) => c.toUpperCase()),
-            }
-          : {}),
-      });
-      // The draft's own failure right before the line that says so, not before the starter's
-      // build: the service reads only the lines just above it (T1759).
-      io.err(said);
-      io.err(stoppedLine(stopped));
+      try {
+        fresh();
+        progress("building");
+        // The starter as it is, kept as private as the description asks (T778), never plain.
+        made = await create(beside, io, starter, {
+          ...options,
+          ...(to.describe
+            ? {
+                describe: to.describe,
+                yes: true,
+                starterOnly: why.replace(/^./, (c) => c.toUpperCase()),
+              }
+            : {}),
+        });
+      } finally {
+        tell();
+      }
       if (made !== 0) return made;
       io.err(`Could not make the app from the description (${why}); starting from ${starter}.\n`);
       mkdirSync(join(beside, "data", ".smithable"), { recursive: true });
