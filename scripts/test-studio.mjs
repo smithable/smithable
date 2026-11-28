@@ -8,8 +8,10 @@ import {
   existsSync,
   mkdirSync,
   mkdtempSync,
+  readdirSync,
   readFileSync,
   rmSync,
+  statSync,
   writeFileSync,
 } from "node:fs";
 import { request } from "node:http";
@@ -73,6 +75,18 @@ const fetch = (url, init) =>
   });
 
 const repo = new URL("..", import.meta.url).pathname;
+// A walk on a Studio built before its source changed tests the old Studio (T1777): stop and say so.
+{
+  const newest = (dir) =>
+    readdirSync(dir, { recursive: true, withFileTypes: true })
+      .filter((e) => e.isFile())
+      .reduce((t, e) => Math.max(t, statSync(join(e.parentPath, e.name)).mtimeMs), 0);
+  const built = join(repo, "apps/studio/dist/index.html");
+  if (!existsSync(built) || newest(join(repo, "apps/studio/src")) > statSync(built).mtimeMs) {
+    console.error("apps/studio/src is newer than apps/studio/dist: run pnpm build first.");
+    process.exit(1);
+  }
+}
 const cli = join(repo, "packages/cli/dist/bin.js");
 const root = mkdtempSync(join(tmpdir(), "smithable-studio-"));
 const dir = join(root, "crm");

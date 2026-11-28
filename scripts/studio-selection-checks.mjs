@@ -39,7 +39,7 @@ export async function checkStudioSelection(browser, base) {
     const selectOn = async () => {
       if ((await select.getAttribute("aria-pressed")) !== "true") await select.click();
     };
-    await select.click();
+    await selectOn();
     await frame.locator("html[data-sm-selecting]").waitFor();
     await link.click();
     await form.waitFor();
@@ -52,7 +52,7 @@ export async function checkStudioSelection(browser, base) {
     assert.ok((await overlay.boundingBox()).x <= 16);
     await form.getByRole("button", { name: "Close selection", exact: true }).click();
     await form.waitFor({ state: "hidden" });
-    // Closing the form leaves Select on: only Escape ends it (T1684).
+    // Closing the form leaves Select on: only Escape or Select again end it (T1684).
     assert.equal(await select.getAttribute("aria-pressed"), "true");
     await frame.locator("html[data-sm-selecting]").waitFor();
     await link.click();
@@ -99,6 +99,8 @@ export async function checkStudioSelection(browser, base) {
     await select.click();
     await frame.locator("html[data-sm-selecting]").waitFor({ state: "hidden" });
     assert.equal(await select.getAttribute("aria-pressed"), "false");
+    // The hidden wait can pass while the preview reloads: the Shift-click's link is there first.
+    await link.waitFor();
 
     await page.locator('iframe[title="App preview"]').focus();
     await page.keyboard.down("Shift");
