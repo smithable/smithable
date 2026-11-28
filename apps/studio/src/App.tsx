@@ -305,10 +305,12 @@ export function App() {
   }, [followed, people, previewingAs]);
   // The sample users are read again after each change while one is followed: the panel reads them
   // only while open, and a change made with it closed (removeSampleUser) must still clear this.
-  const files = project?.files;
+  // Keyed on the revision, which every change moves: the sample users (samples/people.yml) are
+  // not among the spec files in project.files.
+  const revision = project?.revision;
   useEffect(() => {
-    if (followed && files) api.people().then(setPeople, () => {});
-  }, [followed, files]);
+    if (followed && revision) api.people().then(setPeople, () => {});
+  }, [followed, revision]);
   useEffect(() => {
     if (!followed) return;
     const onMessage = (e: MessageEvent) => {
