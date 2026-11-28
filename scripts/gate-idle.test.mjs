@@ -178,8 +178,8 @@ test("a format error in a changed file stops a heavy run before it queues (T1780
         git("commit", "-qm", "change");
       }
       const r = run();
-      assert.equal(r.status, 1, r.stderr);
-      assert.match(r.stderr, /run pnpm fix/);
+      assert.equal(r.status, 77, r.stderr);
+      assert.match(r.stderr, /new file\.js[\s\S]*run pnpm fix/);
       assert.doesNotMatch(r.stdout, /ran-the-job/);
     }
     assert.equal(idle(home), 0, "no ticket was left in the queue");

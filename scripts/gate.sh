@@ -219,11 +219,12 @@ lint_changed() (
   [ -e biome.json ] && [ -x node_modules/.bin/biome ] || exit 0
   base=$(git merge-base HEAD origin/main 2>/dev/null) || exit 0
   { git diff -z --name-only --diff-filter=d "$base"; git ls-files -z --others --exclude-standard; } |
-    xargs -0 -r node_modules/.bin/biome check --files-ignore-unknown=true --no-errors-on-unmatched >/dev/null 2>&1
+    xargs -0 -r node_modules/.bin/biome check --diagnostic-level=error --files-ignore-unknown=true --no-errors-on-unmatched 2>&1
 )
-if [ "$session" != ci ] && ! lint_changed; then
+if [ "$session" != ci ] && ! found=$(lint_changed); then
+  printf '%s\n' "$found" | tail -n 30 >&2
   echo "gate.sh: biome finds errors in the files changed here, so nothing was queued or run: run pnpm fix, then pnpm lint." >&2
-  exit 1
+  exit 77
 fi
 
 ticket="$queue/$(date +%s%N).$$"
