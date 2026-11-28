@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "vitest";
-import { arrival, replaceProject, sync } from "./replace.js";
+import { arrival, replaceProject, stoppedLine, sync } from "./replace.js";
 import { tempDir } from "./test-dir.js";
 
 test("a replacement writes what differs by a rename over the file, and removes the rest", () => {
@@ -55,4 +55,10 @@ test("a time zone Intl does not know is refused before anything is touched", asy
   );
   expect(code).toBe(2);
   expect(said.join("")).toBe('Unknown time zone "Foo/Bar". Use a name like Europe/Mariehamn.\n');
+});
+
+test("where a description's making stopped is one fixed line, naming only the stage (T1759)", () => {
+  // The hosted service names this line's stage and counts every other line: it must stay fixed.
+  for (const stage of ["starting", "preparing", "drafting", "building"] as const)
+    expect(stoppedLine(stage)).toBe(`The description's draft stopped while ${stage}.\n`);
 });
