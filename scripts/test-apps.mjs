@@ -32,6 +32,7 @@ import { startFakeModel } from "./fake-model.mjs";
 import { APP_OFFSETS, APP_PORT, checkPorts, claimPort } from "./ports.mjs";
 import { networkOnly, RETRIED, retriedNote } from "./test-apps-first-load.mjs";
 import { upgradeFlow } from "./upgrade-flow.mjs";
+import { walkRecord } from "./walk-record.mjs";
 
 // How long the waits are, times TEST_PATIENCE (the gate sets it from the machine's load, 1 to 3):
 // a check that waits a minute on a quiet machine waits three under load, so a slow answer is
@@ -48,6 +49,7 @@ const examples = process.argv.slice(2).length
       .filter((e) => e.isDirectory())
       .map((e) => e.name);
 
+const passed = walkRecord("scripts/test-apps.mjs");
 const failures = [];
 /** First loads reloaded because only the network broke them (T1707), and the app they were in. */
 let retried = 0;
@@ -567,6 +569,11 @@ async function calendarFlow(base) {
     await moved(thisWeek);
     if (!page.url().includes("time=morning")) throw new Error("Next dropped the time of day");
     await page.getByRole("button", { name: "Any time", exact: true }).click();
+    // The address first, then the button drawn chosen: the next click starts from the page as it is.
+    await page.waitForURL((url) => !url.searchParams.has("time"));
+    await page
+      .locator('[data-part="time-of-day"] button[aria-pressed="true"]', { hasText: "Any time" })
+      .waitFor({ timeout: 10000 * P });
     // The page's own filters (A 215 5b): a class type's chip shows only its classes, in the address.
     const types = page.locator('[data-kit="filters"] fieldset', {
       has: page.locator("legend", { hasText: "Class type" }),
@@ -596,6 +603,18 @@ async function calendarFlow(base) {
       throw new Error("Previous dropped the class type");
     await types.getByRole("button", { name: chosen }).click();
     await page.waitForURL((url) => !url.search.includes("classType="));
+    // Two quick clicks, the second before the page is drawn again, keep both choices (T1470): each
+    // builds its address from the one in force, not the one the page was drawn with.
+    await page.getByRole("button", { name: "Morning", exact: true }).click();
+    await types.getByRole("button", { name: chosen }).click();
+    await page.waitForURL(
+      (url) => url.searchParams.get("time") === "morning" && url.searchParams.has("classType"),
+    );
+    await page.getByRole("button", { name: "Any time", exact: true }).click();
+    await types.getByRole("button", { name: chosen }).click();
+    await page.waitForURL(
+      (url) => !url.searchParams.has("time") && !url.searchParams.has("classType"),
+    );
     await page.getByRole("button", { name: "Previous" }).click();
     await page.waitForFunction(
       (text) => [...document.querySelectorAll("h2")].some((h) => h.textContent === text),
@@ -11125,4 +11144,5 @@ if (failures.length) {
   process.exit(1);
 }
 for (const dir of dirs) rmSync(join(dir, ".."), { recursive: true, force: true });
+passed(examples.join(" "));
 console.log(`\nAll ${examples.length} example apps passed.${retriedNote(retried)}`);
