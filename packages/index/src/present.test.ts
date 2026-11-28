@@ -161,4 +161,10 @@ test("two pages that would read the same are named by their ids", () => {
   expect(present(three, undefined, titled)[1]?.text).toBe(
     "It has my bookings, bookings, mine and archive, open to everyone.",
   );
+  // Two ids that read alike, on routes of their own, are written as they are (T1770).
+  const twins = validateSpec({
+    path: "smithable.yml",
+    text: "smithable: 0.1\napp: { name: Desk }\nmodels:\n  Booking:\n    fields: { name: string! }\npages:\n  myBookings: { crud: Booking, route: /mine }\n  my-bookings: { crud: Booking }\n",
+  }).ir as SpecIR;
+  expect(present(twins)[1]?.text).toBe("It has myBookings and my-bookings, open to everyone.");
 });
